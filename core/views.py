@@ -8,7 +8,9 @@ from django.db.models import Sum
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
+from .dateutils import format_jalali, parse_jalali_date
 from .models import *
+from .services import sync_sale_line_inventory
 
 
 def _to_int(value, default=0):
@@ -18,6 +20,13 @@ def _to_int(value, default=0):
         return int(str(value).replace(",", "").strip())
     except (TypeError, ValueError):
         return default
+
+
+def _sizes_for_brand(brand):
+    qs = Size.objects.all()
+    if brand and brand.name == "تکوین":
+        qs = qs.exclude(name="4XL")
+    return qs
 
 
 @login_required
@@ -32,6 +41,8 @@ def dashboard(request):
             shorts += line.shorts_count
     alerts = []
     for t in StockThreshold.objects.select_related("brand", "size", "color")[:200]:
+        if t.brand.name == "تکوین" and t.size.name == "4XL":
+            continue
         qs = StockBalance.objects.filter(brand=t.brand, size=t.size, color=t.color)
         home = qs.filter(location__key="home").aggregate(v=Sum("qty"))["v"] or 0
         total = qs.aggregate(v=Sum("qty"))["v"] or 0
@@ -50,11 +61,17 @@ def dashboard(request):
 
 @login_required
 def sale_start(request):
+    today_jalali = format_jalali(date.today())
+    entered_date = request.POST.get("date", today_jalali)
     if request.method == "POST":
-        d = request.POST.get("date") or str(date.today())
-        day, _ = SaleDay.objects.get_or_create(date=d)
+        try:
+            gregorian_date = parse_jalali_date(entered_date)
+        except ValueError as exc:
+            messages.error(request, str(exc))
+            return render(request, "core/sale_start.html", {"today_jalali": today_jalali, "entered_date": entered_date})
+        day, _ = SaleDay.objects.get_or_create(date=gregorian_date)
         return redirect("sale_brand", day_id=day.id)
-    return render(request, "core/sale_start.html", {"today": date.today()})
+    return render(request, "core/sale_start.html", {"today_jalali": today_jalali, "entered_date": today_jalali})
 
 
 @login_required
@@ -63,7 +80,10 @@ def sale_brand(request, day_id):
     brands = Brand.objects.filter(active=True)
     cards = []
     for brand in brands:
-        first_ps = ProductSize.objects.filter(product__brand=brand, active=True, product__active=True).select_related("size").order_by("size__sort_order").first()
+        qs = ProductSize.objects.filter(product__brand=brand, active=True, product__active=True)
+        if brand.name == "تکوین":
+            qs = qs.exclude(size__name="4XL")
+        first_ps = qs.select_related("size").order_by("size__sort_order").first()
         cards.append((brand, first_ps))
     return render(request, "core/sale_brand.html", {"day": day, "cards": cards})
 
@@ -73,12 +93,14 @@ def sale_size(request, day_id, brand_id, size_id):
     day = get_object_or_404(SaleDay, id=day_id)
     brand = get_object_or_404(Brand, id=brand_id)
     size = get_object_or_404(Size, id=size_id)
+    if brand.name == "تکوین" and size.name == "4XL":
+        return redirect("sale_brand", day_id=day.id)
     product_sizes = ProductSize.objects.filter(product__brand=brand, size=size, active=True, product__active=True).select_related("product", "size").order_by("product__code")
     rows = []
     for ps in product_sizes:
         line = SaleLine.objects.filter(day=day, product_size=ps).first()
         rows.append((ps, line))
-    sizes = list(Size.objects.filter(productsize__product__brand=brand, productsize__active=True, productsize__product__active=True).distinct().order_by("sort_order"))
+    sizes = list(_sizes_for_brand(brand).filter(productsize__product__brand=brand, productsize__active=True, productsize__product__active=True).distinct().order_by("sort_order"))
     ids = [s.id for s in sizes]
     idx = ids.index(size.id) if size.id in ids else 0
     prev_size = sizes[idx - 1] if idx > 0 else None
@@ -88,13 +110,22 @@ def sale_size(request, day_id, brand_id, size_id):
 
 @login_required
 @require_POST
+@transaction.atomic
 def sale_line_save(request):
     day = get_object_or_404(SaleDay, id=request.POST["day_id"])
-    ps = get_object_or_404(ProductSize, id=request.POST["product_size_id"])
+    ps = get_object_or_404(ProductSize.objects.select_related("product__brand", "size"), id=request.POST["product_size_id"])
+    if ps.product.brand.name == "تکوین" and ps.size.name == "4XL":
+        return render(request, "core/_saved.html", {"error": "سایز 4XL برای تکوین فعال نیست."}, status=400)
     qty = max(0, _to_int(request.POST.get("quantity")))
     price = max(0, _to_int(request.POST.get("sale_price"), ps.default_sale_price))
-    line, _ = SaleLine.objects.update_or_create(day=day, product_size=ps, defaults={"quantity": qty, "sale_price": price})
-    return render(request, "core/_saved.html", {"line": line})
+    line = SaleLine.objects.select_for_update().filter(day=day, product_size=ps).first()
+    if not line:
+        line = SaleLine.objects.create(day=day, product_size=ps, quantity=0, inventory_applied_quantity=0, sale_price=price)
+    line.quantity = qty
+    line.sale_price = price
+    line.save(update_fields=["quantity", "sale_price"])
+    result = sync_sale_line_inventory(line)
+    return render(request, "core/_saved.html", {"line": line, "stock_result": result})
 
 
 @login_required
@@ -102,7 +133,7 @@ def inventory(request):
     brand_id = request.GET.get("brand")
     brands = Brand.objects.filter(active=True)
     brand = brands.filter(id=brand_id).first() if brand_id else brands.first()
-    sizes = Size.objects.all()
+    sizes = list(_sizes_for_brand(brand)) if brand else []
     colors = Color.objects.filter(active=True)
     table = []
     if brand:
@@ -112,8 +143,8 @@ def inventory(request):
                 qs = StockBalance.objects.filter(brand=brand, color=color, size=size)
                 home = qs.filter(location__key="home").aggregate(v=Sum("qty"))["v"] or 0
                 kh = qs.filter(location__key="khorshid").aggregate(v=Sum("qty"))["v"] or 0
-                row.append((size, home, kh, home + kh))
-            table.append((color, row))
+                row.append({"size": size, "home": home, "kh": kh, "total": home + kh})
+            table.append({"color": color, "cells": row})
     return render(request, "core/inventory.html", {"brands": brands, "brand": brand, "sizes": sizes, "table": table})
 
 
@@ -208,6 +239,8 @@ def settings_product_form(request, product_id=None):
                 comp[color.id] = qty
                 comp_total += qty
         enabled_sizes = [size for size in sizes if request.POST.get(f"size_{size.id}")]
+        if brand.name == "تکوین":
+            enabled_sizes = [size for size in enabled_sizes if size.name != "4XL"]
         errors = []
         if not form_code:
             errors.append("کد محصول را وارد کن.")
@@ -236,6 +269,8 @@ def settings_product_form(request, product_id=None):
             ProductSize.objects.filter(product=product).exclude(size_id__in=selected_ids).update(active=False)
             for size in enabled_sizes:
                 ProductSize.objects.update_or_create(product=product, size=size, defaults={"default_sale_price": max(0, _to_int(request.POST.get(f"sale_price_{size.id}"))), "unit_cost": max(0, _to_int(request.POST.get(f"unit_cost_{size.id}"))), "active": True})
+            if brand.name == "تکوین":
+                ProductSize.objects.filter(product=product, size__name="4XL").update(active=False)
             messages.success(request, f"کد {product.code} ذخیره شد.")
             return redirect("settings_products")
         for err in errors:
@@ -245,6 +280,7 @@ def settings_product_form(request, product_id=None):
         qty = max(0, _to_int(request.POST.get(f"color_{color.id}"))) if request.method == "POST" else existing_comp.get(color.id, 0)
         color_rows.append({"obj": color, "qty": qty})
     size_rows = []
+    selected_brand = Brand.objects.filter(id=form_brand_id).first()
     for size in sizes:
         ps = existing_sizes.get(size.id)
         if request.method == "POST":
@@ -255,7 +291,9 @@ def settings_product_form(request, product_id=None):
             checked = bool(ps and ps.active)
             sale_price = ps.default_sale_price if ps else 0
             unit_cost = ps.unit_cost if ps else 0
-        size_rows.append({"obj": size, "checked": checked, "sale_price": sale_price, "unit_cost": unit_cost})
+        if selected_brand and selected_brand.name == "تکوین" and size.name == "4XL":
+            checked = False
+        size_rows.append({"obj": size, "checked": checked, "sale_price": sale_price, "unit_cost": unit_cost, "takvin_forbidden": size.name == "4XL"})
     return render(request, "core/settings_product_form.html", {"product": product, "brands": brands, "color_rows": color_rows, "size_rows": size_rows, "form_brand_id": form_brand_id, "form_code": form_code, "form_pack_qty": form_pack_qty, "form_note": form_note, "form_active": form_active})
 
 
@@ -264,7 +302,7 @@ def settings_stock(request):
     brands = Brand.objects.filter(active=True)
     brand_id = request.GET.get("brand") or request.POST.get("brand")
     brand = brands.filter(id=brand_id).first() if brand_id else brands.first()
-    sizes = list(Size.objects.all())
+    sizes = list(_sizes_for_brand(brand)) if brand else []
     colors = list(Color.objects.filter(active=True).order_by("id"))
     home = StockLocation.objects.get(key="home")
     khorshid = StockLocation.objects.get(key="khorshid")
@@ -279,6 +317,9 @@ def settings_stock(request):
                     StockBalance.objects.update_or_create(brand=brand, size=size, color=color, location=home, defaults={"qty": home_qty})
                     StockBalance.objects.update_or_create(brand=brand, size=size, color=color, location=khorshid, defaults={"qty": kh_qty})
                     StockThreshold.objects.update_or_create(brand=brand, size=size, color=color, defaults={"home_min": max(0, _to_int(request.POST.get(f"home_min_{color.id}_{size.id}"))), "total_min": max(0, _to_int(request.POST.get(f"total_min_{color.id}_{size.id}")))})
+            if brand.name == "تکوین":
+                StockBalance.objects.filter(brand=brand, size__name="4XL").update(qty=0)
+                StockThreshold.objects.filter(brand=brand, size__name="4XL").delete()
         messages.success(request, f"موجودی و حداقل‌های {brand.name} ذخیره شد.")
         return redirect(f"{request.path}?brand={brand.id}")
     rows = []
@@ -322,11 +363,19 @@ def settings_rules(request):
 
 @login_required
 def report(request):
-    start = request.GET.get("start")
-    end = request.GET.get("end")
+    start = (request.GET.get("start") or "").strip()
+    end = (request.GET.get("end") or "").strip()
     days = SaleDay.objects.all()
-    if start: days = days.filter(date__gte=start)
-    if end: days = days.filter(date__lte=end)
+    if start:
+        try:
+            days = days.filter(date__gte=parse_jalali_date(start))
+        except ValueError as exc:
+            messages.error(request, f"از تاریخ: {exc}")
+    if end:
+        try:
+            days = days.filter(date__lte=parse_jalali_date(end))
+        except ValueError as exc:
+            messages.error(request, f"تا تاریخ: {exc}")
     total_sales = 0
     total_shorts = 0
     total_packs = 0
