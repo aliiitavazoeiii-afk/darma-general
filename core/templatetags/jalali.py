@@ -31,3 +31,14 @@ def pct1(value):
         return f"{float(value):.1f}"
     except (TypeError, ValueError):
         return value
+
+
+@register.filter(name="ratio_pct")
+def ratio_pct(value, denominator):
+    try:
+        den = float(denominator)
+        if den == 0:
+            return 0
+        return float(value) * 100 / den
+    except (TypeError, ValueError, ZeroDivisionError):
+        return 0
