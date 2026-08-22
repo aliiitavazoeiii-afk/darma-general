@@ -2,7 +2,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.template.loader import get_template
 from django.urls import reverse
 
-from core.models import ExcelManualRow, ExcelManualSetting, MaterialReportBlock
+from core.models import ExcelManualRow, ExcelManualSetting, MaterialReportBlock, TakvinPurchase
 
 
 class Command(BaseCommand):
@@ -15,6 +15,7 @@ class Command(BaseCommand):
             "core/report_excel.html",
             "core/_manual_table.html",
             "core/material_report.html",
+            "core/takvin_excel.html",
             "core/sale_calendar.html",
             "core/sale_size.html",
             "core/daily_report.html",
@@ -33,15 +34,13 @@ class Command(BaseCommand):
             "report",
             "manual_report_action",
             "material_report",
+            "takvin",
             "inventory",
             "settings_products",
         ]
         for route in routes:
             try:
-                if route == "manual_report_action":
-                    reverse(route)
-                else:
-                    reverse(route)
+                reverse(route)
                 self.stdout.write(f"route OK: {route}")
             except Exception as exc:
                 errors.append(f"route {route}: {exc}")
@@ -50,6 +49,7 @@ class Command(BaseCommand):
             ExcelManualSetting.objects.count()
             ExcelManualRow.objects.count()
             MaterialReportBlock.objects.count()
+            TakvinPurchase.objects.filter(note__startswith="[excel-web]").count()
             self.stdout.write("Excel-Web models OK")
         except Exception as exc:
             errors.append(f"models/database: {exc}")
