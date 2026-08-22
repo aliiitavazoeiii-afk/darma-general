@@ -163,3 +163,61 @@ class MoneyMovement(models.Model):
 
 
 from .models_final import *  # noqa: F401,F403,E402
+
+
+class ExcelManualSetting(models.Model):
+    key = models.CharField(max_length=80, unique=True)
+    label = models.CharField(max_length=120)
+    value = models.BigIntegerField(default=0)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.label
+
+
+class ExcelManualRow(models.Model):
+    ACCOUNTS = "accounts"
+    PERSONS = "persons"
+    INVENTORY = "inventory"
+    MATERIALS = "materials"
+    ASSETS = "assets"
+    SECTION_CHOICES = [
+        (ACCOUNTS, "ریز حساب‌ها"),
+        (PERSONS, "حساب اشخاص"),
+        (INVENTORY, "موجودی کالا"),
+        (MATERIALS, "مواد اولیه"),
+        (ASSETS, "کالای سرمایه‌ای"),
+    ]
+    section = models.CharField(max_length=30, choices=SECTION_CHOICES, db_index=True)
+    title = models.CharField(max_length=160)
+    amount = models.BigIntegerField(default=0)
+    unit_price = models.BigIntegerField(default=0)
+    quantity = models.DecimalField(max_digits=14, decimal_places=3, default=Decimal("0"))
+    note = models.CharField(max_length=250, blank=True)
+    sort_order = models.PositiveIntegerField(default=0)
+    active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["section", "sort_order", "id"]
+
+    def __str__(self):
+        return f"{self.get_section_display()} - {self.title}"
+
+
+class MaterialReportBlock(models.Model):
+    date = models.DateField()
+    title = models.CharField(max_length=120, blank=True)
+    input_data = models.JSONField(default=dict, blank=True)
+    output_data = models.JSONField(default=dict, blank=True)
+    delivery_wage = models.BigIntegerField(default=0)
+    note = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-date", "-id"]
+
+    def __str__(self):
+        return self.title or str(self.date)
