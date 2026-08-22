@@ -1,4 +1,4 @@
-{% extends 'base.html' %}{% load jalali %}{% block title %}خرید تکوین | DARMA{% endblock %}{% block content %}
+{% extends 'base.html' %}{% load jalali static %}{% block title %}خرید تکوین | DARMA{% endblock %}{% block content %}
 <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4"><div><div class="page-kicker">خرید روز — مطابق اکسل</div><h1 class="page-title mb-1">خرید تکوین</h1><div class="page-muted">فقط گزارش خرید را ثبت می‌کند؛ موجودی، بدهی تکوین و سرمایه به‌صورت دستی باقی می‌مانند.</div></div><a class="btn btn-outline-light" href="{% url 'report' %}">گزارش جامع</a></div>
 
 <div class="card glass-strong mb-4"><form method="post">{% csrf_token %}<input type="hidden" name="action" value="save"><div class="card-body">
@@ -12,7 +12,7 @@
 
 <div class="card"><div class="card-header"><div><h3 class="card-title">تاریخچه خرید تکوین</h3><div class="text-secondary">روزهای قبلی را باز کن و در صورت نیاز ویرایش یا حذف کن.</div></div></div><div class="table-responsive"><table class="table table-vcenter card-table"><thead><tr><th>تاریخ</th><th>تعداد</th><th>قبل تخفیف</th><th>خرید خالص</th><th></th></tr></thead><tbody>{% for row in history_rows %}<tr><td><a href="?date={{ row.jalali }}" class="fw-bold">{{ row.jalali }}</a></td><td class="num">{{ row.qty|groupnum }}</td><td class="money">{{ row.before|groupnum }}</td><td class="money fw-bold">{{ row.net|groupnum }}</td><td class="text-end"><form method="post" class="d-inline">{% csrf_token %}<input type="hidden" name="action" value="delete_day"><input type="hidden" name="date" value="{{ row.jalali }}"><button class="btn btn-sm btn-outline-danger" onclick="return confirm('خرید تکوین این روز حذف شود؟')">حذف</button></form></td></tr>{% empty %}<tr><td colspan="5" class="empty-state">هنوز خرید تکوین ثبت نشده.</td></tr>{% endfor %}</tbody></table></div></div>
 {% endblock %}
-{% block scripts %}<script>
+{% block scripts %}<script src="{% static 'core/jalali_picker.js' %}"></script><script>
 (function(){
  const qtyInputs=[...document.querySelectorAll('.takvin-qty')];
  const priceInputs=[...document.querySelectorAll('.takvin-price')];

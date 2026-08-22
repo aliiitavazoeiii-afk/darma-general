@@ -1,5 +1,5 @@
 from collections import defaultdict
-from datetime import date, timedelta
+from datetime import date
 
 import jdatetime
 from django.contrib.auth.decorators import login_required
@@ -7,14 +7,8 @@ from django.shortcuts import get_object_or_404, redirect, render
 
 from .dateutils import format_jalali
 from .finance import sale_line_metrics
+from .jalali_calendar import jalali_month_data
 from .models import Brand, ProductSize, SaleDay, SaleLine, Size
-
-
-PERSIAN_WEEKDAYS = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه", "جمعه"]
-PERSIAN_MONTHS = [
-    "فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور",
-    "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند",
-]
 
 
 def _brand_sizes(brand):
@@ -32,51 +26,33 @@ def sale_calendar(request):
         jm = int(request.GET.get("jm", today_j.month))
         if not 1 <= jm <= 12:
             raise ValueError
-    except ValueError:
+    except (TypeError, ValueError):
         jy, jm = today_j.year, today_j.month
 
-    first_j = jdatetime.date(jy, jm, 1)
-    first_g = first_j.togregorian()
-    if jm == 12:
-        next_j = jdatetime.date(jy + 1, 1, 1)
-    else:
-        next_j = jdatetime.date(jy, jm + 1, 1)
-    next_g = next_j.togregorian()
-    days_count = (next_g - first_g).days
-    leading = (first_g.weekday() + 2) % 7
-
+    cal = jalali_month_data(jy, jm)
     existing = {
         d.date: d
-        for d in SaleDay.objects.filter(date__gte=first_g, date__lt=next_g).prefetch_related("lines")
+        for d in SaleDay.objects.filter(date__gte=cal["first_g"], date__lt=cal["next_g"]).prefetch_related("lines")
     }
-    cells = [None] * leading
-    for day_num in range(1, days_count + 1):
-        g = jdatetime.date(jy, jm, day_num).togregorian()
-        sale_day = existing.get(g)
-        has_sales = bool(sale_day and any(line.quantity > 0 for line in sale_day.lines.all()))
-        cells.append({
-            "day": day_num,
-            "is_today": g == date.today(),
-            "has_sales": has_sales,
-            "sale_day": sale_day,
-        })
-    while len(cells) % 7:
-        cells.append(None)
-    weeks = [cells[i:i + 7] for i in range(0, len(cells), 7)]
-
-    if jm == 1:
-        prev_y, prev_m = jy - 1, 12
-    else:
-        prev_y, prev_m = jy, jm - 1
-    if jm == 12:
-        next_y, next_m = jy + 1, 1
-    else:
-        next_y, next_m = jy, jm + 1
+    for week in cal["weeks"]:
+        for cell in week:
+            if not cell:
+                continue
+            g = jdatetime.date(jy, jm, cell["day"]).togregorian()
+            sale_day = existing.get(g)
+            cell["has_sales"] = bool(sale_day and any(line.quantity > 0 for line in sale_day.lines.all()))
+            cell["sale_day"] = sale_day
 
     return render(request, "core/sale_calendar.html", {
-        "jy": jy, "jm": jm, "month_name": PERSIAN_MONTHS[jm - 1],
-        "weekdays": PERSIAN_WEEKDAYS, "weeks": weeks,
-        "prev_y": prev_y, "prev_m": prev_m, "next_y": next_y, "next_m": next_m,
+        "jy": jy,
+        "jm": jm,
+        "month_name": cal["month_name"],
+        "weekdays": cal["weekdays"],
+        "weeks": cal["weeks"],
+        "prev_y": cal["prev_y"],
+        "prev_m": cal["prev_m"],
+        "next_y": cal["next_y"],
+        "next_m": cal["next_m"],
     })
 
 

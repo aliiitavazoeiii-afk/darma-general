@@ -1,9 +1,10 @@
 from django.urls import path
 
-from . import daily_views, excel_dashboard, excel_sales, excel_takvin, excel_views, final_views, views
+from . import calendar_views, daily_views, excel_dashboard, excel_sales, excel_takvin, excel_views, final_views, views
 
 urlpatterns = [
     path("", excel_dashboard.dashboard, name="dashboard"),
+    path("calendar/picker/", calendar_views.jalali_picker, name="jalali_picker"),
     path("sales/", daily_views.sale_calendar, name="sale_start"),
     path("sales/select/<int:jy>/<int:jm>/<int:jd>/", daily_views.select_sale_day, name="select_sale_day"),
     path("sales/<int:day_id>/", final_views.sale_brand, name="sale_brand"),

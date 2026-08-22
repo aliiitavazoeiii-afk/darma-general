@@ -4,3 +4,4 @@ whitenoise>=6.8,<7
 gunicorn>=23,<24
 python-dotenv>=1.0,<2
 jdatetime>=5.2,<6
+holidays>=0.80,<1
