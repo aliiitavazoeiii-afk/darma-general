@@ -17,8 +17,11 @@ class Command(BaseCommand):
             "core/material_report.html",
             "core/takvin_excel.html",
             "core/sale_calendar.html",
+            "core/sale_brand_final.html",
             "core/sale_size.html",
+            "core/_sale_saved_final.html",
             "core/daily_report.html",
+            "core/inventory_final.html",
         ]
         errors = []
         for template_name in templates:
@@ -28,9 +31,10 @@ class Command(BaseCommand):
             except Exception as exc:
                 errors.append(f"template {template_name}: {exc}")
 
-        routes = [
+        simple_routes = [
             "dashboard",
             "sale_start",
+            "sale_line_save",
             "report",
             "manual_report_action",
             "material_report",
@@ -38,9 +42,24 @@ class Command(BaseCommand):
             "inventory",
             "settings_products",
         ]
-        for route in routes:
+        for route in simple_routes:
             try:
                 reverse(route)
+                self.stdout.write(f"route OK: {route}")
+            except Exception as exc:
+                errors.append(f"route {route}: {exc}")
+
+        parameter_routes = [
+            ("sale_brand", [1]),
+            ("daily_report", [1]),
+            ("sale_size", [1, 1, 1]),
+            ("shortage_resolve", [1]),
+            ("material_block_save", [1]),
+            ("material_block_delete", [1]),
+        ]
+        for route, args in parameter_routes:
+            try:
+                reverse(route, args=args)
                 self.stdout.write(f"route OK: {route}")
             except Exception as exc:
                 errors.append(f"route {route}: {exc}")
