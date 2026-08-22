@@ -27,10 +27,11 @@
 {% block scripts %}<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script><script>
 (function(){
  const canvas=document.getElementById('salesTrendChart'); if(!canvas||typeof Chart==='undefined') return;
+ Chart.defaults.color='#c7d3df'; Chart.defaults.borderColor='rgba(255,255,255,.10)'; Chart.defaults.font.family='Vazirmatn';
  const labels=JSON.parse(document.getElementById('dashboard-chart-labels').textContent);
  const sales=JSON.parse(document.getElementById('dashboard-chart-sales').textContent);
  const profit=JSON.parse(document.getElementById('dashboard-chart-profit').textContent);
  const fmt=v=>Math.round(v||0).toString().replace(/\B(?=(\d{3})+(?!\d))/g,' ');
- new Chart(canvas,{type:'line',data:{labels,datasets:[{label:'فروش',data:sales,borderColor:'#fb6514',backgroundColor:'rgba(251,101,20,.10)',fill:true,tension:.38,borderWidth:2.4,pointRadius:2.5,pointHoverRadius:5},{label:'سود',data:profit,borderColor:'#12b76a',backgroundColor:'rgba(18,183,106,.04)',fill:false,tension:.38,borderWidth:2.2,pointRadius:2.3,pointHoverRadius:5}]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{position:'top',align:'end',labels:{usePointStyle:true,boxWidth:8,font:{family:'Vazirmatn'}}},tooltip:{callbacks:{label:c=>c.dataset.label+': '+fmt(c.parsed.y)+' تومان'}}},scales:{x:{grid:{display:false},ticks:{font:{family:'Vazirmatn'}}},y:{beginAtZero:true,grid:{color:'rgba(71,84,103,.09)'},ticks:{callback:v=>fmt(v),font:{family:'Vazirmatn'}}}}}});
+ new Chart(canvas,{type:'line',data:{labels,datasets:[{label:'فروش',data:sales,borderColor:'#fb6514',backgroundColor:'rgba(251,101,20,.13)',fill:true,tension:.38,borderWidth:2.4,pointRadius:2.5,pointHoverRadius:5},{label:'سود',data:profit,borderColor:'#39d98a',backgroundColor:'rgba(57,217,138,.05)',fill:false,tension:.38,borderWidth:2.2,pointRadius:2.3,pointHoverRadius:5}]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{position:'top',align:'end',labels:{color:'#dce7f1',usePointStyle:true,boxWidth:8}},tooltip:{backgroundColor:'rgba(5,19,34,.94)',titleColor:'#fff',bodyColor:'#dce7f1',borderColor:'rgba(255,255,255,.14)',borderWidth:1,callbacks:{label:c=>c.dataset.label+': '+fmt(c.parsed.y)+' تومان'}}},scales:{x:{grid:{display:false},ticks:{color:'#aebdcd'}},y:{beginAtZero:true,grid:{color:'rgba(255,255,255,.075)'},ticks:{color:'#aebdcd',callback:v=>fmt(v)}}}}});
 })();
 </script>{% endblock %}
