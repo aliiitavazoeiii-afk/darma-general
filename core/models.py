@@ -1,4 +1,5 @@
 from decimal import Decimal
+
 from django.core.validators import MinValueValidator
 from django.db import models
 
@@ -6,18 +7,13 @@ from django.db import models
 class Brand(models.Model):
     name = models.CharField(max_length=50, unique=True)
     active = models.BooleanField(default=True)
-
-    def __str__(self):
-        return self.name
+    def __str__(self): return self.name
 
 
 class Size(models.Model):
     name = models.CharField(max_length=20, unique=True)
     sort_order = models.PositiveSmallIntegerField(default=0)
-
-    def __str__(self):
-        return self.name
-
+    def __str__(self): return self.name
     class Meta:
         ordering = ["sort_order", "id"]
 
@@ -26,9 +22,7 @@ class Color(models.Model):
     name = models.CharField(max_length=50, unique=True)
     code = models.CharField(max_length=10, blank=True)
     active = models.BooleanField(default=True)
-
-    def __str__(self):
-        return self.name
+    def __str__(self): return self.name
 
 
 class ProductCode(models.Model):
@@ -37,19 +31,15 @@ class ProductCode(models.Model):
     pack_qty = models.PositiveIntegerField(default=1)
     active = models.BooleanField(default=True)
     note = models.CharField(max_length=200, blank=True)
-
     class Meta:
         constraints = [models.UniqueConstraint(fields=["brand", "code"], name="uniq_brand_code")]
-
-    def __str__(self):
-        return f"{self.brand} - {self.code}"
+    def __str__(self): return f"{self.brand} - {self.code}"
 
 
 class ProductComposition(models.Model):
     product = models.ForeignKey(ProductCode, on_delete=models.CASCADE, related_name="composition")
     color = models.ForeignKey(Color, on_delete=models.PROTECT)
     qty = models.PositiveIntegerField(default=1)
-
     class Meta:
         constraints = [models.UniqueConstraint(fields=["product", "color"], name="uniq_product_color")]
 
@@ -60,7 +50,6 @@ class ProductSize(models.Model):
     default_sale_price = models.PositiveBigIntegerField(default=0)
     unit_cost = models.PositiveBigIntegerField(default=0)
     active = models.BooleanField(default=True)
-
     class Meta:
         constraints = [models.UniqueConstraint(fields=["product", "size"], name="uniq_product_size")]
 
@@ -70,9 +59,7 @@ class StockLocation(models.Model):
     KHORSHID = "khorshid"
     key = models.CharField(max_length=20, choices=[(HOME, "خانه"), (KHORSHID, "خورشید")], unique=True)
     title = models.CharField(max_length=50)
-
-    def __str__(self):
-        return self.title
+    def __str__(self): return self.title
 
 
 class StockBalance(models.Model):
@@ -81,7 +68,6 @@ class StockBalance(models.Model):
     color = models.ForeignKey(Color, on_delete=models.PROTECT)
     location = models.ForeignKey(StockLocation, on_delete=models.PROTECT)
     qty = models.IntegerField(default=0)
-
     class Meta:
         constraints = [models.UniqueConstraint(fields=["brand", "size", "color", "location"], name="uniq_stock_balance")]
 
@@ -92,7 +78,6 @@ class StockThreshold(models.Model):
     color = models.ForeignKey(Color, on_delete=models.PROTECT)
     home_min = models.PositiveIntegerField(default=0)
     total_min = models.PositiveIntegerField(default=0)
-
     class Meta:
         constraints = [models.UniqueConstraint(fields=["brand", "size", "color"], name="uniq_stock_threshold")]
 
@@ -101,9 +86,7 @@ class SaleDay(models.Model):
     date = models.DateField(unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
-    def __str__(self):
-        return str(self.date)
+    def __str__(self): return str(self.date)
 
 
 class SaleLine(models.Model):
@@ -112,17 +95,12 @@ class SaleLine(models.Model):
     quantity = models.PositiveIntegerField(default=0)
     inventory_applied_quantity = models.PositiveIntegerField(default=0)
     sale_price = models.PositiveBigIntegerField(default=0)
-
     class Meta:
         constraints = [models.UniqueConstraint(fields=["day", "product_size"], name="uniq_day_product_size")]
-
     @property
-    def gross_sales(self):
-        return self.quantity * self.sale_price
-
+    def gross_sales(self): return self.quantity * self.sale_price
     @property
-    def shorts_count(self):
-        return self.quantity * self.product_size.product.pack_qty
+    def shorts_count(self): return self.quantity * self.product_size.product.pack_qty
 
 
 class Replacement(models.Model):
@@ -164,9 +142,7 @@ class Account(models.Model):
     key = models.CharField(max_length=30, unique=True)
     title = models.CharField(max_length=100)
     opening_balance = models.BigIntegerField(default=0)
-
-    def __str__(self):
-        return self.title
+    def __str__(self): return self.title
 
 
 class MoneyMovement(models.Model):
@@ -184,3 +160,6 @@ class MoneyMovement(models.Model):
     affects_capital = models.BooleanField(default=False)
     note = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+
+from .models_final import *  # noqa: F401,F403,E402
