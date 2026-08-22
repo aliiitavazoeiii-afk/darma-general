@@ -1,3 +1,4 @@
+from django.contrib.staticfiles import finders
 from django.core.management.base import BaseCommand, CommandError
 from django.template.loader import get_template
 from django.urls import reverse
@@ -11,6 +12,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         templates = [
             "base.html",
+            "core/_mobile_shell.html",
             "core/dashboard_excel.html",
             "core/report_excel.html",
             "core/_manual_table.html",
@@ -22,6 +24,14 @@ class Command(BaseCommand):
             "core/_sale_saved_final.html",
             "core/daily_report.html",
             "core/inventory_final.html",
+            "core/inventory_operations.html",
+            "core/settings_home.html",
+            "core/settings_catalog.html",
+            "core/settings_products.html",
+            "core/settings_product_form.html",
+            "core/settings_stock.html",
+            "core/settings_finance.html",
+            "core/settings_rules.html",
         ]
         errors = []
         for template_name in templates:
@@ -40,7 +50,14 @@ class Command(BaseCommand):
             "material_report",
             "takvin",
             "inventory",
+            "inventory_operations",
+            "settings_home",
+            "settings_catalog",
             "settings_products",
+            "settings_product_new",
+            "settings_stock",
+            "settings_finance",
+            "settings_rules",
         ]
         for route in simple_routes:
             try:
@@ -56,6 +73,7 @@ class Command(BaseCommand):
             ("shortage_resolve", [1]),
             ("material_block_save", [1]),
             ("material_block_delete", [1]),
+            ("settings_product_edit", [1]),
         ]
         for route, args in parameter_routes:
             try:
@@ -63,6 +81,11 @@ class Command(BaseCommand):
                 self.stdout.write(f"route OK: {route}")
             except Exception as exc:
                 errors.append(f"route {route}: {exc}")
+
+        if not finders.find("core/jalali_picker.js"):
+            errors.append("static file core/jalali_picker.js not found")
+        else:
+            self.stdout.write("static OK: core/jalali_picker.js")
 
         try:
             ExcelManualSetting.objects.count()
