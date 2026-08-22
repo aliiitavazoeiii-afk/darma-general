@@ -1,9 +1,9 @@
 from django.urls import path
 
-from . import daily_views, excel_views, final_views, views
+from . import daily_views, excel_dashboard, excel_takvin, excel_views, final_views, views
 
 urlpatterns = [
-    path("", excel_views.dashboard, name="dashboard"),
+    path("", excel_dashboard.dashboard, name="dashboard"),
     path("sales/", daily_views.sale_calendar, name="sale_start"),
     path("sales/select/<int:jy>/<int:jm>/<int:jd>/", daily_views.select_sale_day, name="select_sale_day"),
     path("sales/<int:day_id>/", final_views.sale_brand, name="sale_brand"),
@@ -17,12 +17,12 @@ urlpatterns = [
     path("material-report/", excel_views.material_report, name="material_report"),
     path("material-report/<int:block_id>/save/", excel_views.material_block_save, name="material_block_save"),
     path("material-report/<int:block_id>/delete/", excel_views.material_block_delete, name="material_block_delete"),
+    path("takvin/", excel_takvin.takvin_excel, name="takvin"),
 
     path("inventory/", final_views.inventory, name="inventory"),
     path("inventory/operations/", final_views.inventory_operations, name="inventory_operations"),
 
-    # نسخه کامل ERP روی شاخه erp-full-v1 محفوظ است. این مسیرها برای سازگاری فعلاً باقی می‌مانند.
-    path("takvin/", final_views.takvin, name="takvin"),
+    # نسخه کامل ERP روی شاخه erp-full-v1 محفوظ است. مسیرهای زیر فقط برای سازگاری قدیمی باقی مانده‌اند.
     path("materials/", final_views.materials, name="materials"),
     path("production/", final_views.production, name="production"),
     path("finance/", final_views.finance, name="finance"),
