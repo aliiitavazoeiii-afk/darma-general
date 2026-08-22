@@ -8,3 +8,26 @@ register = template.Library()
 @register.filter(name="jalali")
 def jalali(value):
     return format_jalali(value)
+
+
+@register.filter(name="groupnum")
+def groupnum(value):
+    try:
+        number = int(round(float(value)))
+    except (TypeError, ValueError):
+        return value
+    sign = "-" if number < 0 else ""
+    s = str(abs(number))
+    parts = []
+    while s:
+        parts.append(s[-3:])
+        s = s[:-3]
+    return sign + " ".join(reversed(parts))
+
+
+@register.filter(name="pct1")
+def pct1(value):
+    try:
+        return f"{float(value):.1f}"
+    except (TypeError, ValueError):
+        return value
