@@ -1,10 +1,10 @@
 from collections import defaultdict
+from datetime import date
 from decimal import Decimal, ROUND_HALF_UP
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
-from django.db.models import Sum
 from django.shortcuts import redirect, render
 
 from .dateutils import format_jalali, parse_jalali_date
@@ -47,8 +47,11 @@ def _decimal(value, default="10"):
 
 def _masters():
     sizes = []
-    for name, default_price in SIZE_DEFAULTS:
-        size, _ = Size.objects.get_or_create(name=name)
+    for order, (name, default_price) in enumerate(SIZE_DEFAULTS):
+        size, created = Size.objects.get_or_create(name=name, defaults={"sort_order": order})
+        if not created and size.sort_order != order:
+            # Do not force unrelated size ordering; this is only a safety default.
+            pass
         sizes.append({"obj": size, "name": name, "default_price": default_price})
     colors = []
     for name in COLOR_NAMES:
@@ -65,14 +68,13 @@ def _clean_note(note):
 
 
 @login_required
-@transaction.atomic
 def takvin_excel(request):
     sizes, colors = _masters()
-    selected_text = request.GET.get("date") or format_jalali(__import__("datetime").date.today())
+    selected_text = request.GET.get("date") or format_jalali(date.today())
     try:
         selected_date = parse_jalali_date(selected_text)
     except ValueError:
-        selected_date = __import__("datetime").date.today()
+        selected_date = date.today()
         selected_text = format_jalali(selected_date)
 
     if request.method == "POST":
@@ -81,7 +83,8 @@ def takvin_excel(request):
             post_date_text = request.POST.get("date") or selected_text
             post_date = parse_jalali_date(post_date_text)
             if action == "delete_day":
-                TakvinPurchase.objects.filter(date=post_date, note__startswith=PREFIX).delete()
+                with transaction.atomic():
+                    TakvinPurchase.objects.filter(date=post_date, note__startswith=PREFIX).delete()
                 messages.success(request, "خرید تکوین این روز حذف شد.")
                 return redirect("takvin")
 
@@ -90,19 +93,29 @@ def takvin_excel(request):
                 raise ValueError("درصد تخفیف باید بین صفر تا ۱۰۰ باشد.")
             user_note = (request.POST.get("note") or "").strip()
             prices = {
-                item["obj"].id: max(0, _int(request.POST.get(f"price_{item['obj'].id}"), item["default_price"]))
+                item["obj"].id: max(
+                    0,
+                    _int(
+                        request.POST.get(f"price_{item['obj'].id}"),
+                        item["default_price"],
+                    ),
+                )
                 for item in sizes
             }
 
-            TakvinPurchase.objects.filter(date=post_date, note__startswith=PREFIX).delete()
-            created = 0
+            pending = []
             for color in colors:
                 for item in sizes:
                     size = item["obj"]
                     qty = max(0, _int(request.POST.get(f"qty_{color.id}_{size.id}")))
-                    if not qty:
-                        continue
-                    list_price = prices[size.id]
+                    if qty:
+                        pending.append((color, size, qty, prices[size.id]))
+            if not pending:
+                raise ValueError("حداقل یک تعداد خرید وارد کن؛ برای پاک‌کردن روز از دکمه حذف استفاده کن.")
+
+            with transaction.atomic():
+                TakvinPurchase.objects.filter(date=post_date, note__startswith=PREFIX).delete()
+                for color, size, qty, list_price in pending:
                     net_price = int(
                         (Decimal(list_price) * (Decimal("1") - discount / Decimal("100"))).quantize(
                             Decimal("1"), rounding=ROUND_HALF_UP
@@ -120,10 +133,10 @@ def takvin_excel(request):
                         note=f"{PREFIX} {user_note}".strip(),
                         applied=True,
                     )
-                    created += 1
-            if not created:
-                raise ValueError("حداقل یک تعداد خرید وارد کن.")
-            messages.success(request, "خرید تکوین ذخیره شد. این ثبت فقط گزارش خرید است و حساب‌ها/موجودی را خودکار تغییر نمی‌دهد.")
+            messages.success(
+                request,
+                "خرید تکوین ذخیره شد. این ثبت فقط گزارش خرید است و حساب‌ها/موجودی را خودکار تغییر نمی‌دهد.",
+            )
             return redirect(f"/takvin/?date={format_jalali(post_date)}")
         except Exception as exc:
             messages.error(request, str(exc))
@@ -131,7 +144,8 @@ def takvin_excel(request):
             try:
                 selected_date = parse_jalali_date(selected_text)
             except ValueError:
-                pass
+                selected_date = date.today()
+                selected_text = format_jalali(selected_date)
 
     existing = list(
         TakvinPurchase.objects.filter(date=selected_date, note__startswith=PREFIX)
@@ -183,19 +197,16 @@ def takvin_excel(request):
     day_before = sum(row.qty * row.list_unit_price for row in existing)
     day_net = sum(row.total_cost for row in existing)
 
-    history_rows = []
     grouped = defaultdict(lambda: {"qty": 0, "before": 0, "net": 0})
-    history_qs = (
-        TakvinPurchase.objects.filter(note__startswith=PREFIX)
-        .order_by("-date", "-id")[:600]
-    )
-    for row in history_qs:
+    for row in TakvinPurchase.objects.filter(note__startswith=PREFIX).order_by("-date", "-id")[:600]:
         data = grouped[row.date]
         data["qty"] += row.qty
         data["before"] += row.qty * row.list_unit_price
         data["net"] += row.total_cost
-    for day, data in sorted(grouped.items(), reverse=True)[:30]:
-        history_rows.append({"date": day, "jalali": format_jalali(day), **data})
+    history_rows = [
+        {"date": day, "jalali": format_jalali(day), **data}
+        for day, data in sorted(grouped.items(), reverse=True)[:30]
+    ]
 
     return render(
         request,
