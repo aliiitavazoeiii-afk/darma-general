@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import daily_views, excel_dashboard, excel_takvin, excel_views, final_views, views
+from . import daily_views, excel_dashboard, excel_sales, excel_takvin, excel_views, final_views, views
 
 urlpatterns = [
     path("", excel_dashboard.dashboard, name="dashboard"),
@@ -9,8 +9,8 @@ urlpatterns = [
     path("sales/<int:day_id>/", final_views.sale_brand, name="sale_brand"),
     path("sales/<int:day_id>/report/", daily_views.daily_report, name="daily_report"),
     path("sales/<int:day_id>/<int:brand_id>/<int:size_id>/", daily_views.sale_size, name="sale_size"),
-    path("sales/save/", final_views.sale_line_save, name="sale_line_save"),
-    path("sales/shortage/<int:shortage_id>/resolve/", final_views.shortage_resolve, name="shortage_resolve"),
+    path("sales/save/", excel_sales.sale_line_save, name="sale_line_save"),
+    path("sales/shortage/<int:shortage_id>/resolve/", excel_sales.shortage_resolve, name="shortage_resolve"),
 
     path("report/", excel_views.report, name="report"),
     path("report/manual/", excel_views.manual_report_action, name="manual_report_action"),
