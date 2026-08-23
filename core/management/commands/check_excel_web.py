@@ -50,6 +50,7 @@ class Command(BaseCommand):
             "material_report",
             "takvin",
             "inventory",
+            "inventory_add_color_model",
             "inventory_operations",
             "settings_home",
             "settings_catalog",
