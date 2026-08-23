@@ -25,8 +25,6 @@ TAKVIN_EXPECTED = {"M": 261, "L": 410, "XL": 311, "XXL": 328}
 DARMA_TOTAL = 14873
 TAKVIN_TOTAL = 1310
 
-# Current valuation basis. It is stored per brand + model/color + size so future
-# models can have their own cost without changing historical/current other models.
 DARMA_COST_BY_SIZE = {"M": 61000, "L": 61000, "XL": 61000, "XXL": 61000, "3XL": 61000, "4XL": 61000}
 TAKVIN_COST_BY_SIZE = {"M": 108000, "L": 126000, "XL": 139500, "XXL": 153000}
 
@@ -57,13 +55,19 @@ class Command(BaseCommand):
 
         def load_brand(brand_name, stock, expected_by_size, expected_total, cost_by_size, include_khorshid=False):
             brand = Brand.objects.get(name=brand_name)
+            model_names = sorted({name for values in stock.values() for name in values.keys()})
             total = 0
-            for size_name, color_values in stock.items():
+
+            for size_name in expected_by_size.keys():
                 size = Size.objects.get(name=size_name)
-                size_total = 0
                 unit_cost = int(cost_by_size.get(size_name, 0))
-                for color_name, qty in color_values.items():
+                size_values = stock.get(size_name, {})
+                size_total = 0
+
+                for color_name in model_names:
+                    qty = int(size_values.get(color_name, 0))
                     color = Color.objects.get(name=color_name)
+
                     StockBalance.objects.update_or_create(
                         brand=brand, size=size, color=color, location=home,
                         defaults={"qty": qty},
@@ -73,10 +77,12 @@ class Command(BaseCommand):
                             brand=brand, size=size, color=color, location=khorshid,
                             defaults={"qty": 0},
                         )
+
                     InventoryModelCost.objects.update_or_create(
                         brand=brand, color=color, size=size,
                         defaults={"unit_cost": unit_cost},
                     )
+
                     size_total += qty
                     total += qty
 
@@ -86,13 +92,21 @@ class Command(BaseCommand):
 
             if total != expected_total:
                 raise CommandError(f"{brand_name} inventory validation failed: {total} != {expected_total}")
-            return total
 
-        darma_total = load_brand(
+            expected_cost_rows = len(model_names) * len(expected_by_size)
+            actual_cost_rows = InventoryModelCost.objects.filter(brand=brand).count()
+            if actual_cost_rows != expected_cost_rows:
+                raise CommandError(
+                    f"{brand_name} cost matrix incomplete: {actual_cost_rows} != {expected_cost_rows}"
+                )
+
+            return total, len(model_names), actual_cost_rows
+
+        darma_total, darma_models, darma_cost_rows = load_brand(
             "دارما", DARMA_STOCK, DARMA_EXPECTED, DARMA_TOTAL,
             DARMA_COST_BY_SIZE, include_khorshid=True,
         )
-        takvin_total = load_brand(
+        takvin_total, takvin_models, takvin_cost_rows = load_brand(
             "تکوین", TAKVIN_STOCK, TAKVIN_EXPECTED, TAKVIN_TOTAL,
             TAKVIN_COST_BY_SIZE, include_khorshid=False,
         )
@@ -102,9 +116,11 @@ class Command(BaseCommand):
         for name, value in DARMA_EXPECTED.items():
             self.stdout.write(f"  Darma {name}: {value}")
         self.stdout.write(self.style.SUCCESS(f"Darma Home total: {darma_total}"))
+        self.stdout.write(self.style.SUCCESS(f"Darma models: {darma_models} | cost rows: {darma_cost_rows}"))
         self.stdout.write(self.style.SUCCESS("Darma Khorshid total: 0"))
         for name, value in TAKVIN_EXPECTED.items():
             self.stdout.write(f"  Takvin {name}: {value}")
         self.stdout.write(self.style.SUCCESS(f"Takvin Home total: {takvin_total}"))
+        self.stdout.write(self.style.SUCCESS(f"Takvin models: {takvin_models} | cost rows: {takvin_cost_rows}"))
         self.stdout.write(self.style.SUCCESS("Inventory valuation costs loaded."))
         self.stdout.write(self.style.WARNING("Negative Darma quantities from the workbook were preserved exactly."))
