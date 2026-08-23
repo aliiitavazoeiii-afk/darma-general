@@ -3,7 +3,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.template.loader import get_template
 from django.urls import reverse
 
-from core.models import ExcelManualRow, ExcelManualSetting, MaterialReportBlock, TakvinPurchase
+from core.models import ExcelManualRow, ExcelManualSetting, InventoryModelCost, MaterialReportBlock, TakvinPurchase
 
 
 class Command(BaseCommand):
@@ -93,6 +93,7 @@ class Command(BaseCommand):
             ExcelManualRow.objects.count()
             MaterialReportBlock.objects.count()
             TakvinPurchase.objects.filter(note__startswith="[excel-web]").count()
+            InventoryModelCost.objects.count()
             self.stdout.write("Excel-Web models OK")
         except Exception as exc:
             errors.append(f"models/database: {exc}")
