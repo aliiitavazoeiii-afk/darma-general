@@ -20,7 +20,7 @@ urlpatterns = [
     path("material-report/<int:block_id>/delete/", excel_views.material_block_delete, name="material_block_delete"),
     path("takvin/", excel_takvin.takvin_excel, name="takvin"),
 
-    path("inventory/", final_views.inventory, name="inventory"),
+    path("inventory/", inventory_views.inventory, name="inventory"),
     path("inventory/color-model/add/", inventory_views.add_color_model, name="inventory_add_color_model"),
     path("inventory/operations/", final_views.inventory_operations, name="inventory_operations"),
 
