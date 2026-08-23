@@ -11,23 +11,19 @@ class Command(BaseCommand):
         for i, name in enumerate(["M", "L", "XL", "XXL", "3XL", "4XL"]):
             Size.objects.get_or_create(name=name, defaults={"sort_order": i})
 
-        # Correct Darma stock color/model catalog, based on the user's inventory workbook.
-        # These are deliberately kept as simple visible names because the inventory page
-        # is color/model x size, just like the workbook.
+        # Union of the real Darma and Takvin model/color catalogs from the user's
+        # inventory workbooks. Brand-specific visibility is controlled by stock rows.
         colors = [
-            ("مشکی", "B"),
-            ("سفید", "W"),
-            ("سرمه ای", "S"),
-            ("صورتی", "P"),
-            ("کرم", "K"),
-            ("قرمز", "R"),
-            ("زرد", "Y"),
-            ("طوسی", "G"),
-            ("راه راه", "STR"),
-            ("راه راه طوسی", "GSTR"),
-            ("برعکس مشکی", "RB"),
-            ("برعکس سفید", "RW"),
-            ("برعکس سرمه ای", "RS"),
+            # shared / Darma
+            ("مشکی", "B"), ("سفید", "W"), ("سرمه ای", "S"), ("صورتی", "P"),
+            ("کرم", "K"), ("قرمز", "R"), ("زرد", "Y"), ("طوسی", "G"),
+            ("راه راه", "STR"), ("راه راه طوسی", "GSTR"),
+            ("برعکس مشکی", "RB"), ("برعکس سفید", "RW"), ("برعکس سرمه ای", "RS"),
+            # Takvin-only models/colors
+            ("طوسی راه راه", "TGSTR"), ("بنفش", "V"), ("چرک روشن", "CR"),
+            ("راه راه بنفش", "VSTR"), ("متفرقه", "MISC"),
+            ("راه راه سفید مشکی", "WBSTR"), ("راه راه زرد", "YSTR"),
+            ("راه راه سفید", "WSTR"), ("راه راه مشکی", "BSTR"),
         ]
         for name, code in colors:
             Color.objects.get_or_create(name=name, defaults={"code": code, "active": True})
@@ -35,11 +31,8 @@ class Command(BaseCommand):
         StockLocation.objects.get_or_create(key="home", defaults={"title": "خانه"})
         StockLocation.objects.get_or_create(key="khorshid", defaults={"title": "انبار خورشید"})
         for key, title in [
-            ("melat", "ملت"),
-            ("mofid", "مفید"),
-            ("digikala", "طلب دیجی‌کالا"),
-            ("pedram", "حساب پدرام"),
-            ("takvin", "بدهی تکوین"),
+            ("melat", "ملت"), ("mofid", "مفید"), ("digikala", "طلب دیجی‌کالا"),
+            ("pedram", "حساب پدرام"), ("takvin", "بدهی تکوین"),
         ]:
             Account.objects.get_or_create(key=key, defaults={"title": title})
 
