@@ -83,10 +83,11 @@ class Command(BaseCommand):
             except Exception as exc:
                 errors.append(f"route {route}: {exc}")
 
-        if not finders.find("core/jalali_picker.js"):
-            errors.append("static file core/jalali_picker.js not found")
-        else:
-            self.stdout.write("static OK: core/jalali_picker.js")
+        for static_name in ["core/jalali_picker.js", "core/ui-polish.css"]:
+            if not finders.find(static_name):
+                errors.append(f"static file {static_name} not found")
+            else:
+                self.stdout.write(f"static OK: {static_name}")
 
         try:
             ExcelManualSetting.objects.count()
