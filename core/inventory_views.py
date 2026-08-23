@@ -24,9 +24,7 @@ def inventory(request):
 
     if brand:
         color_ids = set(StockBalance.objects.filter(brand=brand).values_list("color_id", flat=True))
-        color_ids.update(
-            ProductComposition.objects.filter(product__brand=brand).values_list("color_id", flat=True)
-        )
+        color_ids.update(ProductComposition.objects.filter(product__brand=brand).values_list("color_id", flat=True))
         colors = Color.objects.filter(active=True, id__in=color_ids).order_by("id")
 
         for color in colors:
@@ -38,12 +36,7 @@ def inventory(request):
                 cells.append({"size": size, "home": home, "kh": kh, "total": home + kh})
             rows.append({"color": color, "cells": cells})
 
-    return render(request, "core/inventory_final.html", {
-        "brands": brands,
-        "brand": brand,
-        "sizes": sizes,
-        "rows": rows,
-    })
+    return render(request, "core/inventory_final.html", {"brands": brands, "brand": brand, "sizes": sizes, "rows": rows})
 
 
 @login_required
@@ -59,10 +52,7 @@ def add_color_model(request):
     elif not brand:
         messages.error(request, "برند معتبر نیست.")
     else:
-        color, created = Color.objects.get_or_create(
-            name=name,
-            defaults={"code": code, "active": True},
-        )
+        color, created = Color.objects.get_or_create(name=name, defaults={"code": code, "active": True})
         changed = False
         if code and color.code != code:
             color.code = code
@@ -73,15 +63,12 @@ def add_color_model(request):
         if changed:
             color.save(update_fields=["code", "active"])
 
-        # Zero stock rows associate this color/model with this brand, so the inventory
-        # table becomes brand-specific even though the legacy Color table itself is global.
-        locations = list(StockLocation.objects.all())
+        home = StockLocation.objects.get(key=StockLocation.HOME)
+        khorshid = StockLocation.objects.get(key=StockLocation.KHORSHID)
         for size in _sizes_for_brand(brand):
-            for location in locations:
-                StockBalance.objects.get_or_create(
-                    brand=brand, size=size, color=color, location=location,
-                    defaults={"qty": 0},
-                )
+            StockBalance.objects.get_or_create(brand=brand, size=size, color=color, location=home, defaults={"qty": 0})
+            if brand.name == "دارما":
+                StockBalance.objects.get_or_create(brand=brand, size=size, color=color, location=khorshid, defaults={"qty": 0})
 
         if created:
             messages.success(request, f"«{name}» اضافه شد و از همین حالا در موجودی {brand.name} نمایش داده می‌شود.")
