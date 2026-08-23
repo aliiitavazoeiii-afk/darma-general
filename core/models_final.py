@@ -246,3 +246,20 @@ class SaleShortage(models.Model):
     resolved = models.BooleanField(default=False)
     target_color = models.ForeignKey(Color, on_delete=models.PROTECT, null=True, blank=True, related_name="sale_shortage_targets")
     created_at = models.DateTimeField(auto_now_add=True)
+
+
+class InventoryModelCost(models.Model):
+    brand = models.ForeignKey(Brand, on_delete=models.CASCADE, related_name="inventory_costs")
+    color = models.ForeignKey(Color, on_delete=models.CASCADE, related_name="inventory_costs")
+    size = models.ForeignKey(Size, on_delete=models.CASCADE, related_name="inventory_costs")
+    unit_cost = models.PositiveBigIntegerField(default=0)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["brand", "color", "size"], name="uniq_inventory_model_cost")
+        ]
+        ordering = ["brand_id", "color_id", "size_id"]
+
+    def __str__(self):
+        return f"{self.brand} / {self.color} / {self.size}: {self.unit_cost}"
