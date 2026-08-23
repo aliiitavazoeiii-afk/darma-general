@@ -2,7 +2,7 @@ from django.core.management import call_command
 from django.core.management.base import BaseCommand, CommandError
 from django.db import connection, transaction
 
-from core.models import Brand, Color, Size, StockBalance, StockLocation
+from core.models import Brand, Color, InventoryModelCost, Size, StockBalance, StockLocation
 
 
 DARMA_STOCK = {
@@ -25,9 +25,14 @@ TAKVIN_EXPECTED = {"M": 261, "L": 410, "XL": 311, "XXL": 328}
 DARMA_TOTAL = 14873
 TAKVIN_TOTAL = 1310
 
+# Current valuation basis. It is stored per brand + model/color + size so future
+# models can have their own cost without changing historical/current other models.
+DARMA_COST_BY_SIZE = {"M": 61000, "L": 61000, "XL": 61000, "XXL": 61000, "3XL": 61000, "4XL": 61000}
+TAKVIN_COST_BY_SIZE = {"M": 108000, "L": 126000, "XL": 139500, "XXL": 153000}
+
 
 class Command(BaseCommand):
-    help = "Delete all business data, rebuild base masters, and load the supplied Darma + Takvin opening stock into Home."
+    help = "Delete all business data, rebuild base masters, and load supplied Darma + Takvin opening stock into Home."
 
     def add_arguments(self, parser):
         parser.add_argument("--yes", action="store_true", help="Required acknowledgement for destructive reset")
@@ -50,12 +55,13 @@ class Command(BaseCommand):
         home = StockLocation.objects.get(key=StockLocation.HOME)
         khorshid = StockLocation.objects.get(key=StockLocation.KHORSHID)
 
-        def load_brand(brand_name, stock, expected_by_size, expected_total, include_khorshid=False):
+        def load_brand(brand_name, stock, expected_by_size, expected_total, cost_by_size, include_khorshid=False):
             brand = Brand.objects.get(name=brand_name)
             total = 0
             for size_name, color_values in stock.items():
                 size = Size.objects.get(name=size_name)
                 size_total = 0
+                unit_cost = int(cost_by_size.get(size_name, 0))
                 for color_name, qty in color_values.items():
                     color = Color.objects.get(name=color_name)
                     StockBalance.objects.update_or_create(
@@ -67,17 +73,29 @@ class Command(BaseCommand):
                             brand=brand, size=size, color=color, location=khorshid,
                             defaults={"qty": 0},
                         )
+                    InventoryModelCost.objects.update_or_create(
+                        brand=brand, color=color, size=size,
+                        defaults={"unit_cost": unit_cost},
+                    )
                     size_total += qty
                     total += qty
+
                 expected = expected_by_size[size_name]
                 if size_total != expected:
                     raise CommandError(f"{brand_name} inventory validation failed for {size_name}: {size_total} != {expected}")
+
             if total != expected_total:
                 raise CommandError(f"{brand_name} inventory validation failed: {total} != {expected_total}")
             return total
 
-        darma_total = load_brand("دارما", DARMA_STOCK, DARMA_EXPECTED, DARMA_TOTAL, include_khorshid=True)
-        takvin_total = load_brand("تکوین", TAKVIN_STOCK, TAKVIN_EXPECTED, TAKVIN_TOTAL, include_khorshid=False)
+        darma_total = load_brand(
+            "دارما", DARMA_STOCK, DARMA_EXPECTED, DARMA_TOTAL,
+            DARMA_COST_BY_SIZE, include_khorshid=True,
+        )
+        takvin_total = load_brand(
+            "تکوین", TAKVIN_STOCK, TAKVIN_EXPECTED, TAKVIN_TOTAL,
+            TAKVIN_COST_BY_SIZE, include_khorshid=False,
+        )
 
         self.stdout.write(self.style.SUCCESS("Business data reset complete."))
         self.stdout.write(self.style.SUCCESS("Darma + Takvin opening inventory loaded into Home."))
@@ -88,4 +106,5 @@ class Command(BaseCommand):
         for name, value in TAKVIN_EXPECTED.items():
             self.stdout.write(f"  Takvin {name}: {value}")
         self.stdout.write(self.style.SUCCESS(f"Takvin Home total: {takvin_total}"))
+        self.stdout.write(self.style.SUCCESS("Inventory valuation costs loaded."))
         self.stdout.write(self.style.WARNING("Negative Darma quantities from the workbook were preserved exactly."))
