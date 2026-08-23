@@ -8,14 +8,58 @@ class Command(BaseCommand):
     def handle(self, *args, **kwargs):
         Brand.objects.get_or_create(name="تکوین")
         Brand.objects.get_or_create(name="دارما")
-        for i, name in enumerate(["M", "L", "XL", "XXL", "3XL", "4XL"]): Size.objects.get_or_create(name=name, defaults={"sort_order": i})
-        for name, code in [("مشکی","B"),("سفید","W"),("سرمه‌ای","S"),("صورتی","P"),("کرم","K"),("قرمز","R"),("طوسی","G"),("راه راه","STR")]: Color.objects.get_or_create(name=name, defaults={"code": code})
-        StockLocation.objects.get_or_create(key="home", defaults={"title":"خانه"})
-        StockLocation.objects.get_or_create(key="khorshid", defaults={"title":"انبار خورشید"})
-        for key,title in [("melat","ملت"),("mofid","مفید"),("digikala","طلب دیجی‌کالا"),("pedram","حساب پدرام"),("takvin","بدهی تکوین")]: Account.objects.get_or_create(key=key,defaults={"title":title})
-        defaults={"digikala_commission_percent":("24","کمیسیون دیجی‌کالا (%)"),"digikala_processing_percent":("7","پردازش و ارسال (%)"),"digikala_processing_floor":("36000","حداقل پردازش و ارسال"),"digikala_vat_percent":("10","مالیات ارزش افزوده (%)"),"digikala_floor_taxable_part":("18000","بخش مشمول مالیات در کف پردازش"),"pedram_dozen_wage":("110000","مزد هر جین پدرام"),"darma_accounting_unit_cost":("61000","بهای محاسباتی هر شورت دارما"),"takvin_discount_percent":("10","تخفیف خرید تکوین (%)")}
-        for key,(value,label) in defaults.items(): AppSetting.objects.get_or_create(key=key,defaults={"value":value,"label":label})
-        for name in ["16cm","25cm"]: ElasticBalance.objects.get_or_create(name=name)
-        for name in ["خوراک","خودرو و بنزین","دفتر و انبار","اینترنت و ارتباطات","خرید شخصی","بسته‌بندی و حمل","سایر"]: ExpenseCategory.objects.get_or_create(name=name)
-        ProductSize.objects.filter(product__brand__name="تکوین",size__name__in=["3XL","4XL"]).update(active=False)
+        for i, name in enumerate(["M", "L", "XL", "XXL", "3XL", "4XL"]):
+            Size.objects.get_or_create(name=name, defaults={"sort_order": i})
+
+        # Correct Darma stock color/model catalog, based on the user's inventory workbook.
+        # These are deliberately kept as simple visible names because the inventory page
+        # is color/model x size, just like the workbook.
+        colors = [
+            ("مشکی", "B"),
+            ("سفید", "W"),
+            ("سرمه ای", "S"),
+            ("صورتی", "P"),
+            ("کرم", "K"),
+            ("قرمز", "R"),
+            ("زرد", "Y"),
+            ("طوسی", "G"),
+            ("راه راه", "STR"),
+            ("راه راه طوسی", "GSTR"),
+            ("برعکس مشکی", "RB"),
+            ("برعکس سفید", "RW"),
+            ("برعکس سرمه ای", "RS"),
+        ]
+        for name, code in colors:
+            Color.objects.get_or_create(name=name, defaults={"code": code, "active": True})
+
+        StockLocation.objects.get_or_create(key="home", defaults={"title": "خانه"})
+        StockLocation.objects.get_or_create(key="khorshid", defaults={"title": "انبار خورشید"})
+        for key, title in [
+            ("melat", "ملت"),
+            ("mofid", "مفید"),
+            ("digikala", "طلب دیجی‌کالا"),
+            ("pedram", "حساب پدرام"),
+            ("takvin", "بدهی تکوین"),
+        ]:
+            Account.objects.get_or_create(key=key, defaults={"title": title})
+
+        defaults = {
+            "digikala_commission_percent": ("24", "کمیسیون دیجی‌کالا (%)"),
+            "digikala_processing_percent": ("7", "پردازش و ارسال (%)"),
+            "digikala_processing_floor": ("36000", "حداقل پردازش و ارسال"),
+            "digikala_vat_percent": ("10", "مالیات ارزش افزوده (%)"),
+            "digikala_floor_taxable_part": ("18000", "بخش مشمول مالیات در کف پردازش"),
+            "pedram_dozen_wage": ("110000", "مزد هر جین پدرام"),
+            "darma_accounting_unit_cost": ("61000", "بهای محاسباتی هر شورت دارما"),
+            "takvin_discount_percent": ("10", "تخفیف خرید تکوین (%)"),
+        }
+        for key, (value, label) in defaults.items():
+            AppSetting.objects.get_or_create(key=key, defaults={"value": value, "label": label})
+
+        for name in ["16cm", "25cm"]:
+            ElasticBalance.objects.get_or_create(name=name)
+        for name in ["خوراک", "خودرو و بنزین", "دفتر و انبار", "اینترنت و ارتباطات", "خرید شخصی", "بسته‌بندی و حمل", "سایر"]:
+            ExpenseCategory.objects.get_or_create(name=name)
+
+        ProductSize.objects.filter(product__brand__name="تکوین", size__name__in=["3XL", "4XL"]).update(active=False)
         self.stdout.write(self.style.SUCCESS("Base ERP data ready"))
