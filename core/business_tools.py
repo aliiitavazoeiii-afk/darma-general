@@ -4,7 +4,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.db.models import Sum
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from .dateutils import format_jalali, parse_jalali_date
@@ -22,12 +22,7 @@ def _mellat_row(create=True):
     if not create:
         return None
     order = qs.aggregate(v=Sum("sort_order"))["v"] or 0
-    return ExcelManualRow.objects.create(
-        section=ExcelManualRow.ACCOUNTS,
-        title="ملت",
-        amount=0,
-        sort_order=order + 1,
-    )
+    return ExcelManualRow.objects.create(section=ExcelManualRow.ACCOUNTS, title="ملت", amount=0, sort_order=order + 1)
 
 
 def mellat_balance():
@@ -42,12 +37,16 @@ def tailor_balance():
 @login_required
 def payments(request):
     rows = BusinessPayment.objects.all()[:100]
+    totals = {key: 0 for key, _ in BusinessPayment.PAYEE_CHOICES}
+    for row in BusinessPayment.objects.values("payee").annotate(v=Sum("amount")):
+        totals[row["payee"]] = int(row["v"] or 0)
     return render(request, "core/payments.html", {
         "rows": rows,
         "today_j": format_jalali(date.today()),
         "mellat_balance": mellat_balance(),
         "tailor_balance": tailor_balance(),
         "payees": BusinessPayment.PAYEE_CHOICES,
+        "payee_totals": totals,
     })
 
 
@@ -63,28 +62,47 @@ def payment_add(request):
             raise ValueError("دریافت‌کننده پرداخت معتبر نیست.")
         if amount <= 0:
             raise ValueError("مبلغ پرداخت باید بیشتر از صفر باشد.")
-
         with transaction.atomic():
             row = _mellat_row(create=True)
             row.amount = int(row.amount or 0) - amount
             row.save(update_fields=["amount", "updated_at"])
-
-            payment = BusinessPayment.objects.create(
-                date=payment_date,
-                payee=payee,
-                amount=amount,
-                note=note,
-            )
-
+            payment = BusinessPayment.objects.create(date=payment_date, payee=payee, amount=amount, note=note)
             if payee == BusinessPayment.TAILOR:
                 TailorBalanceEntry.objects.create(
-                    date=payment_date,
-                    delta=amount,
-                    title="پرداخت به خیاط",
-                    reference=f"payment:{payment.id}",
+                    date=payment_date, delta=amount, title="پرداخت به خیاط", reference=f"payment:{payment.id}"
                 )
-
         messages.success(request, "پرداخت ثبت شد و از موجودی ملت کم شد.")
+    except Exception as exc:
+        messages.error(request, str(exc))
+    return redirect("payments")
+
+
+@login_required
+@require_POST
+def payment_delete(request, payment_id):
+    payment = get_object_or_404(BusinessPayment, id=payment_id)
+    try:
+        with transaction.atomic():
+            row = _mellat_row(create=True)
+            row.amount = int(row.amount or 0) + int(payment.amount or 0)
+            row.save(update_fields=["amount", "updated_at"])
+            if payment.payee == BusinessPayment.TAILOR:
+                TailorBalanceEntry.objects.filter(reference=f"payment:{payment.id}").delete()
+            payment.delete()
+        messages.success(request, "پرداخت حذف شد و اثر مالی آن برگشت.")
+    except Exception as exc:
+        messages.error(request, str(exc))
+    return redirect("payments")
+
+
+@login_required
+@require_POST
+def mellat_set(request):
+    try:
+        row = _mellat_row(create=True)
+        row.amount = _int(request.POST.get("amount"))
+        row.save(update_fields=["amount", "updated_at"])
+        messages.success(request, "موجودی ملت اصلاح شد.")
     except Exception as exc:
         messages.error(request, str(exc))
     return redirect("payments")
@@ -100,10 +118,9 @@ def tailor_adjust(request):
             raise ValueError("مبلغ باید بیشتر از صفر باشد.")
         if mode not in {"receivable", "payable"}:
             raise ValueError("نوع مانده نامعتبر است.")
-        delta = amount if mode == "receivable" else -amount
         TailorBalanceEntry.objects.create(
             date=date.today(),
-            delta=delta,
+            delta=amount if mode == "receivable" else -amount,
             title="اصلاح دستی مانده خیاط",
             reference="manual-adjust",
         )
@@ -111,6 +128,14 @@ def tailor_adjust(request):
     except Exception as exc:
         messages.error(request, str(exc))
     return redirect("payments")
+
+
+@login_required
+def financial_summary(request):
+    return render(request, "core/_financial_summary_extra.html", {
+        "mellat_balance": mellat_balance(),
+        "tailor_balance": tailor_balance(),
+    })
 
 
 @login_required
