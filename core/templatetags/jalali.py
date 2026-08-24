@@ -1,3 +1,5 @@
+from decimal import Decimal, InvalidOperation
+
 from django import template
 
 from core.dateutils import format_jalali
@@ -23,6 +25,19 @@ def groupnum(value):
         parts.append(s[-3:])
         s = s[:-3]
     return sign + "٬".join(reversed(parts))
+
+
+@register.filter(name="qtynum")
+def qtynum(value):
+    """Show kg/quantity as 100 or 98.52, never as 100,000 and never grouped."""
+    try:
+        number = Decimal(str(value))
+    except (InvalidOperation, TypeError, ValueError):
+        return value
+    text = format(number, "f")
+    if "." in text:
+        text = text.rstrip("0").rstrip(".")
+    return text or "0"
 
 
 @register.filter(name="pct1")
