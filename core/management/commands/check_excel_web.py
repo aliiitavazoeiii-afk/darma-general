@@ -4,15 +4,9 @@ from django.template.loader import get_template
 from django.urls import reverse
 
 from core.models import (
-    BusinessPayment,
-    ExcelManualRow,
-    ExcelManualSetting,
-    InventoryModelCost,
-    MaterialReportBlock,
-    MaterialReportConsumption,
-    RawMaterialStock,
-    TailorBalanceEntry,
-    TakvinPurchase,
+    BusinessPayment, ExcelManualRow, ExcelManualSetting, InventoryModelCost,
+    MaterialReportBlock, MaterialReportConsumption, RawMaterialStock,
+    TailorBalanceEntry, TakvinPurchase,
 )
 
 
@@ -21,34 +15,16 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         templates = [
-            "base.html",
-            "core/_mobile_shell.html",
-            "core/dashboard_excel.html",
-            "core/report_excel_v2.html",
-            "core/report_excel_v3.html",
-            "core/_manual_table.html",
-            "core/_raw_fabric_table.html",
-            "core/_raw_elastic_table.html",
-            "core/_raw_material_panel_v3.html",
-            "core/_financial_summary_extra.html",
-            "core/payments.html",
-            "core/calculator.html",
-            "core/_calculator_result.html",
-            "core/material_report.html",
-            "core/takvin_excel.html",
-            "core/sale_calendar.html",
-            "core/sale_brand_final.html",
-            "core/sale_size.html",
-            "core/_sale_saved_final.html",
-            "core/daily_report.html",
-            "core/inventory_final.html",
-            "core/inventory_operations.html",
-            "core/settings_home.html",
-            "core/settings_catalog.html",
-            "core/settings_products.html",
-            "core/settings_product_form.html",
-            "core/settings_stock.html",
-            "core/settings_finance.html",
+            "base.html", "core/_mobile_shell.html", "core/dashboard_excel.html",
+            "core/report_excel_v2.html", "core/report_excel_v3.html", "core/report_excel_v5.html",
+            "core/_manual_table.html", "core/_raw_fabric_table.html", "core/_raw_elastic_table.html",
+            "core/_raw_material_panel_v3.html", "core/_financial_summary_extra.html",
+            "core/payments.html", "core/calculator.html", "core/_calculator_result.html",
+            "core/material_report.html", "core/takvin_excel.html", "core/sale_calendar.html",
+            "core/sale_brand_final.html", "core/sale_size.html", "core/_sale_saved_final.html",
+            "core/daily_report.html", "core/inventory_final.html", "core/inventory_operations.html",
+            "core/settings_home.html", "core/settings_catalog.html", "core/settings_products.html",
+            "core/settings_product_form.html", "core/settings_stock.html", "core/settings_finance.html",
             "core/settings_rules.html",
         ]
         errors = []
@@ -62,9 +38,9 @@ class Command(BaseCommand):
         simple_routes = [
             "dashboard", "sale_start", "sale_line_save", "report", "manual_report_action",
             "financial_summary", "material_report", "takvin", "inventory", "inventory_add_color_model",
-            "inventory_operations", "payments", "payment_add", "mellat_set",
-            "calculator", "calculator_quote", "settings_home", "settings_catalog", "settings_products",
-            "settings_product_new", "settings_stock", "settings_finance", "settings_rules",
+            "inventory_operations", "payments", "payment_add", "mellat_set", "calculator", "calculator_quote",
+            "settings_home", "settings_catalog", "settings_products", "settings_product_new",
+            "settings_stock", "settings_finance", "settings_rules",
         ]
         for route in simple_routes:
             try:
@@ -87,7 +63,7 @@ class Command(BaseCommand):
 
         for static_name in [
             "core/jalali_picker.js", "core/ui-polish.css", "core/number_format.js",
-            "core/raw_materials_v3.js",
+            "core/raw_materials_v3.js", "core/material_report_v5.js",
         ]:
             if not finders.find(static_name):
                 errors.append(f"static file {static_name} not found")
@@ -95,15 +71,9 @@ class Command(BaseCommand):
                 self.stdout.write(f"static OK: {static_name}")
 
         try:
-            ExcelManualSetting.objects.count()
-            ExcelManualRow.objects.count()
-            MaterialReportBlock.objects.count()
-            MaterialReportConsumption.objects.count()
-            TakvinPurchase.objects.filter(note__startswith="[excel-web]").count()
-            InventoryModelCost.objects.count()
-            RawMaterialStock.objects.count()
-            BusinessPayment.objects.count()
-            TailorBalanceEntry.objects.count()
+            ExcelManualSetting.objects.count(); ExcelManualRow.objects.count(); MaterialReportBlock.objects.count()
+            MaterialReportConsumption.objects.count(); TakvinPurchase.objects.filter(note__startswith="[excel-web]").count()
+            InventoryModelCost.objects.count(); RawMaterialStock.objects.count(); BusinessPayment.objects.count(); TailorBalanceEntry.objects.count()
             if getattr(RawMaterialStock, "DEPOT", None) != "depot":
                 raise RuntimeError("RawMaterialStock depot location is not active")
             self.stdout.write("Excel-Web models OK")
@@ -114,5 +84,4 @@ class Command(BaseCommand):
             for error in errors:
                 self.stderr.write(self.style.ERROR(error))
             raise CommandError("Excel-Web preflight failed")
-
         self.stdout.write(self.style.SUCCESS("Excel-Web preflight passed"))
