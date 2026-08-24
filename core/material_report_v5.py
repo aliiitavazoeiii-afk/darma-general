@@ -1,4 +1,5 @@
 from copy import deepcopy
+from decimal import Decimal, ROUND_HALF_UP
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -11,7 +12,7 @@ from .excel_views import OUTPUT_MODELS, OUTPUT_SIZES, RAW_COLORS, RAW_FIELDS, _b
 from .material_receipt_sync import reverse_report_consumption, sync_report_consumption
 from .models import AppSetting, Brand, Color, InventoryModelCost, MaterialReportBlock, Size, StockBalance, StockLocation
 
-DEFAULT_SEWING_WAGE = 110000
+DEFAULT_DOZEN_WAGE = 110000
 
 
 def _norm(value):
@@ -25,9 +26,14 @@ def _int(value):
         return 0
 
 
-def _wage_rate():
-    obj, _ = AppSetting.objects.get_or_create(key="sewing_wage_per_piece", defaults={"value": str(DEFAULT_SEWING_WAGE), "label": "مزد دوخت هر عدد"})
-    return max(0, _int(obj.value) or DEFAULT_SEWING_WAGE)
+def _dozen_wage():
+    obj, _ = AppSetting.objects.get_or_create(key="pedram_dozen_wage", defaults={"value": str(DEFAULT_DOZEN_WAGE), "label": "مزد هر جین پدرام"})
+    return max(0, _int(obj.value) or DEFAULT_DOZEN_WAGE)
+
+
+def _wage_for_pieces(pieces, dozen_wage):
+    pieces = max(0, _int(pieces))
+    return int((Decimal(pieces) * Decimal(dozen_wage) / Decimal(12)).quantize(Decimal("1"), rounding=ROUND_HALF_UP))
 
 
 def _output_total(output_data):
@@ -67,14 +73,14 @@ def _sync_finished_stock(old_output, new_output):
             InventoryModelCost.objects.get_or_create(brand=brand, color=color, size=size, defaults={"unit_cost": 61000})
 
 
-def _parse_input(request, wage_rate):
+def _parse_input(request, dozen_wage):
     data = {}
     for color_key, _ in RAW_COLORS:
         data[color_key] = {}
         for field_key, _, _ in RAW_FIELDS:
             data[color_key][field_key] = (request.POST.get(f"in_{color_key}_{field_key}") or "").strip()
         cut = max(0, _int(data[color_key].get("cut")))
-        data[color_key]["wage"] = str(cut * wage_rate) if cut else ""
+        data[color_key]["wage"] = str(_wage_for_pieces(cut, dozen_wage)) if cut else ""
     return data
 
 
@@ -103,7 +109,7 @@ def material_report(request):
     blocks = [_material_block_view(obj) for obj in MaterialReportBlock.objects.all()[:40]]
     return render(request, "core/material_report.html", {
         "blocks": blocks, "raw_colors": RAW_COLORS, "output_sizes": OUTPUT_SIZES,
-        "today_j": _today_jalali(), "sewing_wage_rate": _wage_rate(),
+        "today_j": _today_jalali(), "sewing_wage_rate": _dozen_wage(),
     })
 
 
@@ -114,17 +120,17 @@ def material_block_save(request, block_id):
     try:
         with transaction.atomic():
             old_output = deepcopy(block.output_data or {})
-            wage_rate = _wage_rate()
+            dozen_wage = _dozen_wage()
             block.date = parse_jalali_date(request.POST.get("date") or format_jalali(block.date))
             block.title = (request.POST.get("title") or "").strip()
             block.note = (request.POST.get("note") or "").strip()
-            block.input_data = _parse_input(request, wage_rate)
+            block.input_data = _parse_input(request, dozen_wage)
             block.output_data = _parse_output(request)
-            block.delivery_wage = _output_total(block.output_data) * wage_rate
+            block.delivery_wage = _wage_for_pieces(_output_total(block.output_data), dozen_wage)
             _sync_finished_stock(old_output, block.output_data)
             block.save()
             sync_report_consumption(block)
-        messages.success(request, "گزارش ذخیره شد؛ مزدها محاسبه و تحویل کالا به موجودی دارما اضافه شد.")
+        messages.success(request, "گزارش ذخیره شد؛ مزد جینی محاسبه و تحویل کالا به موجودی دارما اضافه شد.")
     except Exception as exc:
         messages.error(request, f"ذخیره انجام نشد: {exc}")
     return redirect(f"/material-report/#block-{block.id}")
