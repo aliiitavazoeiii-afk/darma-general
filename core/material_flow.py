@@ -23,6 +23,8 @@ COLOR_LABELS = {
     "stripe": "راه راه",
 }
 
+OUTPUT_SIZE_KEYS = ["m", "l", "xl", "xxl", "3xl", "4xl"]
+
 
 def q(value):
     try:
@@ -43,24 +45,14 @@ def _weighted_price(old_qty, old_price, add_qty, add_price):
 
 def _get_or_create_aggregate(kind, location, material_key, title, variant="", unit="کیلو", unit_price=0):
     row = RawMaterialStock.objects.filter(
-        active=True,
-        kind=kind,
-        location=location,
-        material_key=material_key,
-        variant=variant,
-        title=title,
+        active=True, kind=kind, location=location, material_key=material_key,
+        variant=variant, title=title,
     ).order_by("id").first()
     if row:
         return row
     return RawMaterialStock.objects.create(
-        kind=kind,
-        location=location,
-        material_key=material_key,
-        variant=variant,
-        title=title,
-        quantity=Decimal("0"),
-        unit_price=int(unit_price or 0),
-        unit=unit or "کیلو",
+        kind=kind, location=location, material_key=material_key, variant=variant,
+        title=title, quantity=Decimal("0"), unit_price=int(unit_price or 0), unit=unit or "کیلو",
     )
 
 
@@ -70,20 +62,11 @@ def add_warehouse_stock(*, kind, material_key, title, quantity, unit_price, vari
     if quantity <= 0:
         raise ValueError("مقدار باید بیشتر از صفر باشد.")
     unit_price = int(unit_price or 0)
-
     if kind == FABRIC:
         return RawMaterialStock.objects.create(
-            kind=kind,
-            location=WAREHOUSE,
-            material_key=material_key,
-            variant="",
-            title=title,
-            quantity=quantity,
-            unit_price=unit_price,
-            unit=unit or "کیلو",
-            note=note,
+            kind=kind, location=WAREHOUSE, material_key=material_key, variant="",
+            title=title, quantity=quantity, unit_price=unit_price, unit=unit or "کیلو", note=note,
         )
-
     row = _get_or_create_aggregate(kind, WAREHOUSE, material_key, title, variant, unit, unit_price)
     row.unit_price = _weighted_price(q(row.quantity), row.unit_price, quantity, unit_price)
     row.quantity = q(row.quantity) + quantity
@@ -103,41 +86,41 @@ def transfer_fabric_to_tailor(source_id, quantity):
         raise ValueError("وزن انتقال باید بیشتر از صفر باشد.")
     if q(source.quantity) < quantity:
         raise ValueError("وزن انتقال از موجودی انبار بیشتر است.")
-
     source.quantity = q(source.quantity) - quantity
     source.save(update_fields=["quantity", "updated_at"])
-    target = RawMaterialStock.objects.create(
-        kind=FABRIC,
-        location=TAILOR,
-        material_key=source.material_key,
-        variant="",
-        title=source.title,
-        quantity=quantity,
-        unit_price=source.unit_price,
-        unit=source.unit,
+    return RawMaterialStock.objects.create(
+        kind=FABRIC, location=TAILOR, material_key=source.material_key, variant="",
+        title=source.title, quantity=quantity, unit_price=source.unit_price, unit=source.unit,
         note=f"انتقال از انبار / ردیف {source.id}",
     )
-    return target
 
 
 @transaction.atomic
 def transfer_elastic_to_tailor(material_key, title, qty16=0, qty25=0):
-    moved = []
-    for variant, quantity in (("16", q(qty16)), ("25", q(qty25))):
+    requested = [("16", q(qty16)), ("25", q(qty25))]
+    if not any(amount > 0 for _, amount in requested):
+        raise ValueError("حداقل یکی از مقادیر کش 16 یا 25 را وارد کن.")
+
+    # Validate all requested variants before changing either one.
+    sources = {}
+    for variant, quantity in requested:
         if quantity <= 0:
             continue
         source = RawMaterialStock.objects.select_for_update().filter(
-            active=True,
-            kind=ELASTIC,
-            location=WAREHOUSE,
-            material_key=material_key,
-            variant=variant,
+            active=True, kind=ELASTIC, location=WAREHOUSE,
+            material_key=material_key, variant=variant,
         ).order_by("id").first()
         if not source or q(source.quantity) < quantity:
             raise ValueError(f"موجودی کش {variant} این رنگ در انبار کافی نیست.")
+        sources[variant] = source
+
+    moved = []
+    for variant, quantity in requested:
+        if quantity <= 0:
+            continue
+        source = sources[variant]
         source.quantity = q(source.quantity) - quantity
         source.save(update_fields=["quantity", "updated_at"])
-
         target = _get_or_create_aggregate(
             ELASTIC, TAILOR, material_key, title, variant, source.unit, source.unit_price
         )
@@ -145,65 +128,59 @@ def transfer_elastic_to_tailor(material_key, title, qty16=0, qty25=0):
         target.quantity = q(target.quantity) + quantity
         target.save()
         moved.append(target)
-    if not moved:
-        raise ValueError("حداقل یکی از مقادیر کش 16 یا 25 را وارد کن.")
     return moved
 
 
 def _consume_rows(kind, material_key, variant, delta):
-    """Apply positive delta as consumption from tailor; negative delta returns stock."""
+    """Positive delta consumes tailor stock; negative delta reverses prior consumption."""
     delta = q(delta)
     if delta == 0:
         return
-
-    rows = list(
-        RawMaterialStock.objects.select_for_update().filter(
-            active=True,
-            kind=kind,
-            location=TAILOR,
-            material_key=material_key,
-            variant=variant,
-        ).order_by("id")
-    )
+    rows = list(RawMaterialStock.objects.select_for_update().filter(
+        active=True, kind=kind, location=TAILOR,
+        material_key=material_key, variant=variant,
+    ).order_by("id"))
     title = COLOR_LABELS.get(material_key, material_key or "نامشخص")
 
     if delta > 0:
+        available_total = sum((max(q(row.quantity), Decimal("0")) for row in rows), Decimal("0"))
+        if available_total < delta:
+            name = f"{title} / کش {variant}" if kind == ELASTIC else f"پارچه {title}"
+            raise ValueError(f"موجودی {name} نزد خیاط کافی نیست؛ موجود {available_total} کیلو، مصرف ثبت‌شده {delta} کیلو.")
         remaining = delta
-        last_price = 0
         for row in rows:
             available = max(q(row.quantity), Decimal("0"))
             if available <= 0:
                 continue
             take = min(available, remaining)
             row.quantity = q(row.quantity) - take
-            last_price = row.unit_price
             row.save(update_fields=["quantity", "updated_at"])
             remaining -= take
             if remaining <= 0:
                 break
-        if remaining > 0:
-            shortage = _get_or_create_aggregate(
-                kind, TAILOR, material_key, title, variant, "کیلو", last_price
-            )
-            shortage.quantity = q(shortage.quantity) - remaining
-            shortage.save(update_fields=["quantity", "updated_at"])
     else:
         amount = -delta
-        target = rows[0] if rows else _get_or_create_aggregate(
-            kind, TAILOR, material_key, title, variant, "کیلو", 0
-        )
+        target = rows[0] if rows else _get_or_create_aggregate(kind, TAILOR, material_key, title, variant, "کیلو", 0)
         target.quantity = q(target.quantity) + amount
         target.save(update_fields=["quantity", "updated_at"])
 
 
-def desired_consumption(input_data):
+def _color_has_final_receipt(output_data, key):
+    values = (output_data or {}).get(key, {}) or {}
+    return any(q(values.get(size_key)) > 0 for size_key in OUTPUT_SIZE_KEYS)
+
+
+def desired_consumption(input_data, output_data):
+    """Consume only a color whose finished-goods row has actually been received."""
     desired = {}
     input_data = input_data or {}
     for key in COLOR_LABELS:
+        if not _color_has_final_receipt(output_data, key):
+            continue
         values = input_data.get(key, {}) or {}
-        fabric = q(values.get("weight"))
+        fabric = max(q(values.get("weight")), Decimal("0"))
         if fabric:
-            desired[(FABRIC, key, "")] = max(fabric, Decimal("0"))
+            desired[(FABRIC, key, "")] = fabric
 
         delivered16 = q(values.get("elastic16"))
         delivered25 = q(values.get("elastic25"))
@@ -211,26 +188,26 @@ def desired_consumption(input_data):
         remain25_raw = values.get("remain25")
         used16 = delivered16 - q(remain16_raw) if remain16_raw not in (None, "") else delivered16
         used25 = delivered25 - q(remain25_raw) if remain25_raw not in (None, "") else delivered25
+        used16 = max(used16, Decimal("0"))
+        used25 = max(used25, Decimal("0"))
         if used16:
-            desired[(ELASTIC, key, "16")] = max(used16, Decimal("0"))
+            desired[(ELASTIC, key, "16")] = used16
         if used25:
-            desired[(ELASTIC, key, "25")] = max(used25, Decimal("0"))
+            desired[(ELASTIC, key, "25")] = used25
     return desired
 
 
 @transaction.atomic
 def sync_report_consumption(block):
-    desired = desired_consumption(block.input_data)
+    desired = desired_consumption(block.input_data, block.output_data)
     existing = {
         (row.kind, row.material_key, row.variant): row
         for row in MaterialReportConsumption.objects.select_for_update().filter(block=block)
     }
-    keys = set(desired) | set(existing)
-    for key in keys:
+    for key in set(desired) | set(existing):
         old = q(existing[key].quantity) if key in existing else Decimal("0")
         new = q(desired.get(key, 0))
-        delta = new - old
-        _consume_rows(key[0], key[1], key[2], delta)
+        _consume_rows(key[0], key[1], key[2], new - old)
         if new == 0:
             if key in existing:
                 existing[key].delete()
@@ -239,11 +216,7 @@ def sync_report_consumption(block):
             existing[key].save(update_fields=["quantity"])
         else:
             MaterialReportConsumption.objects.create(
-                block=block,
-                kind=key[0],
-                material_key=key[1],
-                variant=key[2],
-                quantity=new,
+                block=block, kind=key[0], material_key=key[1], variant=key[2], quantity=new
             )
 
 
