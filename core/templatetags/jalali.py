@@ -22,7 +22,7 @@ def groupnum(value):
     while s:
         parts.append(s[-3:])
         s = s[:-3]
-    return sign + " ".join(reversed(parts))
+    return sign + "٬".join(reversed(parts))
 
 
 @register.filter(name="pct1")
