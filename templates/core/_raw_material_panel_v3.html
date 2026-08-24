@@ -25,24 +25,28 @@
       <div class="raw-kind-picker raw-location-choices">
         <button type="button" class="raw-choice raw-location-choice" data-raw-location="warehouse"><span class="raw-choice-icon">⌂</span><strong>انبار</strong><small>موجودی داخل انبار</small></button>
         <button type="button" class="raw-choice raw-location-choice" data-raw-location="tailor"><span class="raw-choice-icon">✂</span><strong>نزد خیاط</strong><small>مواد تحویل‌شده برای تولید</small></button>
+        <button type="button" class="raw-choice raw-location-choice raw-depot-choice" data-raw-location="depot" data-fabric-only="1"><span class="raw-choice-icon">▣</span><strong>دپو</strong><small>پارچه ذخیره؛ خارج از گردش روزانه</small></button>
       </div>
     </div>
   </div>
 
   <div class="raw-pane-wrap">
     <div class="raw-pane d-none" data-pane="fabric-warehouse">
-      {% include 'core/_raw_fabric_table.html' with rows=fabric_warehouse mode='warehouse' panel_title='پارچه — انبار' panel_subtitle='هر طاق را با وزن و فی خودش ثبت کن.' section_total=fabric_warehouse_total editable=1 material_colors=material_colors %}
+      {% include 'core/_raw_fabric_table.html' with rows=fabric_warehouse mode='warehouse' panel_title='پارچه — انبار' panel_subtitle='هر طاق را با وزن و فی خودش ثبت کن.' section_total=fabric_warehouse_total transfer_sources=fabric_warehouse %}
     </div>
     <div class="raw-pane d-none" data-pane="fabric-tailor">
-      {% include 'core/_raw_fabric_table.html' with rows=fabric_tailor mode='tailor' panel_title='پارچه — نزد خیاط' panel_subtitle='ورود این بخش فقط با انتقال از انبار انجام می‌شود.' section_total=fabric_tailor_total transfer_sources=fabric_warehouse material_colors=material_colors %}
+      {% include 'core/_raw_fabric_table.html' with rows=fabric_tailor mode='tailor' panel_title='پارچه — نزد خیاط' panel_subtitle='ورود این بخش با انتقال از انبار است؛ اصلاح و حذف، موجودی انبار را هم معکوس اصلاح می‌کند.' section_total=fabric_tailor_total transfer_sources=fabric_warehouse %}
+    </div>
+    <div class="raw-pane d-none" data-pane="fabric-depot">
+      {% include 'core/_raw_fabric_table.html' with rows=fabric_depot mode='depot' panel_title='پارچه — دپو' panel_subtitle='پارچه‌های ذخیره‌ای که وارد گردش تولید روزانه نمی‌شوند.' section_total=fabric_depot_total %}
     </div>
     <div class="raw-pane d-none" data-pane="elastic-warehouse">
-      {% include 'core/_raw_elastic_table.html' with rows=elastic_warehouse mode='warehouse' panel_title='کش — انبار' panel_subtitle='هر رنگ یک ردیف؛ کش 16 و 25 کنار هم.' section_total=elastic_warehouse_total material_colors=material_colors %}
+      {% include 'core/_raw_elastic_table.html' with rows=elastic_warehouse mode='warehouse' panel_title='کش — انبار' panel_subtitle='هر رنگ یک ردیف؛ کش 16 و 25 کنار هم.' section_total=elastic_warehouse_total %}
     </div>
     <div class="raw-pane d-none" data-pane="elastic-tailor">
-      {% include 'core/_raw_elastic_table.html' with rows=elastic_tailor mode='tailor' panel_title='کش — نزد خیاط' panel_subtitle='انتقال از انبار، همزمان موجودی انبار را کم می‌کند.' section_total=elastic_tailor_total material_colors=material_colors %}
+      {% include 'core/_raw_elastic_table.html' with rows=elastic_tailor mode='tailor' panel_title='کش — نزد خیاط' panel_subtitle='انتقال از انبار، همزمان موجودی انبار را کم می‌کند.' section_total=elastic_tailor_total %}
     </div>
   </div>
 
-  <div class="inventory-auto-note mx-3 mb-3">وقتی در «گزارش مواد اولیه» تحویل نهایی ثبت شود، مصرف پارچه و کش از موجودی <strong>نزد خیاط</strong> به‌صورت خودکار کم می‌شود.</div>
+  <div class="inventory-auto-note mx-3 mb-3">وقتی در «گزارش مواد اولیه» تحویل نهایی ثبت شود، مصرف پارچه و کش فقط از موجودی <strong>نزد خیاط</strong> کم می‌شود؛ دپو دست‌نخورده می‌ماند.</div>
 </div>
