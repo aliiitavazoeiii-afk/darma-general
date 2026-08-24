@@ -7,23 +7,6 @@ from core.dateutils import format_jalali
 register = template.Library()
 
 
-LEGACY_MATERIAL_COLORS = [
-    ("black", "مشکی"),
-    ("white", "سفید"),
-    ("navy", "سرمه‌ای"),
-    ("pink", "صورتی"),
-    ("cream", "کرم"),
-    ("red", "قرمز"),
-    ("yellow", "زرد"),
-    ("gray", "طوسی"),
-    ("stripe", "راه راه"),
-]
-
-
-def _norm(value):
-    return (value or "").replace("ي", "ی").replace("ك", "ک").replace("‌", "").replace(" ", "").strip().lower()
-
-
 @register.filter(name="jalali")
 def jalali(value):
     return format_jalali(value)
@@ -85,15 +68,5 @@ def ratio_pct(value, denominator):
 
 @register.simple_tag
 def material_color_choices():
-    """Legacy report colors plus every active color/model defined in settings."""
-    from core.models import Color
-
-    choices = list(LEGACY_MATERIAL_COLORS)
-    seen = {_norm(label) for _, label in choices}
-    for color in Color.objects.filter(active=True).order_by("id"):
-        normalized = _norm(color.name)
-        if not normalized or normalized in seen:
-            continue
-        choices.append((f"color:{color.id}", color.name))
-        seen.add(normalized)
-    return choices
+    from core.brand_colors import darma_material_choices
+    return darma_material_choices()
