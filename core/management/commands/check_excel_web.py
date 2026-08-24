@@ -3,7 +3,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.template.loader import get_template
 from django.urls import reverse
 
-from core.models import ExcelManualRow, ExcelManualSetting, InventoryModelCost, MaterialReportBlock, TakvinPurchase
+from core.models import ExcelManualRow, ExcelManualSetting, InventoryModelCost, MaterialReportBlock, RawMaterialStock, TakvinPurchase
 
 
 class Command(BaseCommand):
@@ -14,8 +14,9 @@ class Command(BaseCommand):
             "base.html",
             "core/_mobile_shell.html",
             "core/dashboard_excel.html",
-            "core/report_excel.html",
+            "core/report_excel_v2.html",
             "core/_manual_table.html",
+            "core/_raw_material_stock.html",
             "core/material_report.html",
             "core/takvin_excel.html",
             "core/sale_calendar.html",
@@ -42,23 +43,10 @@ class Command(BaseCommand):
                 errors.append(f"template {template_name}: {exc}")
 
         simple_routes = [
-            "dashboard",
-            "sale_start",
-            "sale_line_save",
-            "report",
-            "manual_report_action",
-            "material_report",
-            "takvin",
-            "inventory",
-            "inventory_add_color_model",
-            "inventory_operations",
-            "settings_home",
-            "settings_catalog",
-            "settings_products",
-            "settings_product_new",
-            "settings_stock",
-            "settings_finance",
-            "settings_rules",
+            "dashboard", "sale_start", "sale_line_save", "report", "manual_report_action",
+            "material_report", "takvin", "inventory", "inventory_add_color_model",
+            "inventory_operations", "settings_home", "settings_catalog", "settings_products",
+            "settings_product_new", "settings_stock", "settings_finance", "settings_rules",
         ]
         for route in simple_routes:
             try:
@@ -68,13 +56,9 @@ class Command(BaseCommand):
                 errors.append(f"route {route}: {exc}")
 
         parameter_routes = [
-            ("sale_brand", [1]),
-            ("daily_report", [1]),
-            ("sale_size", [1, 1, 1]),
-            ("shortage_resolve", [1]),
-            ("material_block_save", [1]),
-            ("material_block_delete", [1]),
-            ("settings_product_edit", [1]),
+            ("sale_brand", [1]), ("daily_report", [1]), ("sale_size", [1, 1, 1]),
+            ("shortage_resolve", [1]), ("material_block_save", [1]),
+            ("material_block_delete", [1]), ("settings_product_edit", [1]),
         ]
         for route, args in parameter_routes:
             try:
@@ -83,7 +67,7 @@ class Command(BaseCommand):
             except Exception as exc:
                 errors.append(f"route {route}: {exc}")
 
-        for static_name in ["core/jalali_picker.js", "core/ui-polish.css"]:
+        for static_name in ["core/jalali_picker.js", "core/ui-polish.css", "core/raw_materials.js", "core/number_format.js"]:
             if not finders.find(static_name):
                 errors.append(f"static file {static_name} not found")
             else:
@@ -95,6 +79,7 @@ class Command(BaseCommand):
             MaterialReportBlock.objects.count()
             TakvinPurchase.objects.filter(note__startswith="[excel-web]").count()
             InventoryModelCost.objects.count()
+            RawMaterialStock.objects.count()
             self.stdout.write("Excel-Web models OK")
         except Exception as exc:
             errors.append(f"models/database: {exc}")
