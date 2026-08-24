@@ -15,7 +15,7 @@ from .excel_views import (
     _material_block_view,
     _today_jalali,
 )
-from .material_flow import reverse_report_consumption, sync_report_consumption
+from .material_receipt_sync import reverse_report_consumption, sync_report_consumption
 from .models import MaterialReportBlock
 
 
@@ -82,9 +82,9 @@ def material_block_save(request, block_id):
             sync_report_consumption(block)
 
         if block.stock_consumptions.exists():
-            messages.success(request, "گزارش ذخیره شد و مصرف مواد از موجودی نزد خیاط اعمال شد.")
+            messages.success(request, "گزارش ذخیره شد و مصرف پارچه/کش از موجودی نزد خیاط اعمال شد.")
         else:
-            messages.success(request, "گزارش ذخیره شد. تا وقتی تحویل نهایی کالا ثبت نشود، موجودی نزد خیاط کم نمی‌شود.")
+            messages.success(request, "گزارش ذخیره شد. تا وقتی محصول تحویلی ثبت نشود، موجودی نزد خیاط کم نمی‌شود.")
     except Exception as exc:
         messages.error(request, f"ذخیره انجام نشد: {exc}")
     return redirect(f"/material-report/#block-{block.id}")
