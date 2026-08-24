@@ -1,26 +1,24 @@
 (() => {
   const config = document.getElementById('materialReportConfig');
-  const RATE = Number(config?.dataset.wageRate || 110000);
+  const DOZEN_RATE = Number(config?.dataset.wageRate || 110000);
   const clean = (v) => Number(String(v ?? '').replace(/[٬,\s]/g, '').replace(/[^0-9.-]/g, '')) || 0;
   const fmt = (v) => String(Math.round(v || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, '٬');
+  const wageForPieces = (pieces) => (Math.max(0, pieces) * DOZEN_RATE) / 12;
 
   function recalcForm(form) {
     form.querySelectorAll('input[name$="_cut"]').forEach((cut) => {
       const wageName = cut.name.replace(/_cut$/, '_wage');
       const wage = form.querySelector(`input[name="${wageName}"]`);
       if (wage) {
-        wage.value = clean(cut.value) > 0 ? fmt(clean(cut.value) * RATE) : '';
+        wage.value = clean(cut.value) > 0 ? fmt(wageForPieces(clean(cut.value))) : '';
         wage.readOnly = true;
       }
     });
-
     let delivered = 0;
-    form.querySelectorAll('input[name^="out_"]').forEach((input) => {
-      delivered += Math.max(0, clean(input.value));
-    });
+    form.querySelectorAll('input[name^="out_"]').forEach((input) => { delivered += Math.max(0, clean(input.value)); });
     const totalWage = form.querySelector('input[name="delivery_wage"]');
     if (totalWage) {
-      totalWage.value = delivered > 0 ? fmt(delivered * RATE) : '';
+      totalWage.value = delivered > 0 ? fmt(wageForPieces(delivered)) : '';
       totalWage.readOnly = true;
     }
   }
@@ -35,6 +33,5 @@
       recalcForm(form);
     });
   }
-
   document.addEventListener('DOMContentLoaded', bind);
 })();
