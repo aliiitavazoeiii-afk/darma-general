@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import business_tools, calendar_views, daily_views, excel_dashboard, excel_sales, excel_takvin, final_views, inventory_views, material_report_v2, report_v2, views
+from . import business_tools, calendar_views, catalog_views, daily_views, excel_dashboard, excel_sales, excel_takvin, final_views, inventory_views, material_report_v2, report_actions, report_v4, views
 
 urlpatterns = [
     path("", excel_dashboard.dashboard, name="dashboard"),
@@ -13,8 +13,8 @@ urlpatterns = [
     path("sales/save/", excel_sales.sale_line_save, name="sale_line_save"),
     path("sales/shortage/<int:shortage_id>/resolve/", excel_sales.shortage_resolve, name="shortage_resolve"),
 
-    path("report/", report_v2.report, name="report"),
-    path("report/manual/", report_v2.manual_report_action, name="manual_report_action"),
+    path("report/", report_v4.report, name="report"),
+    path("report/manual/", report_actions.manual_report_action, name="manual_report_action"),
     path("report/financial-summary/", business_tools.financial_summary, name="financial_summary"),
     path("material-report/", material_report_v2.material_report, name="material_report"),
     path("material-report/<int:block_id>/save/", material_report_v2.material_block_save, name="material_block_save"),
@@ -25,7 +25,6 @@ urlpatterns = [
     path("payments/add/", business_tools.payment_add, name="payment_add"),
     path("payments/<int:payment_id>/delete/", business_tools.payment_delete, name="payment_delete"),
     path("payments/mellat/set/", business_tools.mellat_set, name="mellat_set"),
-    path("payments/tailor/adjust/", business_tools.tailor_adjust, name="tailor_adjust"),
     path("calculator/", business_tools.calculator, name="calculator"),
     path("calculator/quote/", business_tools.calculator_quote, name="calculator_quote"),
 
@@ -41,7 +40,7 @@ urlpatterns = [
     path("returns/", final_views.returns, name="returns"),
 
     path("settings/", views.settings_home, name="settings_home"),
-    path("settings/catalog/", views.settings_catalog, name="settings_catalog"),
+    path("settings/catalog/", catalog_views.settings_catalog, name="settings_catalog"),
     path("settings/products/", views.settings_products, name="settings_products"),
     path("settings/products/new/", views.settings_product_form, name="settings_product_new"),
     path("settings/products/<int:product_id>/", views.settings_product_form, name="settings_product_edit"),
