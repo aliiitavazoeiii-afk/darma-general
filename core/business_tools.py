@@ -1,0 +1,136 @@
+from datetime import date
+
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.db import transaction
+from django.db.models import Sum
+from django.shortcuts import redirect, render
+from django.views.decorators.http import require_POST
+
+from .dateutils import format_jalali, parse_jalali_date
+from .excel_views import _int
+from .finance import digikala_fee_for_unit
+from .models import BusinessPayment, ExcelManualRow, TailorBalanceEntry
+
+
+def _mellat_row(create=True):
+    qs = ExcelManualRow.objects.filter(section=ExcelManualRow.ACCOUNTS, active=True)
+    for row in qs.order_by("sort_order", "id"):
+        title = (row.title or "").replace(" ", "")
+        if "ملت" in title or "mellat" in title.lower():
+            return row
+    if not create:
+        return None
+    order = qs.aggregate(v=Sum("sort_order"))["v"] or 0
+    return ExcelManualRow.objects.create(
+        section=ExcelManualRow.ACCOUNTS,
+        title="ملت",
+        amount=0,
+        sort_order=order + 1,
+    )
+
+
+def mellat_balance():
+    row = _mellat_row(create=False)
+    return int(row.amount or 0) if row else 0
+
+
+def tailor_balance():
+    return int(TailorBalanceEntry.objects.aggregate(v=Sum("delta"))["v"] or 0)
+
+
+@login_required
+def payments(request):
+    rows = BusinessPayment.objects.all()[:100]
+    return render(request, "core/payments.html", {
+        "rows": rows,
+        "today_j": format_jalali(date.today()),
+        "mellat_balance": mellat_balance(),
+        "tailor_balance": tailor_balance(),
+        "payees": BusinessPayment.PAYEE_CHOICES,
+    })
+
+
+@login_required
+@require_POST
+def payment_add(request):
+    try:
+        payment_date = parse_jalali_date(request.POST.get("date") or format_jalali(date.today()))
+        payee = request.POST.get("payee") or ""
+        amount = _int(request.POST.get("amount"))
+        note = (request.POST.get("note") or "").strip()
+        if payee not in {key for key, _ in BusinessPayment.PAYEE_CHOICES}:
+            raise ValueError("دریافت‌کننده پرداخت معتبر نیست.")
+        if amount <= 0:
+            raise ValueError("مبلغ پرداخت باید بیشتر از صفر باشد.")
+
+        with transaction.atomic():
+            row = _mellat_row(create=True)
+            row.amount = int(row.amount or 0) - amount
+            row.save(update_fields=["amount", "updated_at"])
+
+            payment = BusinessPayment.objects.create(
+                date=payment_date,
+                payee=payee,
+                amount=amount,
+                note=note,
+            )
+
+            if payee == BusinessPayment.TAILOR:
+                TailorBalanceEntry.objects.create(
+                    date=payment_date,
+                    delta=amount,
+                    title="پرداخت به خیاط",
+                    reference=f"payment:{payment.id}",
+                )
+
+        messages.success(request, "پرداخت ثبت شد و از موجودی ملت کم شد.")
+    except Exception as exc:
+        messages.error(request, str(exc))
+    return redirect("payments")
+
+
+@login_required
+@require_POST
+def tailor_adjust(request):
+    try:
+        amount = _int(request.POST.get("amount"))
+        mode = request.POST.get("mode")
+        if amount <= 0:
+            raise ValueError("مبلغ باید بیشتر از صفر باشد.")
+        if mode not in {"receivable", "payable"}:
+            raise ValueError("نوع مانده نامعتبر است.")
+        delta = amount if mode == "receivable" else -amount
+        TailorBalanceEntry.objects.create(
+            date=date.today(),
+            delta=delta,
+            title="اصلاح دستی مانده خیاط",
+            reference="manual-adjust",
+        )
+        messages.success(request, "مانده خیاط اصلاح شد.")
+    except Exception as exc:
+        messages.error(request, str(exc))
+    return redirect("payments")
+
+
+@login_required
+def calculator(request):
+    return render(request, "core/calculator.html")
+
+
+@login_required
+def calculator_quote(request):
+    sale_price = _int(request.GET.get("sale_price"))
+    cost = _int(request.GET.get("cost"))
+    fee = digikala_fee_for_unit(sale_price) if sale_price > 0 else 0
+    profit = sale_price - fee - cost
+    profit_on_sale = (profit * 100 / sale_price) if sale_price else 0
+    profit_on_cost = (profit * 100 / cost) if cost else 0
+    return render(request, "core/_calculator_result.html", {
+        "sale_price": sale_price,
+        "cost": cost,
+        "fee": fee,
+        "profit": profit,
+        "profit_on_sale": profit_on_sale,
+        "profit_on_cost": profit_on_cost,
+    })
