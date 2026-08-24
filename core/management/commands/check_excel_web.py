@@ -4,12 +4,14 @@ from django.template.loader import get_template
 from django.urls import reverse
 
 from core.models import (
+    BusinessPayment,
     ExcelManualRow,
     ExcelManualSetting,
     InventoryModelCost,
     MaterialReportBlock,
     MaterialReportConsumption,
     RawMaterialStock,
+    TailorBalanceEntry,
     TakvinPurchase,
 )
 
@@ -28,6 +30,10 @@ class Command(BaseCommand):
             "core/_raw_fabric_table.html",
             "core/_raw_elastic_table.html",
             "core/_raw_material_panel_v3.html",
+            "core/_financial_summary_extra.html",
+            "core/payments.html",
+            "core/calculator.html",
+            "core/_calculator_result.html",
             "core/material_report.html",
             "core/takvin_excel.html",
             "core/sale_calendar.html",
@@ -55,8 +61,9 @@ class Command(BaseCommand):
 
         simple_routes = [
             "dashboard", "sale_start", "sale_line_save", "report", "manual_report_action",
-            "material_report", "takvin", "inventory", "inventory_add_color_model",
-            "inventory_operations", "settings_home", "settings_catalog", "settings_products",
+            "financial_summary", "material_report", "takvin", "inventory", "inventory_add_color_model",
+            "inventory_operations", "payments", "payment_add", "mellat_set", "tailor_adjust",
+            "calculator", "calculator_quote", "settings_home", "settings_catalog", "settings_products",
             "settings_product_new", "settings_stock", "settings_finance", "settings_rules",
         ]
         for route in simple_routes:
@@ -69,7 +76,7 @@ class Command(BaseCommand):
         parameter_routes = [
             ("sale_brand", [1]), ("daily_report", [1]), ("sale_size", [1, 1, 1]),
             ("shortage_resolve", [1]), ("material_block_save", [1]),
-            ("material_block_delete", [1]), ("settings_product_edit", [1]),
+            ("material_block_delete", [1]), ("payment_delete", [1]), ("settings_product_edit", [1]),
         ]
         for route, args in parameter_routes:
             try:
@@ -80,7 +87,7 @@ class Command(BaseCommand):
 
         for static_name in [
             "core/jalali_picker.js", "core/ui-polish.css", "core/number_format.js",
-            "core/raw_materials_v3.js",
+            "core/raw_materials.js", "core/raw_materials_v3.js",
         ]:
             if not finders.find(static_name):
                 errors.append(f"static file {static_name} not found")
@@ -95,6 +102,8 @@ class Command(BaseCommand):
             TakvinPurchase.objects.filter(note__startswith="[excel-web]").count()
             InventoryModelCost.objects.count()
             RawMaterialStock.objects.count()
+            BusinessPayment.objects.count()
+            TailorBalanceEntry.objects.count()
             self.stdout.write("Excel-Web models OK")
         except Exception as exc:
             errors.append(f"models/database: {exc}")
