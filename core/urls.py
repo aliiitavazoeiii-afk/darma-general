@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import calendar_views, daily_views, excel_dashboard, excel_sales, excel_takvin, final_views, inventory_views, material_report_v2, report_v2, views
+from . import business_tools, calendar_views, daily_views, excel_dashboard, excel_sales, excel_takvin, final_views, inventory_views, material_report_v2, report_v2, views
 
 urlpatterns = [
     path("", excel_dashboard.dashboard, name="dashboard"),
@@ -15,16 +15,24 @@ urlpatterns = [
 
     path("report/", report_v2.report, name="report"),
     path("report/manual/", report_v2.manual_report_action, name="manual_report_action"),
+    path("report/financial-summary/", business_tools.financial_summary, name="financial_summary"),
     path("material-report/", material_report_v2.material_report, name="material_report"),
     path("material-report/<int:block_id>/save/", material_report_v2.material_block_save, name="material_block_save"),
     path("material-report/<int:block_id>/delete/", material_report_v2.material_block_delete, name="material_block_delete"),
     path("takvin/", excel_takvin.takvin_excel, name="takvin"),
 
+    path("payments/", business_tools.payments, name="payments"),
+    path("payments/add/", business_tools.payment_add, name="payment_add"),
+    path("payments/<int:payment_id>/delete/", business_tools.payment_delete, name="payment_delete"),
+    path("payments/mellat/set/", business_tools.mellat_set, name="mellat_set"),
+    path("payments/tailor/adjust/", business_tools.tailor_adjust, name="tailor_adjust"),
+    path("calculator/", business_tools.calculator, name="calculator"),
+    path("calculator/quote/", business_tools.calculator_quote, name="calculator_quote"),
+
     path("inventory/", inventory_views.inventory, name="inventory"),
     path("inventory/color-model/add/", inventory_views.add_color_model, name="inventory_add_color_model"),
     path("inventory/operations/", final_views.inventory_operations, name="inventory_operations"),
 
-    # نسخه کامل ERP روی شاخه erp-full-v1 محفوظ است. مسیرهای زیر فقط برای سازگاری قدیمی باقی مانده‌اند.
     path("materials/", final_views.materials, name="materials"),
     path("production/", final_views.production, name="production"),
     path("finance/", final_views.finance, name="finance"),
