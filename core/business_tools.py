@@ -25,13 +25,54 @@ def _mellat_row(create=True):
     return ExcelManualRow.objects.create(section=ExcelManualRow.ACCOUNTS, title="ملت", amount=0, sort_order=order + 1)
 
 
+def _tailor_person_row(create=True):
+    qs = ExcelManualRow.objects.filter(section=ExcelManualRow.PERSONS, active=True)
+    for row in qs.order_by("sort_order", "id"):
+        title = (row.title or "").replace(" ", "")
+        if "خیاط" in title:
+            return row
+    if not create:
+        return None
+    order = qs.aggregate(v=Sum("sort_order"))["v"] or 0
+    return ExcelManualRow.objects.create(
+        section=ExcelManualRow.PERSONS,
+        title="خیاط",
+        amount=0,
+        note="همگام با بخش پرداختی‌ها",
+        sort_order=order + 1,
+    )
+
+
 def mellat_balance():
     row = _mellat_row(create=False)
     return int(row.amount or 0) if row else 0
 
 
+def _ensure_tailor_opening():
+    if TailorBalanceEntry.objects.exists():
+        return
+    row = _tailor_person_row(create=False)
+    opening = int(row.amount or 0) if row else 0
+    if opening:
+        TailorBalanceEntry.objects.create(
+            date=date.today(), delta=opening, title="مانده اولیه خیاط", reference="opening-from-person-row"
+        )
+
+
 def tailor_balance():
-    return int(TailorBalanceEntry.objects.aggregate(v=Sum("delta"))["v"] or 0)
+    ledger_total = TailorBalanceEntry.objects.aggregate(v=Sum("delta"))["v"]
+    if ledger_total is not None:
+        return int(ledger_total or 0)
+    row = _tailor_person_row(create=False)
+    return int(row.amount or 0) if row else 0
+
+
+def _sync_tailor_person_row():
+    row = _tailor_person_row(create=True)
+    row.amount = int(TailorBalanceEntry.objects.aggregate(v=Sum("delta"))["v"] or 0)
+    row.note = "همگام با بخش پرداختی‌ها"
+    row.save(update_fields=["amount", "note", "updated_at"])
+    return row.amount
 
 
 @login_required
@@ -68,9 +109,11 @@ def payment_add(request):
             row.save(update_fields=["amount", "updated_at"])
             payment = BusinessPayment.objects.create(date=payment_date, payee=payee, amount=amount, note=note)
             if payee == BusinessPayment.TAILOR:
+                _ensure_tailor_opening()
                 TailorBalanceEntry.objects.create(
                     date=payment_date, delta=amount, title="پرداخت به خیاط", reference=f"payment:{payment.id}"
                 )
+                _sync_tailor_person_row()
         messages.success(request, "پرداخت ثبت شد و از موجودی ملت کم شد.")
     except Exception as exc:
         messages.error(request, str(exc))
@@ -87,7 +130,9 @@ def payment_delete(request, payment_id):
             row.amount = int(row.amount or 0) + int(payment.amount or 0)
             row.save(update_fields=["amount", "updated_at"])
             if payment.payee == BusinessPayment.TAILOR:
+                _ensure_tailor_opening()
                 TailorBalanceEntry.objects.filter(reference=f"payment:{payment.id}").delete()
+                _sync_tailor_person_row()
             payment.delete()
         messages.success(request, "پرداخت حذف شد و اثر مالی آن برگشت.")
     except Exception as exc:
@@ -118,12 +163,15 @@ def tailor_adjust(request):
             raise ValueError("مبلغ باید بیشتر از صفر باشد.")
         if mode not in {"receivable", "payable"}:
             raise ValueError("نوع مانده نامعتبر است.")
-        TailorBalanceEntry.objects.create(
-            date=date.today(),
-            delta=amount if mode == "receivable" else -amount,
-            title="اصلاح دستی مانده خیاط",
-            reference="manual-adjust",
-        )
+        with transaction.atomic():
+            _ensure_tailor_opening()
+            TailorBalanceEntry.objects.create(
+                date=date.today(),
+                delta=amount if mode == "receivable" else -amount,
+                title="اصلاح دستی مانده خیاط",
+                reference="manual-adjust",
+            )
+            _sync_tailor_person_row()
         messages.success(request, "مانده خیاط اصلاح شد.")
     except Exception as exc:
         messages.error(request, str(exc))
