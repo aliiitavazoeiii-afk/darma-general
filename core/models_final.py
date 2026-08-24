@@ -263,3 +263,33 @@ class InventoryModelCost(models.Model):
 
     def __str__(self):
         return f"{self.brand} / {self.color} / {self.size}: {self.unit_cost}"
+
+
+class RawMaterialStock(models.Model):
+    FABRIC = "fabric"
+    ELASTIC = "elastic"
+    WAREHOUSE = "warehouse"
+    TAILOR = "tailor"
+    KIND_CHOICES = [(FABRIC, "پارچه"), (ELASTIC, "کش")]
+    LOCATION_CHOICES = [(WAREHOUSE, "انبار"), (TAILOR, "خیاط")]
+
+    kind = models.CharField(max_length=20, choices=KIND_CHOICES, db_index=True)
+    location = models.CharField(max_length=20, choices=LOCATION_CHOICES, db_index=True)
+    title = models.CharField(max_length=120)
+    quantity = models.DecimalField(max_digits=14, decimal_places=3, default=Decimal("0"))
+    unit_price = models.PositiveBigIntegerField(default=0)
+    unit = models.CharField(max_length=20, default="کیلو")
+    note = models.CharField(max_length=250, blank=True)
+    active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    @property
+    def total_value(self):
+        return int(Decimal(self.quantity or 0) * Decimal(self.unit_price or 0))
+
+    class Meta:
+        ordering = ["kind", "location", "id"]
+
+    def __str__(self):
+        return f"{self.get_kind_display()} / {self.get_location_display()} / {self.title}"
