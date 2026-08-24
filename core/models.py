@@ -221,3 +221,26 @@ class MaterialReportBlock(models.Model):
 
     def __str__(self):
         return self.title or str(self.date)
+
+
+# RawMaterialStock is defined in models_final; these fields keep the existing
+# model while adding reliable mapping to the Excel material-report columns.
+RawMaterialStock.add_to_class("material_key", models.CharField(max_length=40, blank=True, default="", db_index=True))
+RawMaterialStock.add_to_class("variant", models.CharField(max_length=20, blank=True, default="", db_index=True))
+
+
+class MaterialReportConsumption(models.Model):
+    block = models.ForeignKey(MaterialReportBlock, on_delete=models.CASCADE, related_name="stock_consumptions")
+    kind = models.CharField(max_length=20, choices=RawMaterialStock.KIND_CHOICES)
+    material_key = models.CharField(max_length=40)
+    variant = models.CharField(max_length=20, blank=True, default="")
+    quantity = models.DecimalField(max_digits=14, decimal_places=3, default=Decimal("0"))
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["block", "kind", "material_key", "variant"],
+                name="uniq_material_report_consumption",
+            )
+        ]
+        ordering = ["block_id", "kind", "material_key", "variant"]
