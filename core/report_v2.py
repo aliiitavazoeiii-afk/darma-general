@@ -2,7 +2,7 @@ from collections import defaultdict
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.db.models import Sum
+from django.db.models import Max, Sum
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
@@ -183,7 +183,7 @@ def manual_report_action(request):
                 if section not in allowed_sections:
                     raise ValueError("این بخش دیگر ورود دستی ندارد.")
                 title = (request.POST.get("title") or "ردیف جدید").strip()
-                order = ExcelManualRow.objects.filter(section=section).aggregate(v=Sum("sort_order"))["v"] or 0
+                order = ExcelManualRow.objects.filter(section=section).aggregate(v=Max("sort_order"))["v"] or 0
                 ExcelManualRow.objects.create(section=section, title=title, sort_order=order + 1)
             else:
                 ExcelManualRow.objects.filter(id=request.POST.get("id"), section__in=allowed_sections).delete()
