@@ -126,6 +126,32 @@
     const restore = () => window.scrollTo(0, y);
     requestAnimationFrame(() => requestAnimationFrame(restore));
     setTimeout(restore, 120);
+    setTimeout(restore, 320);
+  }
+
+  async function injectFinancialSummary() {
+    if (window.location.pathname !== '/report/' || document.querySelector('.financial-extra-row')) return;
+    const label = [...document.querySelectorAll('.subheader')].find((el) =>
+      (el.textContent || '').includes('حساب بانک و اشخاص')
+    );
+    const row = label?.closest('.row');
+    if (!row) return;
+    try {
+      const response = await fetch('/report/financial-summary/', { credentials: 'same-origin' });
+      if (!response.ok) return;
+      row.insertAdjacentHTML('afterend', await response.text());
+    } catch (_) {}
+  }
+
+  function patchCapitalLabels() {
+    const formula = document.querySelector('.capital-formula');
+    if (formula) formula.textContent = 'حساب‌ها + کالای آماده + مواد اولیه + کالای سرمایه‌ای + طلب دیجی‌کالا − بدهی تکوین';
+    document.querySelectorAll('.card').forEach((card) => {
+      const heading = card.querySelector('h3,.card-title');
+      if ((heading?.textContent || '').trim() !== 'کالای سرمایه‌ای') return;
+      const subtitle = card.querySelector('.text-secondary');
+      if (subtitle) subtitle.textContent = 'ارزش این بخش داخل سرمایه کل محاسبه می‌شود.';
+    });
   }
 
   function bind(root = document) {
@@ -136,8 +162,10 @@
   }
 
   if ('scrollRestoration' in history && window.location.pathname === '/report/') history.scrollRestoration = 'manual';
-  document.addEventListener('DOMContentLoaded', () => {
+  document.addEventListener('DOMContentLoaded', async () => {
     bind();
+    patchCapitalLabels();
+    await injectFinancialSummary();
     restoreReportScroll();
   });
   document.body?.addEventListener('htmx:afterSwap', (event) => bind(event.target));
