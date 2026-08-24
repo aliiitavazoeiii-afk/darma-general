@@ -1,0 +1,3 @@
+{% extends 'core/report_excel_v3.html' %}{% load static %}
+{% block content %}<script>(function(){try{if(sessionStorage.getItem('darma-report-v4-scroll')!==null){document.documentElement.style.visibility='hidden';}}catch(e){}})();</script>{{ block.super }}{% endblock %}
+{% block scripts %}{{ block.super }}<script>document.addEventListener('DOMContentLoaded',function(){requestAnimationFrame(function(){requestAnimationFrame(function(){document.documentElement.style.visibility='visible';});});});setTimeout(function(){document.documentElement.style.visibility='visible';},350);</script>{% endblock %}
