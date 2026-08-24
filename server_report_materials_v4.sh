@@ -42,8 +42,8 @@ docker compose exec -T db pg_dump -U "$DB_USER" "$DB_NAME" > "$BACKUP" || fail "
 [ -s "$BACKUP" ] || fail "backup file is empty"
 echo "BACKUP OK: $BACKUP"
 
-step "3) BUILD WEB IMAGE"
-docker compose build web || fail "Docker build failed"
+step "3) BUILD FRESH WEB IMAGE"
+docker compose build --no-cache web || fail "Docker build failed"
 echo "BUILD OK"
 
 step "4) CHECK MODEL / MIGRATION DRIFT"
