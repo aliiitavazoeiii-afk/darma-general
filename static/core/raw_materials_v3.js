@@ -9,6 +9,8 @@
     const sign = rounded < 0 ? '-' : '';
     return sign + String(Math.abs(rounded)).replace(/\B(?=(\d{3})+(?!\d))/g, '٬');
   };
+  const SCROLL_KEY = 'darma-report-v4-scroll';
+  const PICKER_KEY = 'darma-report-v4-material-picker';
 
   function recalc(row) {
     const qty = num(row.querySelector('.raw-quantity')?.value);
@@ -41,32 +43,102 @@
 
     const hidePanes = () => panes.forEach((pane) => pane.classList.add('d-none'));
     const clearLocation = () => locationButtons.forEach((btn) => btn.classList.remove('active'));
+    const storeState = (location = '') => {
+      try { sessionStorage.setItem(PICKER_KEY, JSON.stringify({ kind, location })); } catch (_) {}
+    };
 
-    kindButtons.forEach((btn) => btn.addEventListener('click', () => {
-      kind = btn.dataset.rawKind;
-      kindButtons.forEach((b) => b.classList.toggle('active', b === btn));
+    const chooseKind = (nextKind, shouldScroll = true) => {
+      kind = nextKind;
+      kindButtons.forEach((b) => b.classList.toggle('active', b.dataset.rawKind === kind));
       clearLocation();
       hidePanes();
+      locationButtons.forEach((btn) => {
+        const fabricOnly = btn.dataset.fabricOnly === '1';
+        btn.classList.toggle('d-none', fabricOnly && kind !== 'fabric');
+      });
       locationPicker?.classList.remove('d-none');
-      locationPicker?.scrollIntoView({behavior:'smooth', block:'nearest'});
-    }));
+      storeState('');
+      if (shouldScroll) locationPicker?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    };
 
-    locationButtons.forEach((btn) => btn.addEventListener('click', () => {
+    const chooseLocation = (location, shouldScroll = true) => {
       if (!kind) return;
+      const btn = locationButtons.find((b) => b.dataset.rawLocation === location && !b.classList.contains('d-none'));
+      if (!btn) return;
       clearLocation();
       btn.classList.add('active');
       hidePanes();
-      const pane = panel.querySelector(`[data-pane="${kind}-${btn.dataset.rawLocation}"]`);
+      const pane = panel.querySelector(`[data-pane="${kind}-${location}"]`);
       pane?.classList.remove('d-none');
-      pane?.scrollIntoView({behavior:'smooth', block:'nearest'});
-    }));
+      storeState(location);
+      if (shouldScroll) pane?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    };
+
+    kindButtons.forEach((btn) => btn.addEventListener('click', () => chooseKind(btn.dataset.rawKind, true)));
+    locationButtons.forEach((btn) => btn.addEventListener('click', () => chooseLocation(btn.dataset.rawLocation, true)));
+
+    try {
+      const saved = JSON.parse(sessionStorage.getItem(PICKER_KEY) || 'null');
+      if (saved?.kind) {
+        chooseKind(saved.kind, false);
+        if (saved.location) chooseLocation(saved.location, false);
+      }
+    } catch (_) {}
+  }
+
+  function bindEditRows(root = document) {
+    root.querySelectorAll('.raw-edit-toggle,.raw-edit-cancel').forEach((button) => {
+      if (button.dataset.editBound === '1') return;
+      button.dataset.editBound = '1';
+      button.addEventListener('click', () => {
+        const target = document.getElementById(button.dataset.editTarget || '');
+        if (!target) return;
+        const willOpen = target.classList.contains('d-none');
+        document.querySelectorAll('.raw-edit-row:not(.d-none)').forEach((row) => {
+          if (row !== target) row.classList.add('d-none');
+        });
+        target.classList.toggle('d-none', !willOpen);
+        if (willOpen) target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      });
+    });
+  }
+
+  function bindReportScrollMemory() {
+    if (window.location.pathname !== '/report/') return;
+    document.querySelectorAll('main form[method="post"], main form[method="POST"]').forEach((form) => {
+      if (form.dataset.reportScrollBound === '1') return;
+      form.dataset.reportScrollBound = '1';
+      form.addEventListener('submit', () => {
+        try { sessionStorage.setItem(SCROLL_KEY, String(window.scrollY)); } catch (_) {}
+      });
+    });
+  }
+
+  function restoreReportScroll() {
+    if (window.location.pathname !== '/report/') return;
+    let saved = null;
+    try {
+      saved = sessionStorage.getItem(SCROLL_KEY);
+      sessionStorage.removeItem(SCROLL_KEY);
+    } catch (_) {}
+    if (saved === null || saved === '') return;
+    const y = Number(saved) || 0;
+    const restore = () => window.scrollTo(0, y);
+    requestAnimationFrame(() => requestAnimationFrame(restore));
+    setTimeout(restore, 120);
   }
 
   function bind(root = document) {
     bindCalc(root);
     bindPicker(root);
+    bindEditRows(root);
+    bindReportScrollMemory();
   }
 
-  document.addEventListener('DOMContentLoaded', () => bind());
+  if ('scrollRestoration' in history && window.location.pathname === '/report/') history.scrollRestoration = 'manual';
+  document.addEventListener('DOMContentLoaded', () => {
+    bind();
+    restoreReportScroll();
+  });
   document.body?.addEventListener('htmx:afterSwap', (event) => bind(event.target));
 })();
