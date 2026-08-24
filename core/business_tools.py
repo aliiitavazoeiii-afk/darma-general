@@ -10,14 +10,18 @@ from django.views.decorators.http import require_POST
 from .dateutils import format_jalali, parse_jalali_date
 from .excel_views import _int
 from .finance import digikala_fee_for_unit
-from .models import BusinessPayment, ExcelManualRow, TailorBalanceEntry
+from .models import BusinessPayment, ExcelManualRow
+
+
+def _norm(value):
+    return (value or "").replace("ي", "ی").replace("ك", "ک").replace("‌", "").replace(" ", "").strip().lower()
 
 
 def _mellat_row(create=True):
     qs = ExcelManualRow.objects.filter(section=ExcelManualRow.ACCOUNTS, active=True)
     for row in qs.order_by("sort_order", "id"):
-        title = (row.title or "").replace(" ", "")
-        if "ملت" in title or "mellat" in title.lower():
+        title = _norm(row.title)
+        if "ملت" in title or "mellat" in title:
             return row
     if not create:
         return None
@@ -25,22 +29,12 @@ def _mellat_row(create=True):
     return ExcelManualRow.objects.create(section=ExcelManualRow.ACCOUNTS, title="ملت", amount=0, sort_order=order + 1)
 
 
-def _tailor_person_row(create=True):
-    qs = ExcelManualRow.objects.filter(section=ExcelManualRow.PERSONS, active=True)
-    for row in qs.order_by("sort_order", "id"):
-        title = (row.title or "").replace(" ", "")
-        if "خیاط" in title:
+def _tailor_base_row():
+    qs = ExcelManualRow.objects.filter(section=ExcelManualRow.PERSONS, active=True).order_by("sort_order", "id")
+    for row in qs:
+        if "خیاط" in _norm(row.title):
             return row
-    if not create:
-        return None
-    order = qs.aggregate(v=Sum("sort_order"))["v"] or 0
-    return ExcelManualRow.objects.create(
-        section=ExcelManualRow.PERSONS,
-        title="خیاط",
-        amount=0,
-        note="همگام با بخش پرداختی‌ها",
-        sort_order=order + 1,
-    )
+    return None
 
 
 def mellat_balance():
@@ -48,31 +42,18 @@ def mellat_balance():
     return int(row.amount or 0) if row else 0
 
 
-def _ensure_tailor_opening():
-    if TailorBalanceEntry.objects.exists():
-        return
-    row = _tailor_person_row(create=False)
-    opening = int(row.amount or 0) if row else 0
-    if opening:
-        TailorBalanceEntry.objects.create(
-            date=date.today(), delta=opening, title="مانده اولیه خیاط", reference="opening-from-person-row"
-        )
-
-
-def tailor_balance():
-    ledger_total = TailorBalanceEntry.objects.aggregate(v=Sum("delta"))["v"]
-    if ledger_total is not None:
-        return int(ledger_total or 0)
-    row = _tailor_person_row(create=False)
+def tailor_base_balance():
+    row = _tailor_base_row()
     return int(row.amount or 0) if row else 0
 
 
-def _sync_tailor_person_row():
-    row = _tailor_person_row(create=True)
-    row.amount = int(TailorBalanceEntry.objects.aggregate(v=Sum("delta"))["v"] or 0)
-    row.note = "همگام با بخش پرداختی‌ها"
-    row.save(update_fields=["amount", "note", "updated_at"])
-    return row.amount
+def tailor_payment_total():
+    return int(BusinessPayment.objects.filter(payee=BusinessPayment.TAILOR).aggregate(v=Sum("amount"))["v"] or 0)
+
+
+def tailor_balance():
+    # Positive = our receivable from tailor, negative = our payable to tailor.
+    return tailor_base_balance() + tailor_payment_total()
 
 
 @login_required
@@ -85,6 +66,8 @@ def payments(request):
         "rows": rows,
         "today_j": format_jalali(date.today()),
         "mellat_balance": mellat_balance(),
+        "tailor_base_balance": tailor_base_balance(),
+        "tailor_payment_total": tailor_payment_total(),
         "tailor_balance": tailor_balance(),
         "payees": BusinessPayment.PAYEE_CHOICES,
         "payee_totals": totals,
@@ -107,13 +90,7 @@ def payment_add(request):
             row = _mellat_row(create=True)
             row.amount = int(row.amount or 0) - amount
             row.save(update_fields=["amount", "updated_at"])
-            payment = BusinessPayment.objects.create(date=payment_date, payee=payee, amount=amount, note=note)
-            if payee == BusinessPayment.TAILOR:
-                _ensure_tailor_opening()
-                TailorBalanceEntry.objects.create(
-                    date=payment_date, delta=amount, title="پرداخت به خیاط", reference=f"payment:{payment.id}"
-                )
-                _sync_tailor_person_row()
+            BusinessPayment.objects.create(date=payment_date, payee=payee, amount=amount, note=note)
         messages.success(request, "پرداخت ثبت شد و از موجودی ملت کم شد.")
     except Exception as exc:
         messages.error(request, str(exc))
@@ -129,12 +106,8 @@ def payment_delete(request, payment_id):
             row = _mellat_row(create=True)
             row.amount = int(row.amount or 0) + int(payment.amount or 0)
             row.save(update_fields=["amount", "updated_at"])
-            if payment.payee == BusinessPayment.TAILOR:
-                _ensure_tailor_opening()
-                TailorBalanceEntry.objects.filter(reference=f"payment:{payment.id}").delete()
-                _sync_tailor_person_row()
             payment.delete()
-        messages.success(request, "پرداخت حذف شد و اثر مالی آن برگشت.")
+        messages.success(request, "پرداخت حذف شد و مبلغ به موجودی ملت برگشت.")
     except Exception as exc:
         messages.error(request, str(exc))
     return redirect("payments")
@@ -148,31 +121,6 @@ def mellat_set(request):
         row.amount = _int(request.POST.get("amount"))
         row.save(update_fields=["amount", "updated_at"])
         messages.success(request, "موجودی ملت اصلاح شد.")
-    except Exception as exc:
-        messages.error(request, str(exc))
-    return redirect("payments")
-
-
-@login_required
-@require_POST
-def tailor_adjust(request):
-    try:
-        amount = _int(request.POST.get("amount"))
-        mode = request.POST.get("mode")
-        if amount <= 0:
-            raise ValueError("مبلغ باید بیشتر از صفر باشد.")
-        if mode not in {"receivable", "payable"}:
-            raise ValueError("نوع مانده نامعتبر است.")
-        with transaction.atomic():
-            _ensure_tailor_opening()
-            TailorBalanceEntry.objects.create(
-                date=date.today(),
-                delta=amount if mode == "receivable" else -amount,
-                title="اصلاح دستی مانده خیاط",
-                reference="manual-adjust",
-            )
-            _sync_tailor_person_row()
-        messages.success(request, "مانده خیاط اصلاح شد.")
     except Exception as exc:
         messages.error(request, str(exc))
     return redirect("payments")
