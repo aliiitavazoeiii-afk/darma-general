@@ -31,7 +31,31 @@
     });
   }
 
+  function injectToolNav() {
+    const nav = document.querySelector('.erp-nav');
+    if (!nav || nav.querySelector('[data-business-tools-nav]')) return;
+    const definitionsTitle = [...nav.querySelectorAll('.erp-nav-title')].find((el) =>
+      (el.textContent || '').trim() === 'تعاریف'
+    );
+    if (!definitionsTitle) return;
+
+    const wrap = document.createElement('div');
+    wrap.dataset.businessToolsNav = '1';
+    const path = window.location.pathname;
+    const payActive = path.startsWith('/payments/');
+    const calcActive = path.startsWith('/calculator/');
+    wrap.innerHTML = `
+      <div class="erp-nav-title">مالی و ابزار</div>
+      <a class="${payActive ? 'active' : ''}" href="/payments/"><span class="erp-dot"></span>پرداختی‌ها</a>
+      <a class="${calcActive ? 'active' : ''}" href="/calculator/"><span class="erp-dot"></span>محاسبه‌گر</a>
+    `;
+    definitionsTitle.parentNode.insertBefore(wrap, definitionsTitle);
+  }
+
   window.DarmaNumber = { raw, grouped, separator: SEP };
-  document.addEventListener('DOMContentLoaded', () => bind());
+  document.addEventListener('DOMContentLoaded', () => {
+    bind();
+    injectToolNav();
+  });
   document.body?.addEventListener('htmx:afterSwap', (event) => bind(event.target));
 })();
