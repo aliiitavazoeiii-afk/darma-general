@@ -223,10 +223,17 @@ class MaterialReportBlock(models.Model):
         return self.title or str(self.date)
 
 
-# RawMaterialStock is defined in models_final; these fields keep the existing
-# model while adding reliable mapping to the Excel material-report columns.
+# RawMaterialStock is defined in models_final; these runtime fields/state keep
+# the Excel-style material system aligned with migrations.
 RawMaterialStock.add_to_class("material_key", models.CharField(max_length=40, blank=True, default="", db_index=True))
 RawMaterialStock.add_to_class("variant", models.CharField(max_length=20, blank=True, default="", db_index=True))
+RawMaterialStock.DEPOT = "depot"
+RawMaterialStock.LOCATION_CHOICES = [
+    (RawMaterialStock.WAREHOUSE, "انبار"),
+    (RawMaterialStock.TAILOR, "خیاط"),
+    (RawMaterialStock.DEPOT, "دپو"),
+]
+RawMaterialStock._meta.get_field("location").choices = RawMaterialStock.LOCATION_CHOICES
 
 
 class MaterialReportConsumption(models.Model):
