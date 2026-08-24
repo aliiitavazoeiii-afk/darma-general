@@ -38,6 +38,31 @@ def attach_orphan_colors_to_darma(apps, schema_editor):
             )
 
 
+def repair_legacy_tailor_person_row(apps, schema_editor):
+    ExcelManualRow = apps.get_model("core", "ExcelManualRow")
+    TailorBalanceEntry = apps.get_model("core", "TailorBalanceEntry")
+
+    candidates = ExcelManualRow.objects.filter(section="persons", active=True)
+    row = None
+    for candidate in candidates.order_by("sort_order", "id"):
+        title = (candidate.title or "").replace(" ", "").replace("‌", "")
+        if "خیاط" in title:
+            row = candidate
+            break
+    if not row:
+        return
+
+    # Older code overwrote this manual person row with the internal tailor ledger.
+    # Only repair rows explicitly marked by that old sync, never arbitrary user rows.
+    if (row.note or "").strip() != "همگام با بخش پرداختی‌ها":
+        return
+
+    opening = TailorBalanceEntry.objects.filter(reference="opening-from-person-row").order_by("id").first()
+    row.amount = int(opening.delta or 0) if opening else 0
+    row.note = "مانده پایه خیاط؛ پرداخت‌های جدید جداگانه روی آن محاسبه می‌شوند"
+    row.save(update_fields=["amount", "note", "updated_at"])
+
+
 class Migration(migrations.Migration):
     dependencies = [("core", "0008_payments")]
 
@@ -52,4 +77,5 @@ class Migration(migrations.Migration):
             ),
         ),
         migrations.RunPython(attach_orphan_colors_to_darma, migrations.RunPython.noop),
+        migrations.RunPython(repair_legacy_tailor_person_row, migrations.RunPython.noop),
     ]
