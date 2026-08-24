@@ -244,3 +244,36 @@ class MaterialReportConsumption(models.Model):
             )
         ]
         ordering = ["block_id", "kind", "material_key", "variant"]
+
+
+class BusinessPayment(models.Model):
+    PEDRAM = "pedram"
+    TAILOR = "tailor"
+    FABRIC = "fabric"
+    ELASTIC = "elastic"
+    PAYEE_CHOICES = [
+        (PEDRAM, "پدرام"),
+        (TAILOR, "خیاط"),
+        (FABRIC, "پارچه‌فروش"),
+        (ELASTIC, "کش‌فروش"),
+    ]
+
+    date = models.DateField()
+    payee = models.CharField(max_length=20, choices=PAYEE_CHOICES, db_index=True)
+    amount = models.PositiveBigIntegerField()
+    note = models.CharField(max_length=250, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-date", "-id"]
+
+
+class TailorBalanceEntry(models.Model):
+    date = models.DateField()
+    delta = models.BigIntegerField()
+    title = models.CharField(max_length=160)
+    reference = models.CharField(max_length=120, blank=True, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-date", "-id"]
