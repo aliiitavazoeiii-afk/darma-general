@@ -62,7 +62,7 @@ class Command(BaseCommand):
         simple_routes = [
             "dashboard", "sale_start", "sale_line_save", "report", "manual_report_action",
             "financial_summary", "material_report", "takvin", "inventory", "inventory_add_color_model",
-            "inventory_operations", "payments", "payment_add", "mellat_set", "tailor_adjust",
+            "inventory_operations", "payments", "payment_add", "mellat_set",
             "calculator", "calculator_quote", "settings_home", "settings_catalog", "settings_products",
             "settings_product_new", "settings_stock", "settings_finance", "settings_rules",
         ]
@@ -87,7 +87,7 @@ class Command(BaseCommand):
 
         for static_name in [
             "core/jalali_picker.js", "core/ui-polish.css", "core/number_format.js",
-            "core/raw_materials.js", "core/raw_materials_v3.js",
+            "core/raw_materials_v3.js",
         ]:
             if not finders.find(static_name):
                 errors.append(f"static file {static_name} not found")
@@ -104,6 +104,8 @@ class Command(BaseCommand):
             RawMaterialStock.objects.count()
             BusinessPayment.objects.count()
             TailorBalanceEntry.objects.count()
+            if getattr(RawMaterialStock, "DEPOT", None) != "depot":
+                raise RuntimeError("RawMaterialStock depot location is not active")
             self.stdout.write("Excel-Web models OK")
         except Exception as exc:
             errors.append(f"models/database: {exc}")
