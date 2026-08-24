@@ -16,6 +16,47 @@ def norm(value):
     return (value or "").replace("ي", "ی").replace("ك", "ک").replace("‌", "").replace(" ", "").strip().lower()
 
 
+def _merge_duplicate_color_rows(colors, StockBalance, InventoryModelCost, StockThreshold):
+    groups = {}
+    for color in colors:
+        groups.setdefault(norm(color.name), []).append(color)
+
+    canonical = {}
+    for key, group in groups.items():
+        primary = sorted(group, key=lambda c: c.id)[0]
+        canonical[key] = primary
+        for duplicate in sorted(group, key=lambda c: c.id)[1:]:
+            for row in list(StockBalance.objects.filter(color=duplicate)):
+                target, _ = StockBalance.objects.get_or_create(
+                    brand_id=row.brand_id, size_id=row.size_id, color=primary, location_id=row.location_id,
+                    defaults={"qty": 0},
+                )
+                target.qty = int(target.qty or 0) + int(row.qty or 0)
+                target.save(update_fields=["qty"])
+                row.delete()
+
+            for row in list(InventoryModelCost.objects.filter(color=duplicate)):
+                target, _ = InventoryModelCost.objects.get_or_create(
+                    brand_id=row.brand_id, size_id=row.size_id, color=primary,
+                    defaults={"unit_cost": int(row.unit_cost or 0)},
+                )
+                if not int(target.unit_cost or 0) and int(row.unit_cost or 0):
+                    target.unit_cost = int(row.unit_cost or 0)
+                    target.save(update_fields=["unit_cost"])
+                row.delete()
+
+            for row in list(StockThreshold.objects.filter(color=duplicate)):
+                target, _ = StockThreshold.objects.get_or_create(
+                    brand_id=row.brand_id, size_id=row.size_id, color=primary,
+                    defaults={"home_min": int(row.home_min or 0), "total_min": int(row.total_min or 0)},
+                )
+                target.home_min = max(int(target.home_min or 0), int(row.home_min or 0))
+                target.total_min = max(int(target.total_min or 0), int(row.total_min or 0))
+                target.save(update_fields=["home_min", "total_min"])
+                row.delete()
+    return canonical
+
+
 def separate_colors(apps, schema_editor):
     Brand = apps.get_model("core", "Brand")
     Color = apps.get_model("core", "Color")
@@ -32,14 +73,13 @@ def separate_colors(apps, schema_editor):
     if not darma or not takvin or not home:
         return
 
+    colors = list(Color.objects.filter(active=True).order_by("id"))
+    canonical = _merge_duplicate_color_rows(colors, StockBalance, InventoryModelCost, StockThreshold)
+    colors = list(canonical.values())
+
     takvin_norm = {norm(x) for x in TAKVIN}
     darma_norm = {norm(x) for x in DARMA}
     shared = takvin_norm & darma_norm
-
-    colors = list(Color.objects.filter(active=True).order_by("id"))
-    by_norm = {}
-    for color in colors:
-        by_norm.setdefault(norm(color.name), color)
 
     # Takvin is intentionally limited to the exact workbook catalog.
     allowed_takvin_ids = {color.id for color in colors if norm(color.name) in takvin_norm}
@@ -55,8 +95,8 @@ def separate_colors(apps, schema_editor):
             StockBalance.objects.get_or_create(brand=takvin, color=color, size=size, location=home, defaults={"qty": 0})
     StockBalance.objects.filter(brand=takvin, location__key="khorshid").delete()
 
-    # Darma keeps its canonical colors plus every user-added color that is not
-    # an exclusive Takvin color. Shared colors remain available to both brands.
+    # Darma keeps canonical Darma colors plus user-added colors, but not
+    # Takvin-exclusive colors. Shared colors are intentionally available to both.
     darma_allowed = []
     for color in colors:
         n = norm(color.name)
