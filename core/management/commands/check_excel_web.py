@@ -3,7 +3,15 @@ from django.core.management.base import BaseCommand, CommandError
 from django.template.loader import get_template
 from django.urls import reverse
 
-from core.models import ExcelManualRow, ExcelManualSetting, InventoryModelCost, MaterialReportBlock, RawMaterialStock, TakvinPurchase
+from core.models import (
+    ExcelManualRow,
+    ExcelManualSetting,
+    InventoryModelCost,
+    MaterialReportBlock,
+    MaterialReportConsumption,
+    RawMaterialStock,
+    TakvinPurchase,
+)
 
 
 class Command(BaseCommand):
@@ -15,8 +23,11 @@ class Command(BaseCommand):
             "core/_mobile_shell.html",
             "core/dashboard_excel.html",
             "core/report_excel_v2.html",
+            "core/report_excel_v3.html",
             "core/_manual_table.html",
-            "core/_raw_material_stock.html",
+            "core/_raw_fabric_table.html",
+            "core/_raw_elastic_table.html",
+            "core/_raw_material_panel_v3.html",
             "core/material_report.html",
             "core/takvin_excel.html",
             "core/sale_calendar.html",
@@ -67,7 +78,10 @@ class Command(BaseCommand):
             except Exception as exc:
                 errors.append(f"route {route}: {exc}")
 
-        for static_name in ["core/jalali_picker.js", "core/ui-polish.css", "core/raw_materials.js", "core/number_format.js"]:
+        for static_name in [
+            "core/jalali_picker.js", "core/ui-polish.css", "core/number_format.js",
+            "core/raw_materials_v3.js",
+        ]:
             if not finders.find(static_name):
                 errors.append(f"static file {static_name} not found")
             else:
@@ -77,6 +91,7 @@ class Command(BaseCommand):
             ExcelManualSetting.objects.count()
             ExcelManualRow.objects.count()
             MaterialReportBlock.objects.count()
+            MaterialReportConsumption.objects.count()
             TakvinPurchase.objects.filter(note__startswith="[excel-web]").count()
             InventoryModelCost.objects.count()
             RawMaterialStock.objects.count()
