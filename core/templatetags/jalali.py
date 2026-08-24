@@ -29,7 +29,6 @@ def groupnum(value):
 
 @register.filter(name="qtynum")
 def qtynum(value):
-    """Show kg/quantity as 100 or 98.52, never as 100,000 and never grouped."""
     try:
         number = Decimal(str(value))
     except (InvalidOperation, TypeError, ValueError):
@@ -38,6 +37,14 @@ def qtynum(value):
     if "." in text:
         text = text.rstrip("0").rstrip(".")
     return text or "0"
+
+
+@register.filter(name="absnum")
+def absnum(value):
+    try:
+        return abs(int(value or 0))
+    except (TypeError, ValueError):
+        return value
 
 
 @register.filter(name="pct1")
