@@ -110,7 +110,7 @@ class Command(BaseCommand):
         self.stdout.write(f"REFERENCE DELTA       = {expected_reference_qty - current_reference_qty:+d}")
         self.stdout.write(f"TARGET VALUE          = {EXPECTED_VALUE}")
         if extra_rows:
-            self.stdout.write(self.style.WARNING("Non-base Darma stock not touched:"))
+            self.stdout.write(self.style.WARNING("Non-base Darma stock detected:"))
             for name, qty in extra_rows:
                 self.stdout.write(self.style.WARNING(f"  {name}: {qty:+d}"))
 
@@ -120,6 +120,9 @@ class Command(BaseCommand):
         if not apply_changes:
             self.stdout.write(self.style.WARNING("DRY RUN ONLY — run again with --apply after reviewing the diffs."))
             return
+
+        if extra_rows:
+            raise CommandError("Unexpected non-zero stock exists on newer Darma colors. Nothing was changed; review the dry-run output first.")
 
         for size_name, color_name, current, target, delta, color in diffs:
             size = sizes[size_name]
