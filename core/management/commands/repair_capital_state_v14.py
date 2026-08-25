@@ -8,6 +8,7 @@ from core.models import (
     Brand,
     BusinessPayment,
     Color,
+    InventoryModelCost,
     MaterialReportBlock,
     Size,
     StockBalance,
@@ -93,15 +94,25 @@ class Command(BaseCommand):
             self.stdout.write(f"ORPHAN BLOCK: id={row[0]} date={row[1]} title={row[2]} shorts={row[3]}")
 
         conflicts = []
+        orphan_value = 0
         for (color_id, size_id, label, size_name), qty in sorted(required.items(), key=lambda x: (x[0][2], x[0][3])):
             current = int(
                 StockBalance.objects.filter(
                     brand=brand, color_id=color_id, size_id=size_id, location=khorshid
                 ).values_list("qty", flat=True).first() or 0
             )
-            self.stdout.write(f"LEGACY OUTPUT CHECK: {label}/{size_name} need_remove={qty} khorshid={current}")
+            unit_cost = int(
+                InventoryModelCost.objects.filter(
+                    brand=brand, color_id=color_id, size_id=size_id
+                ).values_list("unit_cost", flat=True).first() or 0
+            )
+            orphan_value += qty * unit_cost
+            self.stdout.write(
+                f"LEGACY OUTPUT CHECK: {label}/{size_name} need_remove={qty} khorshid={current} cost={unit_cost} value={qty * unit_cost}"
+            )
             if current < qty:
                 conflicts.append(f"{label}/{size_name}: need {qty}, khorshid has {current}")
+        self.stdout.write(f"ORPHAN FINISHED VALUE TO REMOVE = {orphan_value}")
 
         material_payments = BusinessPayment.objects.filter(payee__in=["fabric", "elastic"]).order_by("id")
         backfillable = 0
@@ -153,5 +164,5 @@ class Command(BaseCommand):
             )
 
         self.stdout.write(self.style.SUCCESS(
-            f"CAPITAL V14 LEGACY REPAIR APPLIED; removed orphan finished stock from {len(orphan_blocks)} block(s)."
+            f"CAPITAL V14 LEGACY REPAIR APPLIED; removed {orphan_value} toman orphan finished value from {len(orphan_blocks)} block(s)."
         ))
