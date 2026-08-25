@@ -1,11 +1,12 @@
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
+from django.db.models import Sum
 
 from core.dateutils import format_jalali, parse_jalali_date
 from core.final_services import sync_sale_inventory
 from core.finance import sale_line_metrics
 from core.finance_excel_v9 import digikala_receivable_total, sync_sale_receivable
-from core.models import InventoryMovement, SaleDay
+from core.models import InventoryMovement, SaleDay, StockBalance
 
 
 class Command(BaseCommand):
@@ -37,6 +38,7 @@ class Command(BaseCommand):
         packs = 0
         shorts = 0
         line_ids = []
+        expected_restore = {}
         for line in lines:
             metrics = sale_line_metrics(line)
             gross += int(metrics["gross"] or 0)
@@ -45,7 +47,17 @@ class Command(BaseCommand):
             packs += int(metrics["packs"] or 0)
             shorts += int(metrics["shorts"] or 0)
             line_ids.append(line.id)
+            brand_name = line.product_size.product.brand.name
+            expected_restore[brand_name] = expected_restore.get(brand_name, 0) + (
+                int(line.inventory_applied_quantity or 0) * int(line.product_size.product.pack_qty or 0)
+            )
 
+        before_stock = {
+            brand_name: int(
+                StockBalance.objects.filter(brand__name=brand_name).aggregate(v=Sum("qty"))["v"] or 0
+            )
+            for brand_name in expected_restore
+        }
         receivable_before = int(digikala_receivable_total())
 
         # Setting quantity to zero lets the same inventory engine restore every
@@ -55,6 +67,17 @@ class Command(BaseCommand):
             line.save(update_fields=["quantity"])
             sync_sale_inventory(line)
             sync_sale_receivable(line)
+
+        for brand_name, expected_delta in expected_restore.items():
+            after_qty = int(
+                StockBalance.objects.filter(brand__name=brand_name).aggregate(v=Sum("qty"))["v"] or 0
+            )
+            actual_delta = after_qty - before_stock[brand_name]
+            if actual_delta != expected_delta:
+                raise CommandError(
+                    f"Inventory guard failed for {brand_name}: restored {actual_delta:+d}, expected {expected_delta:+d}. "
+                    "Transaction rolled back; sale day was NOT deleted."
+                )
 
         # Stock balances are already restored; historical movement rows for this
         # deleted day are removed so the movement log does not keep orphan sale refs.
