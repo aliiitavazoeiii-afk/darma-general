@@ -21,7 +21,9 @@ SELLER_COLOR_CODES = {
     "s5": "سرمه ای",
 }
 
-TITLE_COLORS = ["مشکی", "کرم", "صورتی", "سرمه ای"]
+# Title is authoritative for variable-color s3. White has no confirmed seller-code
+# alias yet, but it is fully supported whenever the Digikala title says سفید.
+TITLE_COLORS = ["مشکی", "کرم", "صورتی", "سرمه ای", "سفید"]
 
 
 def _color_for_name(name):
