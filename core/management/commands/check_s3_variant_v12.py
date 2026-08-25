@@ -37,6 +37,7 @@ class Command(BaseCommand):
             ("شورت زنانه دارما مدل s3 | 3XL | مشکی | گارانتی", "s3", "مشکی"),
             ("شورت زنانه دارما مدل s3 | XL | صورتی | گارانتی", "S3", "صورتی"),
             ("شورت زنانه دارما مدل s3 | M | سرمه‌ای | گارانتی", "s5", "سرمه ای"),
+            ("شورت زنانه دارما مدل s3 | L | سفید | گارانتی", "", "سفید"),
         ]
         for title, seller_code, expected in samples:
             actual = resolve_variant_color(title, seller_code)
