@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import business_tools_v14, calendar_views, catalog_v5, daily_order_views_v8, daily_report_v8, daily_views, excel_dashboard, excel_sales, final_views, inventory_operations_v15, inventory_v5, material_report_v14, pricing_v7, report_v9, settings_stock_v5, takvin_v5, views
+from . import business_tools_v14, calendar_views, catalog_v5, daily_order_views_v8, daily_report_v8, daily_views, excel_dashboard, excel_sales, final_views, inventory_operations_v15, inventory_v5, material_report_v16, pricing_v7, report_v9, settings_stock_v5, takvin_v5, views
 
 urlpatterns = [
     path("", excel_dashboard.dashboard, name="dashboard"),
@@ -17,11 +17,12 @@ urlpatterns = [
     path("report/", report_v9.report, name="report"),
     path("report/manual/", report_v9.manual_report_action, name="manual_report_action"),
     path("report/financial-summary/", business_tools_v14.financial_summary, name="financial_summary"),
-    path("material-report/", material_report_v14.material_report, name="material_report"),
-    path("material-report/<int:block_id>/save/", material_report_v14.material_block_save, name="material_block_save"),
-    path("material-report/<int:block_id>/apply/", material_report_v14.material_block_apply, name="material_block_apply"),
-    path("material-report/<int:block_id>/unapply/", material_report_v14.material_block_unapply, name="material_block_unapply"),
-    path("material-report/<int:block_id>/delete/", material_report_v14.material_block_delete, name="material_block_delete"),
+    path("material-report/", material_report_v16.material_report, name="material_report"),
+    path("material-report/<int:block_id>/save/", material_report_v16.material_block_save, name="material_block_save"),
+    path("material-report/<int:block_id>/apply/", material_report_v16.material_block_apply_materials, name="material_block_apply"),
+    path("material-report/<int:block_id>/apply-output/", material_report_v16.material_block_apply_output, name="material_block_apply_output"),
+    path("material-report/<int:block_id>/unapply/", material_report_v16.material_block_unapply_materials, name="material_block_unapply"),
+    path("material-report/<int:block_id>/delete/", material_report_v16.material_block_delete, name="material_block_delete"),
     path("takvin/", takvin_v5.takvin_excel, name="takvin"),
 
     path("payments/", business_tools_v14.payments, name="payments"),
