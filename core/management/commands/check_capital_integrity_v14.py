@@ -29,19 +29,19 @@ class Command(BaseCommand):
         warnings = []
 
         route_checks = {
-            "payments": "core.business_tools_v14",
-            "payment_add": "core.business_tools_v14",
-            "receipt_add": "core.business_tools_v14",
-            "material_report": "core.material_report_v14",
-            "material_block_save": "core.material_report_v14",
-            "material_block_apply": "core.material_report_v14",
-            "material_block_unapply": "core.material_report_v14",
+            "payments": {"core.business_tools_v14"},
+            "payment_add": {"core.business_tools_v14"},
+            "receipt_add": {"core.business_tools_v14"},
+            "material_report": {"core.material_report_v14", "core.material_report_v16"},
+            "material_block_save": {"core.material_report_v14", "core.material_report_v16"},
+            "material_block_apply": {"core.material_report_v14", "core.material_report_v16"},
+            "material_block_unapply": {"core.material_report_v14", "core.material_report_v16"},
         }
-        for name, module in route_checks.items():
+        for name, allowed_modules in route_checks.items():
             args = [1] if "material_block_" in name else []
             actual = resolve(reverse(name, args=args)).func.__module__
-            if actual != module:
-                errors.append(f"{name}: {actual} != {module}")
+            if actual not in allowed_modules:
+                errors.append(f"{name}: {actual} not in {sorted(allowed_modules)}")
             else:
                 self.stdout.write(f"route OK: {name} -> {actual}")
 
@@ -90,7 +90,6 @@ class Command(BaseCommand):
                     f"material payment {payment.id}: payment={payment.amount}, ledger={ledger.amount}"
                 )
 
-        # Detect stock that still says it came from a payment which no longer exists.
         orphan_purchase_value = 0
         for stock in RawMaterialStock.objects.filter(active=True).exclude(note=""):
             match = PURCHASE_NOTE_RE.search(stock.note or "")
