@@ -1,3 +1,5 @@
+import re
+
 from django.core.management.base import BaseCommand, CommandError
 from django.db.models import Sum
 from django.urls import resolve, reverse
@@ -6,13 +8,17 @@ from core.finance_excel_v9 import digikala_receivable_total
 from core.material_purchase_v14 import ledger_for_payment, purchase_data_for_payment
 from core.models import (
     AccountEntry,
+    AppSetting,
     BusinessPayment,
     DigikalaSettlement,
     ExcelManualRow,
     ExcelManualSetting,
     MaterialReportBlock,
+    RawMaterialStock,
 )
 from core.report_v5 import _finished_inventory_value, _raw_material_context
+
+PURCHASE_NOTE_RE = re.compile(r"خرید از پرداخت\s*#(\d+)")
 
 
 class Command(BaseCommand):
@@ -62,7 +68,6 @@ class Command(BaseCommand):
         self.stdout.write(f"CAPITAL TOTAL       = {capital}")
         self.stdout.write("============================")
 
-        # Every Digikala settlement must have exactly one opposite ledger entry.
         for receipt in DigikalaSettlement.objects.all():
             rows = AccountEntry.objects.filter(
                 reference=f"receipt:{receipt.id}:digikala", entry_type="receipt"
@@ -73,8 +78,6 @@ class Command(BaseCommand):
                     f"receipt {receipt.id}: amount={receipt.amount}, ledger_count={rows.count()}, ledger_total={total}"
                 )
 
-        # Every material payment must have a durable purchase ledger in v14. Old unlinked
-        # payments are not auto-deleted; deletion is blocked until manually reconciled.
         for payment in BusinessPayment.objects.filter(payee__in=["fabric", "elastic"]):
             data = purchase_data_for_payment(payment)
             ledger = ledger_for_payment(payment)
@@ -87,12 +90,26 @@ class Command(BaseCommand):
                     f"material payment {payment.id}: payment={payment.amount}, ledger={ledger.amount}"
                 )
 
-        # Under v14, an unapplied report may contain entered output numbers, but it must not
-        # itself mutate stock. Old v13 orphan output is repaired once during deployment.
-        legacy_repair_done = ExcelManualSetting.objects.filter(key="capital_v14_legacy_repair_done").exists()
-        # marker lives in AppSetting, not ExcelManualSetting; import lazily to avoid confusion.
-        from core.models import AppSetting
-        legacy_repair_done = AppSetting.objects.filter(key="capital_v14_legacy_repair_done", value="1").exists()
+        # Detect stock that still says it came from a payment which no longer exists.
+        orphan_purchase_value = 0
+        for stock in RawMaterialStock.objects.filter(active=True).exclude(note=""):
+            match = PURCHASE_NOTE_RE.search(stock.note or "")
+            if not match:
+                continue
+            payment_id = int(match.group(1))
+            if BusinessPayment.objects.filter(id=payment_id).exists():
+                continue
+            value = int(stock.total_value or 0)
+            orphan_purchase_value += value
+            warnings.append(
+                f"orphan material stock row={stock.id} kind={stock.kind} title={stock.title} "
+                f"qty={stock.quantity} value={value} references deleted payment #{payment_id}"
+            )
+        self.stdout.write(f"ORPHAN MATERIAL VALUE FROM DELETED PAYMENTS = {orphan_purchase_value}")
+
+        legacy_repair_done = AppSetting.objects.filter(
+            key="capital_v14_legacy_repair_done", value="1"
+        ).exists()
         if not legacy_repair_done:
             warnings.append("legacy v13 orphan-output repair marker is not set")
 
