@@ -58,14 +58,21 @@ step "7) PREFLIGHT"
 docker compose run --rm --entrypoint sh web -c 'python manage.py check && python manage.py check_excel_web && python manage.py check_finance_flow_v9 && python manage.py check_s3_variant_v12' || fail "preflight failed"
 echo "PREFLIGHT OK"
 
-step "8) VERIFY V12 FILES"
-docker compose run --rm --no-deps --entrypoint sh web -c '
-grep -Fq "daily_order_import_v12" /app/core/daily_order_views_v8.py &&
-grep -Fq "SELLER_COLOR_CODES" /app/core/variant_sale_v12.py &&
-grep -Fq "کرم" /app/core/variant_sale_v12.py &&
-grep -Fq "پک ۱ تایی" /app/templates/core/settings_products.html &&
-echo "S3 V12 FILES OK"
-' || fail "v12 file verification failed"
+step "8) VERIFY V12 RUNTIME"
+docker compose run --rm --no-deps --entrypoint sh web -c 'python manage.py shell -c "
+from django.template.loader import get_template
+from core.daily_order_import_v12 import apply_delivery_report
+from core.variant_sale_v12 import resolve_variant_color, SELLER_COLOR_CODES
+assert callable(apply_delivery_report)
+assert SELLER_COLOR_CODES.get(\"s2\") == \"کرم\"
+assert SELLER_COLOR_CODES.get(\"s3\") == \"مشکی\"
+assert SELLER_COLOR_CODES.get(\"S3\") == \"صورتی\"
+assert SELLER_COLOR_CODES.get(\"s5\") == \"سرمه ای\"
+assert resolve_variant_color(\"شورت زنانه دارما مدل s3 | XXL | سفید | گارانتی\", \"\") == \"سفید\"
+assert resolve_variant_color(\"شورت زنانه دارما مدل s3 | 3XL | کرم | گارانتی\", \"s2\") == \"کرم\"
+get_template(\"core/settings_products.html\")
+print(\"S3 V12 RUNTIME CHECK OK\")
+"' || fail "v12 runtime verification failed"
 
 step "9) RECREATE LIVE WEB"
 docker compose up -d --force-recreate web || fail "could not recreate web"
