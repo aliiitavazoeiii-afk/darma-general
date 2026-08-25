@@ -5,8 +5,9 @@ from django.shortcuts import get_object_or_404, render
 from django.views.decorators.http import require_POST
 
 from .finance import digikala_fee_for_unit
+from .finance_excel_v9 import sync_sale_receivable
 from .final_services import inventory_unit_cost, setting_decimal, sync_sale_inventory
-from .models import AccountEntry, Color, ProductSize, SaleDay, SaleLine, SaleShortage, SaleSnapshot
+from .models import Color, ProductSize, SaleDay, SaleLine, SaleShortage, SaleSnapshot
 
 
 def _int(value, default=0):
@@ -53,9 +54,8 @@ def sale_line_save(request):
     snap.digikala_fee_unit = digikala_fee_for_unit(price)
     snap.save()
 
-    # Excel-Web keeps inventory behavior, but financial balances are manual.
     result = sync_sale_inventory(line)
-    AccountEntry.objects.filter(reference=f"sale:{line.id}:digikala").delete()
+    sync_sale_receivable(line)
     pending = list(line.shortages.filter(resolved=False).select_related("source_color"))
     return render(
         request,
@@ -88,7 +88,7 @@ def shortage_resolve(request, shortage_id):
     shortage.save(update_fields=["resolved", "target_color"])
     line = shortage.sale_line
     result = sync_sale_inventory(line)
-    AccountEntry.objects.filter(reference=f"sale:{line.id}:digikala").delete()
+    sync_sale_receivable(line)
     pending = list(line.shortages.filter(resolved=False).select_related("source_color"))
     return render(
         request,
