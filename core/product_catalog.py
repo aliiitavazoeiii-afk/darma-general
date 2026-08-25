@@ -3,7 +3,16 @@ from .models import Brand, Color, ProductCode, ProductComposition, ProductSize, 
 
 
 TAKVIN_UNIT_COST = {"M": 108000, "L": 126000, "XL": 139500, "XXL": 153000}
-DARMA_UNIT_COST = {"M": 61000, "L": 61000, "XL": 61000, "XXL": 61000, "3XL": 61000}
+DARMA_UNIT_COST = {"M": 61000, "L": 61000, "XL": 61000, "XXL": 61000, "3XL": 61000, "4XL": 61000}
+
+# Final user-confirmed Darma selling prices. Any Darma product whose composition
+# totals 3/4/5/6 pieces uses this table, regardless of product code.
+DARMA_PRICE_BY_PACK = {
+    3: {"M": 385000, "L": 405000, "XL": 430000, "XXL": 455000, "3XL": 470000, "4XL": 495000},
+    4: {"M": 485000, "L": 515000, "XL": 545000, "XXL": 570000, "3XL": 610000, "4XL": 630000},
+    5: {"M": 570000, "L": 618000, "XL": 658000, "XXL": 701000, "3XL": 743000, "4XL": 790000},
+    6: {"M": 699000, "L": 755000, "XL": 795000, "XXL": 860000, "3XL": 920000, "4XL": 980000},
+}
 
 # Canonical current product catalog reconstructed from the workbook's product rows,
 # pack-size formulas and per-color sales formulas. Composition is invariant by size.
@@ -17,8 +26,6 @@ CATALOG = {
         "502": {"composition": {"طوسی راه راه": 1, "طوسی": 1, "سرمه ای": 1}, "prices": {"M": 730000, "L": 860000, "XL": 960000, "XXL": 1050000}},
         "4444": {"composition": {"بنفش": 1, "سرمه ای": 1, "چرک روشن": 1}, "prices": {"M": 730000, "L": 860000, "XL": 960000, "XXL": 1050000}},
         "654-1": {"composition": {"بنفش": 1, "طوسی": 1, "سرمه ای": 1, "سفید": 1, "چرک روشن": 1}, "prices": {"M": 1200000, "L": 1400000, "XL": 1600000, "XXL": 1800000}},
-        # The old workbook had one formula inconsistency by size; user confirmed
-        # this five-color definition for 555-1.
         "555-1": {"composition": {"طوسی": 1, "سرمه ای": 1, "سفید": 1, "چرک روشن": 1, "مشکی": 1}, "prices": {"M": 1200000, "L": 1400000, "XL": 1600000, "XXL": 1800000}},
         "2222": {"composition": {"طوسی": 1, "چرک روشن": 1, "راه راه بنفش": 1}, "prices": {"M": 730000, "L": 860000, "XL": 960000, "XXL": 1050000}},
         "1010": {"composition": {"طوسی": 1, "سفید": 1, "مشکی": 1}, "prices": {"M": 730000, "L": 860000, "XL": 960000, "XXL": 1050000}},
@@ -29,23 +36,23 @@ CATALOG = {
         "403": {"composition": {"راه راه سفید": 1, "راه راه مشکی": 1}, "prices": {"XL": 550000, "XXL": 550000}},
     },
     "دارما": {
-        "D 110": {"composition": {"سرمه ای": 1, "سفید": 1, "کرم": 1}, "prices": {"M": 380000, "L": 403000, "XL": 428000, "XXL": 453000, "3XL": 468000}},
-        "D 220": {"composition": {"سفید": 1, "صورتی": 1, "کرم": 1}, "prices": {"M": 380000, "L": 403000, "XL": 428000, "XXL": 453000, "3XL": 468000}},
-        "D 330": {"composition": {"مشکی": 1, "سفید": 1, "صورتی": 1}, "prices": {"M": 380000, "L": 403000, "XL": 428000, "XXL": 453000, "3XL": 468000}},
-        "D 440": {"composition": {"مشکی": 1, "سفید": 1, "سرمه ای": 1}, "prices": {"M": 380000, "L": 403000, "XL": 428000, "XXL": 453000, "3XL": 468000}},
-        "D 550": {"composition": {"مشکی": 1, "سرمه ای": 1, "صورتی": 1}, "prices": {"M": 380000, "L": 403000, "XL": 428000, "XXL": 453000, "3XL": 468000}},
-        "D 660": {"composition": {"مشکی": 1, "سرمه ای": 1, "کرم": 1}, "prices": {"M": 600000, "L": 600000, "XL": 600000, "XXL": 600000, "3XL": 600000}},
-        "pack 5": {"composition": {"مشکی": 1, "سفید": 1, "سرمه ای": 1, "صورتی": 1, "کرم": 1}, "prices": {"M": 570000, "L": 615000, "XL": 655000, "XXL": 699000, "3XL": 740000}},
-        "880": {"composition": {"مشکی": 1, "سفید": 1, "کرم": 1}, "prices": {"M": 380000, "L": 403000, "XL": 428000, "XXL": 453000, "3XL": 468000}},
-        "990": {"composition": {"مشکی": 1, "قرمز": 1, "زرد": 1}, "prices": {"M": 380000, "L": 403000, "XL": 428000, "XXL": 453000, "3XL": 468000}},
-        "770": {"composition": {"سفید": 1, "سرمه ای": 1, "صورتی": 1}, "prices": {"M": 380000, "L": 403000, "XL": 428000, "XXL": 453000, "3XL": 468000}},
+        "D 110": {"composition": {"سرمه ای": 1, "سفید": 1, "کرم": 1}},
+        "D 220": {"composition": {"سفید": 1, "صورتی": 1, "کرم": 1}},
+        "D 330": {"composition": {"مشکی": 1, "سفید": 1, "صورتی": 1}},
+        "D 440": {"composition": {"مشکی": 1, "سفید": 1, "سرمه ای": 1}},
+        "D 550": {"composition": {"مشکی": 1, "سرمه ای": 1, "صورتی": 1}},
+        "D 660": {"composition": {"مشکی": 1, "سرمه ای": 1, "کرم": 1}},
+        "pack 5": {"composition": {"مشکی": 1, "سفید": 1, "سرمه ای": 1, "صورتی": 1, "کرم": 1}},
+        "880": {"composition": {"مشکی": 1, "سفید": 1, "کرم": 1}},
+        "990": {"composition": {"مشکی": 1, "قرمز": 1, "زرد": 1}},
+        "770": {"composition": {"سفید": 1, "سرمه ای": 1, "صورتی": 1}},
         "p12": {"composition": {"مشکی": 2, "سفید": 2, "سرمه ای": 2, "صورتی": 2, "قرمز": 2, "زرد": 2}, "prices": {"M": 1380000, "L": 1500000, "XL": 1600000, "XXL": 1700000, "3XL": 1800000}},
-        "400": {"composition": {"مشکی": 1, "سرمه ای": 1, "صورتی": 1, "طوسی": 1}, "prices": {"M": 480000, "L": 510000, "XL": 540000, "XXL": 567500, "3XL": 605000}},
-        "06": {"composition": {"مشکی": 1, "سفید": 1, "سرمه ای": 1, "صورتی": 1, "قرمز": 1, "طوسی": 1}, "prices": {"M": 699000, "L": 755000, "XL": 795000, "XXL": 860000, "3XL": 920000}},
-        "rah-110": {"composition": {"راه راه": 1, "سفید": 1, "سرمه ای": 1}, "prices": {"M": 380000, "L": 403000, "XL": 428000, "XXL": 453000}},
-        "pgw": {"composition": {"سفید": 1, "صورتی": 1, "طوسی": 1}, "prices": {"M": 600000, "L": 600000, "XL": 600000, "XXL": 600000, "3XL": 600000}},
-        "rah-220": {"composition": {"راه راه طوسی": 1, "سفید": 1, "طوسی": 1}, "prices": {"L": 383000, "XL": 408000, "XXL": 433000, "3XL": 448000}},
-        "op": {"composition": {"برعکس مشکی": 1, "برعکس سفید": 1, "برعکس سرمه ای": 1}, "prices": {"L": 403000, "XL": 428000, "XXL": 453000, "3XL": 468000}},
+        "400": {"composition": {"مشکی": 1, "سرمه ای": 1, "صورتی": 1, "طوسی": 1}},
+        "06": {"composition": {"مشکی": 1, "سفید": 1, "سرمه ای": 1, "صورتی": 1, "قرمز": 1, "طوسی": 1}},
+        "rah-110": {"composition": {"راه راه": 1, "سفید": 1, "سرمه ای": 1}},
+        "pgw": {"composition": {"سفید": 1, "صورتی": 1, "طوسی": 1}},
+        "rah-220": {"composition": {"راه راه طوسی": 1, "سفید": 1, "طوسی": 1}},
+        "op": {"composition": {"برعکس مشکی": 1, "برعکس سفید": 1, "برعکس سرمه ای": 1}},
     },
 }
 
@@ -82,8 +89,13 @@ def sync_catalog():
                     product=product, color=_color_for_name(color_name), qty=int(qty)
                 )
 
+            if brand_name == "دارما" and pack_qty in DARMA_PRICE_BY_PACK:
+                prices = DARMA_PRICE_BY_PACK[pack_qty]
+            else:
+                prices = spec.get("prices", {})
+
             configured_size_ids = []
-            for size_name, sale_price in spec.get("prices", {}).items():
+            for size_name, sale_price in prices.items():
                 size = Size.objects.get(name=size_name)
                 if brand_name == "تکوین":
                     unit_cost = TAKVIN_UNIT_COST[size_name]
