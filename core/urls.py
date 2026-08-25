@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import business_tools_v14, calendar_views, catalog_v5, daily_order_views_v8, daily_report_v8, daily_views, excel_dashboard, excel_sales, final_views, inventory_v5, material_report_v14, pricing_v7, report_v9, settings_stock_v5, takvin_v5, views
+from . import business_tools_v14, calendar_views, catalog_v5, daily_order_views_v8, daily_report_v8, daily_views, excel_dashboard, excel_sales, final_views, inventory_operations_v15, inventory_v5, material_report_v14, pricing_v7, report_v9, settings_stock_v5, takvin_v5, views
 
 urlpatterns = [
     path("", excel_dashboard.dashboard, name="dashboard"),
@@ -35,7 +35,7 @@ urlpatterns = [
 
     path("inventory/", inventory_v5.inventory, name="inventory"),
     path("inventory/color-model/add/", inventory_v5.add_color_model, name="inventory_add_color_model"),
-    path("inventory/operations/", final_views.inventory_operations, name="inventory_operations"),
+    path("inventory/operations/", inventory_operations_v15.inventory_operations, name="inventory_operations"),
 
     path("materials/", final_views.materials, name="materials"),
     path("production/", final_views.production, name="production"),
