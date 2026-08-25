@@ -19,7 +19,7 @@ def report(request):
     lines = list(
         SaleLine.objects.filter(day__date__gte=start, day__date__lte=end, quantity__gt=0)
         .select_related("day", "product_size__product__brand", "product_size__product", "product_size__size")
-        .prefetch_related("product_size__product__composition__color")
+        .prefetch_related("product_size__product__composition__color", "allocations__color")
     )
     brand_totals = defaultdict(_empty_metrics)
     brand_sizes = defaultdict(lambda: defaultdict(_empty_metrics))
@@ -36,8 +36,16 @@ def report(request):
         _add_metrics(overall, metrics)
         if brand == "دارما":
             product_profit[line.product_size.product.code][size] += metrics["profit"]
-            for comp in line.product_size.product.composition.all():
-                color_sales[comp.color.name][size] += int(line.quantity) * int(comp.qty)
+            # Actual allocations are the source of truth after a sale. This correctly
+            # handles replacement colors and the customer-selectable single-item s3.
+            allocations = list(line.allocations.all())
+            if allocations:
+                for alloc in allocations:
+                    color_sales[alloc.color.name][size] += int(alloc.qty)
+            else:
+                # Fallback for historical rows created before allocations existed.
+                for comp in line.product_size.product.composition.all():
+                    color_sales[comp.color.name][size] += int(line.quantity) * int(comp.qty)
 
     for values in brand_totals.values():
         _finish_metrics(values)
