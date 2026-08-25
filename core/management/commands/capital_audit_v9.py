@@ -1,12 +1,13 @@
 from django.core.management.base import BaseCommand
 
 from core.finance_excel_v9 import digikala_base_receivable, digikala_ledger_total, digikala_receivable_total
+from core.inventory_valuation_v17 import finished_inventory_value_v17
 from core.models import ExcelManualRow, ExcelManualSetting
-from core.report_v5 import _finished_inventory_value, _raw_material_context
+from core.report_v5 import _raw_material_context
 
 
 class Command(BaseCommand):
-    help = "Print the exact Excel-Web capital components for finance v9 diagnostics."
+    help = "Print the exact Excel-Web capital components for finance diagnostics."
 
     def handle(self, *args, **options):
         accounts = list(ExcelManualRow.objects.filter(active=True, section=ExcelManualRow.ACCOUNTS))
@@ -14,7 +15,7 @@ class Command(BaseCommand):
         assets = list(ExcelManualRow.objects.filter(active=True, section=ExcelManualRow.ASSETS))
         accounts_total = sum(int(row.amount or 0) for row in accounts) + sum(int(row.amount or 0) for row in persons)
         assets_total = sum(int(row.amount or 0) for row in assets)
-        finished = int(_finished_inventory_value())
+        finished = int(finished_inventory_value_v17())
         raw = _raw_material_context()
         materials = int(raw["materials_total"])
         inventory = finished + materials
@@ -25,7 +26,7 @@ class Command(BaseCommand):
         digi_total = int(digikala_receivable_total())
         capital = accounts_total + inventory + digi_total - takvin_debt + assets_total
 
-        self.stdout.write("=== CAPITAL AUDIT V9 ===")
+        self.stdout.write("=== CAPITAL AUDIT V17 ===")
         self.stdout.write(f"ACCOUNTS + PERSONS = {accounts_total}")
         self.stdout.write(f"FINISHED INVENTORY  = {finished}")
         self.stdout.write(f"RAW MATERIALS       = {materials}")
