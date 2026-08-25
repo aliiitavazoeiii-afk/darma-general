@@ -61,7 +61,7 @@ echo "PREFLIGHT OK"
 step "8) VERIFY V12 FILES"
 docker compose run --rm --no-deps --entrypoint sh web -c '
 grep -Fq "daily_order_import_v12" /app/core/daily_order_views_v8.py &&
-grep -Fq "s2.*کرم" /app/core/variant_sale_v12.py &&
+grep -Fq '"'"'"s2"'"'": "'"'"کرم"'"'"' /app/core/variant_sale_v12.py &&
 grep -Fq "پک ۱ تایی" /app/templates/core/settings_products.html &&
 echo "S3 V12 FILES OK"
 ' || fail "v12 file verification failed"
