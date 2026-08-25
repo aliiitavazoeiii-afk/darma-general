@@ -21,26 +21,11 @@ def daily_report(request, day_id):
         )
     )
 
-    by_brand = defaultdict(
-        lambda: {
-            "gross": 0,
-            "digikala_fee": 0,
-            "cogs": 0,
-            "profit": 0,
-            "shorts": 0,
-            "packs": 0,
-            "margin": 0,
-        }
-    )
-    total = {
-        "gross": 0,
-        "digikala_fee": 0,
-        "cogs": 0,
-        "profit": 0,
-        "shorts": 0,
-        "packs": 0,
-        "margin": 0,
-    }
+    by_brand = defaultdict(lambda: {
+        "gross": 0, "digikala_fee": 0, "cogs": 0, "profit": 0,
+        "shorts": 0, "packs": 0, "margin": 0,
+    })
+    total = {"gross": 0, "digikala_fee": 0, "cogs": 0, "profit": 0, "shorts": 0, "packs": 0, "margin": 0}
     detail_rows = []
 
     for line in lines:
@@ -55,22 +40,19 @@ def daily_report(request, day_id):
         values["margin"] = (values["profit"] / values["gross"] * 100) if values["gross"] else 0
     total["margin"] = (total["profit"] / total["gross"] * 100) if total["gross"] else 0
 
+    preferred = ["تکوین", "دارما", "انبارش"]
     ordered_brands = []
-    for brand_name in ["تکوین", "دارما"]:
+    for brand_name in preferred:
         if brand_name in by_brand:
             ordered_brands.append((brand_name, by_brand[brand_name]))
     for brand_name, values in by_brand.items():
-        if brand_name not in ["تکوین", "دارما"]:
+        if brand_name not in preferred:
             ordered_brands.append((brand_name, values))
 
-    return render(
-        request,
-        "core/daily_report_v8.html",
-        {
-            "day": day,
-            "jalali_date": format_jalali(day.date),
-            "detail_rows": detail_rows,
-            "by_brand": ordered_brands,
-            "total": total,
-        },
-    )
+    return render(request, "core/daily_report_v8.html", {
+        "day": day,
+        "jalali_date": format_jalali(day.date),
+        "detail_rows": detail_rows,
+        "by_brand": ordered_brands,
+        "total": total,
+    })
