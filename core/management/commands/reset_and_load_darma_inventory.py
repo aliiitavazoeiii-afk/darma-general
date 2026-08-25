@@ -111,6 +111,9 @@ class Command(BaseCommand):
             TAKVIN_COST_BY_SIZE, include_khorshid=False,
         )
 
+        # Keep product codes/compositions available after any future destructive reset.
+        call_command("sync_excel_product_catalog", verbosity=0)
+
         self.stdout.write(self.style.SUCCESS("Business data reset complete."))
         self.stdout.write(self.style.SUCCESS("Darma + Takvin opening inventory loaded into Home."))
         for name, value in DARMA_EXPECTED.items():
@@ -123,4 +126,5 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(f"Takvin Home total: {takvin_total}"))
         self.stdout.write(self.style.SUCCESS(f"Takvin models: {takvin_models} | cost rows: {takvin_cost_rows}"))
         self.stdout.write(self.style.SUCCESS("Inventory valuation costs loaded."))
+        self.stdout.write(self.style.SUCCESS("Excel product catalog loaded."))
         self.stdout.write(self.style.WARNING("Negative Darma quantities from the workbook were preserved exactly."))
