@@ -1,0 +1,131 @@
+from django.core.management.base import BaseCommand, CommandError
+from django.db.models import Sum
+from django.urls import resolve, reverse
+
+from core.finance_excel_v9 import digikala_receivable_total
+from core.material_purchase_v14 import ledger_for_payment, purchase_data_for_payment
+from core.models import (
+    AccountEntry,
+    BusinessPayment,
+    DigikalaSettlement,
+    ExcelManualRow,
+    ExcelManualSetting,
+    MaterialReportBlock,
+)
+from core.report_v5 import _finished_inventory_value, _raw_material_context
+
+
+class Command(BaseCommand):
+    help = "Audit capital equation and verify all internal-transfer invariants."
+
+    def handle(self, *args, **options):
+        errors = []
+        warnings = []
+
+        route_checks = {
+            "payments": "core.business_tools_v14",
+            "payment_add": "core.business_tools_v14",
+            "receipt_add": "core.business_tools_v14",
+            "material_report": "core.material_report_v14",
+            "material_block_save": "core.material_report_v14",
+            "material_block_apply": "core.material_report_v14",
+            "material_block_unapply": "core.material_report_v14",
+        }
+        for name, module in route_checks.items():
+            args = [1] if "material_block_" in name else []
+            actual = resolve(reverse(name, args=args)).func.__module__
+            if actual != module:
+                errors.append(f"{name}: {actual} != {module}")
+            else:
+                self.stdout.write(f"route OK: {name} -> {actual}")
+
+        manual = ExcelManualRow.objects.filter(active=True)
+        accounts_total = int(
+            sum(row.amount for row in manual.filter(section__in=[ExcelManualRow.ACCOUNTS, ExcelManualRow.PERSONS]))
+        )
+        assets_total = int(sum(row.amount for row in manual.filter(section=ExcelManualRow.ASSETS)))
+        finished = int(_finished_inventory_value())
+        raw = _raw_material_context()
+        materials = int(raw["materials_total"])
+        digikala = int(digikala_receivable_total())
+        debt_obj = ExcelManualSetting.objects.filter(key="takvin_debt").first()
+        takvin_debt = int(debt_obj.value or 0) if debt_obj else 0
+        capital = accounts_total + finished + materials + digikala + assets_total - takvin_debt
+
+        self.stdout.write("=== CAPITAL EQUATION V14 ===")
+        self.stdout.write(f"ACCOUNTS + PERSONS = {accounts_total}")
+        self.stdout.write(f"FINISHED INVENTORY  = {finished}")
+        self.stdout.write(f"RAW MATERIALS       = {materials}")
+        self.stdout.write(f"ASSETS              = {assets_total}")
+        self.stdout.write(f"DIGIKALA RECEIVABLE = {digikala}")
+        self.stdout.write(f"TAKVIN DEBT         = {takvin_debt}")
+        self.stdout.write(f"CAPITAL TOTAL       = {capital}")
+        self.stdout.write("============================")
+
+        # Every Digikala settlement must have exactly one opposite ledger entry.
+        for receipt in DigikalaSettlement.objects.all():
+            rows = AccountEntry.objects.filter(
+                reference=f"receipt:{receipt.id}:digikala", entry_type="receipt"
+            )
+            total = int(rows.aggregate(v=Sum("delta"))["v"] or 0)
+            if rows.count() != 1 or total != -int(receipt.amount or 0):
+                errors.append(
+                    f"receipt {receipt.id}: amount={receipt.amount}, ledger_count={rows.count()}, ledger_total={total}"
+                )
+
+        # Every material payment must have a durable purchase ledger in v14. Old unlinked
+        # payments are not auto-deleted; deletion is blocked until manually reconciled.
+        for payment in BusinessPayment.objects.filter(payee__in=["fabric", "elastic"]):
+            data = purchase_data_for_payment(payment)
+            ledger = ledger_for_payment(payment)
+            if not data:
+                warnings.append(f"material payment {payment.id}: no purchase data; deletion will be blocked")
+            elif not ledger:
+                warnings.append(f"material payment {payment.id}: legacy note only; run v14 repair/backfill")
+            elif int(ledger.amount or 0) != int(payment.amount or 0):
+                errors.append(
+                    f"material payment {payment.id}: payment={payment.amount}, ledger={ledger.amount}"
+                )
+
+        # Under v14, an unapplied report may contain entered output numbers, but it must not
+        # itself mutate stock. Old v13 orphan output is repaired once during deployment.
+        legacy_repair_done = ExcelManualSetting.objects.filter(key="capital_v14_legacy_repair_done").exists()
+        # marker lives in AppSetting, not ExcelManualSetting; import lazily to avoid confusion.
+        from core.models import AppSetting
+        legacy_repair_done = AppSetting.objects.filter(key="capital_v14_legacy_repair_done", value="1").exists()
+        if not legacy_repair_done:
+            warnings.append("legacy v13 orphan-output repair marker is not set")
+
+        applied = 0
+        unapplied_with_output = 0
+        for block in MaterialReportBlock.objects.all():
+            if block.stock_consumptions.exists():
+                applied += 1
+            else:
+                has_output = False
+                for values in (block.output_data or {}).values():
+                    values = values or {}
+                    for key, value in values.items():
+                        if key == "delivery_date":
+                            continue
+                        try:
+                            if int(float(str(value or 0).replace("٬", "").replace(",", ""))) > 0:
+                                has_output = True
+                                break
+                        except Exception:
+                            pass
+                    if has_output:
+                        break
+                if has_output:
+                    unapplied_with_output += 1
+        self.stdout.write(f"APPLIED MATERIAL REPORTS = {applied}")
+        self.stdout.write(f"UNAPPLIED REPORTS WITH ENTERED OUTPUT = {unapplied_with_output}")
+
+        for warning in warnings:
+            self.stdout.write(self.style.WARNING("WARNING: " + warning))
+        if errors:
+            for error in errors:
+                self.stderr.write(self.style.ERROR("ERROR: " + error))
+            raise CommandError("CAPITAL INTEGRITY V14 FAILED")
+
+        self.stdout.write(self.style.SUCCESS("CAPITAL INTEGRITY V14 OK"))
