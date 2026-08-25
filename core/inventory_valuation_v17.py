@@ -1,26 +1,40 @@
-from django.db.models import Sum
+from django.db.models import Avg, Sum
 
-from .models import InventoryModelCost, StockBalance
+from .models import InventoryModelCost, ProductSize, StockBalance
 from .takvin_pricing_v17 import takvin_cost_for
 
 
+def _anbaresh_unit_cost(brand_id, color_id, size_id):
+    value = (
+        ProductSize.objects.filter(
+            product__brand_id=brand_id,
+            product__composition__color_id=color_id,
+            size_id=size_id,
+            active=True,
+            product__active=True,
+            unit_cost__gt=0,
+        ).aggregate(v=Avg("unit_cost"))["v"]
+    )
+    return int(value or 0)
+
+
 def finished_inventory_value_v17():
-    """Current finished-goods value, using today's Takvin rule and stored model costs elsewhere."""
     cost_map = {
         (row.brand_id, row.color_id, row.size_id): int(row.unit_cost or 0)
         for row in InventoryModelCost.objects.all()
     }
     total = 0
-    rows = (
-        StockBalance.objects.values(
-            "brand_id", "brand__name", "color_id", "size_id", "size__name"
-        ).annotate(qty=Sum("qty"))
-    )
+    rows = StockBalance.objects.values(
+        "brand_id", "brand__name", "color_id", "size_id", "size__name"
+    ).annotate(qty=Sum("qty"))
     for row in rows:
         qty = int(row["qty"] or 0)
+        key = (row["brand_id"], row["color_id"], row["size_id"])
         if row["brand__name"] == "تکوین":
             unit_cost = takvin_cost_for(row["size__name"])
         else:
-            unit_cost = cost_map.get((row["brand_id"], row["color_id"], row["size_id"]), 0)
+            unit_cost = cost_map.get(key, 0)
+            if not unit_cost and row["brand__name"] == "انبارش":
+                unit_cost = _anbaresh_unit_cost(*key)
         total += qty * int(unit_cost or 0)
     return total
