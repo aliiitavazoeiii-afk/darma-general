@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import business_tools_v14, calendar_views, catalog_v5, daily_order_views_v8, daily_report_v8, daily_views, excel_dashboard, excel_sales, final_views, inventory_operations_v15, inventory_v5, material_report_v16, pricing_v7, report_v9, settings_stock_v5, takvin_v5, views
+from . import business_tools_v14, calendar_views, catalog_v5, daily_order_views_v8, daily_report_v8, daily_views, excel_dashboard, excel_sales, final_views, inventory_operations_v15, inventory_v5, material_report_v16, pricing_v7, report_v9, settings_rules_v17, settings_stock_v5, takvin_v5, views
 
 urlpatterns = [
     path("", excel_dashboard.dashboard, name="dashboard"),
@@ -52,5 +52,5 @@ urlpatterns = [
     path("settings/products/<int:product_id>/", views.settings_product_form, name="settings_product_edit"),
     path("settings/stock/", settings_stock_v5.settings_stock, name="settings_stock"),
     path("settings/finance/", views.settings_finance, name="settings_finance"),
-    path("settings/rules/", views.settings_rules, name="settings_rules"),
+    path("settings/rules/", settings_rules_v17.settings_rules, name="settings_rules"),
 ]
