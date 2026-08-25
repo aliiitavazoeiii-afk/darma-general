@@ -4,10 +4,10 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, render
 from django.views.decorators.http import require_POST
 
-from .finance import digikala_fee_for_unit
+from .cost_accounting_v14 import snapshot_sale_line
 from .finance_excel_v9 import sync_sale_receivable
-from .final_services import inventory_unit_cost, setting_decimal, sync_sale_inventory
-from .models import Color, ProductSize, SaleDay, SaleLine, SaleShortage, SaleSnapshot
+from .final_services import sync_sale_inventory
+from .models import Color, ProductSize, SaleDay, SaleLine, SaleShortage
 
 
 def _int(value, default=0):
@@ -42,19 +42,10 @@ def sale_line_save(request):
     line.sale_price = price
     line.save(update_fields=["quantity", "sale_price"])
 
-    # Snapshot keeps old daily reports stable even if master prices change later.
-    snap, _ = SaleSnapshot.objects.get_or_create(sale_line=line)
-    snap.pack_qty = int(ps.product.pack_qty or 0)
-    if ps.unit_cost:
-        snap.unit_cost = int(ps.unit_cost)
-    elif ps.product.brand.name == "دارما":
-        snap.unit_cost = int(setting_decimal("darma_accounting_unit_cost", 61000))
-    else:
-        snap.unit_cost = int(inventory_unit_cost(ps.product.brand, ps.size))
-    snap.digikala_fee_unit = digikala_fee_for_unit(price)
-    snap.save()
-
+    # Inventory is synced first so the snapshot can use the colors actually allocated
+    # (including replacements), not a stale fixed 61k Darma cost.
     result = sync_sale_inventory(line)
+    snapshot_sale_line(line, ps, price)
     sync_sale_receivable(line)
     pending = list(line.shortages.filter(resolved=False).select_related("source_color"))
     return render(
@@ -74,7 +65,7 @@ def sale_line_save(request):
 @transaction.atomic
 def shortage_resolve(request, shortage_id):
     shortage = get_object_or_404(
-        SaleShortage.objects.select_for_update().select_related("sale_line"),
+        SaleShortage.objects.select_for_update().select_related("sale_line__product_size__product__brand", "sale_line__product_size__size"),
         id=shortage_id,
     )
     choice = request.POST.get("target_color")
@@ -88,6 +79,7 @@ def shortage_resolve(request, shortage_id):
     shortage.save(update_fields=["resolved", "target_color"])
     line = shortage.sale_line
     result = sync_sale_inventory(line)
+    snapshot_sale_line(line, line.product_size, line.sale_price)
     sync_sale_receivable(line)
     pending = list(line.shortages.filter(resolved=False).select_related("source_color"))
     return render(
