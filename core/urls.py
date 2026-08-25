@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import business_tools_v5, calendar_views, catalog_v5, daily_order_views_v8, daily_views, excel_dashboard, excel_sales, final_views, inventory_v5, material_report_v5, pricing_v7, report_v5, settings_stock_v5, takvin_v5, views
+from . import business_tools_v5, calendar_views, catalog_v5, daily_order_views_v8, daily_report_v8, daily_views, excel_dashboard, excel_sales, final_views, inventory_v5, material_report_v5, pricing_v7, report_v5, settings_stock_v5, takvin_v5, views
 
 urlpatterns = [
     path("", excel_dashboard.dashboard, name="dashboard"),
@@ -8,7 +8,7 @@ urlpatterns = [
     path("sales/", daily_views.sale_calendar, name="sale_start"),
     path("sales/select/<int:jy>/<int:jm>/<int:jd>/", daily_views.select_sale_day, name="select_sale_day"),
     path("sales/<int:day_id>/", final_views.sale_brand, name="sale_brand"),
-    path("sales/<int:day_id>/report/", daily_views.daily_report, name="daily_report"),
+    path("sales/<int:day_id>/report/", daily_report_v8.daily_report, name="daily_report"),
     path("sales/<int:day_id>/import-xlsx/", daily_order_views_v8.import_daily_orders, name="daily_order_import"),
     path("sales/<int:day_id>/<int:brand_id>/<int:size_id>/", daily_views.sale_size, name="sale_size"),
     path("sales/save/", excel_sales.sale_line_save, name="sale_line_save"),
