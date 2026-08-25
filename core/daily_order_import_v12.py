@@ -7,12 +7,12 @@ from dataclasses import dataclass
 
 from django.db import transaction
 
+from .cost_accounting_v14 import snapshot_sale_line
 from .daily_order_import_v8 import (
     DailyOrderImportError,
     _product_maps,
     _resolve_product,
     _resolve_size,
-    _snapshot_line,
     parse_delivery_report,
 )
 from .final_services import sync_sale_inventory
@@ -37,7 +37,6 @@ class ResolvedOrderRowV12:
 
 
 def _model_candidate(title: str) -> str:
-    # Handles both "مدل 4444 مجموعه ..." and single-item "مدل s3 | ...".
     text = str(title or "")
     match = re.search(r"مدل\s+(.+?)(?:\s+مجموعه|\s*\|)", text, re.IGNORECASE)
     if not match:
@@ -214,8 +213,6 @@ def apply_delivery_report(day: SaleDay, file_bytes: bytes, filename: str = "") -
         line.quantity = qty
         line.sale_price = price
         line.save(update_fields=["quantity", "sale_price"])
-        if qty > 0:
-            _snapshot_line(line, ps, price)
 
         if ps.product.brand.name == "دارما" and ps.product.code == VARIANT_PRODUCT_CODE:
             key = key_by_ps.get(ps_id, (ps.product.brand.name, ps.product.code, ps.size.name))
@@ -224,7 +221,10 @@ def apply_delivery_report(day: SaleDay, file_bytes: bytes, filename: str = "") -
             result = sync_sale_inventory(line)
         shortage_count += len(result.get("shortages") or [])
 
-        # Finance v9 rebuilds this immediately after the import completes.
+        # Snapshot after inventory allocation so Darma COGS uses the actual colors sold.
+        if qty > 0:
+            snapshot_sale_line(line, ps, price)
+
         AccountEntry.objects.filter(reference=f"sale:{line.id}:digikala").delete()
 
     current_lines = list(
