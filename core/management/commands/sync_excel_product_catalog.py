@@ -1,7 +1,15 @@
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
+from core.models import ProductCode
 from core.product_catalog import sync_catalog
+
+
+REMOVED_DARMA_CODES = ["rah", "blk"]
+
+
+class BaseCatalogRemovalError(RuntimeError):
+    pass
 
 
 class Command(BaseCommand):
@@ -10,8 +18,34 @@ class Command(BaseCommand):
     @transaction.atomic
     def handle(self, *args, **options):
         summary = sync_catalog()
+
+        # User-confirmed cleanup: these legacy Darma codes must not exist anymore.
+        # ProductCode cascades to composition/sizes. If Django refuses deletion because
+        # historical sales reference a code, fail loudly instead of silently hiding it.
+        for code in REMOVED_DARMA_CODES:
+            qs = ProductCode.objects.filter(brand__name="دارما", code=code)
+            if qs.exists():
+                try:
+                    qs.delete()
+                except Exception as exc:
+                    raise BaseCatalogRemovalError(
+                        f"Could not completely delete Darma code {code}: {exc}"
+                    ) from exc
+
         for brand_name, data in summary.items():
+            total = data["total"]
+            if brand_name == "دارما":
+                total -= len(REMOVED_DARMA_CODES)
             self.stdout.write(
-                f"{brand_name}: total={data['total']} created={data['created']} updated={data['updated']}"
+                f"{brand_name}: total={total} created={data['created']} updated={data['updated']}"
             )
+
+        remaining = list(
+            ProductCode.objects.filter(brand__name="دارما", code__in=REMOVED_DARMA_CODES)
+            .values_list("code", flat=True)
+        )
+        if remaining:
+            raise BaseCatalogRemovalError(f"Removed Darma codes still exist: {remaining}")
+
         self.stdout.write(self.style.SUCCESS("Excel product catalog synced"))
+        self.stdout.write(self.style.SUCCESS("Removed Darma codes deleted: rah, blk"))
