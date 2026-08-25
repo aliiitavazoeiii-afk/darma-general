@@ -36,14 +36,11 @@ def report(request):
         _add_metrics(overall, metrics)
         if brand == "دارما":
             product_profit[line.product_size.product.code][size] += metrics["profit"]
-            # Actual allocations are the source of truth after a sale. This correctly
-            # handles replacement colors and the customer-selectable single-item s3.
             allocations = list(line.allocations.all())
             if allocations:
                 for alloc in allocations:
                     color_sales[alloc.color.name][size] += int(alloc.qty)
             else:
-                # Fallback for historical rows created before allocations existed.
                 for comp in line.product_size.product.composition.all():
                     color_sales[comp.color.name][size] += int(line.quantity) * int(comp.qty)
 
@@ -55,15 +52,13 @@ def report(request):
     _finish_metrics(overall)
 
     brands_view = []
-    for brand_name in ["تکوین", "دارما"]:
+    for brand_name in ["تکوین", "دارما", "انبارش"]:
         sizes = ["M", "L", "XL", "XXL"] if brand_name == "تکوین" else DISPLAY_SIZES
-        brands_view.append(
-            {
-                "name": brand_name,
-                "total": brand_totals[brand_name],
-                "sizes": [(size, brand_sizes[brand_name][size]) for size in sizes],
-            }
-        )
+        brands_view.append({
+            "name": brand_name,
+            "total": brand_totals[brand_name],
+            "sizes": [(size, brand_sizes[brand_name][size]) for size in sizes],
+        })
 
     product_rows = []
     for code, values in sorted(product_profit.items()):
@@ -93,10 +88,6 @@ def report(request):
     finished_inventory_total = _finished_inventory_value()
     raw = _raw_material_context()
     inventory_total = finished_inventory_total + raw["materials_total"]
-
-    # Sale accounting invariant:
-    # inventory falls by COGS, Digikala receivable rises by gross - Digikala fee.
-    # Therefore capital changes only by actual sale profit.
     capital_total = accounts_total + inventory_total + digikala_receivable - takvin_debt + assets_total
 
     context = {
@@ -128,8 +119,6 @@ def report(request):
 @login_required
 @require_POST
 def manual_report_action(request):
-    # The visible Digikala field is the CURRENT receivable. Internally we store
-    # only the base so automatic sale/receipt ledger entries are never doubled.
     if request.POST.get("action") == "setting" and request.POST.get("key") == "digikala_receivable":
         try:
             desired_total = _int(request.POST.get("value"))
