@@ -10,10 +10,6 @@ from core.models import (
 )
 
 
-class BaseCommand(BaseCommand):
-    pass
-
-
 class Command(BaseCommand):
     help = "Compile Excel-Web templates and verify main routes/models before deployment."
 
