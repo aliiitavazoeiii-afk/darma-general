@@ -7,6 +7,7 @@ DARMA_UNIT_COST = {"M": 61000, "L": 61000, "XL": 61000, "XXL": 61000, "3XL": 610
 
 # Canonical current product catalog reconstructed from the workbook's product rows,
 # pack-size formulas and per-color sales formulas. Composition is invariant by size.
+# User-confirmed removals from Darma: legacy codes `rah` and `blk` are intentionally absent.
 CATALOG = {
     "تکوین": {
         "12": {"composition": {"طوسی راه راه": 1}, "prices": {"M": 300000, "L": 330000, "XL": 360000, "XXL": 390000}},
@@ -16,8 +17,8 @@ CATALOG = {
         "502": {"composition": {"طوسی راه راه": 1, "طوسی": 1, "سرمه ای": 1}, "prices": {"M": 730000, "L": 860000, "XL": 960000, "XXL": 1050000}},
         "4444": {"composition": {"بنفش": 1, "سرمه ای": 1, "چرک روشن": 1}, "prices": {"M": 730000, "L": 860000, "XL": 960000, "XXL": 1050000}},
         "654-1": {"composition": {"بنفش": 1, "طوسی": 1, "سرمه ای": 1, "سفید": 1, "چرک روشن": 1}, "prices": {"M": 1200000, "L": 1400000, "XL": 1600000, "XXL": 1800000}},
-        # The old workbook had one formula inconsistency by size; the majority/current
-        # five-color definition is used here.
+        # The old workbook had one formula inconsistency by size; user confirmed
+        # this five-color definition for 555-1.
         "555-1": {"composition": {"طوسی": 1, "سرمه ای": 1, "سفید": 1, "چرک روشن": 1, "مشکی": 1}, "prices": {"M": 1200000, "L": 1400000, "XL": 1600000, "XXL": 1800000}},
         "2222": {"composition": {"طوسی": 1, "چرک روشن": 1, "راه راه بنفش": 1}, "prices": {"M": 730000, "L": 860000, "XL": 960000, "XXL": 1050000}},
         "1010": {"composition": {"طوسی": 1, "سفید": 1, "مشکی": 1}, "prices": {"M": 730000, "L": 860000, "XL": 960000, "XXL": 1050000}},
@@ -25,8 +26,6 @@ CATALOG = {
         "23": {"composition": {"راه راه سفید مشکی": 1}, "prices": {"L": 600000}},
         "16": {"composition": {"راه راه زرد": 1}, "prices": {"L": 100000}},
         "gg": {"composition": {"طوسی راه راه": 1, "سرمه ای": 1}, "prices": {"L": 400000}},
-        # 403 is a two-pack used only in XL/XXL; these are the two dedicated stripe
-        # colors present in those workbook size blocks.
         "403": {"composition": {"راه راه سفید": 1, "راه راه مشکی": 1}, "prices": {"XL": 550000, "XXL": 550000}},
     },
     "دارما": {
@@ -44,9 +43,7 @@ CATALOG = {
         "400": {"composition": {"مشکی": 1, "سرمه ای": 1, "صورتی": 1, "طوسی": 1}, "prices": {"M": 480000, "L": 510000, "XL": 540000, "XXL": 567500, "3XL": 605000}},
         "06": {"composition": {"مشکی": 1, "سفید": 1, "سرمه ای": 1, "صورتی": 1, "قرمز": 1, "طوسی": 1}, "prices": {"M": 699000, "L": 755000, "XL": 795000, "XXL": 860000, "3XL": 920000}},
         "rah-110": {"composition": {"راه راه": 1, "سفید": 1, "سرمه ای": 1}, "prices": {"M": 380000, "L": 403000, "XL": 428000, "XXL": 453000}},
-        "rah": {"composition": {"راه راه": 1, "سفید": 1, "سرمه ای": 1}, "prices": {"3XL": 468000}},
         "pgw": {"composition": {"سفید": 1, "صورتی": 1, "طوسی": 1}, "prices": {"M": 600000, "L": 600000, "XL": 600000, "XXL": 600000, "3XL": 600000}},
-        "blk": {"composition": {"مشکی": 1}, "prices": {"L": 300000, "XL": 300000, "XXL": 300000}, "unit_cost": 95000},
         "rah-220": {"composition": {"راه راه طوسی": 1, "سفید": 1, "طوسی": 1}, "prices": {"L": 383000, "XL": 408000, "XXL": 433000, "3XL": 448000}},
         "op": {"composition": {"برعکس مشکی": 1, "برعکس سفید": 1, "برعکس سرمه ای": 1}, "prices": {"L": 403000, "XL": 428000, "XXL": 453000, "3XL": 468000}},
     },
@@ -102,7 +99,6 @@ def sync_catalog():
                 )
                 configured_size_ids.append(size.id)
 
-            # The workbook is the source of truth for which sizes currently exist.
             ProductSize.objects.filter(product=product).exclude(size_id__in=configured_size_ids).update(active=False)
             if created:
                 created_count += 1
