@@ -28,14 +28,14 @@ def import_daily_orders(request, day_id):
         data = uploaded.read()
         result = apply_delivery_report(day, data, filename)
 
-        # Importer v8 intentionally cleaned old financial entries. V9 makes the
-        # selected file the financial truth as well: each current line gets one
-        # idempotent Digikala receivable entry and zeroed lines remove theirs.
+        # Importer v8 still clears legacy manual-finance entries internally.
+        # Finance v9 immediately rebuilds exactly one receivable entry per current
+        # sale line, so repeated uploads are idempotent for both stock and finance.
         receivable_added = 0
         for line in day.lines.select_related(
             "day", "product_size__product", "product_size__size"
         ).all():
-            receivable_added += sync_sale_receivable(line)
+            receivable_added += int(sync_sale_receivable(line) or 0)
         result["digikala_receivable_added"] = receivable_added
     except DailyOrderImportError as exc:
         for line in str(exc).splitlines():
@@ -46,10 +46,12 @@ def import_daily_orders(request, day_id):
         messages.error(request, f"ورود فایل انجام نشد: {exc}")
         return redirect("sale_brand", day_id=day.id)
 
+    receivable_text = f"{result['digikala_receivable_added']:,}".replace(",", "٬")
     messages.success(
         request,
         f"فایل {result['filename']} ثبت شد: {result['grouped_lines']} ردیف تجمیعی، "
-        f"{result['total_quantity']} کالا. فروش، موجودی و طلب دیجی‌کالا همگام شدند.",
+        f"{result['total_quantity']} کالا. طلب خالص دیجی‌کالا برای این روز: "
+        f"{receivable_text} تومان.",
     )
     if result.get("shortage_count"):
         messages.warning(
