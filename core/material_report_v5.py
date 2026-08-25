@@ -54,8 +54,9 @@ def _find_color(label):
 
 
 def _sync_finished_stock(old_output, new_output):
+    """Sync finished production into the Darma warehouse (Khorshid), never Home."""
     brand = Brand.objects.get(name="دارما")
-    home = StockLocation.objects.get(key=StockLocation.HOME)
+    warehouse = StockLocation.objects.get(key=StockLocation.KHORSHID)
     for model_key, label in OUTPUT_MODELS:
         color = _find_color(label)
         old_values = (old_output or {}).get(model_key, {}) or {}
@@ -67,10 +68,14 @@ def _sync_finished_stock(old_output, new_output):
             if not delta:
                 continue
             size = Size.objects.get(name=size_name)
-            stock, _ = StockBalance.objects.get_or_create(brand=brand, color=color, size=size, location=home, defaults={"qty": 0})
+            stock, _ = StockBalance.objects.get_or_create(
+                brand=brand, color=color, size=size, location=warehouse, defaults={"qty": 0}
+            )
             stock.qty = int(stock.qty or 0) + delta
             stock.save(update_fields=["qty"])
-            InventoryModelCost.objects.get_or_create(brand=brand, color=color, size=size, defaults={"unit_cost": 61000})
+            InventoryModelCost.objects.get_or_create(
+                brand=brand, color=color, size=size, defaults={"unit_cost": 61000}
+            )
 
 
 def _parse_input(request, dozen_wage):
@@ -130,7 +135,10 @@ def material_block_save(request, block_id):
             _sync_finished_stock(old_output, block.output_data)
             block.save()
             sync_report_consumption(block)
-        messages.success(request, "گزارش ذخیره شد؛ مزد جینی محاسبه و تحویل کالا به موجودی دارما اضافه شد.")
+        messages.success(
+            request,
+            "گزارش ذخیره شد؛ مزد جینی محاسبه و کالای تحویلی به موجودی انبار دارما اضافه شد.",
+        )
     except Exception as exc:
         messages.error(request, f"ذخیره انجام نشد: {exc}")
     return redirect(f"/material-report/#block-{block.id}")
