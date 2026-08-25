@@ -23,7 +23,8 @@ def digikala_base_receivable():
 
 def digikala_ledger_total():
     account = _digikala_account()
-    return int(account.entries.aggregate(v=Sum("delta"))["v"] or 0)
+    value = account.entries.filter(entry_type__in=["sale", "receipt"]).aggregate(v=Sum("delta"))["v"] or 0
+    return int(value)
 
 
 def digikala_receivable_total():
@@ -55,15 +56,3 @@ def sync_sale_receivable(line: SaleLine):
             note="ثبت خودکار فروش روزانه",
         )
     return value
-
-
-@transaction.atomic
-def sync_all_current_sale_receivables():
-    total = 0
-    count = 0
-    for line in SaleLine.objects.filter(quantity__gt=0).select_related(
-        "day", "product_size__product", "product_size__size"
-    ):
-        total += sync_sale_receivable(line)
-        count += 1
-    return {"lines": count, "total": total}
