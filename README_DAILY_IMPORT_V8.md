@@ -1,0 +1,1 @@
+Daily order import v8 uploads Digikala XLSX delivery reports into a selected SaleDay using replacement/idempotent semantics. The importer reads the first worksheet, uses تعداد ارسالی for quantity, accepts دریافت شده rows, maps seller/title product codes and numeric size labels, creates/updates SaleLine snapshots, syncs inventory, and leaves Excel-Web financial balances manual.
