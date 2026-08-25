@@ -223,8 +223,6 @@ class MaterialReportBlock(models.Model):
         return self.title or str(self.date)
 
 
-# RawMaterialStock is defined in models_final; these runtime fields/state keep
-# the Excel-style material system aligned with migrations.
 RawMaterialStock.add_to_class("material_key", models.CharField(max_length=40, blank=True, default="", db_index=True))
 RawMaterialStock.add_to_class("variant", models.CharField(max_length=20, blank=True, default="", db_index=True))
 RawMaterialStock.DEPOT = "depot"
@@ -245,16 +243,12 @@ class MaterialReportConsumption(models.Model):
 
     class Meta:
         constraints = [
-            models.UniqueConstraint(
-                fields=["block", "kind", "material_key", "variant"],
-                name="uniq_material_report_consumption",
-            )
+            models.UniqueConstraint(fields=["block", "kind", "material_key", "variant"], name="uniq_material_report_consumption")
         ]
         ordering = ["block_id", "kind", "material_key", "variant"]
 
 
 class MaterialReportOutputApplied(models.Model):
-    """Cumulative finished-goods quantity already posted to stock for one report cell."""
     block = models.ForeignKey(MaterialReportBlock, on_delete=models.CASCADE, related_name="output_applications")
     model_key = models.CharField(max_length=40)
     size_key = models.CharField(max_length=20)
@@ -263,12 +257,25 @@ class MaterialReportOutputApplied(models.Model):
 
     class Meta:
         constraints = [
-            models.UniqueConstraint(
-                fields=["block", "model_key", "size_key"],
-                name="uniq_material_report_output_applied",
-            )
+            models.UniqueConstraint(fields=["block", "model_key", "size_key"], name="uniq_material_report_output_applied")
         ]
         ordering = ["block_id", "model_key", "size_key"]
+
+
+class TakvinCostRule(models.Model):
+    size = models.ForeignKey(Size, on_delete=models.PROTECT, related_name="takvin_cost_rules")
+    effective_from = models.DateField(db_index=True)
+    unit_cost = models.PositiveBigIntegerField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["size", "effective_from"], name="uniq_takvin_cost_rule_date")
+        ]
+        ordering = ["-effective_from", "size__sort_order", "-id"]
+
+    def __str__(self):
+        return f"تکوین {self.size.name} از {self.effective_from}: {self.unit_cost}"
 
 
 class BusinessPayment(models.Model):
@@ -282,7 +289,6 @@ class BusinessPayment(models.Model):
         (FABRIC, "پارچه‌فروش"),
         (ELASTIC, "کش‌فروش"),
     ]
-
     date = models.DateField()
     payee = models.CharField(max_length=20, choices=PAYEE_CHOICES, db_index=True)
     amount = models.PositiveBigIntegerField()
