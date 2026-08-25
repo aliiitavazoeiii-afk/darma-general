@@ -16,7 +16,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         templates = [
             "base.html", "core/_mobile_shell.html", "core/dashboard_excel.html",
-            "core/report_excel_v2.html", "core/report_excel_v3.html", "core/report_excel_v5.html",
+            "core/report_excel_v2.html", "core/report_excel_v3.html", "core/report_excel_v5.html", "core/report_excel_v9.html",
             "core/_manual_table.html", "core/_raw_fabric_table.html", "core/_raw_elastic_table.html",
             "core/_raw_material_panel_v3.html", "core/_financial_summary_extra.html",
             "core/payments.html", "core/payments_v9.html", "core/calculator.html", "core/_calculator_result.html",
