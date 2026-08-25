@@ -5,7 +5,7 @@ from django.db.models import Sum
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
-from .dateutils import format_jalali, parse_jalali_date
+from .dateutils import parse_jalali_date
 from .excel_views import (
     OUTPUT_MODELS,
     OUTPUT_SIZES,
@@ -19,6 +19,7 @@ from .material_receipt_sync import reverse_report_consumption, sync_report_consu
 from .material_report_v14 import (
     _adjust_tailor_balance,
     _dozen_wage,
+    _find_color,
     _int,
     _save_data_only,
     _sync_finished_stock_costed,
@@ -26,7 +27,6 @@ from .material_report_v14 import (
 )
 from .models import (
     Brand,
-    Color,
     InventoryMovement,
     MaterialReportBlock,
     MaterialReportOutputApplied,
@@ -112,7 +112,7 @@ def _production_objects(model_key, size_key):
     label = dict(OUTPUT_MODELS)[model_key]
     size_name = dict(OUTPUT_SIZES)[size_key]
     brand = Brand.objects.get(name="دارما")
-    color = Color.objects.get(name=label)
+    color = _find_color(label)
     size = Size.objects.get(name=size_name)
     khorshid = StockLocation.objects.get(key=StockLocation.KHORSHID)
     return brand, color, size, khorshid, label, size_name
@@ -138,8 +138,6 @@ def _apply_output_delta(block):
             if delta <= 0:
                 continue
 
-            # Cost blending and quantity posting are delegated to the tested v14 helper,
-            # but only for this cell's NEW delta, never the cumulative table value.
             _sync_finished_stock_costed(
                 _sparse_output(model_key, size_key, delta),
                 block.input_data or {},
