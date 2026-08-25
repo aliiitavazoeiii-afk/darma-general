@@ -1,12 +1,13 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.db.models import Sum
+from django.db.models import Avg, Sum
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
 
 from .brand_colors import colors_for_brand
-from .models import Brand, Color, InventoryModelCost, Size, StockBalance, StockLocation
+from .models import Brand, Color, InventoryModelCost, ProductSize, Size, StockBalance, StockLocation
+from .takvin_pricing_v17 import takvin_cost_for
 
 
 def _sizes_for_brand(brand):
@@ -23,6 +24,18 @@ def _int(value, default=0):
         return int(str(value).replace(" ", "").replace(",", "").replace("٬", ""))
     except (TypeError, ValueError):
         return default
+
+
+def _anbaresh_cost(brand, color, size):
+    value = ProductSize.objects.filter(
+        product__brand=brand,
+        product__composition__color=color,
+        size=size,
+        active=True,
+        product__active=True,
+        unit_cost__gt=0,
+    ).aggregate(v=Avg("unit_cost"))["v"]
+    return int(value or 0)
 
 
 @login_required
@@ -51,7 +64,12 @@ def inventory(request):
                 home = qs.filter(location__key=StockLocation.HOME).aggregate(v=Sum("qty"))["v"] or 0
                 kh = qs.filter(location__key=StockLocation.KHORSHID).aggregate(v=Sum("qty"))["v"] or 0
                 total = home + kh
-                unit_cost = cost_map.get((color.id, size.id), 0)
+                if brand.name == "تکوین":
+                    unit_cost = takvin_cost_for(size)
+                else:
+                    unit_cost = cost_map.get((color.id, size.id), 0)
+                    if not unit_cost and brand.name == "انبارش":
+                        unit_cost = _anbaresh_cost(brand, color, size)
                 capital = total * unit_cost
                 cells.append({"size": size, "home": home, "kh": kh, "total": total, "unit_cost": unit_cost, "capital": capital})
                 row_total += total
@@ -91,7 +109,7 @@ def add_color_model(request):
         khorshid = StockLocation.objects.filter(key=StockLocation.KHORSHID).first()
         for size in _sizes_for_brand(brand):
             StockBalance.objects.get_or_create(brand=brand, size=size, color=color, location=home, defaults={"qty": 0})
-            if brand.name == "دارما" and khorshid:
+            if brand.name in {"دارما", "انبارش"} and khorshid:
                 StockBalance.objects.get_or_create(brand=brand, size=size, color=color, location=khorshid, defaults={"qty": 0})
             InventoryModelCost.objects.update_or_create(brand=brand, color=color, size=size, defaults={"unit_cost": unit_cost})
         messages.success(request, f"«{name}» فقط به کاتالوگ {brand.name} اضافه شد.")
