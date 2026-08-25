@@ -5,7 +5,11 @@ from .models import AppSetting, Brand, ProductCode, ProductSize, Size
 
 SIZE_NAMES = ["M", "L", "XL", "XXL", "3XL", "4XL"]
 
+# Pack-1 is intentionally initialized to zero because the Digikala delivery XLSX
+# does not carry the sale price. The user sets these once from the bulk-pricing UI;
+# imports refuse a single-item sale until its size has a real price.
 DEFAULT_GROUP_PRICES = {
+    1: {"M": 0, "L": 0, "XL": 0, "XXL": 0, "3XL": 0, "4XL": 0},
     3: {"M": 385000, "L": 405000, "XL": 430000, "XXL": 455000, "3XL": 470000, "4XL": 495000},
     4: {"M": 485000, "L": 515000, "XL": 545000, "XXL": 570000, "3XL": 610000, "4XL": 630000},
     5: {"M": 570000, "L": 618000, "XL": 658000, "XXL": 701000, "3XL": 743000, "4XL": 790000},
