@@ -3,6 +3,7 @@ from decimal import Decimal, ROUND_HALF_UP
 from .finance import digikala_fee_for_unit
 from .final_services import inventory_unit_cost, setting_decimal
 from .models import InventoryModelCost, SaleSnapshot
+from .takvin_pricing_v17 import takvin_cost_for
 
 
 def _round(value):
@@ -17,7 +18,6 @@ def _color_cost(brand_id, color_id, size_id):
 
 
 def darma_actual_unit_cost(line, ps):
-    """Average cost per short, based on actual allocated colors when available."""
     allocations = list(line.allocations.select_related("color").all())
     if allocations:
         total_qty = sum(max(0, int(row.qty or 0)) for row in allocations)
@@ -48,6 +48,10 @@ def snapshot_sale_line(line, ps=None, price=None):
     snap.pack_qty = int(ps.product.pack_qty or 0)
     if ps.product.brand.name == "دارما":
         snap.unit_cost = darma_actual_unit_cost(line, ps)
+    elif ps.product.brand.name == "تکوین":
+        # The rule effective on the SALE DATE is frozen into the snapshot.
+        # Changing a later rule never rewrites old reports.
+        snap.unit_cost = takvin_cost_for(ps.size, line.day.date)
     elif ps.unit_cost:
         snap.unit_cost = int(ps.unit_cost)
     else:
