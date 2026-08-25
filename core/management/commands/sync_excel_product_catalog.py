@@ -20,8 +20,6 @@ class Command(BaseCommand):
         summary = sync_catalog()
 
         # User-confirmed cleanup: these legacy Darma codes must not exist anymore.
-        # ProductCode cascades to composition/sizes. If Django refuses deletion because
-        # historical sales reference a code, fail loudly instead of silently hiding it.
         for code in REMOVED_DARMA_CODES:
             qs = ProductCode.objects.filter(brand__name="دارما", code=code)
             if qs.exists():
@@ -33,11 +31,8 @@ class Command(BaseCommand):
                     ) from exc
 
         for brand_name, data in summary.items():
-            total = data["total"]
-            if brand_name == "دارما":
-                total -= len(REMOVED_DARMA_CODES)
             self.stdout.write(
-                f"{brand_name}: total={total} created={data['created']} updated={data['updated']}"
+                f"{brand_name}: total={data['total']} created={data['created']} updated={data['updated']}"
             )
 
         remaining = list(
