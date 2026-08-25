@@ -5,7 +5,8 @@ from django.db.models import Sum
 from django.shortcuts import get_object_or_404, redirect
 from django.views.decorators.http import require_POST
 
-from .daily_order_import_v8 import DailyOrderImportError, apply_delivery_report
+from .daily_order_import_v8 import DailyOrderImportError
+from .daily_order_import_v12 import apply_delivery_report
 from .finance_excel_v9 import sync_sale_receivable
 from .models import SaleDay, StockBalance
 
@@ -64,9 +65,6 @@ def import_daily_orders(request, day_id):
                     f"ولی بر اساس صورت باید {expected_stock_change:+d} عدد می‌بود. کل ورود فایل لغو شد."
                 )
 
-        # Importer v8 still clears legacy manual-finance entries internally.
-        # Finance v9 immediately rebuilds exactly one receivable entry per current
-        # sale line, so repeated uploads are idempotent for both stock and finance.
         receivable_added = 0
         for line in day.lines.select_related(
             "day", "product_size__product", "product_size__size"
