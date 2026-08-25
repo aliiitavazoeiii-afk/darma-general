@@ -19,7 +19,7 @@ def seed_rules_and_anbaresh(apps, schema_editor):
 
     Brand.objects.get_or_create(name="انبارش", defaults={"active": True})
 
-    effective = date(2020, 3, 20)  # 1400/01/01; historical SaleSnapshots remain frozen anyway.
+    effective = date(2021, 3, 21)  # 1400/01/01; historical SaleSnapshots stay frozen.
     for size_name, value in DEFAULT_COSTS.items():
         size = Size.objects.filter(name=size_name).first()
         if size:
