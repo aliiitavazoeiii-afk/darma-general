@@ -253,6 +253,24 @@ class MaterialReportConsumption(models.Model):
         ordering = ["block_id", "kind", "material_key", "variant"]
 
 
+class MaterialReportOutputApplied(models.Model):
+    """Cumulative finished-goods quantity already posted to stock for one report cell."""
+    block = models.ForeignKey(MaterialReportBlock, on_delete=models.CASCADE, related_name="output_applications")
+    model_key = models.CharField(max_length=40)
+    size_key = models.CharField(max_length=20)
+    quantity = models.PositiveIntegerField(default=0)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["block", "model_key", "size_key"],
+                name="uniq_material_report_output_applied",
+            )
+        ]
+        ordering = ["block_id", "model_key", "size_key"]
+
+
 class BusinessPayment(models.Model):
     PEDRAM = "pedram"
     TAILOR = "tailor"
