@@ -64,6 +64,7 @@ grep -Fq "digikala_receivable_total" /app/core/report_v9.py &&
 grep -Fq "sync_sale_receivable" /app/core/excel_sales.py &&
 grep -Fq "receipt_add" /app/core/business_tools_v9.py &&
 grep -Fq "دریافتی‌ها و پرداختی‌ها" /app/templates/core/payments_v9.html &&
+grep -Fq "طلب دیجی‌کالا" /app/templates/core/report_excel_v9.html &&
 echo "FINANCE V9 FILES OK"
 ' || fail "finance v9 files verification failed"
 
@@ -71,7 +72,10 @@ step "8) RECREATE LIVE WEB"
 docker compose up -d --force-recreate web || fail "could not recreate web container"
 docker compose restart caddy || fail "could not restart caddy"
 
-step "9) STATUS"
+step "9) CAPITAL AUDIT BEFORE RE-UPLOAD"
+docker compose exec -T web python manage.py capital_audit_v9 || fail "capital audit failed"
+
+step "10) STATUS"
 docker compose ps
 
 echo ""
@@ -79,4 +83,5 @@ echo "======================================"
 echo "SUCCESS: FINANCE FLOW V9 DEPLOYED"
 echo "Backup: $BACKUP"
 echo "IMPORTANT: Re-upload the already-imported daily Excel once on the same day to create its Digikala receivable entry. Inventory will not double because import is replacement-based."
+echo "After re-upload, run: docker compose exec -T web python manage.py capital_audit_v9"
 echo "======================================"
