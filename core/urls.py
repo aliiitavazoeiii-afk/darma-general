@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import business_tools_v9, calendar_views, catalog_v5, daily_order_views_v8, daily_report_v8, daily_views, excel_dashboard, excel_sales, final_views, inventory_v5, material_report_v5, pricing_v7, report_v9, settings_stock_v5, takvin_v5, views
+from . import business_tools_v13, calendar_views, catalog_v5, daily_order_views_v8, daily_report_v8, daily_views, excel_dashboard, excel_sales, final_views, inventory_v5, material_report_v13, pricing_v7, report_v9, settings_stock_v5, takvin_v5, views
 
 urlpatterns = [
     path("", excel_dashboard.dashboard, name="dashboard"),
@@ -16,20 +16,22 @@ urlpatterns = [
 
     path("report/", report_v9.report, name="report"),
     path("report/manual/", report_v9.manual_report_action, name="manual_report_action"),
-    path("report/financial-summary/", business_tools_v9.financial_summary, name="financial_summary"),
-    path("material-report/", material_report_v5.material_report, name="material_report"),
-    path("material-report/<int:block_id>/save/", material_report_v5.material_block_save, name="material_block_save"),
-    path("material-report/<int:block_id>/delete/", material_report_v5.material_block_delete, name="material_block_delete"),
+    path("report/financial-summary/", business_tools_v13.financial_summary, name="financial_summary"),
+    path("material-report/", material_report_v13.material_report, name="material_report"),
+    path("material-report/<int:block_id>/save/", material_report_v13.material_block_save, name="material_block_save"),
+    path("material-report/<int:block_id>/apply/", material_report_v13.material_block_apply, name="material_block_apply"),
+    path("material-report/<int:block_id>/unapply/", material_report_v13.material_block_unapply, name="material_block_unapply"),
+    path("material-report/<int:block_id>/delete/", material_report_v13.material_block_delete, name="material_block_delete"),
     path("takvin/", takvin_v5.takvin_excel, name="takvin"),
 
-    path("payments/", business_tools_v9.payments, name="payments"),
-    path("payments/add/", business_tools_v9.payment_add, name="payment_add"),
-    path("payments/<int:payment_id>/delete/", business_tools_v9.payment_delete, name="payment_delete"),
-    path("payments/mellat/set/", business_tools_v9.mellat_set, name="mellat_set"),
-    path("payments/receipts/add/", business_tools_v9.receipt_add, name="receipt_add"),
-    path("payments/receipts/<int:receipt_id>/delete/", business_tools_v9.receipt_delete, name="receipt_delete"),
-    path("calculator/", business_tools_v9.calculator, name="calculator"),
-    path("calculator/quote/", business_tools_v9.calculator_quote, name="calculator_quote"),
+    path("payments/", business_tools_v13.payments, name="payments"),
+    path("payments/add/", business_tools_v13.payment_add, name="payment_add"),
+    path("payments/<int:payment_id>/delete/", business_tools_v13.payment_delete, name="payment_delete"),
+    path("payments/mellat/set/", business_tools_v13.mellat_set, name="mellat_set"),
+    path("payments/receipts/add/", business_tools_v13.receipt_add, name="receipt_add"),
+    path("payments/receipts/<int:receipt_id>/delete/", business_tools_v13.receipt_delete, name="receipt_delete"),
+    path("calculator/", business_tools_v13.calculator, name="calculator"),
+    path("calculator/quote/", business_tools_v13.calculator_quote, name="calculator_quote"),
 
     path("inventory/", inventory_v5.inventory, name="inventory"),
     path("inventory/color-model/add/", inventory_v5.add_color_model, name="inventory_add_color_model"),
