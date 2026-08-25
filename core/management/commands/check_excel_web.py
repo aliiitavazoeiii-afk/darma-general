@@ -4,7 +4,7 @@ from django.template.loader import get_template
 from django.urls import reverse
 
 from core.models import (
-    BusinessPayment, ExcelManualRow, ExcelManualSetting, InventoryModelCost,
+    BusinessPayment, DigikalaSettlement, ExcelManualRow, ExcelManualSetting, InventoryModelCost,
     MaterialReportBlock, MaterialReportConsumption, ProductCode, ProductComposition,
     ProductSize, RawMaterialStock, TailorBalanceEntry, TakvinPurchase,
 )
@@ -19,7 +19,7 @@ class Command(BaseCommand):
             "core/report_excel_v2.html", "core/report_excel_v3.html", "core/report_excel_v5.html",
             "core/_manual_table.html", "core/_raw_fabric_table.html", "core/_raw_elastic_table.html",
             "core/_raw_material_panel_v3.html", "core/_financial_summary_extra.html",
-            "core/payments.html", "core/calculator.html", "core/_calculator_result.html",
+            "core/payments.html", "core/payments_v9.html", "core/calculator.html", "core/_calculator_result.html",
             "core/material_report.html", "core/takvin_excel.html", "core/sale_calendar.html",
             "core/sale_brand_final.html", "core/sale_size.html", "core/_sale_saved_final.html",
             "core/daily_report.html", "core/daily_report_v8.html", "core/_daily_order_upload.html",
@@ -39,7 +39,7 @@ class Command(BaseCommand):
         simple_routes = [
             "dashboard", "sale_start", "sale_line_save", "report", "manual_report_action",
             "financial_summary", "material_report", "takvin", "inventory", "inventory_add_color_model",
-            "inventory_operations", "payments", "payment_add", "mellat_set", "calculator", "calculator_quote",
+            "inventory_operations", "payments", "payment_add", "receipt_add", "mellat_set", "calculator", "calculator_quote",
             "settings_home", "settings_catalog", "settings_products", "settings_product_new",
             "settings_stock", "settings_finance", "settings_rules",
         ]
@@ -54,7 +54,7 @@ class Command(BaseCommand):
             ("sale_brand", [1]), ("daily_report", [1]), ("daily_order_import", [1]),
             ("sale_size", [1, 1, 1]), ("shortage_resolve", [1]),
             ("material_block_save", [1]), ("material_block_delete", [1]),
-            ("payment_delete", [1]), ("settings_product_edit", [1]),
+            ("payment_delete", [1]), ("receipt_delete", [1]), ("settings_product_edit", [1]),
         ]
         for route, args in parameter_routes:
             try:
@@ -75,7 +75,7 @@ class Command(BaseCommand):
         try:
             ExcelManualSetting.objects.count(); ExcelManualRow.objects.count(); MaterialReportBlock.objects.count()
             MaterialReportConsumption.objects.count(); TakvinPurchase.objects.filter(note__startswith="[excel-web]").count()
-            InventoryModelCost.objects.count(); RawMaterialStock.objects.count(); BusinessPayment.objects.count(); TailorBalanceEntry.objects.count()
+            InventoryModelCost.objects.count(); RawMaterialStock.objects.count(); BusinessPayment.objects.count(); DigikalaSettlement.objects.count(); TailorBalanceEntry.objects.count()
             ProductCode.objects.count(); ProductComposition.objects.count(); ProductSize.objects.count()
             if getattr(RawMaterialStock, "DEPOT", None) != "depot":
                 raise RuntimeError("RawMaterialStock depot location is not active")
