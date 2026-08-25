@@ -9,7 +9,7 @@
 </div>
 
 <div class="row g-3 mb-4">
-  <div class="col-xl-8"><div class="card glass-card h-100"><div class="card-header d-flex justify-content-between align-items-center"><div><h3 class="card-title mb-1">روند فروش ۱۴ روز اخیر</h3><div class="text-secondary small">فروش و سود روزانه بر اساس صورت‌های ثبت‌شده</div></div><span class="badge badge-soft-orange">۱۴ روز</span></div><div class="card-body"><div class="chart-wrap"><canvas id="salesTrendChart" height="112"></canvas></div></div></div></div>
+  <div class="col-xl-8"><div class="card glass-card h-100"><div class="card-header d-flex justify-content-between align-items-center"><div><h3 class="card-title mb-1">روند فروش ۱۴ روز اخیر</h3><div class="text-secondary small">فروش و سود روزانه بر اساس صورت‌های ثبت‌شده</div></div><span class="badge badge-soft-orange">۱۴ روز</span></div><div class="card-body"><div class="chart-wrap" dir="ltr"><canvas id="salesTrendChart" height="112" dir="ltr" style="direction:ltr"></canvas></div></div></div></div>
   <div class="col-xl-4"><div class="card glass-card h-100"><div class="card-header d-flex justify-content-between align-items-center"><div><h3 class="card-title mb-1">هشدارها</h3><div class="text-secondary small">مواردی که بهتر است بررسی کنی</div></div><span class="alert-count">{{ alerts|length }}</span></div><div class="card-body p-0"><div class="alert-list">{% for alert in alerts %}<a href="{{ alert.url }}" class="alert-item text-decoration-none"><span class="alert-dot alert-dot-{{ alert.level }}"></span><span class="flex-fill"><strong>{{ alert.title }}</strong><small>{{ alert.detail }}</small></span><span class="alert-arrow">‹</span></a>{% empty %}<div class="empty-state py-5"><strong class="text-success">همه‌چیز آرام است</strong><div class="mt-1">هشدار فعالی وجود ندارد.</div></div>{% endfor %}</div></div></div></div>
 </div>
 
@@ -27,12 +27,16 @@
 {% block scripts %}<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script><script>
 (function(){
  const canvas=document.getElementById('salesTrendChart'); if(!canvas||typeof Chart==='undefined') return;
+ canvas.dir='ltr'; canvas.style.direction='ltr';
+ const ctx=canvas.getContext('2d'); if(ctx) ctx.direction='ltr';
  Chart.defaults.color='#c7d3df'; Chart.defaults.borderColor='rgba(255,255,255,.10)'; Chart.defaults.font.family='Vazirmatn';
- const labels=JSON.parse(document.getElementById('dashboard-chart-labels').textContent);
+ const rawLabels=JSON.parse(document.getElementById('dashboard-chart-labels').textContent);
+ const labels=rawLabels.map(v=>'\u200E'+String(v));
  const sales=JSON.parse(document.getElementById('dashboard-chart-sales').textContent);
  const profit=JSON.parse(document.getElementById('dashboard-chart-profit').textContent);
- const fmt=v=>Math.round(v||0).toString().replace(/\B(?=(\d{3})+(?!\d))/g,' ');
+ const nf=new Intl.NumberFormat('en-US',{maximumFractionDigits:0});
+ const fmt=v=>'\u200E'+nf.format(Math.round(Number(v)||0));
  const small=window.innerWidth<576;
- new Chart(canvas,{type:'line',data:{labels,datasets:[{label:'فروش',data:sales,borderColor:'#fb6514',backgroundColor:'rgba(251,101,20,.13)',fill:true,tension:.38,borderWidth:2.4,pointRadius:small?1.5:2.5,pointHoverRadius:5},{label:'سود',data:profit,borderColor:'#39d98a',backgroundColor:'rgba(57,217,138,.05)',fill:false,tension:.38,borderWidth:2.2,pointRadius:small?1.3:2.3,pointHoverRadius:5}]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:!small,position:'top',align:'end',labels:{color:'#dce7f1',usePointStyle:true,boxWidth:8}},tooltip:{backgroundColor:'rgba(5,19,34,.94)',titleColor:'#fff',bodyColor:'#dce7f1',borderColor:'rgba(255,255,255,.14)',borderWidth:1,callbacks:{label:c=>c.dataset.label+': '+fmt(c.parsed.y)+' تومان'}}},scales:{x:{grid:{display:false},ticks:{color:'#aebdcd',maxRotation:0,autoSkip:true,maxTicksLimit:small?7:14}},y:{beginAtZero:true,grid:{color:'rgba(255,255,255,.075)'},ticks:{color:'#aebdcd',maxTicksLimit:small?5:8,callback:v=>fmt(v)}}}}});
+ new Chart(canvas,{type:'line',data:{labels,datasets:[{label:'فروش',data:sales,borderColor:'#fb6514',backgroundColor:'rgba(251,101,20,.13)',fill:true,tension:.38,borderWidth:2.4,pointRadius:small?1.5:2.5,pointHoverRadius:5},{label:'سود',data:profit,borderColor:'#39d98a',backgroundColor:'rgba(57,217,138,.05)',fill:false,tension:.38,borderWidth:2.2,pointRadius:small?1.3:2.3,pointHoverRadius:5}]},options:{locale:'en-US',responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:!small,position:'top',align:'end',rtl:false,textDirection:'ltr',labels:{color:'#dce7f1',usePointStyle:true,boxWidth:8}},tooltip:{rtl:false,textDirection:'ltr',backgroundColor:'rgba(5,19,34,.94)',titleColor:'#fff',bodyColor:'#dce7f1',borderColor:'rgba(255,255,255,.14)',borderWidth:1,callbacks:{title:items=>items.length?String(items[0].label).replace(/^\u200E/,''):'',label:c=>c.dataset.label+' : '+fmt(c.parsed.y)+' تومان'}}},scales:{x:{grid:{display:false},ticks:{color:'#aebdcd',maxRotation:0,autoSkip:true,maxTicksLimit:small?7:14,callback:function(value){return '\u200E'+this.getLabelForValue(value).replace(/^\u200E/,'');}}},y:{beginAtZero:true,grid:{color:'rgba(255,255,255,.075)'},ticks:{color:'#aebdcd',maxTicksLimit:small?5:8,callback:v=>fmt(v)}}}}});
 })();
 </script>{% endblock %}
