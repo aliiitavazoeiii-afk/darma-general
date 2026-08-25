@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import business_tools_v5, calendar_views, catalog_v5, daily_views, excel_dashboard, excel_sales, final_views, inventory_v5, material_report_v5, pricing_v7, report_v5, settings_stock_v5, takvin_v5, views
+from . import business_tools_v5, calendar_views, catalog_v5, daily_order_views_v8, daily_views, excel_dashboard, excel_sales, final_views, inventory_v5, material_report_v5, pricing_v7, report_v5, settings_stock_v5, takvin_v5, views
 
 urlpatterns = [
     path("", excel_dashboard.dashboard, name="dashboard"),
@@ -9,6 +9,7 @@ urlpatterns = [
     path("sales/select/<int:jy>/<int:jm>/<int:jd>/", daily_views.select_sale_day, name="select_sale_day"),
     path("sales/<int:day_id>/", final_views.sale_brand, name="sale_brand"),
     path("sales/<int:day_id>/report/", daily_views.daily_report, name="daily_report"),
+    path("sales/<int:day_id>/import-xlsx/", daily_order_views_v8.import_daily_orders, name="daily_order_import"),
     path("sales/<int:day_id>/<int:brand_id>/<int:size_id>/", daily_views.sale_size, name="sale_size"),
     path("sales/save/", excel_sales.sale_line_save, name="sale_line_save"),
     path("sales/shortage/<int:shortage_id>/resolve/", excel_sales.shortage_resolve, name="shortage_resolve"),
@@ -42,6 +43,7 @@ urlpatterns = [
     path("settings/", views.settings_home, name="settings_home"),
     path("settings/catalog/", catalog_v5.settings_catalog, name="settings_catalog"),
     path("settings/products/", pricing_v7.settings_products, name="settings_products"),
+    path("settings/products/bulk-pricing/", pricing_v7.update_bulk_prices, name="darma_bulk_pricing"),
     path("settings/products/new/", views.settings_product_form, name="settings_product_new"),
     path("settings/products/<int:product_id>/", views.settings_product_form, name="settings_product_edit"),
     path("settings/stock/", settings_stock_v5.settings_stock, name="settings_stock"),
