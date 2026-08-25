@@ -6,19 +6,18 @@ from core.models import Account, BusinessPayment, DigikalaSettlement
 
 
 class Command(BaseCommand):
-    help = "Verify Digikala finance routes/models; supports current v13 payment UI."
+    help = "Verify Digikala finance routes/models across supported payment controllers."
 
     def handle(self, *args, **options):
         errors = []
+        finance_modules = {"core.business_tools_v9", "core.business_tools_v13", "core.business_tools_v14"}
         checks = {
             "report": {"core.report_v9"},
             "manual_report_action": {"core.report_v9"},
-            # Finance ledger stays v9, but the payments UI/controller was intentionally
-            # upgraded in v13 to support material purchases.
-            "payments": {"core.business_tools_v9", "core.business_tools_v13"},
-            "payment_add": {"core.business_tools_v9", "core.business_tools_v13"},
-            "receipt_add": {"core.business_tools_v9", "core.business_tools_v13"},
-            "calculator": {"core.business_tools_v9", "core.business_tools_v13"},
+            "payments": finance_modules,
+            "payment_add": finance_modules,
+            "receipt_add": finance_modules,
+            "calculator": finance_modules,
         }
         route_args = {"receipt_add": [], "payment_add": []}
         for name, allowed_modules in checks.items():
@@ -50,4 +49,4 @@ class Command(BaseCommand):
                 self.stderr.write(self.style.ERROR(error))
             raise CommandError("Finance flow preflight failed")
 
-        self.stdout.write(self.style.SUCCESS("FINANCE FLOW V9/V13 OK"))
+        self.stdout.write(self.style.SUCCESS("FINANCE FLOW V9/V13/V14 OK"))
