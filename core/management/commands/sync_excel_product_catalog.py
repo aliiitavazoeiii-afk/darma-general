@@ -1,6 +1,7 @@
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
+from core.darma_pricing import apply_all_group_prices
 from core.models import ProductCode
 from core.product_catalog import sync_catalog
 
@@ -30,11 +31,6 @@ class Command(BaseCommand):
                         f"Could not completely delete Darma code {code}: {exc}"
                     ) from exc
 
-        for brand_name, data in summary.items():
-            self.stdout.write(
-                f"{brand_name}: total={data['total']} created={data['created']} updated={data['updated']}"
-            )
-
         remaining = list(
             ProductCode.objects.filter(brand__name="دارما", code__in=REMOVED_DARMA_CODES)
             .values_list("code", flat=True)
@@ -42,5 +38,18 @@ class Command(BaseCommand):
         if remaining:
             raise BaseCatalogRemovalError(f"Removed Darma codes still exist: {remaining}")
 
+        # Group pricing is the final source of truth for Darma 3/4/5/6 packs.
+        pricing_summary = apply_all_group_prices()
+
+        for brand_name, data in summary.items():
+            self.stdout.write(
+                f"{brand_name}: total={data['total']} created={data['created']} updated={data['updated']}"
+            )
+        for pack_qty, data in pricing_summary.items():
+            self.stdout.write(
+                f"Darma pack {pack_qty}: products={data['products']} price_rows={data['rows']}"
+            )
+
         self.stdout.write(self.style.SUCCESS("Excel product catalog synced"))
         self.stdout.write(self.style.SUCCESS("Removed Darma codes deleted: rah, blk"))
+        self.stdout.write(self.style.SUCCESS("Darma group prices applied"))
