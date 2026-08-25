@@ -9,8 +9,9 @@ from .dateutils import format_jalali
 from .excel_views import DISPLAY_SIZES, _add_metrics, _empty_metrics, _finish_metrics, _int, _period_range
 from .finance import sale_line_metrics
 from .finance_excel_v9 import digikala_ledger_total, digikala_receivable_total
+from .inventory_valuation_v17 import finished_inventory_value_v17
 from .models import ExcelManualRow, ExcelManualSetting, SaleLine
-from .report_v5 import _finished_inventory_value, _raw_material_context, manual_report_action as legacy_manual_report_action
+from .report_v5 import _raw_material_context, manual_report_action as legacy_manual_report_action
 
 
 @login_required
@@ -54,11 +55,7 @@ def report(request):
     brands_view = []
     for brand_name in ["تکوین", "دارما", "انبارش"]:
         sizes = ["M", "L", "XL", "XXL"] if brand_name == "تکوین" else DISPLAY_SIZES
-        brands_view.append({
-            "name": brand_name,
-            "total": brand_totals[brand_name],
-            "sizes": [(size, brand_sizes[brand_name][size]) for size in sizes],
-        })
+        brands_view.append({"name": brand_name, "total": brand_totals[brand_name], "sizes": [(size, brand_sizes[brand_name][size]) for size in sizes]})
 
     product_rows = []
     for code, values in sorted(product_profit.items()):
@@ -77,7 +74,6 @@ def report(request):
     person_rows = list(manual_rows.filter(section=ExcelManualRow.PERSONS).order_by("sort_order", "id"))
     asset_rows = list(manual_rows.filter(section=ExcelManualRow.ASSETS).order_by("sort_order", "id"))
     settings = {obj.key: obj for obj in ExcelManualSetting.objects.all()}
-
     takvin_debt = int(settings.get("takvin_debt").value or 0) if settings.get("takvin_debt") else 0
     digikala_base = int(settings.get("digikala_receivable").value or 0) if settings.get("digikala_receivable") else 0
     digikala_ledger = digikala_ledger_total()
@@ -85,31 +81,18 @@ def report(request):
 
     accounts_total = sum(row.amount for row in accounts_rows) + sum(row.amount for row in person_rows)
     assets_total = sum(row.amount for row in asset_rows)
-    finished_inventory_total = _finished_inventory_value()
+    finished_inventory_total = finished_inventory_value_v17()
     raw = _raw_material_context()
     inventory_total = finished_inventory_total + raw["materials_total"]
     capital_total = accounts_total + inventory_total + digikala_receivable - takvin_debt + assets_total
 
     context = {
-        "period": period,
-        "start": format_jalali(start),
-        "end": format_jalali(end),
-        "overall": overall,
-        "brands": brands_view,
-        "display_sizes": DISPLAY_SIZES,
-        "product_rows": product_rows,
-        "color_rows": color_rows,
-        "accounts_rows": accounts_rows,
-        "person_rows": person_rows,
-        "asset_rows": asset_rows,
-        "accounts_total": accounts_total,
-        "assets_total": assets_total,
-        "finished_inventory_total": finished_inventory_total,
-        "inventory_total": inventory_total,
-        "capital_total": capital_total,
-        "takvin_debt": takvin_debt,
-        "digikala_receivable": digikala_receivable,
-        "digikala_base_receivable": digikala_base,
+        "period": period, "start": format_jalali(start), "end": format_jalali(end), "overall": overall,
+        "brands": brands_view, "display_sizes": DISPLAY_SIZES, "product_rows": product_rows, "color_rows": color_rows,
+        "accounts_rows": accounts_rows, "person_rows": person_rows, "asset_rows": asset_rows,
+        "accounts_total": accounts_total, "assets_total": assets_total, "finished_inventory_total": finished_inventory_total,
+        "inventory_total": inventory_total, "capital_total": capital_total, "takvin_debt": takvin_debt,
+        "digikala_receivable": digikala_receivable, "digikala_base_receivable": digikala_base,
         "digikala_ledger_total": digikala_ledger,
     }
     context.update(raw)
@@ -124,10 +107,7 @@ def manual_report_action(request):
             desired_total = _int(request.POST.get("value"))
             ledger = digikala_ledger_total()
             base_value = desired_total - ledger
-            obj, _ = ExcelManualSetting.objects.get_or_create(
-                key="digikala_receivable",
-                defaults={"label": "طلب پایه دیجی‌کالا", "value": 0},
-            )
+            obj, _ = ExcelManualSetting.objects.get_or_create(key="digikala_receivable", defaults={"label": "طلب پایه دیجی‌کالا", "value": 0})
             obj.value = base_value
             obj.label = "طلب پایه دیجی‌کالا"
             obj.save(update_fields=["value", "label", "updated_at"])
@@ -135,5 +115,4 @@ def manual_report_action(request):
         except Exception as exc:
             messages.error(request, str(exc))
         return redirect("report")
-
     return legacy_manual_report_action(request)
