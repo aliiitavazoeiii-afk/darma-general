@@ -73,14 +73,17 @@ def comp(brand, code):
     return {norm(x.color.name): x.qty for x in p.composition.all()}
 
 assert len(CATALOG['تکوین']) == 15
-assert len(CATALOG['دارما']) == 19
+assert len(CATALOG['دارما']) == 17
+assert not ProductCode.objects.filter(brand__name='دارما', code__in=['rah','blk']).exists()
 assert comp('تکوین','4444') == {norm('بنفش'):1, norm('سرمه ای'):1, norm('چرک روشن'):1}
+assert comp('تکوین','555-1') == {norm('طوسی'):1, norm('سرمه ای'):1, norm('سفید'):1, norm('چرک روشن'):1, norm('مشکی'):1}
 assert comp('دارما','rah-110') == {norm('راه راه'):1, norm('سفید'):1, norm('سرمه ای'):1}
 assert comp('دارما','rah-220') == {norm('راه راه طوسی'):1, norm('سفید'):1, norm('طوسی'):1}
 assert ProductCode.objects.get(brand__name='دارما', code='p12').pack_qty == 12
 assert ProductCode.objects.get(brand__name='دارما', code='06').pack_qty == 6
 print('TAKVIN CATALOG:', len(CATALOG['تکوین']))
 print('DARMA CATALOG:', len(CATALOG['دارما']))
+print('REMOVED CODES ABSENT: rah, blk')
 print('PRODUCT CATALOG CHECK OK')
 \"" || fail "product catalog verification failed"
 
