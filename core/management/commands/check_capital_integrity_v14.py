@@ -5,18 +5,13 @@ from django.db.models import Sum
 from django.urls import resolve, reverse
 
 from core.finance_excel_v9 import digikala_receivable_total
+from core.inventory_valuation_v17 import finished_inventory_value_v17
 from core.material_purchase_v14 import ledger_for_payment, purchase_data_for_payment
 from core.models import (
-    AccountEntry,
-    AppSetting,
-    BusinessPayment,
-    DigikalaSettlement,
-    ExcelManualRow,
-    ExcelManualSetting,
-    MaterialReportBlock,
-    RawMaterialStock,
+    AccountEntry, AppSetting, BusinessPayment, DigikalaSettlement, ExcelManualRow,
+    ExcelManualSetting, MaterialReportBlock, RawMaterialStock,
 )
-from core.report_v5 import _finished_inventory_value, _raw_material_context
+from core.report_v5 import _raw_material_context
 
 PURCHASE_NOTE_RE = re.compile(r"خرید از پرداخت\s*#(\d+)")
 
@@ -27,15 +22,14 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         errors = []
         warnings = []
-
         route_checks = {
             "payments": {"core.business_tools_v14"},
             "payment_add": {"core.business_tools_v14"},
             "receipt_add": {"core.business_tools_v14"},
-            "material_report": {"core.material_report_v14", "core.material_report_v16"},
-            "material_block_save": {"core.material_report_v14", "core.material_report_v16"},
-            "material_block_apply": {"core.material_report_v14", "core.material_report_v16"},
-            "material_block_unapply": {"core.material_report_v14", "core.material_report_v16"},
+            "material_report": {"core.material_report_v16"},
+            "material_block_save": {"core.material_report_v16"},
+            "material_block_apply": {"core.material_report_v16"},
+            "material_block_unapply": {"core.material_report_v16"},
         }
         for name, allowed_modules in route_checks.items():
             args = [1] if "material_block_" in name else []
@@ -46,11 +40,9 @@ class Command(BaseCommand):
                 self.stdout.write(f"route OK: {name} -> {actual}")
 
         manual = ExcelManualRow.objects.filter(active=True)
-        accounts_total = int(
-            sum(row.amount for row in manual.filter(section__in=[ExcelManualRow.ACCOUNTS, ExcelManualRow.PERSONS]))
-        )
+        accounts_total = int(sum(row.amount for row in manual.filter(section__in=[ExcelManualRow.ACCOUNTS, ExcelManualRow.PERSONS])))
         assets_total = int(sum(row.amount for row in manual.filter(section=ExcelManualRow.ASSETS)))
-        finished = int(_finished_inventory_value())
+        finished = int(finished_inventory_value_v17())
         raw = _raw_material_context()
         materials = int(raw["materials_total"])
         digikala = int(digikala_receivable_total())
@@ -58,7 +50,7 @@ class Command(BaseCommand):
         takvin_debt = int(debt_obj.value or 0) if debt_obj else 0
         capital = accounts_total + finished + materials + digikala + assets_total - takvin_debt
 
-        self.stdout.write("=== CAPITAL EQUATION V14 ===")
+        self.stdout.write("=== CAPITAL EQUATION V17 ===")
         self.stdout.write(f"ACCOUNTS + PERSONS = {accounts_total}")
         self.stdout.write(f"FINISHED INVENTORY  = {finished}")
         self.stdout.write(f"RAW MATERIALS       = {materials}")
@@ -69,14 +61,10 @@ class Command(BaseCommand):
         self.stdout.write("============================")
 
         for receipt in DigikalaSettlement.objects.all():
-            rows = AccountEntry.objects.filter(
-                reference=f"receipt:{receipt.id}:digikala", entry_type="receipt"
-            )
+            rows = AccountEntry.objects.filter(reference=f"receipt:{receipt.id}:digikala", entry_type="receipt")
             total = int(rows.aggregate(v=Sum("delta"))["v"] or 0)
             if rows.count() != 1 or total != -int(receipt.amount or 0):
-                errors.append(
-                    f"receipt {receipt.id}: amount={receipt.amount}, ledger_count={rows.count()}, ledger_total={total}"
-                )
+                errors.append(f"receipt {receipt.id}: amount={receipt.amount}, ledger_count={rows.count()}, ledger_total={total}")
 
         for payment in BusinessPayment.objects.filter(payee__in=["fabric", "elastic"]):
             data = purchase_data_for_payment(payment)
@@ -86,9 +74,7 @@ class Command(BaseCommand):
             elif not ledger:
                 warnings.append(f"material payment {payment.id}: legacy note only; run v14 repair/backfill")
             elif int(ledger.amount or 0) != int(payment.amount or 0):
-                errors.append(
-                    f"material payment {payment.id}: payment={payment.amount}, ledger={ledger.amount}"
-                )
+                errors.append(f"material payment {payment.id}: payment={payment.amount}, ledger={ledger.amount}")
 
         orphan_purchase_value = 0
         for stock in RawMaterialStock.objects.filter(active=True).exclude(note=""):
@@ -100,15 +86,10 @@ class Command(BaseCommand):
                 continue
             value = int(stock.total_value or 0)
             orphan_purchase_value += value
-            warnings.append(
-                f"orphan material stock row={stock.id} kind={stock.kind} title={stock.title} "
-                f"qty={stock.quantity} value={value} references deleted payment #{payment_id}"
-            )
+            warnings.append(f"orphan material stock row={stock.id} kind={stock.kind} title={stock.title} qty={stock.quantity} value={value} references deleted payment #{payment_id}")
         self.stdout.write(f"ORPHAN MATERIAL VALUE FROM DELETED PAYMENTS = {orphan_purchase_value}")
 
-        legacy_repair_done = AppSetting.objects.filter(
-            key="capital_v14_legacy_repair_done", value="1"
-        ).exists()
+        legacy_repair_done = AppSetting.objects.filter(key="capital_v14_legacy_repair_done", value="1").exists()
         if not legacy_repair_done:
             warnings.append("legacy v13 orphan-output repair marker is not set")
 
@@ -142,6 +123,5 @@ class Command(BaseCommand):
         if errors:
             for error in errors:
                 self.stderr.write(self.style.ERROR("ERROR: " + error))
-            raise CommandError("CAPITAL INTEGRITY V14 FAILED")
-
-        self.stdout.write(self.style.SUCCESS("CAPITAL INTEGRITY V14 OK"))
+            raise CommandError("CAPITAL INTEGRITY V17 FAILED")
+        self.stdout.write(self.style.SUCCESS("CAPITAL INTEGRITY V17 OK"))
