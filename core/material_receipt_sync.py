@@ -2,25 +2,16 @@ from decimal import Decimal
 
 from django.db import transaction
 
-from .material_flow import COLOR_LABELS, ELASTIC, FABRIC, OUTPUT_SIZE_KEYS, _consume_rows, q
+from .material_flow import COLOR_LABELS, ELASTIC, FABRIC, _consume_rows, q
 from .models import MaterialReportConsumption
 
 
-def _has_final_receipt(output_data):
-    for values in (output_data or {}).values():
-        values = values or {}
-        if any(q(values.get(size_key)) > 0 for size_key in OUTPUT_SIZE_KEYS):
-            return True
-    return False
-
-
 def desired_consumption(block):
-    # A material-report block is considered final once at least one finished-good
-    # quantity is received. At that point all material usage recorded in the block
-    # belongs to the tailor stock and is deducted once, idempotently.
-    if not _has_final_receipt(block.output_data):
-        return {}
+    """Desired raw-material consumption for the block, independent of finished receipts.
 
+    Consumption is posted only when the user explicitly presses the material-apply button.
+    Existing MaterialReportConsumption rows make re-apply idempotent/delta-based.
+    """
     desired = {}
     for key in COLOR_LABELS:
         values = (block.input_data or {}).get(key, {}) or {}
