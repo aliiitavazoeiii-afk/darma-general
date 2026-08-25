@@ -6,7 +6,7 @@ from django.urls import reverse
 from core.models import (
     BusinessPayment, DigikalaSettlement, ExcelManualRow, ExcelManualSetting, InventoryModelCost,
     MaterialReportBlock, MaterialReportConsumption, MaterialReportOutputApplied, ProductCode, ProductComposition,
-    ProductSize, RawMaterialStock, TailorBalanceEntry, TakvinPurchase,
+    ProductSize, RawMaterialStock, TailorBalanceEntry, TakvinCostRule, TakvinPurchase,
 )
 
 
@@ -26,7 +26,7 @@ class Command(BaseCommand):
             "core/inventory_final.html", "core/inventory_operations.html",
             "core/settings_home.html", "core/settings_catalog.html", "core/settings_products.html",
             "core/settings_product_form.html", "core/settings_stock.html", "core/settings_finance.html",
-            "core/settings_rules.html",
+            "core/settings_rules.html", "core/settings_rules_v17.html",
         ]
         errors = []
         for template_name in templates:
@@ -75,7 +75,7 @@ class Command(BaseCommand):
 
         try:
             ExcelManualSetting.objects.count(); ExcelManualRow.objects.count(); MaterialReportBlock.objects.count()
-            MaterialReportConsumption.objects.count(); MaterialReportOutputApplied.objects.count()
+            MaterialReportConsumption.objects.count(); MaterialReportOutputApplied.objects.count(); TakvinCostRule.objects.count()
             TakvinPurchase.objects.filter(note__startswith="[excel-web]").count()
             InventoryModelCost.objects.count(); RawMaterialStock.objects.count(); BusinessPayment.objects.count(); DigikalaSettlement.objects.count(); TailorBalanceEntry.objects.count()
             ProductCode.objects.count(); ProductComposition.objects.count(); ProductSize.objects.count()
