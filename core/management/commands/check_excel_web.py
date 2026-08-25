@@ -5,8 +5,8 @@ from django.urls import reverse
 
 from core.models import (
     BusinessPayment, ExcelManualRow, ExcelManualSetting, InventoryModelCost,
-    MaterialReportBlock, MaterialReportConsumption, RawMaterialStock,
-    TailorBalanceEntry, TakvinPurchase,
+    MaterialReportBlock, MaterialReportConsumption, ProductCode, ProductComposition,
+    ProductSize, RawMaterialStock, TailorBalanceEntry, TakvinPurchase,
 )
 
 
@@ -74,6 +74,7 @@ class Command(BaseCommand):
             ExcelManualSetting.objects.count(); ExcelManualRow.objects.count(); MaterialReportBlock.objects.count()
             MaterialReportConsumption.objects.count(); TakvinPurchase.objects.filter(note__startswith="[excel-web]").count()
             InventoryModelCost.objects.count(); RawMaterialStock.objects.count(); BusinessPayment.objects.count(); TailorBalanceEntry.objects.count()
+            ProductCode.objects.count(); ProductComposition.objects.count(); ProductSize.objects.count()
             if getattr(RawMaterialStock, "DEPOT", None) != "depot":
                 raise RuntimeError("RawMaterialStock depot location is not active")
             self.stdout.write("Excel-Web models OK")
