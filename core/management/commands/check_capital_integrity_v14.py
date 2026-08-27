@@ -92,43 +92,33 @@ class Command(BaseCommand):
             settlement = _settlement_ledger(payment)
 
             if legacy_prepayment and settlement:
-                errors.append(f"material payment {payment.id}: has both legacy prepayment and v22 settlement ledgers")
+                errors.append(f"material payment {payment.id}: has both legacy and v22 prepayment ledgers")
                 continue
 
             if data:
                 invoice = _invoice_value(data)
-                expected_delta = int(payment.amount or 0) - int(invoice)
                 if not purchase_ledger:
                     warnings.append(f"material payment {payment.id}: legacy purchase note only; run v14 repair/backfill")
                 elif int(purchase_ledger.amount or 0) != int(payment.amount or 0):
                     errors.append(f"material purchase {payment.id}: payment={payment.amount}, ledger={purchase_ledger.amount}")
-                if legacy_prepayment:
-                    errors.append(f"material purchase {payment.id}: purchase also has legacy prepayment ledger")
-                if settlement:
-                    payload = _decode_json_ledger(settlement) or {}
-                    actual_delta = int(payload.get("delta") or 0)
-                    if actual_delta != expected_delta:
-                        errors.append(
-                            f"material purchase {payment.id}: supplier delta={actual_delta}, expected={expected_delta} "
-                            f"(paid={payment.amount}, invoice={invoice})"
-                        )
-                    if int(settlement.amount or 0) != abs(actual_delta):
-                        errors.append(f"material purchase {payment.id}: settlement amount mismatch")
-                elif expected_delta != 0:
-                    errors.append(
-                        f"material purchase {payment.id}: paid={payment.amount}, invoice={invoice}, but supplier settlement ledger is missing"
-                    )
+                if legacy_prepayment or settlement:
+                    errors.append(f"material purchase {payment.id}: received-goods purchase must not have a supplier prepayment ledger")
+                self.stdout.write(
+                    f"material purchase {payment.id}: invoice_value={invoice} actual_paid={int(payment.amount or 0)}"
+                )
             elif settlement:
                 payload = _decode_json_ledger(settlement) or {}
                 expected_delta = int(payment.amount or 0)
                 actual_delta = int(payload.get("delta") or 0)
                 if actual_delta != expected_delta:
                     errors.append(f"material prepayment {payment.id}: settlement delta={actual_delta}, expected={expected_delta}")
+                if int(settlement.amount or 0) != expected_delta:
+                    errors.append(f"material prepayment {payment.id}: settlement amount mismatch")
             elif legacy_prepayment:
                 if int(legacy_prepayment.amount or 0) != int(payment.amount or 0):
                     errors.append(f"legacy material prepayment {payment.id}: payment={payment.amount}, ledger={legacy_prepayment.amount}")
             else:
-                warnings.append(f"material payment {payment.id}: no purchase/prepayment/settlement ledger; edit/delete is blocked")
+                warnings.append(f"material payment {payment.id}: no purchase/prepayment ledger; edit/delete is blocked")
 
         orphan_purchase_value = 0
         for stock in RawMaterialStock.objects.filter(active=True).exclude(note=""):
