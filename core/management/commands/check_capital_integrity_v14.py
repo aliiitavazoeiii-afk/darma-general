@@ -4,6 +4,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db.models import Sum
 from django.urls import resolve, reverse
 
+from core.business_tools_v22 import _decode_json_ledger, _invoice_value, _settlement_ledger
 from core.finance_excel_v9 import digikala_receivable_total
 from core.inventory_valuation_v17 import finished_inventory_value_v17
 from core.material_purchase_v14 import ledger_for_payment, purchase_data_for_payment
@@ -24,8 +25,8 @@ class Command(BaseCommand):
         errors = []
         warnings = []
         route_checks = {
-            "payments": {"core.business_tools_v21"},
-            "payment_add": {"core.business_tools_v21"},
+            "payments": {"core.business_tools_v22"},
+            "payment_add": {"core.business_tools_v22"},
             "receipt_add": {"core.business_tools_v21"},
             "material_report": {"core.material_report_v19"},
             "material_block_save": {"core.material_report_v19"},
@@ -35,6 +36,19 @@ class Command(BaseCommand):
         }
         for name, allowed_modules in route_checks.items():
             args = [1] if "material_block_" in name else []
+            actual = resolve(reverse(name, args=args)).func.__module__
+            if actual not in allowed_modules:
+                errors.append(f"{name}: {actual} not in {sorted(allowed_modules)}")
+            else:
+                self.stdout.write(f"route OK: {name} -> {actual}")
+
+        parameter_routes = {
+            "payment_update": ({"core.business_tools_v22"}, [1]),
+            "payment_delete": ({"core.business_tools_v22"}, [1]),
+            "receipt_update": ({"core.business_tools_v21"}, [1]),
+            "receipt_delete": ({"core.business_tools_v21"}, [1]),
+        }
+        for name, (allowed_modules, args) in parameter_routes.items():
             actual = resolve(reverse(name, args=args)).func.__module__
             if actual not in allowed_modules:
                 errors.append(f"{name}: {actual} not in {sorted(allowed_modules)}")
@@ -52,7 +66,7 @@ class Command(BaseCommand):
         takvin_debt = int(debt_obj.value or 0) if debt_obj else 0
         capital = accounts_total + finished + materials + digikala + assets_total - takvin_debt
 
-        self.stdout.write("=== CAPITAL EQUATION V21 ===")
+        self.stdout.write("=== CAPITAL EQUATION V22 ===")
         self.stdout.write(f"ACCOUNTS + PERSONS = {accounts_total}")
         self.stdout.write(f"FINISHED INVENTORY  = {finished}")
         self.stdout.write(f"RAW MATERIALS       = {materials}")
@@ -71,23 +85,50 @@ class Command(BaseCommand):
         for payment in BusinessPayment.objects.filter(payee__in=["fabric", "elastic"]):
             data = purchase_data_for_payment(payment)
             purchase_ledger = ledger_for_payment(payment)
-            prepayment_ledger = MoneyMovement.objects.filter(
+            legacy_prepayment = MoneyMovement.objects.filter(
                 kind=MoneyMovement.TRANSFER,
                 title=f"{PREPAYMENT_PREFIX}{payment.id}",
             ).order_by("-id").first()
+            settlement = _settlement_ledger(payment)
+
+            if legacy_prepayment and settlement:
+                errors.append(f"material payment {payment.id}: has both legacy prepayment and v22 settlement ledgers")
+                continue
 
             if data:
+                invoice = _invoice_value(data)
+                expected_delta = int(payment.amount or 0) - int(invoice)
                 if not purchase_ledger:
                     warnings.append(f"material payment {payment.id}: legacy purchase note only; run v14 repair/backfill")
                 elif int(purchase_ledger.amount or 0) != int(payment.amount or 0):
                     errors.append(f"material purchase {payment.id}: payment={payment.amount}, ledger={purchase_ledger.amount}")
-                if prepayment_ledger:
-                    errors.append(f"material payment {payment.id}: has BOTH purchase and prepayment ledgers")
-            elif prepayment_ledger:
-                if int(prepayment_ledger.amount or 0) != int(payment.amount or 0):
-                    errors.append(f"material prepayment {payment.id}: payment={payment.amount}, ledger={prepayment_ledger.amount}")
+                if legacy_prepayment:
+                    errors.append(f"material purchase {payment.id}: purchase also has legacy prepayment ledger")
+                if settlement:
+                    payload = _decode_json_ledger(settlement) or {}
+                    actual_delta = int(payload.get("delta") or 0)
+                    if actual_delta != expected_delta:
+                        errors.append(
+                            f"material purchase {payment.id}: supplier delta={actual_delta}, expected={expected_delta} "
+                            f"(paid={payment.amount}, invoice={invoice})"
+                        )
+                    if int(settlement.amount or 0) != abs(actual_delta):
+                        errors.append(f"material purchase {payment.id}: settlement amount mismatch")
+                elif expected_delta != 0:
+                    errors.append(
+                        f"material purchase {payment.id}: paid={payment.amount}, invoice={invoice}, but supplier settlement ledger is missing"
+                    )
+            elif settlement:
+                payload = _decode_json_ledger(settlement) or {}
+                expected_delta = int(payment.amount or 0)
+                actual_delta = int(payload.get("delta") or 0)
+                if actual_delta != expected_delta:
+                    errors.append(f"material prepayment {payment.id}: settlement delta={actual_delta}, expected={expected_delta}")
+            elif legacy_prepayment:
+                if int(legacy_prepayment.amount or 0) != int(payment.amount or 0):
+                    errors.append(f"legacy material prepayment {payment.id}: payment={payment.amount}, ledger={legacy_prepayment.amount}")
             else:
-                warnings.append(f"material payment {payment.id}: no purchase/prepayment ledger; edit/delete is intentionally blocked")
+                warnings.append(f"material payment {payment.id}: no purchase/prepayment/settlement ledger; edit/delete is blocked")
 
         orphan_purchase_value = 0
         for stock in RawMaterialStock.objects.filter(active=True).exclude(note=""):
@@ -138,5 +179,5 @@ class Command(BaseCommand):
         if errors:
             for error in errors:
                 self.stderr.write(self.style.ERROR("ERROR: " + error))
-            raise CommandError("CAPITAL INTEGRITY V21 FAILED")
-        self.stdout.write(self.style.SUCCESS("CAPITAL INTEGRITY V21 OK"))
+            raise CommandError("CAPITAL INTEGRITY V22 FAILED")
+        self.stdout.write(self.style.SUCCESS("CAPITAL INTEGRITY V22 OK"))
