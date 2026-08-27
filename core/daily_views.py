@@ -5,10 +5,14 @@ import jdatetime
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 
+from .anbaresh_catalog_v19 import sync_anbaresh_catalog
 from .dateutils import format_jalali
 from .finance import sale_line_metrics
 from .jalali_calendar import jalali_month_data
 from .models import Brand, ProductSize, SaleDay, SaleLine, Size
+
+
+SALES_BRANDS = {"دارما", "تکوین", "انبارش"}
 
 
 def _brand_sizes(brand):
@@ -69,6 +73,11 @@ def select_sale_day(request, jy, jm, jd):
 def sale_size(request, day_id, brand_id, size_id):
     day = get_object_or_404(SaleDay, id=day_id)
     brand = get_object_or_404(Brand, id=brand_id)
+    if brand.name not in SALES_BRANDS:
+        return redirect("sale_brand", day_id=day.id)
+    if brand.name == "انبارش":
+        sync_anbaresh_catalog()
+
     size = get_object_or_404(Size, id=size_id)
     sizes = _brand_sizes(brand)
     ids = [s.id for s in sizes]
@@ -121,11 +130,11 @@ def daily_report(request, day_id):
     total["margin"] = (total["profit"] / total["gross"] * 100) if total["gross"] else 0
 
     ordered_brands = []
-    for brand_name in ["تکوین", "دارما"]:
+    for brand_name in ["تکوین", "دارما", "انبارش"]:
         if brand_name in by_brand:
             ordered_brands.append((brand_name, by_brand[brand_name]))
     for brand_name, values in by_brand.items():
-        if brand_name not in ["تکوین", "دارما"]:
+        if brand_name not in ["تکوین", "دارما", "انبارش"]:
             ordered_brands.append((brand_name, values))
 
     return render(request, "core/daily_report.html", {
