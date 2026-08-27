@@ -1,6 +1,6 @@
 # AI START HERE — DARMA GENERAL
 
-Last updated: 2026-08-26
+Last updated: 2026-08-27
 Repository: `aliiitavazoeiii-afk/darma-general`
 Default branch: `main`
 Domain: `gozaresh.filmjadiid.ir`
@@ -13,23 +13,25 @@ This is a live Django business-management system used instead of Excel for an ap
 Before doing any work:
 
 1. Read this file completely.
-2. Read `PROJECT_HANDOFF.md` completely.
-3. Inspect the current `main` branch files relevant to the requested change; do not rely only on old version names.
-4. Do not assume code on `main` is already deployed. Confirm the live server state from user output when deployment status matters.
-5. Make a rollback branch before risky changes when practical.
-6. Never run destructive inventory/database reset scripts for normal changes.
+2. Read `PROJECT_HANDOFF.md` completely for older history.
+3. IMPORTANT: where `PROJECT_HANDOFF.md` conflicts with the v18/v19 sections below, THIS FILE is newer and wins.
+4. Inspect current `main` files relevant to the requested change; do not rely only on old version names.
+5. Do not assume code on `main` is already deployed. Confirm live server state from user output when deployment status matters.
+6. Make a rollback branch before risky changes when practical.
+7. Never run destructive inventory/database reset scripts for normal changes.
 
 ## 2. Non-negotiable safety rules
 
 - Never use `server_inventory_fix.sh` for routine changes. It is destructive and resets business data.
-- Do not blindly repair Darma stock. Current Darma stock has a known historical anomaly: `دارما / طوسی / XXL / خورشید = -50`. It must remain untouched until the user supplies a fresh physical count for HOME and KHORSHID.
-- Do not run `server_fix_khorshid_negative_v15.sh`; its dry-run proved the simple HOME→KHORSHID repair is unsafe because HOME had only 43 while KHORSHID was -50.
+- Never rerun the old v11 Excel stock baseline as a current Darma target.
+- Never run `server_fix_khorshid_negative_v15.sh` as an apply operation.
+- The historical `طوسی / XXL / خورشید = -50` anomaly was NOT repaired in isolation. It was superseded by the user's complete physical HOME + KHORSHID count and the v18 physical-baseline reconcile.
 - Preserve current capital/accounting state unless the requested operation intentionally changes it. Deployment scripts should compare capital before/after where possible.
 - Prefer atomic/idempotent inventory operations and explicit ledgers over inference from notes/text.
-- All sale/import inventory changes must preserve brand stock invariants and rollback on mismatch.
-- Existing historical SaleSnapshots are accounting history. Do not rewrite old sale snapshots merely because pricing rules change later.
+- All sale/import inventory changes must preserve stock/accounting invariants and rollback on mismatch.
+- Existing SaleSnapshots are historical accounting records. Never rewrite old snapshots just because current costs/rules change later.
 
-## 3. Current architecture
+## 3. Current architecture and active source-of-truth routes on `main`
 
 - Django 5.2
 - PostgreSQL 16 Alpine
@@ -37,161 +39,258 @@ Before doing any work:
 - WhiteNoise
 - Caddy HTTPS
 - Docker Compose
-- True-glass navy UI; do not revert the visual system.
+- True-glass navy UI; do not regress it.
 - Jalali dates throughout business workflows.
 
-Primary routes currently point to:
+Current `main` routes are intended to point to:
 
 - dashboard: `core.excel_dashboard`
-- sale brand selection: `core.sale_brand_v17`
-- manual sales: `core.excel_sales`
-- daily Digikala XLSX import: `core.daily_order_views_v8` using `core.daily_order_import_v12`
+- sale brand selection: `core.sale_brand_v19`
+- manual sale save: `core.excel_sales`
+- manual sale stock engine: `core.sale_inventory_v19`
+- daily Digikala XLSX: `core.daily_order_views_v8` using `core.daily_order_import_v12`
 - daily report: `core.daily_report_v8`
 - comprehensive report/capital: `core.report_v9`
-- materials report: `core.material_report_v16`
+- material report: `core.material_report_v19`
 - payments/receipts: `core.business_tools_v14`
-- inventory: `core.inventory_v5`
+- inventory: `core.inventory_v19`
 - inventory operations: `core.inventory_operations_v15`
-- rules: `core.settings_rules_v17`
+- settings/rules: `core.settings_rules_v17`
 
-See `core/urls.py` for the current source of truth.
+Always verify against `core/urls.py` before editing.
 
-## 4. Current important feature generations
+## 4. Accounting model
 
-### v9 finance
+Capital is intended to remain:
 
-Digikala receivable is automatic. A sale increases Digikala receivable by gross minus Digikala fee. A Digikala receipt decreases receivable and increases Mellat. Capital equation is based on assets, not cash-flow events.
+`accounts/persons + finished inventory + raw materials + Digikala receivable + assets - Takvin debt`
 
-### v11 Darma reference reconcile
+Key rules:
 
-A historical Excel baseline was reconciled to 14,311 Darma shorts / 872,971,000 toman at 61,000 each. Do not rerun this old snapshot against current live stock after newer sales/production.
+- Digikala receipt moves value from receivable to Mellat; capital unchanged.
+- Raw-material purchase exchanges Mellat for raw-material inventory; capital unchanged.
+- Sale reduces finished inventory by COGS and increases Digikala receivable by gross minus fee; capital rises only by sale profit.
+- Internal stock transfers do not create capital.
+- SaleSnapshot freezes pack quantity, COGS/unit cost and Digikala fee at sale time.
 
-### v12 Darma `s3` variable-color single item
+Current finished-goods valuation helper remains `core.inventory_valuation_v17.finished_inventory_value_v17()`, but v19 semantics are important: `انبارش` is excluded as an independent inventory asset; `Novani` is included as a real inventory brand.
 
-`Darma s3` is a pack-1 product whose sold color is taken from the Digikala title, not a fixed composition. Known seller-code color hints are case-sensitive:
+## 5. v18 — authoritative Darma physical baseline after 1405/06/03 sales
+
+The user supplied complete physical counts for both Darma locations after the sales of 3 Shahrivar 1405. The count is an END-OF-DAY baseline: sales of 1405/06/03 must NOT be reapplied or changed.
+
+Physical totals supplied:
+
+- HOME = 4,585 shorts
+- KHORSHID = 8,890 shorts
+- TOTAL = 13,475 shorts
+
+The old historical audit had 13,467 net shorts, so the physical correction was +8 shorts. At the then-current 61,000 accounting value this was +488,000 toman.
+
+User-reported totals after applying the physical baseline were:
+
+- inventory total = `3,129,524,600`
+- capital total = `5,485,803,435`
+
+These were mathematically consistent with the prior totals by exactly +488,000.
+
+Relevant v18 files:
+
+- `core/management/commands/reconcile_darma_physical_v18.py`
+- `server_darma_physical_v18.sh`
+
+Do not treat the old `-50` Khorshid cell as a pending isolated repair anymore. For future Darma stock corrections, use fresh physical evidence and explicit adjustments/reconcile logic.
+
+## 6. v19 — Anbaresh is SALES-ONLY, backed by Darma stock
+
+This section SUPERSEDES the older v17 handoff wording that described Anbaresh as a normal inventory brand.
+
+Business rule:
+
+- `انبارش` exists only in daily sales/reporting.
+- It must NOT appear in the inventory page or inventory operations.
+- The user warehouses only Darma goods through this channel.
+- Entering Anbaresh manually must show the same active codes/sizes/default sale prices as Darma without defining a separate catalog by hand.
+- Anbaresh SaleLines remain brand=`انبارش` so daily/comprehensive sales reports show Anbaresh separately.
+- Physical goods for an Anbaresh sale are deducted from REAL Darma HOME/KHORSHID stock using the Darma-style auto-transfer/shortage logic.
+- Therefore Anbaresh has no independent StockBalance asset and must never be added to capital as separate inventory.
+- Anbaresh SaleSnapshot COGS is calculated from the actual Darma colors/costs allocated to that sale so reported profit equals the real capital movement.
+
+Relevant v19 files:
+
+- `core/anbaresh_catalog_v19.py` — mirrors Darma catalog into Anbaresh for manual sale UI only.
+- `core/sale_brand_v19.py`
+- `core/sale_inventory_v19.py`
+- `core/excel_sales.py`
+- `core/cost_accounting_v14.py`
+- `core/inventory_valuation_v17.py`
+
+### XLSX coexistence rule
+
+The user may have BOTH Digikala orders and manual Anbaresh sales on the same date.
+
+Therefore:
+
+- Digikala XLSX resolver is intentionally limited to `دارما` and `تکوین`.
+- It must never resolve mirrored Anbaresh codes or Novani.
+- Replacement semantics of an uploaded XLSX apply only to Darma/Takvin lines.
+- Manual Anbaresh SaleLines on the same SaleDay must remain untouched if they are absent from the XLSX.
+
+Current implementation for this is in `core/daily_order_import_v12.py`.
+
+## 7. v19 — Novani is a REAL inventory/production brand
+
+Business rule:
+
+- Brand name: `Novani`.
+- Novani appears in the inventory page beside Darma and Takvin.
+- Novani is NOT a daily-sale brand at this stage.
+- Novani has one inventory bucket/table only; there is no visible HOME/KHORSHID split.
+- Internally its stock uses HOME as the single storage location.
+- Current Novani accounting cost is 61,000 toman per finished short for all seeded color × size rows.
+- Novani stock contributes to finished inventory value and capital.
+
+Migration `0013_saleonly_anbaresh_novani_material_brand.py` seeds Novani with Darma's base color set × sizes at quantity zero and InventoryModelCost=61,000.
+
+Relevant files:
+
+- `core/inventory_v19.py`
+- `templates/core/inventory_v19.html`
+- `core/inventory_operations_v15.py`
+
+Only Darma can transfer HOME↔KHORSHID. Novani inventory adjustments are forced into its single HOME bucket.
+
+## 8. v19 — material reports are brand-aware
+
+This section SUPERSEDES the older v16 assumption that every finished output goes to Darma KHORSHID.
+
+Each `MaterialReportBlock` now has a required `brand` and allowed workflow brands are:
+
+- `دارما`
+- `Novani`
+
+Historical material reports are assigned to Darma by migration because all pre-v19 reports were Darma-era reports.
+
+Behavior remains split/idempotent:
+
+1. Save = data only; no stock effect.
+2. Apply Materials = raw-material consumption only; no finished goods.
+3. Apply Output = only the new cumulative delta not previously applied.
+
+Destination rule:
+
+- Darma output → Darma KHORSHID, preserving existing v14/v16 cost-blending behavior.
+- Novani output → Novani's single inventory bucket, currently valued at 61,000/unit.
+
+Once any output has been applied for a material report, changing that report's brand is blocked to prevent moving historical production between brands silently.
+
+Relevant files:
+
+- `core/material_report_v19.py`
+- `templates/core/material_report_v19.html`
+- `MaterialReportBlock.brand`
+- migration `0013_saleonly_anbaresh_novani_material_brand.py`
+
+## 9. Takvin dated accounting costs remain v17
+
+Takvin accounting cost is date-effective via `TakvinCostRule` and is distinct from sale price.
+
+Default historical seed:
+
+- M = 108,000
+- L = 126,000
+- XL = 139,500
+- XXL = 153,000
+
+`settings_rules_v17.py` can add a new full cost set with a Jalali effective date. `snapshot_sale_line()` freezes the rule effective on the SaleDay date. Never recalculate old sales from today's Takvin cost.
+
+## 10. Darma s3 variable-color import remains v12
+
+`Darma s3` is pack-1 and its sold color comes from the Digikala title/seller hint, not fixed ProductComposition.
+
+Case-sensitive known hints:
 
 - `s2` = کرم
 - `s3` = مشکی
 - `S3` = صورتی
 - `s5` = سرمه‌ای
-- سفید is also recognized from the title.
+- white can also be recognized from title.
 
-The title is authoritative for variable-color `s3`.
+The XLSX importer must continue preserving this behavior.
 
-### v14 capital/cost integrity
+## 11. v19 deployment status and safe script
 
-Capital is intended to be:
+Current `main` contains v19 code, but DO NOT claim it is live until the user shows successful VPS output.
 
-`accounts/persons + finished inventory + raw materials + Digikala receivable + assets - Takvin debt`
+Rollback branch:
 
-Internal conversions/purchases must not create capital out of nowhere. Material purchases should exchange Mellat cash for raw-material inventory with zero net capital effect.
+`before-saleonly-anbaresh-novani-material-v19`
 
-### v15 inventory diagnostics
-
-Manual stock transfer is guarded against insufficient source stock. Read-only diagnostics exist:
-
-- `audit_darma_stock_v15`
-- `trace_negative_darma_v15`
-
-### v16 split material/production apply
-
-Material reports intentionally have separate effects:
-
-1. Save form: data only; no inventory effect.
-2. Apply material consumption: only fabric/elastic consumption from tailor stock.
-3. Apply finished-goods receipt: only newly received shorts are added to KHORSHID.
-
-Finished-goods receipt is cumulative/delta-based by color × size using `MaterialReportOutputApplied`:
-
-- enter pink=100 and apply → +100
-- later add black=100 while pink stays 100 and apply → +100 black only
-- later change pink from 100 to 150 and apply → +50 pink only
-
-Never re-add previously applied quantities.
-
-### v17 Anbaresh + date-effective Takvin cost rules
-
-Current `main` contains v17 code, but live deployment has NOT been confirmed in this handoff.
-
-- New active brand `انبارش` is seeded by migration `0012_takvin_cost_rule_and_anbaresh.py`.
-- `sale_brand_v17.py` shows brand cards ordered دارما, تکوین, انبارش.
-- Anbaresh is meant to behave like another sale brand in daily reports: gross, Digikala fee, COGS, profit, packs/shorts all use the normal SaleLine flow.
-- Takvin accounting cost is now date-effective via `TakvinCostRule`.
-- Default seeded Takvin costs: M=108,000; L=126,000; XL=139,500; XXL=153,000.
-- `settings_rules_v17.py` lets the user add a new cost set with an effective Jalali date. Old sales remain frozen via SaleSnapshot.
-- `cost_accounting_v14.snapshot_sale_line()` now uses `takvin_cost_for(size, line.day.date)` for Takvin.
-- `inventory_valuation_v17.finished_inventory_value_v17()` values current Takvin inventory using the current effective Takvin rule and is used by capital/report integrity logic.
-- Safe deployment script: `server_anbaresh_takvin_v17.sh`.
-- v17 preflight: `python manage.py check_v17_features`.
-
-## 5. Known Darma stock anomaly — DO NOT GUESS-FIX
-
-Read-only audit for 1405/06/01 through 1405/06/03 showed:
-
-- day 1 Darma sold shorts: 160
-- day 2: 282
-- day 3: 402
-- total: 844
-- allocations: 844
-- applied shorts: 844
-- mismatches: 0
-
-The previously questioned Darma total `821,487,000` was mathematically correct because `863,211,000` was already the post-day-1 value.
-
-Current anomaly from that audit:
-
-- `طوسی / XXL / HOME = 43`
-- `طوسی / XXL / KHORSHID = -50`
-- target-cell net = -7
-
-The old v11 Excel snapshot itself had `طوسی / XXL = -3` total. v11 intentionally reconciled by changing HOME only while preserving KHORSHID, so an older negative KHORSHID row could survive while HOME was adjusted to make the total match. After later sales the net became -7.
-
-The user later stated the actual physical stock should be recounted. Correct next step is NOT to repair this cell in isolation. Wait for a complete physical HOME + KHORSHID stock count and reconcile the entire Darma matrix to the physical end-of-day baseline (intended baseline: after day 3), then continue from day 4 onward.
-
-## 6. Deployment discipline
-
-For normal safe deployment, scripts follow this pattern:
-
-- start/health-check DB
-- pg_dump backup
-- build web image
-- `makemigrations --check --dry-run`
-- migrate
-- preflight checks
-- compare capital before/after when relevant
-- recreate live web
-- restart Caddy
-- final checks
-
-For current v17 code, use only after deciding to deploy it:
+Safe deploy script:
 
 ```bash
 cd /opt/darma-general
 git pull --ff-only
-bash server_anbaresh_takvin_v17.sh
+bash server_saleonly_anbaresh_novani_v19.sh
 ```
 
-Do not claim v17 is live until the user shows successful output ending in:
+The script intentionally guards before migration:
 
-`SUCCESS: ANBARESH + TAKVIN PRICING V17 DEPLOYED`
+- DB backup must succeed.
+- live web must be available to establish before-state.
+- legacy Anbaresh stock quantity must be zero; otherwise deployment stops.
+- legacy positive Anbaresh SaleLines must be zero; otherwise deployment stops for explicit reconciliation.
+- Darma stock total is captured before migration and must be unchanged after migration.
+- capital is captured before migration and must be exactly unchanged after metadata migration.
+- migration drift/system/template/v19/capital checks must pass before live web is replaced.
 
-## 7. User workflow expectations
+Expected successful ending:
+
+`SUCCESS: SALE-ONLY ANBARESH + NOVANI + MATERIAL BRAND V19 DEPLOYED`
+
+Do not bypass these guards if the script fails. Diagnose the exact reason and patch safely.
+
+## 12. Deployment discipline
+
+For model/data-affecting changes:
+
+- pg_dump first;
+- `makemigrations --check --dry-run`;
+- migrate in a fresh container;
+- run relevant preflight management commands;
+- compare expected capital/inventory before and after;
+- do not recreate live web if a safety check fails;
+- then recreate web/restart Caddy;
+- run final live audits.
+
+Useful current checks:
+
+```bash
+python manage.py check
+python manage.py check_excel_web
+python manage.py check_v17_features
+python manage.py check_v19_features
+python manage.py check_capital_integrity_v14
+python manage.py capital_audit_v9
+```
+
+## 13. User workflow expectations
 
 - Keep UI simple and Excel-like, not ERP-heavy.
-- Edit GitHub directly when asked to implement.
+- Edit GitHub directly when implementation is requested.
 - Give short copy/paste VPS commands.
-- Do not ask for information already available in the repo/handoff.
-- Diagnose pasted deployment errors quickly and patch GitHub if needed.
+- Do not ask for facts already available in repo/handoff.
+- Diagnose pasted deployment errors from the exact failing step; do not ask user to bypass safeguards.
 - Preserve true-glass styling and mobile behavior.
 - Money uses Persian thousands separator `٬`; quantities/weights use normal decimals.
 
-## 8. Immediate handoff priorities
+## 14. Immediate next state
 
-The next chat should first determine what the user wants to do next. Likely pending items are:
+At the time of this update:
 
-- confirm/deploy v17 (Anbaresh + Takvin dated costs) if not yet deployed;
-- wait for physical Darma HOME/KHORSHID inventory counts, then create a NEW safe full-matrix reconcile baseline after 1405/06/03;
-- never use the old v11 baseline for that new physical reconcile;
-- verify v16 material split behavior on the live server before entering historical material reports.
+- v18 physical Darma baseline is the authoritative post-1405/06/03 stock baseline.
+- v19 code is on `main` and awaits confirmed safe deployment output.
+- After v19 is live, the user intends to create/use a Novani material report for five fabric rolls currently belonging to Novani, then enter received finished quantities so only Novani inventory increases.
+- Anbaresh must remain manual daily-sale only and may coexist with Digikala XLSX orders on the same date.
 
-For deeper history, exact numbers, rollback branches, and file map, read `PROJECT_HANDOFF.md`.
+For older history, exact prior versions and legacy rationale, read `PROJECT_HANDOFF.md`, but do not let its older v17 Anbaresh semantics override this v19 section.
