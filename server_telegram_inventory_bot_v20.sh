@@ -103,9 +103,13 @@ if [ -z "$USER_ID" ]; then
   case "$USER_ID" in
     ''|*[!0-9]*|0) fail "Telegram User ID must be a positive number" ;;
   esac
-  set_env TELEGRAM_ALLOWED_USER_ID "$USER_ID"
-  load_env
 fi
+
+# v20 is intentionally private to one Telegram account. Clear any old plural
+# allow-list so it cannot override the selected singular ID.
+set_env TELEGRAM_ALLOWED_USER_ID "$USER_ID"
+set_env TELEGRAM_ALLOWED_USER_IDS ""
+load_env
 
 docker compose -f compose.yml -f compose.telegram.yml run --rm --entrypoint python bot manage.py check_telegram_bot_v20 --network || fail "locked Telegram preflight failed"
 
