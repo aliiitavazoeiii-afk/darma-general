@@ -19,7 +19,7 @@ class Command(BaseCommand):
             "core/report_excel_v2.html", "core/report_excel_v3.html", "core/report_excel_v5.html", "core/report_excel_v9.html",
             "core/_manual_table.html", "core/_raw_fabric_table.html", "core/_raw_elastic_table.html",
             "core/_raw_material_panel_v3.html", "core/_financial_summary_extra.html",
-            "core/payments.html", "core/payments_v9.html", "core/payments_v13.html", "core/payments_v21.html", "core/calculator.html", "core/_calculator_result.html",
+            "core/payments.html", "core/payments_v9.html", "core/payments_v13.html", "core/payments_v21.html", "core/payments_v22.html", "core/_payment_edit_v22.html", "core/calculator.html", "core/_calculator_result.html",
             "core/material_report.html", "core/material_report_v13.html", "core/material_report_v16.html", "core/material_report_v19.html", "core/takvin_excel.html", "core/sale_calendar.html",
             "core/sale_brand_final.html", "core/sale_size.html", "core/_sale_saved_final.html",
             "core/daily_report.html", "core/daily_report_v8.html", "core/daily_report_v21.html", "core/_daily_order_upload.html",
