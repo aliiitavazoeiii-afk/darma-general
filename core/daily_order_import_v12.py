@@ -10,7 +10,7 @@ from django.db import transaction
 from .cost_accounting_v14 import snapshot_sale_line
 from .daily_order_import_v8 import (
     DailyOrderImportError,
-    _product_maps,
+    _compact_code,
     _resolve_product,
     _resolve_size,
     parse_delivery_report,
@@ -24,6 +24,9 @@ from .variant_sale_v12 import (
     sold_units_by_brand,
     sync_variant_inventory,
 )
+
+
+IMPORT_BRANDS = ("دارما", "تکوین")
 
 
 @dataclass(frozen=True)
@@ -46,17 +49,39 @@ def _model_candidate(title: str) -> str:
     return value
 
 
+def _product_maps_v19():
+    """Digikala XLSX is intentionally limited to real marketplace brands.
+
+    Anbaresh mirrors Darma codes for MANUAL daily entry, so including it here
+    would make duplicate Darma codes ambiguous. Novani is inventory/production
+    only and also must never be selected by the Digikala importer.
+    """
+    products = list(
+        ProductCode.objects.select_related("brand").filter(
+            active=True,
+            brand__name__in=IMPORT_BRANDS,
+        )
+    )
+    by_key = defaultdict(list)
+    for product in products:
+        by_key[_compact_code(product.code)].append(product)
+    return by_key
+
+
 def _resolve_product_v12(seller_code, title, by_key):
     candidate = _model_candidate(title)
     if candidate.lower() == VARIANT_PRODUCT_CODE and "دارما" in str(title or ""):
         return ProductCode.objects.filter(
             brand__name="دارما", code=VARIANT_PRODUCT_CODE, active=True
         ).first()
-    return _resolve_product(seller_code, title, by_key)
+    product = _resolve_product(seller_code, title, by_key)
+    if product and product.brand.name in IMPORT_BRANDS:
+        return product
+    return None
 
 
 def resolve_rows_v12(parsed_rows):
-    by_key = _product_maps()
+    by_key = _product_maps_v19()
     resolved = []
     errors = []
     for row in parsed_rows:
