@@ -58,7 +58,7 @@ def daily_report(request, day_id):
         except Exception:
             pass
 
-    return render(request, "core/daily_report_v8.html", {
+    return render(request, "core/daily_report_v21.html", {
         "day": day,
         "jalali_date": format_jalali(day.date),
         "detail_rows": detail_rows,
