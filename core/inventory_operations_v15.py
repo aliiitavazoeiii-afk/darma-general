@@ -13,6 +13,9 @@ from .models import (
 )
 
 
+INVENTORY_BRANDS = ("دارما", "تکوین", "Novani")
+
+
 def _int(value, default=0):
     try:
         if value in (None, ""):
@@ -28,7 +31,8 @@ def _date(value=None):
 
 @login_required
 def inventory_operations(request):
-    brands = Brand.objects.filter(active=True)
+    brands = Brand.objects.filter(active=True, name__in=INVENTORY_BRANDS).order_by("id")
+    transfer_brands = brands.filter(name="دارما")
     sizes = Size.objects.all()
     colors = Color.objects.filter(active=True)
     locations = StockLocation.objects.all()
@@ -36,8 +40,17 @@ def inventory_operations(request):
     if request.method == "POST":
         try:
             action = request.POST.get("action")
+            brand = Brand.objects.filter(
+                id=request.POST.get("brand"),
+                active=True,
+                name__in=INVENTORY_BRANDS,
+            ).first()
+            if not brand:
+                raise ValueError("برند موجودی معتبر نیست.")
+
             if action == "transfer":
-                brand_id = request.POST.get("brand")
+                if brand.name != "دارما":
+                    raise ValueError("انتقال خانه/خورشید فقط برای دارما فعال است.")
                 size_id = request.POST.get("size")
                 color_id = request.POST.get("color")
                 from_id = request.POST.get("from_location")
@@ -49,7 +62,7 @@ def inventory_operations(request):
 
                 with transaction.atomic():
                     src, _ = StockBalance.objects.get_or_create(
-                        brand_id=brand_id,
+                        brand=brand,
                         size_id=size_id,
                         color_id=color_id,
                         location_id=from_id,
@@ -64,7 +77,7 @@ def inventory_operations(request):
 
                     obj = StockTransfer.objects.create(
                         date=_date(request.POST.get("date")),
-                        brand_id=brand_id,
+                        brand=brand,
                         size_id=size_id,
                         color_id=color_id,
                         qty=qty,
@@ -75,12 +88,15 @@ def inventory_operations(request):
                     sync_stock_transfer(obj)
                 messages.success(request, "انتقال موجودی ثبت شد.")
             else:
+                location_id = request.POST.get("location")
+                if brand.name == "Novani":
+                    location_id = StockLocation.objects.get(key=StockLocation.HOME).id
                 obj = InventoryAdjustment.objects.create(
                     date=_date(request.POST.get("date")),
-                    brand_id=request.POST.get("brand"),
+                    brand=brand,
                     size_id=request.POST.get("size"),
                     color_id=request.POST.get("color"),
-                    location_id=request.POST.get("location"),
+                    location_id=location_id,
                     delta=_int(request.POST.get("delta")),
                     note=request.POST.get("note", ""),
                 )
@@ -101,6 +117,7 @@ def inventory_operations(request):
         "core/inventory_operations.html",
         {
             "brands": brands,
+            "transfer_brands": transfer_brands,
             "sizes": sizes,
             "colors": colors,
             "locations": locations,
