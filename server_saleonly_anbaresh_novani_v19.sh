@@ -36,7 +36,7 @@ from django.db.models import Sum
 from core.models import Brand, StockBalance
 b=Brand.objects.filter(name="انبارش").first()
 qs=StockBalance.objects.filter(brand=b) if b else StockBalance.objects.none()
-print(f"{qs.count()}|{int(qs.aggregate(v=Sum("qty"))["v"] or 0)}")
+print(str(qs.count())+"|"+str(int(qs.aggregate(v=Sum("qty"))["v"] or 0)))
 ' 2>/dev/null | tail -1) || fail "could not inspect live Anbaresh stock"
 ANB_ROWS=$(printf '%s' "$ANB_STATE" | cut -d'|' -f1)
 ANB_QTY=$(printf '%s' "$ANB_STATE" | cut -d'|' -f2)
