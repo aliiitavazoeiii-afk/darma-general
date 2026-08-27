@@ -28,6 +28,10 @@ def finished_inventory_value_v17():
         "brand_id", "brand__name", "color_id", "size_id", "size__name"
     ).annotate(qty=Sum("qty"))
     for row in rows:
+        # V19 contract: Anbaresh is a sales/reporting channel for Darma goods and
+        # must never contribute a separate inventory asset.
+        if row["brand__name"] == "انبارش":
+            continue
         qty = int(row["qty"] or 0)
         key = (row["brand_id"], row["color_id"], row["size_id"])
         if row["brand__name"] == "تکوین":
