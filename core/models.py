@@ -209,6 +209,7 @@ class ExcelManualRow(models.Model):
 class MaterialReportBlock(models.Model):
     date = models.DateField()
     title = models.CharField(max_length=120, blank=True)
+    brand = models.ForeignKey(Brand, on_delete=models.PROTECT, related_name="material_reports")
     input_data = models.JSONField(default=dict, blank=True)
     output_data = models.JSONField(default=dict, blank=True)
     delivery_wage = models.BigIntegerField(default=0)
