@@ -9,11 +9,12 @@ from core.inventory_valuation_v17 import finished_inventory_value_v17
 from core.material_purchase_v14 import ledger_for_payment, purchase_data_for_payment
 from core.models import (
     AccountEntry, AppSetting, BusinessPayment, DigikalaSettlement, ExcelManualRow,
-    ExcelManualSetting, MaterialReportBlock, RawMaterialStock,
+    ExcelManualSetting, MaterialReportBlock, MoneyMovement, RawMaterialStock,
 )
 from core.report_v5 import _raw_material_context
 
 PURCHASE_NOTE_RE = re.compile(r"خرید از پرداخت\s*#(\d+)")
+PREPAYMENT_PREFIX = "material-prepayment:"
 
 
 class Command(BaseCommand):
@@ -23,9 +24,9 @@ class Command(BaseCommand):
         errors = []
         warnings = []
         route_checks = {
-            "payments": {"core.business_tools_v14"},
-            "payment_add": {"core.business_tools_v14"},
-            "receipt_add": {"core.business_tools_v14"},
+            "payments": {"core.business_tools_v21"},
+            "payment_add": {"core.business_tools_v21"},
+            "receipt_add": {"core.business_tools_v21"},
             "material_report": {"core.material_report_v19"},
             "material_block_save": {"core.material_report_v19"},
             "material_block_apply": {"core.material_report_v19"},
@@ -51,7 +52,7 @@ class Command(BaseCommand):
         takvin_debt = int(debt_obj.value or 0) if debt_obj else 0
         capital = accounts_total + finished + materials + digikala + assets_total - takvin_debt
 
-        self.stdout.write("=== CAPITAL EQUATION V19 ===")
+        self.stdout.write("=== CAPITAL EQUATION V21 ===")
         self.stdout.write(f"ACCOUNTS + PERSONS = {accounts_total}")
         self.stdout.write(f"FINISHED INVENTORY  = {finished}")
         self.stdout.write(f"RAW MATERIALS       = {materials}")
@@ -69,13 +70,24 @@ class Command(BaseCommand):
 
         for payment in BusinessPayment.objects.filter(payee__in=["fabric", "elastic"]):
             data = purchase_data_for_payment(payment)
-            ledger = ledger_for_payment(payment)
-            if not data:
-                warnings.append(f"material payment {payment.id}: no purchase data; deletion will be blocked")
-            elif not ledger:
-                warnings.append(f"material payment {payment.id}: legacy note only; run v14 repair/backfill")
-            elif int(ledger.amount or 0) != int(payment.amount or 0):
-                errors.append(f"material payment {payment.id}: payment={payment.amount}, ledger={ledger.amount}")
+            purchase_ledger = ledger_for_payment(payment)
+            prepayment_ledger = MoneyMovement.objects.filter(
+                kind=MoneyMovement.TRANSFER,
+                title=f"{PREPAYMENT_PREFIX}{payment.id}",
+            ).order_by("-id").first()
+
+            if data:
+                if not purchase_ledger:
+                    warnings.append(f"material payment {payment.id}: legacy purchase note only; run v14 repair/backfill")
+                elif int(purchase_ledger.amount or 0) != int(payment.amount or 0):
+                    errors.append(f"material purchase {payment.id}: payment={payment.amount}, ledger={purchase_ledger.amount}")
+                if prepayment_ledger:
+                    errors.append(f"material payment {payment.id}: has BOTH purchase and prepayment ledgers")
+            elif prepayment_ledger:
+                if int(prepayment_ledger.amount or 0) != int(payment.amount or 0):
+                    errors.append(f"material prepayment {payment.id}: payment={payment.amount}, ledger={prepayment_ledger.amount}")
+            else:
+                warnings.append(f"material payment {payment.id}: no purchase/prepayment ledger; edit/delete is intentionally blocked")
 
         orphan_purchase_value = 0
         for stock in RawMaterialStock.objects.filter(active=True).exclude(note=""):
@@ -126,5 +138,5 @@ class Command(BaseCommand):
         if errors:
             for error in errors:
                 self.stderr.write(self.style.ERROR("ERROR: " + error))
-            raise CommandError("CAPITAL INTEGRITY V19 FAILED")
-        self.stdout.write(self.style.SUCCESS("CAPITAL INTEGRITY V19 OK"))
+            raise CommandError("CAPITAL INTEGRITY V21 FAILED")
+        self.stdout.write(self.style.SUCCESS("CAPITAL INTEGRITY V21 OK"))
