@@ -36,7 +36,7 @@ from django.db.models import Sum
 from core.models import Brand, StockBalance
 b=Brand.objects.filter(name="انبارش").first()
 qs=StockBalance.objects.filter(brand=b) if b else StockBalance.objects.none()
-print(f"{qs.count()}|{int(qs.aggregate(v=Sum(chr(113)+chr(116)+chr(121)))[chr(118)] or 0)}")
+print(f"{qs.count()}|{int(qs.aggregate(v=Sum("qty"))["v"] or 0)}")
 ' 2>/dev/null | tail -1) || fail "could not inspect live Anbaresh stock"
 ANB_ROWS=$(printf '%s' "$ANB_STATE" | cut -d'|' -f1)
 ANB_QTY=$(printf '%s' "$ANB_STATE" | cut -d'|' -f2)
@@ -75,7 +75,7 @@ python manage.py check_capital_integrity_v14
 ' || fail "v19 preflight failed; live web was NOT replaced"
 
 step "9) VERIFY DATA + CAPITAL AFTER MIGRATION"
-DARMA_AFTER=$(docker compose run --rm --entrypoint sh web -c 'python manage.py shell -c '\''from django.db.models import Sum; from core.models import Brand,StockBalance; b=Brand.objects.get(name="دارما"); print(int(StockBalance.objects.filter(brand=b).aggregate(v=Sum("qty"))["v"] or 0))'\''' | tail -1)
+DARMA_AFTER=$(docker compose run --rm --entrypoint sh web -c 'python manage.py shell -c "from django.db.models import Sum; from core.models import Brand,StockBalance; b=Brand.objects.get(name=\"دارما\"); print(int(StockBalance.objects.filter(brand=b).aggregate(v=Sum(\"qty\"))[\"v\"] or 0))"' | tail -1)
 echo "DARMA QTY AFTER  = $DARMA_AFTER"
 [ "$DARMA_BEFORE" = "$DARMA_AFTER" ] || fail "Darma stock changed during v19 metadata migration: before=$DARMA_BEFORE after=$DARMA_AFTER"
 
