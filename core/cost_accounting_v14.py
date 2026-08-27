@@ -2,7 +2,7 @@ from decimal import Decimal, ROUND_HALF_UP
 
 from .finance import digikala_fee_for_unit
 from .final_services import inventory_unit_cost, setting_decimal
-from .models import InventoryModelCost, SaleSnapshot
+from .models import Brand, InventoryModelCost, SaleSnapshot
 from .takvin_pricing_v17 import takvin_cost_for
 
 
@@ -17,13 +17,15 @@ def _color_cost(brand_id, color_id, size_id):
     return int(value or 0) or int(setting_decimal("darma_accounting_unit_cost", 61000))
 
 
-def darma_actual_unit_cost(line, ps):
+def darma_actual_unit_cost(line, ps, stock_brand_id=None):
+    """Cost a Darma-backed sale from the colors actually allocated from stock."""
+    cost_brand_id = stock_brand_id or ps.product.brand_id
     allocations = list(line.allocations.select_related("color").all())
     if allocations:
         total_qty = sum(max(0, int(row.qty or 0)) for row in allocations)
         if total_qty > 0:
             total_value = sum(
-                max(0, int(row.qty or 0)) * _color_cost(ps.product.brand_id, row.color_id, ps.size_id)
+                max(0, int(row.qty or 0)) * _color_cost(cost_brand_id, row.color_id, ps.size_id)
                 for row in allocations
             )
             return _round(Decimal(total_value) / Decimal(total_qty))
@@ -33,7 +35,7 @@ def darma_actual_unit_cost(line, ps):
         pack_qty = int(ps.product.pack_qty or 0)
         if pack_qty > 0:
             pack_value = sum(
-                int(comp.qty or 0) * _color_cost(ps.product.brand_id, comp.color_id, ps.size_id)
+                int(comp.qty or 0) * _color_cost(cost_brand_id, comp.color_id, ps.size_id)
                 for comp in composition
             )
             return _round(Decimal(pack_value) / Decimal(pack_qty))
@@ -46,9 +48,16 @@ def snapshot_sale_line(line, ps=None, price=None):
     price = int(line.sale_price if price is None else price)
     snap, _ = SaleSnapshot.objects.get_or_create(sale_line=line)
     snap.pack_qty = int(ps.product.pack_qty or 0)
-    if ps.product.brand.name == "دارما":
+    brand_name = ps.product.brand.name
+    if brand_name == "دارما":
         snap.unit_cost = darma_actual_unit_cost(line, ps)
-    elif ps.product.brand.name == "تکوین":
+    elif brand_name == "انبارش":
+        # Anbaresh is only a sales channel; physical goods are deducted from Darma.
+        # Freeze the exact Darma inventory cost into the Anbaresh SaleSnapshot so
+        # reported profit matches the capital movement.
+        darma_id = Brand.objects.only("id").get(name="دارما").id
+        snap.unit_cost = darma_actual_unit_cost(line, ps, stock_brand_id=darma_id)
+    elif brand_name == "تکوین":
         # The rule effective on the SALE DATE is frozen into the snapshot.
         # Changing a later rule never rewrites old reports.
         snap.unit_cost = takvin_cost_for(ps.size, line.day.date)
