@@ -20,10 +20,10 @@ class Command(BaseCommand):
             "core/_manual_table.html", "core/_raw_fabric_table.html", "core/_raw_elastic_table.html",
             "core/_raw_material_panel_v3.html", "core/_financial_summary_extra.html",
             "core/payments.html", "core/payments_v9.html", "core/payments_v13.html", "core/calculator.html", "core/_calculator_result.html",
-            "core/material_report.html", "core/material_report_v13.html", "core/material_report_v16.html", "core/takvin_excel.html", "core/sale_calendar.html",
+            "core/material_report.html", "core/material_report_v13.html", "core/material_report_v16.html", "core/material_report_v19.html", "core/takvin_excel.html", "core/sale_calendar.html",
             "core/sale_brand_final.html", "core/sale_size.html", "core/_sale_saved_final.html",
             "core/daily_report.html", "core/daily_report_v8.html", "core/_daily_order_upload.html",
-            "core/inventory_final.html", "core/inventory_operations.html",
+            "core/inventory_final.html", "core/inventory_v19.html", "core/inventory_operations.html",
             "core/settings_home.html", "core/settings_catalog.html", "core/settings_products.html",
             "core/settings_product_form.html", "core/settings_stock.html", "core/settings_finance.html",
             "core/settings_rules.html", "core/settings_rules_v17.html",
@@ -81,6 +81,8 @@ class Command(BaseCommand):
             ProductCode.objects.count(); ProductComposition.objects.count(); ProductSize.objects.count()
             if getattr(RawMaterialStock, "DEPOT", None) != "depot":
                 raise RuntimeError("RawMaterialStock depot location is not active")
+            if not hasattr(MaterialReportBlock, "brand"):
+                raise RuntimeError("MaterialReportBlock brand field is not active")
             self.stdout.write("Excel-Web models OK")
         except Exception as exc:
             errors.append(f"models/database: {exc}")
