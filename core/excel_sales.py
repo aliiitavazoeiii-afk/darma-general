@@ -6,7 +6,7 @@ from django.views.decorators.http import require_POST
 
 from .cost_accounting_v14 import snapshot_sale_line
 from .finance_excel_v9 import sync_sale_receivable
-from .final_services import sync_sale_inventory
+from .sale_inventory_v19 import sync_sale_inventory_v19
 from .models import Color, ProductSize, SaleDay, SaleLine, SaleShortage
 
 
@@ -30,6 +30,8 @@ def sale_line_save(request):
     )
     if ps.product.brand.name == "تکوین" and ps.size.name in ("3XL", "4XL"):
         return HttpResponse("این سایز برای تکوین فعال نیست.", status=400)
+    if ps.product.brand.name == "Novani":
+        return HttpResponse("Novani برند موجودی/تولید است و در فروش روزانه ثبت نمی‌شود.", status=400)
 
     qty = max(0, _int(request.POST.get("quantity")))
     price = max(0, _int(request.POST.get("sale_price"), ps.default_sale_price))
@@ -42,9 +44,10 @@ def sale_line_save(request):
     line.sale_price = price
     line.save(update_fields=["quantity", "sale_price"])
 
-    # Inventory is synced first so the snapshot can use the colors actually allocated
-    # (including replacements), not a stale fixed 61k Darma cost.
-    result = sync_sale_inventory(line)
+    # V19: Anbaresh remains a separate sales/reporting brand, but its physical
+    # inventory is deducted from Darma HOME/KHORSHID. All other brands keep
+    # the existing inventory behavior.
+    result = sync_sale_inventory_v19(line)
     snapshot_sale_line(line, ps, price)
     sync_sale_receivable(line)
     pending = list(line.shortages.filter(resolved=False).select_related("source_color"))
@@ -78,7 +81,7 @@ def shortage_resolve(request, shortage_id):
     shortage.target_color = None if keep_negative else target
     shortage.save(update_fields=["resolved", "target_color"])
     line = shortage.sale_line
-    result = sync_sale_inventory(line)
+    result = sync_sale_inventory_v19(line)
     snapshot_sale_line(line, line.product_size, line.sale_price)
     sync_sale_receivable(line)
     pending = list(line.shortages.filter(resolved=False).select_related("source_color"))
