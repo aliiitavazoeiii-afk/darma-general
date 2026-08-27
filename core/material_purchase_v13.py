@@ -23,8 +23,20 @@ def _label(material_key):
     return COLOR_LABELS[material_key]
 
 
+def _posted_material_key(payee, post):
+    # Some historical/payment templates contain one material_key select for
+    # fabric and another for elastic inside the same form. QueryDict.get()
+    # returns the last one, which can silently pick the hidden field. Choose
+    # the field by material type instead: fabric is first, elastic is last.
+    values = post.getlist("material_key") if hasattr(post, "getlist") else []
+    values = [str(v or "").strip() for v in values if str(v or "").strip()]
+    if values:
+        return values[0] if payee == "fabric" else values[-1]
+    return (post.get("material_key") or "").strip()
+
+
 def build_purchase_from_post(payee, post):
-    material_key = (post.get("material_key") or "").strip()
+    material_key = _posted_material_key(payee, post)
     title = _label(material_key)
     user_note = (post.get("note") or "").strip()[:70]
 
