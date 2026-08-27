@@ -203,10 +203,13 @@ def apply_delivery_report(day: SaleDay, file_bytes: bytes, filename: str = "") -
         product_sizes[ps.id] = ps
         key_by_ps[ps.id] = key
 
+    # The XLSX is authoritative only for the Digikala-import brands. Manual
+    # Anbaresh lines can coexist on the same SaleDay and must never be zeroed
+    # merely because they are absent from the delivery-report file.
     existing_lines = {
         line.product_size_id: line
         for line in SaleLine.objects.select_for_update()
-        .filter(day=day)
+        .filter(day=day, product_size__product__brand__name__in=IMPORT_BRANDS)
         .select_related("product_size__product__brand", "product_size__size")
     }
 
@@ -253,8 +256,11 @@ def apply_delivery_report(day: SaleDay, file_bytes: bytes, filename: str = "") -
         AccountEntry.objects.filter(reference=f"sale:{line.id}:digikala").delete()
 
     current_lines = list(
-        SaleLine.objects.filter(day=day, quantity__gt=0)
-        .select_related("product_size__product__brand", "product_size__size")
+        SaleLine.objects.filter(
+            day=day,
+            quantity__gt=0,
+            product_size__product__brand__name__in=IMPORT_BRANDS,
+        ).select_related("product_size__product__brand", "product_size__size")
     )
     after_stock = _stock_totals()
     new_sold = sold_units_by_brand(current_lines)
