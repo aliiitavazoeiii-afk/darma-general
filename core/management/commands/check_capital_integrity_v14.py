@@ -26,10 +26,11 @@ class Command(BaseCommand):
             "payments": {"core.business_tools_v14"},
             "payment_add": {"core.business_tools_v14"},
             "receipt_add": {"core.business_tools_v14"},
-            "material_report": {"core.material_report_v16"},
-            "material_block_save": {"core.material_report_v16"},
-            "material_block_apply": {"core.material_report_v16"},
-            "material_block_unapply": {"core.material_report_v16"},
+            "material_report": {"core.material_report_v19"},
+            "material_block_save": {"core.material_report_v19"},
+            "material_block_apply": {"core.material_report_v19"},
+            "material_block_apply_output": {"core.material_report_v19"},
+            "material_block_unapply": {"core.material_report_v19"},
         }
         for name, allowed_modules in route_checks.items():
             args = [1] if "material_block_" in name else []
@@ -50,7 +51,7 @@ class Command(BaseCommand):
         takvin_debt = int(debt_obj.value or 0) if debt_obj else 0
         capital = accounts_total + finished + materials + digikala + assets_total - takvin_debt
 
-        self.stdout.write("=== CAPITAL EQUATION V17 ===")
+        self.stdout.write("=== CAPITAL EQUATION V19 ===")
         self.stdout.write(f"ACCOUNTS + PERSONS = {accounts_total}")
         self.stdout.write(f"FINISHED INVENTORY  = {finished}")
         self.stdout.write(f"RAW MATERIALS       = {materials}")
@@ -95,7 +96,9 @@ class Command(BaseCommand):
 
         applied = 0
         unapplied_with_output = 0
-        for block in MaterialReportBlock.objects.all():
+        for block in MaterialReportBlock.objects.select_related("brand").all():
+            if not block.brand_id:
+                errors.append(f"material report {block.id}: brand is missing")
             if block.stock_consumptions.exists():
                 applied += 1
             else:
@@ -123,5 +126,5 @@ class Command(BaseCommand):
         if errors:
             for error in errors:
                 self.stderr.write(self.style.ERROR("ERROR: " + error))
-            raise CommandError("CAPITAL INTEGRITY V17 FAILED")
-        self.stdout.write(self.style.SUCCESS("CAPITAL INTEGRITY V17 OK"))
+            raise CommandError("CAPITAL INTEGRITY V19 FAILED")
+        self.stdout.write(self.style.SUCCESS("CAPITAL INTEGRITY V19 OK"))
