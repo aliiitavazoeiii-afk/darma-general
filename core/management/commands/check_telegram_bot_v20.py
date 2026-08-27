@@ -4,11 +4,10 @@ from django.core.management.base import BaseCommand, CommandError
 
 from core.brand_colors import colors_for_brand
 from core.models import Brand, Size, StockLocation
+from core.telegram_inventory_alerts_v20 import _alert_timezone
 from core.telegram_inventory_bot_v20 import (
     TelegramAPI,
     TelegramAPIError,
-    alert_check_seconds,
-    alert_repeat_seconds,
     allowed_user_ids,
     home_min,
     total_min,
@@ -47,8 +46,8 @@ class Command(BaseCommand):
         self.stdout.write(f"SIZES = {size_count}")
         self.stdout.write(f"HOME ALERT BELOW = {home_min()}")
         self.stdout.write(f"PRODUCTION ALERT AT OR BELOW = {total_min()}")
-        self.stdout.write(f"ALERT CHECK SECONDS = {alert_check_seconds()}")
-        self.stdout.write(f"ALERT REPEAT SECONDS = {alert_repeat_seconds()}")
+        self.stdout.write(f"ALERT TIMEZONE = {_alert_timezone().key}")
+        self.stdout.write("AUTOMATIC ALERTS = once after daily report + once during 09:00 hour")
         ids = sorted(allowed_user_ids())
         if ids:
             self.stdout.write(f"AUTHORIZED TELEGRAM USERS = {ids}")
