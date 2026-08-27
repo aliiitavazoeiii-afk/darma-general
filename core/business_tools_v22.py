@@ -50,6 +50,7 @@ def _invoice_value(data):
 
 
 def _purchase_signature(data):
+    """Physical/value detail signature. Date, note and actual cash paid are intentionally excluded."""
     if not data:
         return None
     if data.get("k") == "fabric":
@@ -94,67 +95,62 @@ def _decode_json_ledger(ledger):
         return None
 
 
-def _supplier_title(payee, note, required=False):
+def _supplier_title(payee, note):
     note = str(note or "").strip()
-    if note:
-        return note[:160]
-    if required:
+    if not note:
         example = "پارچه فروش حسینی" if payee == "fabric" else "کش فروش نام فروشنده"
         raise ValueError(f"برای پیش‌پرداخت اسم فروشنده را در توضیح بنویس؛ مثلاً «{example}».")
-    return "پارچه فروش" if payee == "fabric" else "کش فروش"
+    return note[:160]
 
 
 def _supplier_row(title, create=True):
     return v21._supplier_account_row(title, create=create)
 
 
-def _create_supplier_effect(payment, supplier_title, invoice_value):
-    paid = int(payment.amount or 0)
-    invoice_value = int(invoice_value or 0)
-    delta = paid - invoice_value
+def _create_prepayment_effect(payment, supplier_title):
+    """No goods received: cash becomes a positive supplier prepayment asset in ریزحساب‌ها."""
+    amount = int(payment.amount or 0)
+    if amount <= 0:
+        raise ValueError("مبلغ پیش‌پرداخت باید بیشتر از صفر باشد.")
     MoneyMovement.objects.filter(
         kind=MoneyMovement.TRANSFER,
         title=_settlement_title(payment.id),
     ).delete()
-    if delta == 0:
-        return None
-
     row = _supplier_row(supplier_title, create=True)
     if row is None:
         raise ValueError("ریزحساب فروشنده ساخته نشد.")
     row = ExcelManualRow.objects.select_for_update().get(pk=row.pk)
-    row.amount = int(row.amount or 0) + delta
+    row.amount = int(row.amount or 0) + amount
     row.save(update_fields=["amount", "updated_at"])
-
     payload = {
         "v": 22,
         "row_id": row.id,
         "title": row.title,
         "payee": payment.payee,
-        "delta": delta,
-        "paid": paid,
-        "invoice": invoice_value,
+        "delta": amount,
+        "paid": amount,
+        "invoice": 0,
     }
     return MoneyMovement.objects.create(
         date=payment.date,
         kind=MoneyMovement.TRANSFER,
-        amount=abs(delta),
+        amount=amount,
         title=_settlement_title(payment.id),
         affects_capital=False,
         note=json.dumps(payload, ensure_ascii=False, separators=(",", ":")),
     )
 
 
-def _reverse_supplier_effect(payment):
+def _reverse_prepayment_effect(payment):
     current = _settlement_ledger(payment)
     legacy = v21._prepayment_ledger(payment)
     if current and legacy:
-        raise ValueError("برای این پرداخت دو Ledger فروشنده پیدا شد؛ عملیات متوقف شد تا دوباره‌کاری مالی رخ ندهد.")
+        raise ValueError("برای این پیش‌پرداخت دو Ledger پیدا شد؛ عملیات متوقف شد.")
 
     if current:
         data = _decode_json_ledger(current)
         if not data or "delta" not in data:
-            raise ValueError("Ledger مانده فروشنده قابل خواندن نیست؛ عملیات متوقف شد.")
+            raise ValueError("Ledger پیش‌پرداخت قابل خواندن نیست.")
         row = ExcelManualRow.objects.select_for_update().filter(
             id=data.get("row_id"), section=ExcelManualRow.ACCOUNTS
         ).first()
@@ -163,7 +159,7 @@ def _reverse_supplier_effect(payment):
             if row:
                 row = ExcelManualRow.objects.select_for_update().get(pk=row.pk)
         if row is None:
-            raise ValueError("ریزحساب فروشنده مربوط به این پرداخت پیدا نشد.")
+            raise ValueError("ریزحساب فروشنده مربوط به پیش‌پرداخت پیدا نشد.")
         row.amount = int(row.amount or 0) - int(data.get("delta") or 0)
         row.save(update_fields=["amount", "updated_at"])
         current.delete()
@@ -185,6 +181,9 @@ def _reverse_supplier_effect(payment):
         row.amount = int(row.amount or 0) - int(payment.amount or 0)
         row.save(update_fields=["amount", "updated_at"])
         legacy.delete()
+        return
+
+    raise ValueError("Ledger پیش‌پرداخت پیدا نشد؛ عملیات برای حفظ سرمایه متوقف شد.")
 
 
 def _has_material_details(payee, post):
@@ -200,21 +199,20 @@ def _parse_payment_post(post):
 
     purchase_data = None
     invoice_value = 0
-    supplier_title = None
+    prepayment_title = None
 
     if payee in MATERIAL_PAYEES and _has_material_details(payee, post):
         invoice_value, purchase_data = build_purchase_from_post(payee, post)
         entered_paid = _int(post.get("amount"))
         paid_amount = entered_paid if entered_paid > 0 else int(invoice_value)
         if paid_amount <= 0:
-            raise ValueError("مبلغ پرداخت واقعی باید بیشتر از صفر باشد.")
-        supplier_title = _supplier_title(payee, note, required=False)
+            raise ValueError("مبلغ نهایی پرداخت باید بیشتر از صفر باشد.")
     else:
         paid_amount = _int(post.get("amount"))
         if paid_amount <= 0:
             raise ValueError("مبلغ پرداخت باید بیشتر از صفر باشد.")
         if payee in MATERIAL_PAYEES:
-            supplier_title = _supplier_title(payee, note, required=True)
+            prepayment_title = _supplier_title(payee, note)
 
     return {
         "date": payment_date,
@@ -223,7 +221,7 @@ def _parse_payment_post(post):
         "note": note,
         "purchase": purchase_data,
         "invoice": int(invoice_value),
-        "supplier": supplier_title,
+        "prepayment_title": prepayment_title,
     }
 
 
@@ -234,13 +232,14 @@ def _adjust_mellat(delta):
     row.save(update_fields=["amount", "updated_at"])
 
 
-def _apply_material_finance_only(payment, purchase_data, supplier_title):
+def _apply_material_purchase_finance_only(payment):
     _adjust_mellat(-int(payment.amount or 0))
-    _create_supplier_effect(payment, supplier_title, _invoice_value(purchase_data))
 
 
-def _reverse_material_finance_only(payment):
-    _reverse_supplier_effect(payment)
+def _reverse_material_purchase_finance_only(payment):
+    # Received goods have no supplier prepayment ledger. Only actual cash changes here.
+    if _settlement_ledger(payment) or v21._prepayment_ledger(payment):
+        raise ValueError("خرید تحویل‌گرفته‌شده نباید Ledger پیش‌پرداخت داشته باشد؛ عملیات متوقف شد.")
     _adjust_mellat(int(payment.amount or 0))
 
 
@@ -251,9 +250,8 @@ def _apply_full(payment, parsed):
         if purchase_data:
             apply_purchase_stock(payment, purchase_data)
             create_purchase_ledger(payment, purchase_data)
-            _create_supplier_effect(payment, parsed["supplier"], _invoice_value(purchase_data))
         else:
-            _create_supplier_effect(payment, parsed["supplier"], 0)
+            _create_prepayment_effect(payment, parsed["prepayment_title"])
         return
     v21._apply_payment_effects(payment, None, None)
 
@@ -262,15 +260,14 @@ def _reverse_full(payment):
     if payment.payee in MATERIAL_PAYEES:
         purchase_data = purchase_data_for_payment(payment)
         if purchase_data:
+            if _settlement_ledger(payment) or v21._prepayment_ledger(payment):
+                raise ValueError("خرید مواد نباید همزمان Ledger پیش‌پرداخت داشته باشد.")
             reverse_purchase_stock(payment, purchase_data)
             purchase_ledger = ledger_for_payment(payment)
             if purchase_ledger:
                 purchase_ledger.delete()
-        elif not _settlement_ledger(payment) and not v21._prepayment_ledger(payment):
-            raise ValueError(
-                "این پرداخت مواد اولیه هیچ Ledger خرید/پیش‌پرداخت معتبری ندارد؛ عملیات برای حفظ سرمایه متوقف شد."
-            )
-        _reverse_supplier_effect(payment)
+        else:
+            _reverse_prepayment_effect(payment)
         _adjust_mellat(int(payment.amount or 0))
         return
     v21._reverse_payment_effects(payment)
@@ -284,7 +281,7 @@ def _save_payment_fields(payment, parsed):
     payment.save(update_fields=["date", "payee", "amount", "note"])
 
 
-def _settlement_data_for(payment):
+def _prepayment_data_for(payment):
     ledger = _settlement_ledger(payment)
     if ledger:
         return _decode_json_ledger(ledger) or {}
@@ -307,23 +304,23 @@ def _payment_rows():
     rows = list(BusinessPayment.objects.all()[:100])
     for row in rows:
         purchase = purchase_data_for_payment(row) if row.payee in MATERIAL_PAYEES else None
-        settlement = _settlement_data_for(row)
+        prep = _prepayment_data_for(row) if row.payee in MATERIAL_PAYEES and not purchase else {}
         invoice = _invoice_value(purchase)
-        delta = int(settlement.get("delta") or 0)
+        paid = int(row.amount or 0)
+        diff = invoice - paid if purchase else 0
         row.payee_label = PAYEE_LABELS.get(row.payee, row.payee)
         row.is_material_purchase = bool(purchase)
-        row.is_material_prepayment = bool(row.payee in MATERIAL_PAYEES and not purchase and settlement)
+        row.is_material_prepayment = bool(row.payee in MATERIAL_PAYEES and not purchase and prep)
         row.material_summary = purchase_summary(purchase).replace(",", "٬") if purchase else ""
         row.display_note = (purchase or {}).get("n", "") if purchase else row.note
         row.purchase_data = purchase or {}
         row.invoice_value = invoice
-        row.actual_paid = int(row.amount or 0)
-        row.supplier_account = settlement.get("title", "")
-        row.supplier_delta = delta
-        row.supplier_abs = abs(delta)
-        row.has_supplier_balance = bool(delta)
-        row.supplier_is_credit = delta > 0
-        row.supplier_is_debt = delta < 0
+        row.actual_paid = paid
+        row.purchase_difference = diff
+        row.purchase_difference_abs = abs(diff)
+        row.paid_less_than_value = diff > 0
+        row.paid_more_than_value = diff < 0
+        row.prepayment_account = prep.get("title", "")
     return rows
 
 
@@ -377,14 +374,14 @@ def payment_add(request):
             invoice = parsed["invoice"]
             paid = parsed["paid"]
             if paid == invoice:
-                messages.success(request, "خرید مواد ثبت شد؛ مبلغ پرداخت واقعی با ارزش خرید برابر است.")
+                messages.success(request, "خرید مواد ثبت شد؛ مبلغ نهایی با ارزش محاسبه‌شده خرید برابر است.")
             else:
                 messages.success(
                     request,
-                    f"خرید ثبت شد؛ ارزش خرید {invoice:,} و پرداخت واقعی {paid:,} تومان ثبت شد. اختلاف در ریزحساب فروشنده نشست.",
+                    f"خرید ثبت شد؛ ارزش محاسبه‌شده {invoice:,} و مبلغ نهایی پرداخت {paid:,} تومان است. ریزحساب فروشنده تغییر نکرد چون کالا تحویل شده است.",
                 )
         elif parsed["payee"] in MATERIAL_PAYEES:
-            messages.success(request, f"پیش‌پرداخت در ریزحساب «{parsed['supplier']}» ثبت شد.")
+            messages.success(request, f"پیش‌پرداخت در ریزحساب «{parsed['prepayment_title']}» ثبت شد.")
         else:
             messages.success(request, f"پرداخت به {PAYEE_LABELS[parsed['payee']]} ثبت شد.")
     except Exception as exc:
@@ -408,15 +405,14 @@ def payment_update(request, payment_id):
             )
 
             if same_purchase:
-                # Metadata/cash settlement edit: never touch physical stock.
-                _reverse_material_finance_only(payment)
+                # Date/note/final-cash edit only. Never reverse or move raw-material stock.
+                _reverse_material_purchase_finance_only(payment)
                 _save_payment_fields(payment, parsed)
                 create_purchase_ledger(payment, parsed["purchase"])
-                _apply_material_finance_only(payment, parsed["purchase"], parsed["supplier"])
+                _apply_material_purchase_finance_only(payment)
                 mode = "metadata"
             else:
-                # Product/weight/color/unit-cost/payee changes are physical/value changes.
-                # They still require a safe full reverse before applying new details.
+                # Physical/value details changed (weight/color/name/unit price/payee): full safe reverse required.
                 _reverse_full(payment)
                 _save_payment_fields(payment, parsed)
                 _apply_full(payment, parsed)
@@ -425,7 +421,7 @@ def payment_update(request, payment_id):
         if mode == "metadata":
             messages.success(
                 request,
-                "تاریخ/توضیح/مبلغ پرداخت اصلاح شد؛ موجودی مواد اولیه دست نخورد و فقط گردش مالی/ریزحساب فروشنده بالانس شد.",
+                "تاریخ/توضیح/مبلغ نهایی اصلاح شد؛ موجودی مواد اولیه دست نخورد. فقط مبلغ واقعی خروجی ملت و Ledger پرداخت به‌روز شد.",
             )
         else:
             messages.success(request, "پرداخت و جزئیات خرید ویرایش شد و اثرهای مالی/موجودی به‌صورت اتمیک بازسازی شدند.")
