@@ -36,13 +36,17 @@ from django.db.models import Sum
 from core.models import Brand, StockBalance
 b=Brand.objects.filter(name="انبارش").first()
 qs=StockBalance.objects.filter(brand=b) if b else StockBalance.objects.none()
-print(str(qs.count())+"|"+str(int(qs.aggregate(v=Sum("qty"))["v"] or 0)))
+nonzero=qs.exclude(qty=0).count()
+print(str(qs.count())+"|"+str(nonzero)+"|"+str(int(qs.aggregate(v=Sum("qty"))["v"] or 0)))
 ' 2>/dev/null | tail -1) || fail "could not inspect live Anbaresh stock"
 ANB_ROWS=$(printf '%s' "$ANB_STATE" | cut -d'|' -f1)
-ANB_QTY=$(printf '%s' "$ANB_STATE" | cut -d'|' -f2)
-echo "ANBARESH STOCK ROWS BEFORE = $ANB_ROWS"
-echo "ANBARESH STOCK QTY BEFORE  = $ANB_QTY"
-[ "${ANB_QTY:-0}" = "0" ] || fail "Anbaresh has non-zero legacy stock. Nothing was migrated; review before converting it to a sales-only channel."
+ANB_NONZERO=$(printf '%s' "$ANB_STATE" | cut -d'|' -f2)
+ANB_QTY=$(printf '%s' "$ANB_STATE" | cut -d'|' -f3)
+echo "ANBARESH STOCK ROWS BEFORE    = $ANB_ROWS"
+echo "ANBARESH NONZERO ROWS BEFORE  = $ANB_NONZERO"
+echo "ANBARESH STOCK QTY BEFORE     = $ANB_QTY"
+[ "${ANB_NONZERO:-0}" = "0" ] || fail "Anbaresh has non-zero legacy stock rows. Nothing was migrated; review them before converting it to a sales-only channel."
+[ "${ANB_QTY:-0}" = "0" ] || fail "Anbaresh stock total is non-zero. Nothing was migrated."
 
 ANB_SALES=$(docker compose exec -T web python manage.py shell -c '
 from core.models import SaleLine
