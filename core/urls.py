@@ -1,13 +1,13 @@
 from django.urls import path
 
-from . import business_tools_v14, calendar_views, catalog_v5, daily_order_views_v8, daily_report_v8, daily_views, excel_dashboard, excel_sales, final_views, inventory_operations_v15, inventory_v5, material_report_v16, pricing_v7, report_v9, sale_brand_v17, settings_rules_v17, settings_stock_v5, takvin_v5, views
+from . import business_tools_v14, calendar_views, catalog_v5, daily_order_views_v8, daily_report_v8, daily_views, excel_dashboard, excel_sales, final_views, inventory_operations_v15, inventory_v19, material_report_v19, pricing_v7, report_v9, sale_brand_v19, settings_rules_v17, settings_stock_v5, takvin_v5, views
 
 urlpatterns = [
     path("", excel_dashboard.dashboard, name="dashboard"),
     path("calendar/picker/", calendar_views.jalali_picker, name="jalali_picker"),
     path("sales/", daily_views.sale_calendar, name="sale_start"),
     path("sales/select/<int:jy>/<int:jm>/<int:jd>/", daily_views.select_sale_day, name="select_sale_day"),
-    path("sales/<int:day_id>/", sale_brand_v17.sale_brand, name="sale_brand"),
+    path("sales/<int:day_id>/", sale_brand_v19.sale_brand, name="sale_brand"),
     path("sales/<int:day_id>/report/", daily_report_v8.daily_report, name="daily_report"),
     path("sales/<int:day_id>/import-xlsx/", daily_order_views_v8.import_daily_orders, name="daily_order_import"),
     path("sales/<int:day_id>/<int:brand_id>/<int:size_id>/", daily_views.sale_size, name="sale_size"),
@@ -17,12 +17,12 @@ urlpatterns = [
     path("report/", report_v9.report, name="report"),
     path("report/manual/", report_v9.manual_report_action, name="manual_report_action"),
     path("report/financial-summary/", business_tools_v14.financial_summary, name="financial_summary"),
-    path("material-report/", material_report_v16.material_report, name="material_report"),
-    path("material-report/<int:block_id>/save/", material_report_v16.material_block_save, name="material_block_save"),
-    path("material-report/<int:block_id>/apply/", material_report_v16.material_block_apply_materials, name="material_block_apply"),
-    path("material-report/<int:block_id>/apply-output/", material_report_v16.material_block_apply_output, name="material_block_apply_output"),
-    path("material-report/<int:block_id>/unapply/", material_report_v16.material_block_unapply_materials, name="material_block_unapply"),
-    path("material-report/<int:block_id>/delete/", material_report_v16.material_block_delete, name="material_block_delete"),
+    path("material-report/", material_report_v19.material_report, name="material_report"),
+    path("material-report/<int:block_id>/save/", material_report_v19.material_block_save, name="material_block_save"),
+    path("material-report/<int:block_id>/apply/", material_report_v19.material_block_apply_materials, name="material_block_apply"),
+    path("material-report/<int:block_id>/apply-output/", material_report_v19.material_block_apply_output, name="material_block_apply_output"),
+    path("material-report/<int:block_id>/unapply/", material_report_v19.material_block_unapply_materials, name="material_block_unapply"),
+    path("material-report/<int:block_id>/delete/", material_report_v19.material_block_delete, name="material_block_delete"),
     path("takvin/", takvin_v5.takvin_excel, name="takvin"),
 
     path("payments/", business_tools_v14.payments, name="payments"),
@@ -34,8 +34,8 @@ urlpatterns = [
     path("calculator/", business_tools_v14.calculator, name="calculator"),
     path("calculator/quote/", business_tools_v14.calculator_quote, name="calculator_quote"),
 
-    path("inventory/", inventory_v5.inventory, name="inventory"),
-    path("inventory/color-model/add/", inventory_v5.add_color_model, name="inventory_add_color_model"),
+    path("inventory/", inventory_v19.inventory, name="inventory"),
+    path("inventory/color-model/add/", inventory_v19.add_color_model, name="inventory_add_color_model"),
     path("inventory/operations/", inventory_operations_v15.inventory_operations, name="inventory_operations"),
 
     path("materials/", final_views.materials, name="materials"),
