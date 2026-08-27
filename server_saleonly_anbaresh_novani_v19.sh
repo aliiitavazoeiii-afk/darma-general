@@ -44,6 +44,13 @@ echo "ANBARESH STOCK ROWS BEFORE = $ANB_ROWS"
 echo "ANBARESH STOCK QTY BEFORE  = $ANB_QTY"
 [ "${ANB_QTY:-0}" = "0" ] || fail "Anbaresh has non-zero legacy stock. Nothing was migrated; review before converting it to a sales-only channel."
 
+ANB_SALES=$(docker compose exec -T web python manage.py shell -c '
+from core.models import SaleLine
+print(SaleLine.objects.filter(product_size__product__brand__name="انبارش", quantity__gt=0).count())
+' 2>/dev/null | tail -1) || fail "could not inspect live Anbaresh sales"
+echo "ANBARESH POSITIVE SALE LINES BEFORE = $ANB_SALES"
+[ "${ANB_SALES:-0}" = "0" ] || fail "Legacy Anbaresh sales already exist. Nothing was migrated; they must be reconciled before switching Anbaresh to Darma-backed inventory."
+
 DARMA_BEFORE=$(docker compose exec -T web python manage.py shell -c '
 from django.db.models import Sum
 from core.models import Brand, StockBalance
