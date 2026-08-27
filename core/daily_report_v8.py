@@ -6,6 +6,7 @@ from django.shortcuts import get_object_or_404, render
 from .dateutils import format_jalali
 from .finance import sale_line_metrics
 from .models import SaleDay, SaleLine
+from .telegram_inventory_v20 import notify_after_daily_report
 
 
 @login_required
@@ -48,6 +49,14 @@ def daily_report(request, day_id):
     for brand_name, values in by_brand.items():
         if brand_name not in preferred:
             ordered_brands.append((brand_name, values))
+
+    # Alert at most once for this sale date. Telegram/network failure must never
+    # prevent the business report from opening; a later visit can retry.
+    if lines:
+        try:
+            notify_after_daily_report(day)
+        except Exception:
+            pass
 
     return render(request, "core/daily_report_v8.html", {
         "day": day,
