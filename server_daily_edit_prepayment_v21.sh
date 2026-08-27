@@ -42,6 +42,7 @@ docker compose run --rm --entrypoint python web manage.py makemigrations --check
 
 step "5) V21 PREFLIGHT"
 docker compose run --rm --entrypoint python web manage.py check || fail "Django check failed"
+docker compose run --rm --entrypoint python web manage.py check_excel_web || fail "template/route compile check failed"
 docker compose run --rm --entrypoint python web manage.py check_v21_workflows || fail "v21 workflow check failed"
 docker compose run --rm --entrypoint python web manage.py check_v19_features || fail "v19 feature check failed"
 docker compose run --rm --entrypoint python web manage.py check_capital_integrity_v14 || fail "capital integrity check failed"
