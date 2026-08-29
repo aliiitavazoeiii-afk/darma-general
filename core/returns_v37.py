@@ -4,12 +4,12 @@ from uuid import uuid4
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
-from django.db.models import Q
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_POST
 
 from .dateutils import format_jalali, parse_jalali_date
 from .final_services import sync_inventory_adjustment
+from .inventory_valuation_v17 import finished_inventory_value_v17
 from .models import Brand, Color, InventoryAdjustment, ProductComposition, ProductSize, Size, StockLocation
 
 RETURN_BRANDS = ("دارما", "تکوین")
@@ -94,6 +94,59 @@ def _create_adjustment(*, when, brand, size, color, qty, group, source):
     return obj
 
 
+def _apply_color_batch(*, when, brand, size, entries):
+    allowed = {c.id: c for c in _colors_for_brand(brand)}
+    group = uuid4().hex[:12]
+    shorts_total = 0
+    for color, qty in entries:
+        qty = _int(qty)
+        if not qty:
+            continue
+        if color.id not in allowed:
+            raise ValueError("این رنگ برای برند انتخاب‌شده معتبر نیست.")
+        _create_adjustment(
+            when=when, brand=brand, size=size, color=color, qty=qty,
+            group=group, source=f"color={color.id}",
+        )
+        shorts_total += qty
+    if shorts_total <= 0:
+        raise ValueError("حداقل یک تعداد وارد کن.")
+    return {"shorts": shorts_total, "group": group}
+
+
+def _apply_code_batch(*, when, brand, size, entries):
+    allowed = {row["ps"].id: row for row in _products_for(brand, size)}
+    group = uuid4().hex[:12]
+    shorts_total = 0
+    for product_size, packs in entries:
+        packs = _int(packs)
+        if not packs:
+            continue
+        row = allowed.get(product_size.id)
+        if not row:
+            raise ValueError("این کد برای برند/سایز انتخاب‌شده معتبر نیست.")
+        if not row["fixed"]:
+            raise ValueError(f"کد {row['code']} ترکیب رنگ ثابت ندارد؛ آن را از مسیر «بر اساس رنگ» ثبت کن.")
+        components = list(product_size.product.composition.select_related("color").all())
+        component_total = 0
+        for comp in components:
+            units = packs * int(comp.qty or 0)
+            if not units:
+                continue
+            _create_adjustment(
+                when=when, brand=brand, size=size, color=comp.color, qty=units,
+                group=group, source=f"code={row['code']} ps={product_size.id} packs={packs}",
+            )
+            component_total += units
+        expected = packs * int(row["pack_qty"])
+        if component_total != expected:
+            raise ValueError(f"ترکیب کد {row['code']} با تعداد پک همخوان نیست؛ عملیات کامل برگشت.")
+        shorts_total += component_total
+    if shorts_total <= 0:
+        raise ValueError("حداقل یک تعداد وارد کن.")
+    return {"shorts": shorts_total, "group": group}
+
+
 @login_required
 def returns_home(request):
     mode = (request.GET.get("mode") or "").strip().lower()
@@ -141,17 +194,13 @@ def return_apply(request):
 
     try:
         when = parse_jalali_date(request.POST.get("date") or format_jalali(date.today()))
-        group = uuid4().hex[:12]
-        shorts_total = 0
-        rows_total = 0
+        before_value = int(finished_inventory_value_v17())
         with transaction.atomic():
             if mode == "color":
                 allowed = {c.id: c for c in _colors_for_brand(brand)}
+                entries = []
                 for key, value in request.POST.items():
-                    if not key.startswith("qty_color_"):
-                        continue
-                    qty = _int(value)
-                    if not qty:
+                    if not key.startswith("qty_color_") or not _int(value):
                         continue
                     try:
                         color_id = int(key.removeprefix("qty_color_"))
@@ -160,19 +209,13 @@ def return_apply(request):
                     color = allowed.get(color_id)
                     if not color:
                         raise ValueError("این رنگ برای برند انتخاب‌شده معتبر نیست.")
-                    _create_adjustment(
-                        when=when, brand=brand, size=size, color=color, qty=qty,
-                        group=group, source=f"color={color.id}",
-                    )
-                    shorts_total += qty
-                    rows_total += 1
+                    entries.append((color, value))
+                result = _apply_color_batch(when=when, brand=brand, size=size, entries=entries)
             else:
                 allowed = {row["ps"].id: row for row in _products_for(brand, size)}
+                entries = []
                 for key, value in request.POST.items():
-                    if not key.startswith("qty_code_"):
-                        continue
-                    packs = _int(value)
-                    if not packs:
+                    if not key.startswith("qty_code_") or not _int(value):
                         continue
                     try:
                         ps_id = int(key.removeprefix("qty_code_"))
@@ -181,36 +224,18 @@ def return_apply(request):
                     row = allowed.get(ps_id)
                     if not row:
                         raise ValueError("این کد برای برند/سایز انتخاب‌شده معتبر نیست.")
-                    if not row["fixed"]:
-                        raise ValueError(
-                            f"کد {row['code']} ترکیب رنگ ثابت ندارد؛ آن را از مسیر «بر اساس رنگ» ثبت کن."
-                        )
-                    components = list(row["ps"].product.composition.select_related("color").all())
-                    component_total = 0
-                    for comp in components:
-                        units = packs * int(comp.qty or 0)
-                        if not units:
-                            continue
-                        _create_adjustment(
-                            when=when, brand=brand, size=size, color=comp.color, qty=units,
-                            group=group, source=f"code={row['code']} ps={ps_id} packs={packs}",
-                        )
-                        component_total += units
-                        rows_total += 1
-                    expected = packs * int(row["pack_qty"])
-                    if component_total != expected:
-                        raise ValueError(
-                            f"ترکیب کد {row['code']} با تعداد پک همخوان نیست؛ عملیات کامل برگشت."
-                        )
-                    shorts_total += component_total
+                    entries.append((row["ps"], value))
+                result = _apply_code_batch(when=when, brand=brand, size=size, entries=entries)
 
-            if shorts_total <= 0:
-                raise ValueError("حداقل یک تعداد وارد کن.")
+            after_value = int(finished_inventory_value_v17())
+            value_delta = after_value - before_value
+            if value_delta <= 0:
+                raise ValueError("ارزش موجودی با مرجوعی افزایش پیدا نکرد؛ برای جلوگیری از ثبت ناقص عملیات برگشت خورد.")
 
         messages.success(
             request,
-            f"مرجوعی ثبت شد: {shorts_total:,} شورت فقط به موجودی خانه {brand.name} اضافه شد. "
-            "فروش، سود، دیجی، طلب دیجی و حساب‌ها تغییر نکردند.",
+            f"مرجوعی ثبت شد: {result['shorts']:,} شورت فقط به موجودی خانه {brand.name} اضافه شد؛ "
+            f"ارزش موجودی/سرمایه {value_delta:,} تومان افزایش یافت. فروش، سود، دیجی، طلب دیجی و حساب‌ها تغییر نکردند.",
         )
     except Exception as exc:
         messages.error(request, f"مرجوعی اعمال نشد و کل عملیات برگشت: {exc}")
