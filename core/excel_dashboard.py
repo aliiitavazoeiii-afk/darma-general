@@ -8,16 +8,7 @@ from django.shortcuts import render
 
 from .dateutils import format_jalali
 from .finance import sale_line_metrics
-from .models import (
-    ExcelManualSetting,
-    MaterialReportBlock,
-    SaleDay,
-    SaleLine,
-    StockBalance,
-    StockLocation,
-    StockThreshold,
-    TakvinPurchase,
-)
+from .models import MaterialReportBlock, SaleDay, SaleLine, StockBalance, StockLocation, TakvinPurchase
 
 EXCEL_TAKVIN_PREFIX = "[excel-web]"
 
@@ -85,63 +76,25 @@ def dashboard(request):
         chart_sales.append(daily[current]["gross"])
         chart_profit.append(daily[current]["profit"])
 
-    # Operational alerts only; no automatic accounting is performed here.
+    # V36 UI-only alert rule: ONLY Darma HOME cells below 10.
+    # Red/yellow product colors are intentionally excluded. No threshold/accounting logic is changed.
     alerts = []
-    if not today_day or not today_day.lines.filter(quantity__gt=0).exists():
-        alerts.append({
-            "level": "orange",
-            "title": "صورت فروش امروز ثبت نشده",
-            "detail": "برای امروز هنوز فروش نهایی وجود ندارد.",
-            "url": "/sales/",
-        })
-
-    for threshold in StockThreshold.objects.select_related("brand", "size", "color"):
-        if threshold.brand.name == "تکوین" and threshold.size.name in ("3XL", "4XL"):
-            continue
-        balances = StockBalance.objects.filter(
-            brand=threshold.brand, size=threshold.size, color=threshold.color
+    low_home = (
+        StockBalance.objects.filter(
+            brand__name="دارما",
+            location__key=StockLocation.HOME,
+            qty__lt=10,
         )
-        home = balances.filter(location__key=StockLocation.HOME).aggregate(v=Sum("qty"))["v"] or 0
-        total = balances.aggregate(v=Sum("qty"))["v"] or 0
-        khorshid = balances.filter(location__key=StockLocation.KHORSHID).aggregate(v=Sum("qty"))["v"] or 0
-
-        if threshold.total_min and total <= threshold.total_min:
-            if threshold.brand.name == "تکوین":
-                alerts.append({
-                    "level": "orange",
-                    "title": f"خرید تکوین: {threshold.color.name} / {threshold.size.name}",
-                    "detail": f"موجودی کل {total}؛ حداقل تعیین‌شده {threshold.total_min}.",
-                    "url": "/takvin/",
-                })
-            else:
-                alerts.append({
-                    "level": "red",
-                    "title": f"نیاز به تولید: {threshold.color.name} / {threshold.size.name}",
-                    "detail": f"موجودی کل {total}؛ حداقل تعیین‌شده {threshold.total_min}.",
-                    "url": "/inventory/",
-                })
-        elif (
-            threshold.brand.name == "دارما"
-            and threshold.home_min
-            and home <= threshold.home_min
-            and khorshid > 0
-        ):
-            alerts.append({
-                "level": "green",
-                "title": f"انتقال از خورشید: {threshold.color.name} / {threshold.size.name}",
-                "detail": f"خانه {home} عدد؛ خورشید {khorshid} عدد.",
-                "url": "/inventory/",
-            })
-        if len(alerts) >= 10:
-            break
-
-    takvin_setting = ExcelManualSetting.objects.filter(key="takvin_debt").first()
-    if takvin_setting and takvin_setting.value:
+        .exclude(color__name__in=["قرمز", "زرد"])
+        .select_related("color", "size")
+        .order_by("qty", "color__name", "size__sort_order", "size__id")
+    )
+    for balance in low_home:
         alerts.append({
-            "level": "orange",
-            "title": "بدهی تکوین در گزارش جامع ثبت شده",
-            "detail": f"مبلغ دستی فعلی: {takvin_setting.value:,} تومان",
-            "url": "/report/",
+            "level": "red",
+            "title": f"{balance.color.name} / {balance.size.name}",
+            "detail": f"موجودی خانه: {int(balance.qty or 0)} عدد",
+            "url": "/inventory/",
         })
 
     purchase_month_total = TakvinPurchase.objects.filter(
@@ -161,7 +114,7 @@ def dashboard(request):
             "chart_labels": chart_labels,
             "chart_sales": chart_sales,
             "chart_profit": chart_profit,
-            "alerts": alerts[:10],
+            "alerts": alerts,
             "purchase_month_total": purchase_month_total,
         },
     )
