@@ -97,10 +97,11 @@ echo "$LIVE"
 step "4) BUILD LATEST WEB IMAGE"
 docker compose build web || fail "web build failed"
 
-step "5) PREFLIGHT — NO MIGRATIONS / FORMULAS PRESERVED"
+step "5) PREFLIGHT — NO MIGRATIONS / FORMULAS / ENDPOINT DRIFT"
 docker compose run --rm --entrypoint python web manage.py makemigrations --check --dry-run || fail "migration drift detected"
 docker compose run --rm --entrypoint python web manage.py check || fail "Django check failed"
-docker compose run --rm --entrypoint python web manage.py check_ui_returns_v36 || fail "v36 rollback regression check failed"
+docker compose run --rm --entrypoint python web manage.py check_ui_returns_v36 || fail "v36 UI/return rollback regression check failed"
+docker compose run --rm --entrypoint python web manage.py check_operational_roundtrip_v36 || fail "v36 endpoint/accounting roundtrip check failed"
 docker compose run --rm --entrypoint python web -c '
 from pathlib import Path
 r=Path("/app/core/report_v9.py").read_text(encoding="utf-8")
@@ -125,7 +126,8 @@ docker compose up -d --force-recreate web || fail "web recreate failed"
 docker compose restart caddy || fail "caddy restart failed"
 sleep 4
 docker compose exec -T web python manage.py check || fail "live Django check failed"
-docker compose exec -T web python manage.py check_ui_returns_v36 || fail "live v36 regression check failed"
+docker compose exec -T web python manage.py check_ui_returns_v36 || fail "live v36 UI/return regression check failed"
+docker compose exec -T web python manage.py check_operational_roundtrip_v36 || fail "live v36 endpoint/accounting roundtrip check failed"
 
 step "8) FINAL BUSINESS INVARIANTS"
 FINAL=$(snapshot_live) || fail "could not read final business values"
@@ -137,6 +139,9 @@ echo "======================================"
 echo "SUCCESS: UI SIMPLIFY + DAILY RETURNS V36 DEPLOYED"
 echo "Backup: $BACKUP"
 echo "Existing accounting/sale/material formulas: unchanged"
+echo "Operational endpoints: route-locked and transactional roundtrip checked"
+echo "Payments: Mellat/tailor and material-prepayment apply+reverse checked"
+echo "Digikala receipt: Digi/Mellat apply+reverse checked when receivable > 0"
 echo "Dashboard alerts: Darma HOME < 10 only; red/yellow product colors excluded"
 echo "Daily returns: loose colors first, full-pack codes second; HOME stock only"
 echo "Daily returns: no SaleLine, no Digikala fee, no Digikala receivable movement"
