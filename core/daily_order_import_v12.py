@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import os
-import re
 from collections import defaultdict
 from dataclasses import dataclass
 
@@ -11,12 +10,12 @@ from .cost_accounting_v14 import snapshot_sale_line
 from .daily_order_import_v8 import (
     DailyOrderImportError,
     _compact_code,
-    _resolve_product,
     _resolve_size,
     parse_delivery_report,
 )
 from .final_services import sync_sale_inventory
 from .models import AccountEntry, ProductCode, ProductSize, SaleDay, SaleLine, StockBalance
+from .title_product_resolver_v27 import model_candidate_from_title, resolve_product_from_title
 from .variant_sale_v12 import (
     VARIANT_PRODUCT_CODE,
     assert_stock_invariant,
@@ -40,22 +39,11 @@ class ResolvedOrderRowV12:
 
 
 def _model_candidate(title: str) -> str:
-    text = str(title or "")
-    match = re.search(r"مدل\s+(.+?)(?:\s+مجموعه|\s*\|)", text, re.IGNORECASE)
-    if not match:
-        return ""
-    value = match.group(1).strip()
-    value = re.sub(r"^نخی\s+", "", value, flags=re.IGNORECASE)
-    return value
+    return model_candidate_from_title(title)
 
 
 def _product_maps_v19():
-    """Digikala XLSX is intentionally limited to real marketplace brands.
-
-    Anbaresh mirrors Darma codes for MANUAL daily entry, so including it here
-    would make duplicate Darma codes ambiguous. Novani is inventory/production
-    only and also must never be selected by the Digikala importer.
-    """
+    """Compatibility helper used by checks; resolution itself is title-only v27."""
     products = list(
         ProductCode.objects.select_related("brand").filter(
             active=True,
@@ -68,36 +56,20 @@ def _product_maps_v19():
     return by_key
 
 
-def _resolve_product_v12(seller_code, title, by_key):
-    """Resolve marketplace product strictly from the explicit model in title.
+def _resolve_product_v12(seller_code, title, by_key=None):
+    """Resolve marketplace product exclusively from the Digikala title.
 
-    Seller-code metadata from Digikala is deliberately ignored. A real export
-    contained seller_code=rah220 while the title explicitly said D-220, which
-    incorrectly booked five 4XL packs to rah-220 when seller code was trusted.
-    If the title cannot identify a configured Darma/Takvin product, import must
-    fail instead of guessing from seller code.
+    seller_code and by_key are accepted only for backward-compatible call sites;
+    neither participates in resolution. Unknown title models fail closed.
     """
-    candidate = _model_candidate(title)
-    if not candidate:
-        return None
-
-    if candidate.lower() == VARIANT_PRODUCT_CODE and "دارما" in str(title or ""):
-        return ProductCode.objects.filter(
-            brand__name="دارما", code=VARIANT_PRODUCT_CODE, active=True
-        ).first()
-
-    product = _resolve_product("", title, by_key)
-    if product and product.brand.name in IMPORT_BRANDS:
-        return product
-    return None
+    return resolve_product_from_title(title)
 
 
 def resolve_rows_v12(parsed_rows):
-    by_key = _product_maps_v19()
     resolved = []
     errors = []
     for row in parsed_rows:
-        product = _resolve_product_v12(row.seller_code, row.title, by_key)
+        product = _resolve_product_v12(row.seller_code, row.title, None)
         size_name = _resolve_size(row.title)
         if product is None:
             shown_code = _model_candidate(row.title) or "بدون مدل در عنوان"
@@ -122,8 +94,6 @@ def resolve_rows_v12(parsed_rows):
 
         color_name = ""
         if product.brand.name == "دارما" and product.code == VARIANT_PRODUCT_CODE:
-            # User rule: seller-code column is not trusted for anything. Variable
-            # color must also be stated in the title or the row is rejected.
             color_name = resolve_variant_color(row.title, "") or ""
             if not color_name:
                 errors.append(
