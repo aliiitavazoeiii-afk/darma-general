@@ -55,7 +55,6 @@
       delivered += recalcOutputRow(form, row);
     });
 
-    // Fallback for older markup if needed.
     if (!form.querySelector('.output-data-row')) {
       form.querySelectorAll('input[name^="out_"]').forEach((input) => {
         delivered += Math.max(0, clean(input.value));
@@ -72,7 +71,26 @@
     if (grand) grand.textContent = fmt(delivered);
   }
 
+  function makeTwoWayUi() {
+    const stockNote = document.querySelector('.material-stock-note small');
+    if (stockNote) {
+      stockNote.textContent = 'برای هر دو برند Darma و Novani جدول تحویل دوطرفه است: افزایش، موجودی و مزد را زیاد می‌کند؛ کاهش یا پاک‌کردن، پس از همگام‌سازی همان مقدار را از موجودی همان برند کم و مزدش را برمی‌گرداند. ستون برش و کسری/مازاد فقط مقایسه‌ای است.';
+    }
+
+    document.querySelectorAll('button[formaction*="/apply-output/"]').forEach((button) => {
+      button.textContent = 'همگام‌سازی تحویل و موجودی';
+      button.onclick = () => window.confirm('تحویل با موجودی و مزد همان برند همگام شود؟ افزایش اضافه می‌شود و کاهش/پاک‌کردن از موجودی و مزد برمی‌گردد.');
+      const action = button.closest('.section-action');
+      if (!action) return;
+      const title = action.querySelector('strong');
+      const help = action.querySelector('p');
+      if (title) title.textContent = 'همگام‌سازی تحویل ↔ موجودی';
+      if (help) help.textContent = 'برای Darma و Novani هم افزایش و هم کاهش را اعمال می‌کند. اگر برای کاهش موجودی همان رنگ/سایز کافی نباشد، کل عملیات بدون تغییر متوقف می‌شود.';
+    });
+  }
+
   function bind() {
+    makeTwoWayUi();
     document.querySelectorAll('.material-card form').forEach((form) => {
       if (form.dataset.wageBound === '1') return;
       form.dataset.wageBound = '1';
