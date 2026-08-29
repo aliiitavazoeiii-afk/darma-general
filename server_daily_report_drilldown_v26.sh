@@ -21,14 +21,22 @@ while [ "$i" -le 30 ]; do
 done
 docker compose exec -T web python manage.py check >/dev/null || fail "current live web is not healthy"
 
-snapshot_state(){
-  service="$1"
-  CAPITAL=$(docker compose $service python manage.py capital_audit_v9 | awk -F'= ' '/CAPITAL TOTAL/{gsub(/[[:space:]]/,"",$2);print $2}' | tail -1)
-  STOCK=$(docker compose $service python manage.py shell -c 'from django.db.models import Sum; from core.models import StockBalance; rows=StockBalance.objects.values("brand__name").annotate(q=Sum("qty")).order_by("brand__name"); print("|".join("%s=%s" % (r["brand__name"], int(r["q"] or 0)) for r in rows))' 2>/dev/null | tail -1)
-  SALES=$(docker compose $service python manage.py shell -c 'from django.db.models import Sum; from core.models import SaleDay,SaleLine,SaleAllocation; vals=(SaleDay.objects.count(),SaleLine.objects.count(),int(SaleLine.objects.aggregate(v=Sum("quantity"))["v"] or 0),SaleAllocation.objects.count(),int(SaleAllocation.objects.aggregate(v=Sum("qty"))["v"] or 0)); print("days=%s|lines=%s|qty=%s|allocs=%s|allocqty=%s" % vals)' 2>/dev/null | tail -1)
-  [ -n "$CAPITAL" ] || fail "could not read capital snapshot"
-  [ -n "$STOCK" ] || fail "could not read stock snapshot"
-  [ -n "$SALES" ] || fail "could not read sales snapshot"
+snapshot_live(){
+  CAPITAL=$(docker compose exec -T web python manage.py capital_audit_v9 | awk -F'= ' '/CAPITAL TOTAL/{gsub(/[[:space:]]/,"",$2);print $2}' | tail -1)
+  STOCK=$(docker compose exec -T web python manage.py shell -c 'from django.db.models import Sum; from core.models import StockBalance; rows=StockBalance.objects.values("brand__name").annotate(q=Sum("qty")).order_by("brand__name"); print("|".join("%s=%s" % (r["brand__name"], int(r["q"] or 0)) for r in rows))' 2>/dev/null | tail -1)
+  SALES=$(docker compose exec -T web python manage.py shell -c 'from django.db.models import Sum; from core.models import SaleDay,SaleLine,SaleAllocation; vals=(SaleDay.objects.count(),SaleLine.objects.count(),int(SaleLine.objects.aggregate(v=Sum("quantity"))["v"] or 0),SaleAllocation.objects.count(),int(SaleAllocation.objects.aggregate(v=Sum("qty"))["v"] or 0)); print("days=%s|lines=%s|qty=%s|allocs=%s|allocqty=%s" % vals)' 2>/dev/null | tail -1)
+  [ -n "$CAPITAL" ] || fail "could not read live capital snapshot"
+  [ -n "$STOCK" ] || fail "could not read live stock snapshot"
+  [ -n "$SALES" ] || fail "could not read live sales snapshot"
+}
+
+snapshot_new_image(){
+  CAPITAL=$(docker compose run --rm --entrypoint python web manage.py capital_audit_v9 | awk -F'= ' '/CAPITAL TOTAL/{gsub(/[[:space:]]/,"",$2);print $2}' | tail -1)
+  STOCK=$(docker compose run --rm --entrypoint python web manage.py shell -c 'from django.db.models import Sum; from core.models import StockBalance; rows=StockBalance.objects.values("brand__name").annotate(q=Sum("qty")).order_by("brand__name"); print("|".join("%s=%s" % (r["brand__name"], int(r["q"] or 0)) for r in rows))' 2>/dev/null | tail -1)
+  SALES=$(docker compose run --rm --entrypoint python web manage.py shell -c 'from django.db.models import Sum; from core.models import SaleDay,SaleLine,SaleAllocation; vals=(SaleDay.objects.count(),SaleLine.objects.count(),int(SaleLine.objects.aggregate(v=Sum("quantity"))["v"] or 0),SaleAllocation.objects.count(),int(SaleAllocation.objects.aggregate(v=Sum("qty"))["v"] or 0)); print("days=%s|lines=%s|qty=%s|allocs=%s|allocqty=%s" % vals)' 2>/dev/null | tail -1)
+  [ -n "$CAPITAL" ] || fail "could not read new-image capital snapshot"
+  [ -n "$STOCK" ] || fail "could not read new-image stock snapshot"
+  [ -n "$SALES" ] || fail "could not read new-image sales snapshot"
 }
 
 step "2) BACKUP + BEFORE STATE"
@@ -37,7 +45,7 @@ STAMP=$(date +%Y%m%d-%H%M%S)
 BACKUP="backups/before-daily-report-drilldown-v26-${STAMP}.sql"
 docker compose exec -T db pg_dump -U "$DB_USER" "$DB_NAME" > "$BACKUP" || fail "database backup failed"
 [ -s "$BACKUP" ] || fail "database backup is empty"
-snapshot_state "exec -T web"
+snapshot_live
 CAP_BEFORE="$CAPITAL"
 STOCK_BEFORE="$STOCK"
 SALES_BEFORE="$SALES"
@@ -60,7 +68,7 @@ docker compose run --rm --entrypoint python web manage.py check_v19_features || 
 docker compose run --rm --entrypoint python web manage.py check_capital_integrity_v14 || fail "capital integrity check failed"
 
 step "5) VERIFY PREFLIGHT WAS READ-ONLY"
-snapshot_state "run --rm web"
+snapshot_new_image
 [ "$CAPITAL" = "$CAP_BEFORE" ] || fail "capital changed during preflight: before=$CAP_BEFORE now=$CAPITAL"
 [ "$STOCK" = "$STOCK_BEFORE" ] || fail "stock changed during preflight: before=$STOCK_BEFORE now=$STOCK"
 [ "$SALES" = "$SALES_BEFORE" ] || fail "sales/allocations changed during preflight: before=$SALES_BEFORE now=$SALES"
@@ -75,7 +83,7 @@ docker compose exec -T web python manage.py check || fail "final Django check fa
 docker compose exec -T web python manage.py check_daily_report_v26 || fail "live daily report v26 check failed"
 docker compose exec -T web python manage.py check_v23_delivery_import || fail "live Digikala regression check failed"
 docker compose exec -T web python manage.py check_capital_integrity_v14 || fail "live capital integrity failed"
-snapshot_state "exec -T web"
+snapshot_live
 [ "$CAPITAL" = "$CAP_BEFORE" ] || fail "capital changed by deployment: before=$CAP_BEFORE after=$CAPITAL"
 [ "$STOCK" = "$STOCK_BEFORE" ] || fail "stock changed by deployment: before=$STOCK_BEFORE after=$STOCK"
 [ "$SALES" = "$SALES_BEFORE" ] || fail "sales/allocations changed by deployment: before=$SALES_BEFORE after=$SALES"
