@@ -20,9 +20,11 @@ CUT_SOURCE = {
     "gray": "gray",
     "stripe": "stripe",
     "gray_stripe": "stripe",
-    "reverse_black": "black",
-    "reverse_white": "white",
-    "reverse_navy": "navy",
+    # Reverse models do not inherit the base-color cut. They have no raw cut row,
+    # so their cut comparator must stay zero unless a dedicated cut source is added later.
+    "reverse_black": "reverse_black",
+    "reverse_white": "reverse_white",
+    "reverse_navy": "reverse_navy",
 }
 NOVANI_WAGE_LEDGER_PREFIX = "novani_output_wage_pieces_v35_"
 DARMA_WAGE_LEDGER_PREFIX = "darma_output_wage_pieces_v35_"
