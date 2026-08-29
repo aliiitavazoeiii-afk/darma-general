@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import business_tools_v14, business_tools_v21, business_tools_v22, calendar_views, catalog_v5, daily_order_views_v8, daily_report_actions_v21, daily_report_v8, daily_returns_v36, daily_views, excel_dashboard, excel_sales, final_views, inventory_operations_v15, inventory_v20, material_report_v20, material_report_v21, material_report_v22, pricing_v7, report_v9, sale_brand_v19, settings_rules_v17, settings_stock_v5, takvin_v5, views
+from . import business_tools_v14, business_tools_v21, business_tools_v22, calculator_v37, calendar_views, catalog_v5, daily_order_views_v8, daily_report_actions_v21, daily_report_v8, daily_views, excel_dashboard, excel_sales, final_views, inventory_operations_v15, inventory_v20, material_report_v20, material_report_v21, material_report_v22, pricing_v7, report_v9, returns_v37, sale_brand_v19, settings_rules_v17, settings_stock_v5, takvin_v5, views
 
 urlpatterns = [
     path("", excel_dashboard.dashboard, name="dashboard"),
@@ -9,13 +9,15 @@ urlpatterns = [
     path("sales/select/<int:jy>/<int:jm>/<int:jd>/", daily_views.select_sale_day, name="select_sale_day"),
     path("sales/<int:day_id>/", sale_brand_v19.sale_brand, name="sale_brand"),
     path("sales/<int:day_id>/report/", daily_report_v8.daily_report, name="daily_report"),
-    path("sales/<int:day_id>/return/", daily_returns_v36.daily_return_add, name="daily_return_add"),
     path("sales/<int:day_id>/import-xlsx/", daily_order_views_v8.import_daily_orders, name="daily_order_import"),
     path("sales/<int:day_id>/<int:brand_id>/<int:size_id>/", daily_views.sale_size, name="sale_size"),
     path("sales/save/", excel_sales.sale_line_save, name="sale_line_save"),
     path("sales/shortage/<int:shortage_id>/resolve/", excel_sales.shortage_resolve, name="shortage_resolve"),
     path("sales/report-line/<int:line_id>/price/", daily_report_actions_v21.sale_price_update, name="daily_sale_price_update"),
     path("sales/report-line/<int:line_id>/delete/", daily_report_actions_v21.sale_line_delete, name="daily_sale_line_delete"),
+
+    path("returns/", returns_v37.returns_home, name="returns"),
+    path("returns/apply/", returns_v37.return_apply, name="return_apply"),
 
     path("report/", report_v9.report, name="report"),
     path("report/manual/", report_v9.manual_report_action, name="manual_report_action"),
@@ -36,8 +38,9 @@ urlpatterns = [
     path("payments/receipts/add/", business_tools_v21.receipt_add, name="receipt_add"),
     path("payments/receipts/<int:receipt_id>/edit/", business_tools_v21.receipt_update, name="receipt_update"),
     path("payments/receipts/<int:receipt_id>/delete/", business_tools_v21.receipt_delete, name="receipt_delete"),
-    path("calculator/", business_tools_v14.calculator, name="calculator"),
-    path("calculator/quote/", business_tools_v14.calculator_quote, name="calculator_quote"),
+    path("calculator/", calculator_v37.calculator, name="calculator"),
+    path("calculator/quote/", calculator_v37.calculator_quote, name="calculator_quote"),
+    path("calculator/target-quote/", calculator_v37.calculator_target_quote, name="calculator_target_quote"),
 
     path("inventory/", inventory_v20.inventory, name="inventory"),
     path("inventory/color-model/add/", inventory_v20.add_color_model, name="inventory_add_color_model"),
@@ -48,7 +51,6 @@ urlpatterns = [
     path("finance/", final_views.finance, name="finance"),
     path("expenses/", final_views.expenses, name="expenses"),
     path("assets/", final_views.assets, name="assets"),
-    path("returns/", final_views.returns, name="returns"),
 
     path("settings/", views.settings_home, name="settings_home"),
     path("settings/catalog/", catalog_v5.settings_catalog, name="settings_catalog"),
