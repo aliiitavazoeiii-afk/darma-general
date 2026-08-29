@@ -30,14 +30,6 @@ NEGATIVE_STATUS_MARKERS = (
     "ردشده",
 )
 
-# Digikala sometimes exposes the same Takvin model with the numeric groups
-# reversed versus the site's long-standing internal code. Keep the site's
-# canonical ProductCode unchanged and normalize only the MODEL TEXT IN TITLE.
-# Seller-code metadata is preserved but deliberately ignored by the resolver.
-TAKVIN_PRODUCT_ALIASES = {
-    "1-654": "654-1",
-}
-
 
 def _compact_status(value: str) -> str:
     text = base._norm_text(value).lower()
@@ -46,12 +38,7 @@ def _compact_status(value: str) -> str:
 
 
 def _status_is_delivery(value: str) -> bool:
-    """Accept known positive Digikala delivery-report statuses only.
-
-    Old exports used received/delivery wording. Current exports can use
-    «اماده ارسال/تحویل». Explicit negative/return/cancel markers always win.
-    Blank status remains accepted for legacy exports that had no status column.
-    """
+    """Accept known positive Digikala delivery-report statuses only."""
     status = _compact_status(value)
     if not status:
         return True
@@ -64,33 +51,6 @@ def _status_is_delivery(value: str) -> bool:
     if "اماده" in status and "ارسال" in status and "تحویل" in status:
         return True
     return False
-
-
-def _normalize_takvin_product_aliases(parsed_rows):
-    normalized = []
-    for row in parsed_rows:
-        title = str(row.title or "")
-        if "تکوین" in title:
-            candidate = v12._model_candidate(title)
-            canonical = TAKVIN_PRODUCT_ALIASES.get(candidate)
-            if canonical:
-                title = re.sub(
-                    r"(مدل\s+(?:نخی\s+)?)" + re.escape(candidate) + r"(?=\s+مجموعه|\s*\|)",
-                    lambda match: match.group(1) + canonical,
-                    title,
-                    count=1,
-                    flags=re.IGNORECASE,
-                )
-        normalized.append(
-            base.ParsedOrderRow(
-                source_row=row.source_row,
-                seller_code=row.seller_code,  # preserved only; resolver ignores it
-                title=title,
-                quantity=row.quantity,
-                status=row.status,
-            )
-        )
-    return normalized
 
 
 def parse_delivery_report(file_bytes: bytes, filename: str = ""):
@@ -134,7 +94,6 @@ def parse_delivery_report(file_bytes: bytes, filename: str = ""):
         quantity = max(0, base._safe_int(value("تعداد ارسالی")))
         status = value("وضعیت")
         title = value("عنوان")
-        seller_code = value("کد فروشنده")
         if quantity <= 0:
             ignored += 1
             continue
@@ -143,10 +102,12 @@ def parse_delivery_report(file_bytes: bytes, filename: str = ""):
             ignored_statuses[status or "(خالی)"] += 1
             continue
 
+        # Intentionally discard Digikala's «کد فروشنده» at parse time. Product
+        # identity and s3 color are derived from title only.
         result.append(
             base.ParsedOrderRow(
                 source_row=row_number,
-                seller_code=seller_code,
+                seller_code="",
                 title=title,
                 quantity=quantity,
                 status=status,
@@ -172,7 +133,6 @@ def parse_delivery_report(file_bytes: bytes, filename: str = ""):
 
 def preview_delivery_report(file_bytes: bytes, filename: str = "") -> dict:
     parsed, meta = parse_delivery_report(file_bytes, filename)
-    parsed = _normalize_takvin_product_aliases(parsed)
     resolved, errors = v12.resolve_rows_v12(parsed)
     grouped = v12._aggregate(resolved)
     rows = [
