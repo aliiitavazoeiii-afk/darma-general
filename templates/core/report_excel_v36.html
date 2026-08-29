@@ -1,0 +1,51 @@
+{% extends 'core/report_excel_v9.html' %}
+{% block scripts %}{{ block.super }}
+<style>
+.v36-sales-overview>.card-header{display:none!important}.v36-sales-overview>.card-body{padding:0!important}.v36-top-metrics{margin:0!important;padding:0}.v36-top-metrics>div{padding-top:0!important;padding-bottom:0!important}.v36-top-metrics>div:nth-child(n+5){display:none!important}.v36-top-metrics .summary-cell{height:100%;border-radius:14px;background:linear-gradient(145deg,rgba(255,255,255,.055),rgba(255,255,255,.018));border:1px solid rgba(255,255,255,.11)}
+.v36-section-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:0 0 28px}.v36-fold{border:1px solid rgba(255,255,255,.11);border-radius:16px;background:linear-gradient(145deg,rgba(255,255,255,.05),rgba(255,255,255,.018));overflow:hidden}.v36-fold[open]{grid-column:1/-1}.v36-fold>summary{list-style:none;cursor:pointer;padding:15px 16px;min-height:78px;display:flex;align-items:center;justify-content:space-between;gap:12px}.v36-fold>summary::-webkit-details-marker{display:none}.v36-fold>summary:hover{background:rgba(255,255,255,.025)}.v36-fold[open]>summary{border-bottom:1px solid rgba(255,255,255,.08);background:rgba(255,153,51,.055)}.v36-fold-title{font-weight:900;font-size:.95rem}.v36-fold-sub{display:block;color:#8fa2b7;font-size:.7rem;margin-top:3px}.v36-fold-arrow{font-size:1.25rem;color:#ff9a54;transition:.16s}.v36-fold[open] .v36-fold-arrow{transform:rotate(-90deg)}.v36-fold-body{padding:16px}.v36-fold-body>.row:last-child,.v36-fold-body>.mb-4:last-child{margin-bottom:0!important}.v36-fold-body .raw-materials-wrap{margin-bottom:0!important}.v36-fold-body>.raw-materials-wrap{border:0;background:transparent}.v36-report-details .brand-report:last-child{margin-bottom:0!important}
+@media(max-width:991.98px){.v36-section-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:575.98px){.v36-section-grid{grid-template-columns:1fr 1fr;gap:8px}.v36-fold>summary{padding:12px;min-height:70px}.v36-fold-title{font-size:.84rem}.v36-fold-sub{font-size:.64rem}.v36-fold[open]{grid-column:1/-1}.v36-fold-body{padding:10px}.v36-top-metrics>div{width:50%!important;flex:0 0 50%!important}}
+</style>
+<script>
+document.addEventListener('DOMContentLoaded',function(){
+  const salesCard=document.querySelector('.excel-section');
+  const capitalHero=document.querySelector('.capital-hero');
+  const raw=document.querySelector('.raw-materials-wrap');
+  if(!salesCard||!capitalHero||!raw) return;
+
+  salesCard.classList.add('v36-sales-overview');
+  const salesBody=salesCard.querySelector('.card-body');
+  const summaryRow=salesBody?.querySelector(':scope > .row');
+  if(summaryRow) summaryRow.classList.add('v36-top-metrics');
+
+  const productColorRow=salesCard.nextElementSibling && salesCard.nextElementSibling.classList.contains('row')
+    ? salesCard.nextElementSibling : null;
+  const capitalMini=capitalHero.nextElementSibling;
+  const accountsRow=capitalMini?.nextElementSibling;
+  const assetWrap=raw.nextElementSibling;
+  if(!capitalMini||!accountsRow||!assetWrap) return;
+
+  function fold(title,sub,klass){
+    const d=document.createElement('details'); d.className='v36-fold '+(klass||'');
+    const s=document.createElement('summary');
+    s.innerHTML='<span><span class="v36-fold-title">'+title+'</span><span class="v36-fold-sub">'+sub+'</span></span><span class="v36-fold-arrow">‹</span>';
+    const b=document.createElement('div'); b.className='v36-fold-body';
+    d.appendChild(s); d.appendChild(b); return {details:d,body:b};
+  }
+
+  const grid=document.createElement('div'); grid.className='v36-section-grid';
+  const report=fold('گزارش','سایزها، انبارش، سوددهی و رنگ‌ها','v36-report-details');
+  const accounts=fold('حساب‌ها','ریز حساب‌ها و حساب اشخاص');
+  const materials=fold('مواد اولیه و موجودی','پارچه، کش و محل موجودی');
+  const assets=fold('کالای سرمایه‌ای','فهرست دارایی‌های سرمایه‌ای');
+
+  salesBody?.querySelectorAll(':scope > .brand-report').forEach(node=>report.body.appendChild(node));
+  if(productColorRow) report.body.appendChild(productColorRow);
+  accounts.body.appendChild(accountsRow);
+  materials.body.appendChild(raw);
+  assets.body.appendChild(assetWrap);
+
+  grid.appendChild(report.details); grid.appendChild(accounts.details); grid.appendChild(materials.details); grid.appendChild(assets.details);
+  capitalMini.insertAdjacentElement('afterend',grid);
+});
+</script>
+{% endblock %}
