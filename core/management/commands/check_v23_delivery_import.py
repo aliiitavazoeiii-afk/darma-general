@@ -76,6 +76,18 @@ class Command(BaseCommand):
         if direct_d and direct_rah and direct_d.id == direct_rah.id:
             errors.append("D-220 and rah-220 incorrectly resolve to the same ProductCode")
 
+        # The current real export has Darma model 400 rows whose title omits the
+        # brand word entirely. This still must resolve from title/model only when
+        # the model is unique across marketplace brands; seller code stays unused.
+        brandless_400_title = (
+            "شورت زنانه مدل 400 مجموعه 4 عددی | XL | چند رنگ | "
+            "گارانتی اصالت و سلامت فیزیکی کالا"
+        )
+        brandless_400 = v12._resolve_product_v12("WRONG-SELLER-CODE", brandless_400_title, {"wrong": [object()]})
+        if not brandless_400 or brandless_400.brand.name != "دارما" or brandless_400.code != "400":
+            shown = None if not brandless_400 else f"{brandless_400.brand.name}/{brandless_400.code}"
+            errors.append(f"brandless title 400 failed: expected دارما/400, got {shown}")
+
         takvin_alias = "شورت زنانه تکوین مدل 1-654 مجموعه 5 عددی | M | چند رنگ"
         takvin = resolve_product_from_title(takvin_alias)
         if not takvin or takvin.brand.name != "تکوین" or takvin.code != "654-1":
@@ -106,5 +118,6 @@ class Command(BaseCommand):
         self.stdout.write("D-220 title -> D 220; rah-220 title -> rah-220")
         self.stdout.write("contradictory seller code/by-key data cannot change title result")
         self.stdout.write("seller-code column is discarded at parse time")
+        self.stdout.write("brandless title model 400 -> unique Darma/400")
         self.stdout.write("Takvin title 1-654 -> canonical 654-1")
         self.stdout.write(self.style.SUCCESS("V23 DELIVERY IMPORT CHECK OK"))
