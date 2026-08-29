@@ -6,6 +6,8 @@ from .daily_order_import_v8 import _compact_code, _norm_text
 from .models import ProductCode
 
 
+IMPORT_BRANDS = ("دارما", "تکوین")
+
 # These aliases describe MODEL TEXT IN THE DIGIKALA TITLE only.
 # Seller-code metadata must never be passed to this resolver.
 DARMA_TITLE_ALIASES = {
@@ -64,30 +66,20 @@ def brand_from_title(title: str) -> str:
     return ""
 
 
-def resolve_product_from_title(title: str):
-    """Resolve a marketplace ProductCode strictly from title text.
-
-    No seller-code value is accepted by this function by design. The title must
-    contain both a recognized brand and an explicit model. Unknown/ambiguous
-    title models fail closed instead of being guessed.
-    """
-    brand_name = brand_from_title(title)
-    candidate = model_candidate_from_title(title)
-    if not brand_name or not candidate:
-        return None
-
-    key = _compact_code(candidate)
+def _alias_target(brand_name: str, key: str):
     aliases = DARMA_TITLE_ALIASES if brand_name == "دارما" else TAKVIN_TITLE_ALIASES
     canonical = aliases.get(key)
-    if canonical:
-        return ProductCode.objects.filter(
-            brand__name=brand_name,
-            code=canonical,
-            active=True,
-        ).first()
+    if not canonical:
+        return None
+    return ProductCode.objects.filter(
+        brand__name=brand_name,
+        code=canonical,
+        active=True,
+    ).first()
 
-    # Exact normalized title-model match inside the title's own brand only.
-    matches = [
+
+def _exact_matches(brand_name: str, key: str):
+    return [
         product
         for product in ProductCode.objects.select_related("brand").filter(
             brand__name=brand_name,
@@ -95,6 +87,43 @@ def resolve_product_from_title(title: str):
         )
         if _compact_code(product.code) == key
     ]
-    if len(matches) == 1:
-        return matches[0]
-    return None
+
+
+def resolve_product_from_title(title: str):
+    """Resolve ProductCode exclusively from Digikala title text.
+
+    Seller-code metadata never participates. When the title explicitly names
+    Darma/Takvin, resolution is confined to that brand. Some real Digikala rows
+    omit the brand word (for example «مدل 400»); in that case the model text may
+    still resolve only when it identifies exactly one active marketplace product
+    across Darma/Takvin. Ambiguous or unknown title models fail closed.
+    """
+    candidate = model_candidate_from_title(title)
+    if not candidate:
+        return None
+
+    key = _compact_code(candidate)
+    explicit_brand = brand_from_title(title)
+
+    if explicit_brand:
+        aliased = _alias_target(explicit_brand, key)
+        if aliased:
+            return aliased
+        matches = _exact_matches(explicit_brand, key)
+        return matches[0] if len(matches) == 1 else None
+
+    # No brand word in title: still title-only. Accept only a unique model match
+    # across the two marketplace brands; seller code remains completely ignored.
+    candidates = []
+    seen_ids = set()
+    for brand_name in IMPORT_BRANDS:
+        aliased = _alias_target(brand_name, key)
+        if aliased and aliased.id not in seen_ids:
+            candidates.append(aliased)
+            seen_ids.add(aliased.id)
+        for product in _exact_matches(brand_name, key):
+            if product.id not in seen_ids:
+                candidates.append(product)
+                seen_ids.add(product.id)
+
+    return candidates[0] if len(candidates) == 1 else None
