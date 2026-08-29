@@ -101,7 +101,7 @@ CHANGED=$(git diff --name-only "$BASE"..HEAD)
 echo "$CHANGED"
 for f in $CHANGED; do
   case "$f" in
-    core/returns_v37.py|core/calculator_v37.py|core/urls.py|core/daily_report_v8.py|core/management/commands/check_returns_calculator_v37.py|templates/core/returns_v37.html|templates/core/calculator_v37.html|templates/core/_calculator_target_result_v37.html|static/core/number_format.js|server_standalone_returns_calculator_v37.sh) ;;
+    UI_SAFETY_V37.md|core/returns_v37.py|core/calculator_v37.py|core/urls.py|core/daily_report_v8.py|core/management/commands/check_returns_calculator_v37.py|templates/core/returns_v37.html|templates/core/calculator_v37.html|templates/core/_calculator_target_result_v37.html|static/core/number_format.js|server_standalone_returns_calculator_v37.sh) ;;
     *) fail "unexpected v37 file changed: $f" ;;
   esac
 done
