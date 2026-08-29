@@ -39,6 +39,8 @@ class Command(BaseCommand):
                 input_data=v20._blank_input_data(), output_data=v20._blank_output_data_for_brand(novani),
             )
             nblock.input_data["black"]["cut"] = "20"
+            nblock.input_data["white"]["cut"] = "30"
+            nblock.input_data["navy"]["cut"] = "40"
             nblock.output_data["black"]["s"] = "12"
             nblock.save(update_fields=["input_data", "output_data", "updated_at"])
             nplus = v22._sync_output(nblock)
@@ -51,6 +53,12 @@ class Command(BaseCommand):
             black = next(x for x in nview["output_rows"] if x["model_key"] == "black")
             if black["cut_total"] != 20 or black["total"] != 12 or black["cut_diff"] != -8:
                 raise CommandError(f"cut variance mismatch: {black}")
+
+            # Reverse models are output-only rows and must never borrow black/white/navy cuts.
+            for key in ("reverse_black", "reverse_white", "reverse_navy"):
+                reverse_row = next(x for x in nview["output_rows"] if x["model_key"] == key)
+                if reverse_row["cut_total"] != 0 or reverse_row["cut_diff"] != 0:
+                    raise CommandError(f"reverse model borrowed a base-color cut: {key} -> {reverse_row}")
 
             nblock.output_data["black"]["s"] = ""
             nblock.save(update_fields=["output_data", "updated_at"])
@@ -102,4 +110,5 @@ class Command(BaseCommand):
         self.stdout.write("Novani: increase/reduce/clear reverses stock+wage exactly")
         self.stdout.write("Darma: increase/reduce/clear reverses KHORSHID stock/value+wage exactly")
         self.stdout.write("Cut variance: cut=20 / delivered=12 -> shortage=8")
+        self.stdout.write("Reverse black/white/navy: cut remains zero and never borrows base-color cut")
         self.stdout.write("Dozen wage: 110000 per 12 delivered pieces")
