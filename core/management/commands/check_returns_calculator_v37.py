@@ -10,8 +10,8 @@ from core.calculator_v37 import _solve_sale_price
 from core.finance import digikala_fee_for_unit
 from core.finance_excel_v9 import digikala_receivable_total
 from core.inventory_valuation_v17 import finished_inventory_value_v17
-from core.models import AccountEntry, Brand, InventoryAdjustment, ProductComposition, ProductSize, SaleLine, StockBalance, StockLocation
-from core.returns_v37 import _create_adjustment
+from core.models import AccountEntry, Brand, InventoryAdjustment, ProductSize, SaleLine, StockBalance, StockLocation
+from core.returns_v37 import _apply_code_batch, _apply_color_batch
 
 
 class Command(BaseCommand):
@@ -21,6 +21,15 @@ class Command(BaseCommand):
         return int(StockBalance.objects.filter(
             brand=brand, size=size, color=color, location__key=StockLocation.HOME
         ).aggregate(v=Sum("qty"))["v"] or 0)
+
+    def _snapshot(self):
+        return {
+            "finished": int(finished_inventory_value_v17()),
+            "digi": int(digikala_receivable_total()),
+            "entries": AccountEntry.objects.count(),
+            "sales": SaleLine.objects.count(),
+            "adjustments": InventoryAdjustment.objects.count(),
+        }
 
     def handle(self, *args, **options):
         if resolve("/returns/").func.__module__ != "core.returns_v37":
@@ -64,7 +73,7 @@ class Command(BaseCommand):
                 raise CommandError("target calculator did not return minimum valid sale price")
 
         darma = Brand.objects.get(name="دارما")
-        ps = (
+        candidates = list(
             ProductSize.objects.filter(
                 product__brand=darma,
                 product__active=True,
@@ -74,48 +83,75 @@ class Command(BaseCommand):
             .select_related("product", "size")
             .prefetch_related("product__composition__color")
             .distinct()
-            .first()
         )
+        ps = None
+        for candidate in candidates:
+            comps = list(candidate.product.composition.all())
+            if comps and sum(int(c.qty or 0) for c in comps) == int(candidate.product.pack_qty or 0):
+                ps = candidate
+                break
         if not ps:
-            raise CommandError("no Darma product-size available for return rollback test")
-        comp = list(ProductComposition.objects.filter(product=ps.product).select_related("color")).pop(0)
-        before_qty = self._home_qty(darma, ps.size, comp.color)
-        before_finished = int(finished_inventory_value_v17())
-        before_digi = int(digikala_receivable_total())
-        before_entries = AccountEntry.objects.count()
-        before_sales = SaleLine.objects.count()
-        before_adjustments = InventoryAdjustment.objects.count()
+            raise CommandError("no consistent fixed-composition Darma product-size available for return test")
+        components = list(ps.product.composition.all())
+        first_color = components[0].color
+        before = self._snapshot()
 
+        # 1) Loose-color return round trip.
+        loose_before = self._home_qty(darma, ps.size, first_color)
         with transaction.atomic():
-            _create_adjustment(
-                when=date.today(), brand=darma, size=ps.size, color=comp.color,
-                qty=2, group="v37check", source="rollback-test",
+            result = _apply_color_batch(
+                when=date.today(), brand=darma, size=ps.size,
+                entries=[(first_color, 2)],
             )
-            if self._home_qty(darma, ps.size, comp.color) != before_qty + 2:
-                raise CommandError("standalone return did not add exact HOME quantity")
-            if int(digikala_receivable_total()) != before_digi:
-                raise CommandError("standalone return changed Digikala receivable")
-            if AccountEntry.objects.count() != before_entries:
-                raise CommandError("standalone return created finance entry")
-            if SaleLine.objects.count() != before_sales:
-                raise CommandError("standalone return changed sales")
-            if int(finished_inventory_value_v17()) <= before_finished:
-                raise CommandError("standalone return did not increase inventory value")
+            if result["shorts"] != 2:
+                raise CommandError(f"color-return quantity mismatch: {result}")
+            if self._home_qty(darma, ps.size, first_color) != loose_before + 2:
+                raise CommandError("color return did not add exact HOME quantity")
+            if int(digikala_receivable_total()) != before["digi"]:
+                raise CommandError("color return changed Digikala receivable")
+            if AccountEntry.objects.count() != before["entries"] or SaleLine.objects.count() != before["sales"]:
+                raise CommandError("color return changed finance/sales")
+            if int(finished_inventory_value_v17()) <= before["finished"]:
+                raise CommandError("color return did not increase inventory value")
             transaction.set_rollback(True)
+        if self._snapshot() != before or self._home_qty(darma, ps.size, first_color) != loose_before:
+            raise CommandError("color-return rollback left business data changed")
 
-        if self._home_qty(darma, ps.size, comp.color) != before_qty:
-            raise CommandError("return rollback left HOME stock changed")
-        if int(finished_inventory_value_v17()) != before_finished:
-            raise CommandError("return rollback left finished inventory value changed")
-        if int(digikala_receivable_total()) != before_digi:
-            raise CommandError("return rollback left Digikala changed")
-        if AccountEntry.objects.count() != before_entries or SaleLine.objects.count() != before_sales:
-            raise CommandError("return rollback left finance/sale data changed")
-        if InventoryAdjustment.objects.count() != before_adjustments:
-            raise CommandError("return rollback left adjustment rows changed")
+        # 2) Full-code pack round trip: every composition color must return exactly.
+        component_before = {
+            comp.color_id: self._home_qty(darma, ps.size, comp.color)
+            for comp in components
+        }
+        with transaction.atomic():
+            result = _apply_code_batch(
+                when=date.today(), brand=darma, size=ps.size,
+                entries=[(ps, 1)],
+            )
+            if result["shorts"] != int(ps.product.pack_qty or 0):
+                raise CommandError(f"code-return quantity mismatch: {result}")
+            for comp in components:
+                actual = self._home_qty(darma, ps.size, comp.color)
+                expected = component_before[comp.color_id] + int(comp.qty or 0)
+                if actual != expected:
+                    raise CommandError(
+                        f"code return component mismatch {comp.color.name}: expected {expected}, found {actual}"
+                    )
+            if int(digikala_receivable_total()) != before["digi"]:
+                raise CommandError("code return changed Digikala receivable")
+            if AccountEntry.objects.count() != before["entries"] or SaleLine.objects.count() != before["sales"]:
+                raise CommandError("code return changed finance/sales")
+            if int(finished_inventory_value_v17()) <= before["finished"]:
+                raise CommandError("code return did not increase inventory value")
+            transaction.set_rollback(True)
+        if self._snapshot() != before:
+            raise CommandError("code-return rollback left business data changed")
+        for comp in components:
+            if self._home_qty(darma, ps.size, comp.color) != component_before[comp.color_id]:
+                raise CommandError("code-return rollback left HOME stock changed")
 
         self.stdout.write("RETURNS + CALCULATOR V37 CHECK OK")
         self.stdout.write("Old return box/route removed from daily report")
-        self.stdout.write("Standalone return adds HOME only; no SaleLine/AccountEntry/Digikala movement")
+        self.stdout.write("Color return: exact HOME-only round trip; no finance/sale/Digikala movement")
+        self.stdout.write("Code return: exact ProductComposition HOME round trip; no finance/sale/Digikala movement")
         self.stdout.write("Target calculator uses exact existing Digikala fee engine")
-        self.stdout.write("Rollback test left business values unchanged")
+        self.stdout.write("Rollback tests left business values unchanged")
