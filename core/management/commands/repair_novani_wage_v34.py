@@ -10,10 +10,6 @@ from core.models import AppSetting, Brand, InventoryMovement, MaterialReportBloc
 MARKER_PREFIX = "novani_wage_repair_v34_block_"
 
 
-class BaseCommandWithRepair(BaseCommand):
-    pass
-
-
 class Command(BaseCommand):
     help = "Repair missing tailor wage for Novani output-v21 movements without touching inventory."
 
@@ -93,8 +89,7 @@ class Command(BaseCommand):
             if AppSetting.objects.select_for_update().filter(key=marker, value="1").exists():
                 raise CommandError("repair marker appeared concurrently; refusing duplicate deduction")
 
-            # Keep the saved report metadata aligned with the actual delivered-piece wage.
-            # This changes no stock/material quantity and does not recalculate from cut quantity.
+            # Saved wage follows actual delivered pieces only; cut quantity is irrelevant here.
             block.delivery_wage = wage
             block.save(update_fields=["delivery_wage", "updated_at"])
 
