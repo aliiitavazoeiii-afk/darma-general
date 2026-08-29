@@ -1,5 +1,7 @@
 import inspect
+from pathlib import Path
 
+from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 from django.template.loader import get_template
 
@@ -15,10 +17,12 @@ class Command(BaseCommand):
         errors = []
 
         try:
-            template = get_template("core/daily_report_v21.html")
-            source = template.template.source
+            # Compile through Django first so invalid template syntax/routes fail.
+            get_template("core/daily_report_v21.html")
+            template_path = Path(settings.BASE_DIR) / "templates" / "core" / "daily_report_v21.html"
+            source = template_path.read_text(encoding="utf-8")
         except Exception as exc:
-            raise CommandError(f"daily report template does not compile: {exc}") from exc
+            raise CommandError(f"daily report template does not compile/read: {exc}") from exc
 
         required_markers = [
             'data-brand-button',
