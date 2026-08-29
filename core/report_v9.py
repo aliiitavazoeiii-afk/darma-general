@@ -96,7 +96,7 @@ def report(request):
         "digikala_ledger_total": digikala_ledger,
     }
     context.update(raw)
-    return render(request, "core/report_excel_v9.html", context)
+    return render(request, "core/report_excel_v36.html", context)
 
 
 @login_required
