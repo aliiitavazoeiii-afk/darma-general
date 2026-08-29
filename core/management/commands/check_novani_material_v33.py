@@ -1,10 +1,9 @@
 from django.core.management.base import BaseCommand, CommandError
 from django.db.models import Sum
 
-from core.inventory_v19 import _sizes_for_brand
-from core.material_report_v19 import NOVANI_OUTPUT_SIZES, _output_sizes_for_brand
+from core.inventory_v20 import _sizes_for_brand
+from core.material_report_v20 import NOVANI_OUTPUT_SIZES, _output_sizes_for_brand
 from core.models import Brand, Size, StockBalance, StockLocation
-
 
 EXPECTED_NOVANI = ["S", "M", "L", "XL", "XXL", "3XL"]
 EXPECTED_DARMA = ["M", "L", "XL", "XXL", "3XL", "4XL"]
@@ -15,8 +14,7 @@ class Command(BaseCommand):
     help = "Verify Novani material-report sizes and inventory isolation. Read only."
 
     def handle(self, *args, **options):
-        names = list(Size.objects.order_by("sort_order", "id").values_list("name", flat=True))
-        if "S" not in names:
+        if not Size.objects.filter(name="S").exists():
             raise CommandError("Size S is missing; migration was not applied")
 
         novani = Brand.objects.get(name="Novani")
