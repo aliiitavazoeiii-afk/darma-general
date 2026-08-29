@@ -2,7 +2,7 @@
 
 This file captures the user's accepted interaction model and visual constraints. UI work must not change business semantics.
 
-Last synchronized: 2026-08-29 after confirmed V38 UI modernization deployment.
+Last synchronized: 2026-08-29 after V39 logo/typography implementation was prepared on GitHub; latest confirmed production remains V38 until successful V39 deployment output.
 
 ---
 
@@ -21,7 +21,7 @@ The accepted interface direction is:
 - money values displayed with Persian thousands separator `٬`;
 - quantities/weights remain practical numeric inputs.
 
-V38 is now the confirmed-live global presentation layer and further refines this direction with:
+V38 is the confirmed-live global presentation layer and further refines this direction with:
 
 - darker, quieter navy surfaces;
 - cleaner glass hierarchy;
@@ -31,17 +31,19 @@ V38 is now the confirmed-live global presentation layer and further refines this
 - improved tablet/mobile spacing;
 - reduced-motion accessibility support.
 
-V38 intentionally modernizes the existing DOM rather than rebuilding business workflows. The only application presentation file changed in V38 was `static/core/ui-polish.css`.
+V39 adds the user's Darma logo and establishes a less crowded Persian typography direction. Keep Vazirmatn, but avoid aggressive letter-spacing and unusual synthetic font weights in Persian prose/navigation/tables. Prefer standard weights (400/500/600/700/800), normal Persian spacing and practical line-height. Numeric KPI values may remain stronger and tabular.
 
 Do not regress to opaque old cards, default bootstrap-looking administration screens or Tahoma-heavy legacy styling.
 
-Relevant global files:
+Relevant global files now include:
 
 - `templates/base.html`
 - `templates/core/_mobile_shell.html`
-- `static/core/ui-polish.css`
-- `static/core/number_format.js`
-- `static/core/jalali_picker.js`
+- `static/core/ui-polish.css` — V38 global theme;
+- `static/core/ui-v39.css` — V39 logo/typography refinement;
+- `static/core/darma-logo-v39.webp` — user's Darma logo asset;
+- `static/core/number_format.js` — existing formatter/navigation UI + V39 stylesheet loader;
+- `static/core/jalali_picker.js`.
 
 ---
 
@@ -61,7 +63,7 @@ Includes operational pages such as:
 - material report;
 - **standalone returns**.
 
-V37 injects standalone Returns under daily-work navigation using `static/core/number_format.js` without modifying the accounting logic. V38 only changes its presentation styling.
+V37 injects standalone Returns under daily-work navigation using `static/core/number_format.js` without modifying the accounting logic. V38 changes its presentation styling. V39 does not change the navigation structure; it only loads the new presentation stylesheet and displays the Darma logo on the existing home/brand link.
 
 ### مالی و ابزار
 
@@ -190,7 +192,7 @@ Contains existing raw fabric/elastic inventory UI and forms.
 
 Contains existing asset rows/forms.
 
-Important implementation principle used in V36 and preserved by V38:
+Important implementation principle used in V36 and preserved by V38/V39:
 
 - move/reparent or style existing rendered elements visually;
 - keep forms/routes/calculation contexts intact;
@@ -217,7 +219,7 @@ The user must be able to edit/clear a previously applied delivery cell and then 
 
 Do not make the cell visually editable while backend remains positive-only.
 
-V38 may improve the table surface visually but must not change these semantics.
+V38/V39 may improve table typography/surface visually but must not change these semantics.
 
 ---
 
@@ -268,7 +270,7 @@ The result should clearly show:
 
 Do not hide the fee or present a gross markup-only number.
 
-V38 changes appearance only; calculator formulas remain V37.
+V38/V39 change appearance only; calculator formulas remain V37.
 
 ---
 
@@ -345,7 +347,7 @@ Any new large table must:
 - keep action buttons reachable;
 - use existing mobile shell rather than creating a second mobile navigation system.
 
-V38 responsive refinements are now the current live visual baseline.
+V38 responsive refinements remain the live baseline; V39 only adjusts typography and sidebar branding responsively.
 
 ---
 
@@ -365,7 +367,7 @@ AccountEntry count
 
 If a cosmetic deployment changes one of these, treat it as a bug.
 
-V38 confirmed this discipline in production: the deploy succeeded only because the starting live snapshot and final snapshot matched exactly.
+V38 confirmed this discipline in production. V39 uses the same exact invariant discipline.
 
 ---
 
@@ -374,3 +376,13 @@ V38 confirmed this discipline in production: the deploy succeeded only because t
 After every important UI/workflow change, update the relevant context-pack files.
 
 After every successful deployment confirmed by server output, also update `08_LIVE_STATE_AND_CHECKPOINTS.md` using the actual final production snapshot. Never copy an older checkpoint forward merely because the code change was cosmetic.
+
+---
+
+## 17. V39 logo + typography contract
+
+The user's Darma logo is now the preferred site-brand artwork for the sidebar brand/home link. Do not revert to the old orange `D` visual unless the user explicitly requests it.
+
+For Persian text, the user's accepted direction is now: modern Vazirmatn, but **not visually crowded**. Avoid excessive negative/positive letter-spacing, synthetic intermediate weights such as 650/750, and unnecessary 900-weight prose. Keep headings clear, normal text calmer, tables readable, and numeric KPIs strong but not blurry.
+
+This contract is presentation-only and must never be used as justification to alter a value, formula, data source, route or business workflow.
