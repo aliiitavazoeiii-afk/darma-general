@@ -55,6 +55,33 @@ print(f"RAW={raw}")
 ' 2>/dev/null
 }
 
+snapshot_new() {
+  docker compose run --rm --entrypoint python web manage.py shell -c '
+from django.db.models import Sum
+from core.finance_excel_v9 import digikala_receivable_total
+from core.inventory_valuation_v17 import finished_inventory_value_v17
+from core.models import Brand, ExcelManualRow, ExcelManualSetting, StockBalance
+from core.report_v5 import _raw_material_context
+
+def bqty(name):
+    b=Brand.objects.get(name=name)
+    return int(StockBalance.objects.filter(brand=b).aggregate(v=Sum("qty"))["v"] or 0)
+rows=ExcelManualRow.objects.filter(active=True)
+accounts=sum(int(x.amount or 0) for x in rows.filter(section__in=[ExcelManualRow.ACCOUNTS,ExcelManualRow.PERSONS]))
+assets=sum(int(x.amount or 0) for x in rows.filter(section=ExcelManualRow.ASSETS))
+finished=int(finished_inventory_value_v17())
+raw=int(_raw_material_context()["materials_total"])
+digi=int(digikala_receivable_total())
+debt=int(ExcelManualSetting.objects.filter(key="takvin_debt").values_list("value",flat=True).first() or 0)
+capital=accounts+assets+finished+raw+digi-debt
+print(f"CAPITAL={capital}")
+print(f"DARMA={bqty(chr(1583)+chr(1575)+chr(1585)+chr(1605)+chr(1575))}")
+print(f"TAKVIN={bqty(chr(1578)+chr(1705)+chr(1608)+chr(1740)+chr(1606))}")
+print(f"NOVANI={bqty(chr(78)+chr(111)+chr(118)+chr(97)+chr(110)+chr(105))}")
+print(f"RAW={raw}")
+' 2>/dev/null
+}
+
 step "3) CAPTURE CURRENT LIVE INVARIANTS"
 LIVE=$(snapshot_live) || fail "could not read live invariants"
 echo "$LIVE"
@@ -72,43 +99,25 @@ step "5) PREFLIGHT"
 docker compose run --rm --entrypoint python web manage.py makemigrations --check --dry-run || fail "migration drift detected"
 docker compose run --rm --entrypoint python web manage.py check || fail "Django check failed"
 
-step "6) APPLY ONLY NOVANI S-SEED MIGRATION"
+step "6) APPLY NOVANI S-SEED MIGRATION (IDEMPOTENT)"
 docker compose run --rm --entrypoint python web manage.py migrate || fail "migration failed"
 
 step "7) VERIFY NOVANI SIZE + WRITE ISOLATION"
 docker compose run --rm --entrypoint python web manage.py check_novani_material_v33 || fail "Novani v33 isolation check failed"
 
 step "8) VERIFY DEPLOY DID NOT CHANGE BUSINESS VALUES"
-NEW=$(docker compose run --rm --entrypoint python web manage.py shell -c '
-from django.db.models import Sum
-from core.finance_excel_v9 import digikala_receivable_total
-from core.inventory_valuation_v17 import finished_inventory_value_v17
-from core.models import Brand, ExcelManualRow, ExcelManualSetting, StockBalance
-from core.report_v5 import _raw_material_context
-
-def bqty(name):
-    b=Brand.objects.get(name=name)
-    return int(StockBalance.objects.filter(brand=b).aggregate(v=Sum("qty"))["v"] or 0)
-rows=ExcelManualRow.objects.filter(active=True)
-accounts=sum(int(x.amount or 0) for x in rows.filter(section__in=[ExcelManualRow.ACCOUNTS,ExcelManualRow.PERSONS]))
-assets=sum(int(x.amount or 0) for x in rows.filter(section=ExcelManualRow.ASSETS)
-finished=int(finished_inventory_value_v17())
-raw=int(_raw_material_context()["materials_total"])
-digi=int(digikala_receivable_total())
-debt=int(ExcelManualSetting.objects.filter(key="takvin_debt").values_list("value",flat=True).first() or 0)
-capital=accounts+assets+finished+raw+digi-debt
-print(f"CAPITAL={capital}")
-print(f"DARMA={bqty(chr(1583)+chr(1575)+chr(1585)+chr(1605)+chr(1575))}")
-print(f"TAKVIN={bqty(chr(1578)+chr(1705)+chr(1608)+chr(1740)+chr(1606))}")
-print(f"NOVANI={bqty(chr(78)+chr(111)+chr(118)+chr(97)+chr(110)+chr(105))}")
-print(f"RAW={raw}")
-' 2>/dev/null) || fail "could not read new-image invariants"
+NEW=$(snapshot_new) || fail "could not read new-image invariants"
 echo "$NEW"
 CAP_AFTER=$(printf '%s\n' "$NEW" | awk -F= '/^CAPITAL=/{print $2}')
 DARMA_AFTER=$(printf '%s\n' "$NEW" | awk -F= '/^DARMA=/{print $2}')
 TAKVIN_AFTER=$(printf '%s\n' "$NEW" | awk -F= '/^TAKVIN=/{print $2}')
 NOVANI_AFTER=$(printf '%s\n' "$NEW" | awk -F= '/^NOVANI=/{print $2}')
 RAW_AFTER=$(printf '%s\n' "$NEW" | awk -F= '/^RAW=/{print $2}')
+[ -n "$CAP_AFTER" ] || fail "capital after missing"
+[ -n "$DARMA_AFTER" ] || fail "Darma after missing"
+[ -n "$TAKVIN_AFTER" ] || fail "Takvin after missing"
+[ -n "$NOVANI_AFTER" ] || fail "Novani after missing"
+[ -n "$RAW_AFTER" ] || fail "raw after missing"
 [ "$CAP_AFTER" = "$CAP_BEFORE" ] || fail "capital changed during deploy: $CAP_BEFORE -> $CAP_AFTER"
 [ "$DARMA_AFTER" = "$DARMA_BEFORE" ] || fail "Darma qty changed during deploy: $DARMA_BEFORE -> $DARMA_AFTER"
 [ "$TAKVIN_AFTER" = "$TAKVIN_BEFORE" ] || fail "Takvin qty changed during deploy: $TAKVIN_BEFORE -> $TAKVIN_AFTER"
@@ -121,6 +130,20 @@ docker compose restart caddy || fail "caddy restart failed"
 sleep 4
 docker compose exec -T web python manage.py check || fail "live Django check failed"
 docker compose exec -T web python manage.py check_novani_material_v33 || fail "live Novani v33 check failed"
+
+step "10) FINAL LIVE INVARIANTS"
+FINAL=$(snapshot_live) || fail "could not read final live invariants"
+echo "$FINAL"
+CAP_FINAL=$(printf '%s\n' "$FINAL" | awk -F= '/^CAPITAL=/{print $2}')
+DARMA_FINAL=$(printf '%s\n' "$FINAL" | awk -F= '/^DARMA=/{print $2}')
+TAKVIN_FINAL=$(printf '%s\n' "$FINAL" | awk -F= '/^TAKVIN=/{print $2}')
+NOVANI_FINAL=$(printf '%s\n' "$FINAL" | awk -F= '/^NOVANI=/{print $2}')
+RAW_FINAL=$(printf '%s\n' "$FINAL" | awk -F= '/^RAW=/{print $2}')
+[ "$CAP_FINAL" = "$CAP_BEFORE" ] || fail "final capital changed: $CAP_BEFORE -> $CAP_FINAL"
+[ "$DARMA_FINAL" = "$DARMA_BEFORE" ] || fail "final Darma qty changed: $DARMA_BEFORE -> $DARMA_FINAL"
+[ "$TAKVIN_FINAL" = "$TAKVIN_BEFORE" ] || fail "final Takvin qty changed: $TAKVIN_BEFORE -> $TAKVIN_FINAL"
+[ "$NOVANI_FINAL" = "$NOVANI_BEFORE" ] || fail "final Novani qty changed: $NOVANI_BEFORE -> $NOVANI_FINAL"
+[ "$RAW_FINAL" = "$RAW_BEFORE" ] || fail "final raw materials changed: $RAW_BEFORE -> $RAW_FINAL"
 
 echo ""
 echo "======================================"
