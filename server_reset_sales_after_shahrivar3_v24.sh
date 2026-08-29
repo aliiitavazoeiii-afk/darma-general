@@ -61,13 +61,30 @@ grep -q "cream 3XL = 77" "$APPLYLOG" || fail "cream 3XL reference verification f
 grep -q "grey 4XL = 0" "$APPLYLOG" || fail "grey 4XL reference verification failed"
 grep -q "red XXL = 0" "$APPLYLOG" || fail "red XXL reference verification failed"
 
-step "7) RECREATE LIVE WEB ON LATEST CODE"
+step "7) MIRROR CORRECTED DARMA CATALOG TO ANBARESH + VERIFY CODE 06"
+docker compose run --rm --entrypoint python web manage.py shell -c '
+from core.anbaresh_catalog_v19 import sync_anbaresh_catalog
+from core.brand_colors import norm
+from core.models import Brand, ProductCode
+sync_anbaresh_catalog()
+for brand_name in ("دارما", "انبارش"):
+    brand = Brand.objects.get(name=brand_name)
+    p = ProductCode.objects.get(brand=brand, code="06")
+    comps = list(p.composition.select_related("color"))
+    names = [(x.color.name, int(x.qty or 0)) for x in comps]
+    assert not any(norm(name) == norm("قرمز") for name, qty in names), f"{brand_name} 06 still contains red: {names}"
+    assert any(norm(name) == norm("کرم") for name, qty in names), f"{brand_name} 06 has no cream: {names}"
+    assert sum(qty for name, qty in names) == int(p.pack_qty or 0), f"{brand_name} 06 composition total mismatch: {names}, pack={p.pack_qty}"
+    print(brand_name, "06", names)
+' || fail "Darma/Anbaresh code 06 catalog verification failed"
+
+step "8) RECREATE LIVE WEB ON LATEST CODE"
 docker compose up -d --force-recreate web || fail "web recreate failed"
 docker compose restart caddy || fail "caddy restart failed"
 sleep 3
 docker compose exec -T web python manage.py check || fail "final live Django check failed"
 
-step "8) FINAL STATE"
+step "9) FINAL STATE"
 CAP_AFTER=$(docker compose exec -T web python manage.py capital_audit_v9 | awk -F'= ' '/CAPITAL TOTAL/{gsub(/[[:space:]]/,"",$2);print $2}' | tail -1)
 DARMA_AFTER=$(docker compose exec -T web python manage.py shell -c 'from django.db.models import Sum; from core.models import Brand,StockBalance; b=Brand.objects.get(name="دارما"); print(int(StockBalance.objects.filter(brand=b).aggregate(v=Sum("qty"))["v"] or 0))' 2>/dev/null | tail -1)
 POST_DAYS=$(docker compose exec -T web python manage.py shell -c 'from core.dateutils import parse_jalali_date; from core.models import SaleDay; d=parse_jalali_date("1405/06/03"); print(SaleDay.objects.filter(date__gt=d).count())' 2>/dev/null | tail -1)
@@ -89,5 +106,6 @@ echo "Darma total after: $DARMA_AFTER"
 echo "3 Shahrivar preserved: YES"
 echo "SaleDays after 3 Shahrivar: 0"
 echo "Reference cells: cream 3XL=77 | grey 4XL=0 | red XXL=0"
+echo "Darma/Anbaresh code 06: no red, cream present"
 echo "Next: import 4 Shahrivar only, inspect inventory, then 5 Shahrivar, etc."
 echo "======================================"
