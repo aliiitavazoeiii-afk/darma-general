@@ -30,6 +30,13 @@ NEGATIVE_STATUS_MARKERS = (
     "ردشده",
 )
 
+# Digikala sometimes exposes the same Takvin model with the numeric groups
+# reversed versus the site's long-standing internal code. Keep the site's
+# canonical ProductCode unchanged and normalize only the import input.
+TAKVIN_PRODUCT_ALIASES = {
+    "1-654": "654-1",
+}
+
 
 def _compact_status(value: str) -> str:
     text = base._norm_text(value).lower()
@@ -56,6 +63,37 @@ def _status_is_delivery(value: str) -> bool:
     if "اماده" in status and "ارسال" in status and "تحویل" in status:
         return True
     return False
+
+
+def _normalize_takvin_product_aliases(parsed_rows):
+    normalized = []
+    for row in parsed_rows:
+        title = str(row.title or "")
+        seller_code = str(row.seller_code or "")
+        if "تکوین" in title:
+            candidate = v12._model_candidate(title)
+            canonical = TAKVIN_PRODUCT_ALIASES.get(candidate)
+            if canonical:
+                title = re.sub(
+                    r"(مدل\s+(?:نخی\s+)?)" + re.escape(candidate) + r"(?=\s+مجموعه|\s*\|)",
+                    lambda match: match.group(1) + canonical,
+                    title,
+                    count=1,
+                    flags=re.IGNORECASE,
+                )
+            raw_seller = base._norm_text(seller_code)
+            if raw_seller in TAKVIN_PRODUCT_ALIASES:
+                seller_code = TAKVIN_PRODUCT_ALIASES[raw_seller]
+        normalized.append(
+            base.ParsedOrderRow(
+                source_row=row.source_row,
+                seller_code=seller_code,
+                title=title,
+                quantity=row.quantity,
+                status=row.status,
+            )
+        )
+    return normalized
 
 
 def parse_delivery_report(file_bytes: bytes, filename: str = ""):
@@ -137,6 +175,7 @@ def parse_delivery_report(file_bytes: bytes, filename: str = ""):
 
 def preview_delivery_report(file_bytes: bytes, filename: str = "") -> dict:
     parsed, meta = parse_delivery_report(file_bytes, filename)
+    parsed = _normalize_takvin_product_aliases(parsed)
     resolved, errors = v12.resolve_rows_v12(parsed)
     grouped = v12._aggregate(resolved)
     rows = [
