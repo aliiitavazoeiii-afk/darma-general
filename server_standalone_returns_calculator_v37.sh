@@ -129,7 +129,7 @@ assert "daily_report_v36" not in d and "daily_return" not in d
 assert "core/daily_report_v21.html" in d
 assert "def digikala_fee_for_unit" in f and "digikala_processing_floor" in f and "digikala_vat_percent" in f
 assert "capital_total = accounts_total + inventory_total + digikala_receivable - takvin_debt + assets_total" in r
-assert "data.returnsNav" in n and "/returns/" in n
+assert "dataset.returnsNav" in n and "/returns/" in n
 print("V37 SOURCE SAFETY CHECK OK")
 ' || fail "v37 source safety check failed"
 
