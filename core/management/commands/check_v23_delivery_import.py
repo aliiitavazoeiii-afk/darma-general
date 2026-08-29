@@ -1,13 +1,16 @@
+import inspect
+
 from django.core.management.base import BaseCommand, CommandError
 
 from core import daily_order_import_v12 as v12
+from core import daily_order_import_v23 as v23
 from core import daily_order_views_v8
-from core.daily_order_import_v23 import _status_is_delivery
 from core.models import ProductSize
+from core.title_product_resolver_v27 import resolve_product_from_title
 
 
 class Command(BaseCommand):
-    help = "Verify Digikala delivery status compatibility and strict title-only product resolution."
+    help = "Verify delivery statuses and deterministic title-only product resolution."
 
     def handle(self, *args, **options):
         errors = []
@@ -28,54 +31,70 @@ class Command(BaseCommand):
             "ارسال ناموفق",
             "رد شده",
         ]
-
         for value in accepted:
-            if not _status_is_delivery(value):
+            if not v23._status_is_delivery(value):
                 errors.append(f"should accept status: {value!r}")
         for value in rejected:
-            if _status_is_delivery(value):
+            if v23._status_is_delivery(value):
                 errors.append(f"should reject status: {value!r}")
 
         module = getattr(daily_order_views_v8.apply_delivery_report, "__module__", "")
         if module != "core.daily_order_import_v23":
             errors.append(f"daily upload engine is {module}, expected core.daily_order_import_v23")
 
-        by_key = v12._product_maps_v19()
-
-        # Real regression from the user's export: seller code says rah220 while
-        # title says D-220. Title must be the only product identity source.
         conflict_title = (
             "شورت زنانه دارما مدل D-220 مجموعه 3 عددی | 46-48 | چند رنگ | "
             "گارانتی اصالت و سلامت فیزیکی کالا"
         )
-        product = v12._resolve_product_v12("rah220", conflict_title, by_key)
+        product = v12._resolve_product_v12("rah220", conflict_title, {"rah220": [object()]})
         size_name = v12._resolve_size(conflict_title)
         if not product or product.brand.name != "دارما" or product.code != "D 220":
             shown = None if not product else f"{product.brand.name}/{product.code}"
-            errors.append(f"title-only regression failed: expected دارما/D 220, got {shown}")
+            errors.append(f"STRICT D-220 regression failed: expected دارما/D 220, got {shown}")
         if size_name != "4XL":
             errors.append(f"46-48 size regression failed: expected 4XL, got {size_name}")
-        if product and size_name:
-            if not ProductSize.objects.filter(product=product, size__name=size_name, active=True).exists():
-                errors.append("resolved target دارما/D 220/4XL is not active in ProductSize")
+        if product and size_name and not ProductSize.objects.filter(product=product, size__name=size_name, active=True).exists():
+            errors.append("resolved target دارما/D 220/4XL is not active in ProductSize")
 
-        reverse_conflict_title = (
+        rah_title = (
             "شورت زنانه دارما مدل rah-220 مجموعه 3 عددی | 3XL | چند رنگ | "
             "گارانتی اصالت و سلامت فیزیکی کالا"
         )
-        product = v12._resolve_product_v12("220", reverse_conflict_title, by_key)
-        if not product or product.brand.name != "دارما" or product.code != "rah-220":
-            shown = None if not product else f"{product.brand.name}/{product.code}"
-            errors.append(f"reverse title-only regression failed: expected دارما/rah-220, got {shown}")
+        rah_product = v12._resolve_product_v12("D220", rah_title, {"d220": [object()]})
+        if not rah_product or rah_product.brand.name != "دارما" or rah_product.code != "rah-220":
+            shown = None if not rah_product else f"{rah_product.brand.name}/{rah_product.code}"
+            errors.append(f"STRICT rah-220 regression failed: expected دارما/rah-220, got {shown}")
 
-        # Seller code is never allowed to rescue a missing/unknown title model.
+        # Direct resolver must distinguish the two titles even when contradictory
+        # seller-code/by-key data are supplied to the compatibility wrapper.
+        direct_d = resolve_product_from_title(conflict_title)
+        direct_rah = resolve_product_from_title(rah_title)
+        if not direct_d or direct_d.code != "D 220":
+            errors.append("direct title resolver does not map D-220 to D 220")
+        if not direct_rah or direct_rah.code != "rah-220":
+            errors.append("direct title resolver does not map rah-220 to rah-220")
+        if direct_d and direct_rah and direct_d.id == direct_rah.id:
+            errors.append("D-220 and rah-220 incorrectly resolve to the same ProductCode")
+
+        takvin_alias = "شورت زنانه تکوین مدل 1-654 مجموعه 5 عددی | M | چند رنگ"
+        takvin = resolve_product_from_title(takvin_alias)
+        if not takvin or takvin.brand.name != "تکوین" or takvin.code != "654-1":
+            shown = None if not takvin else f"{takvin.brand.name}/{takvin.code}"
+            errors.append(f"Takvin title alias failed: expected تکوین/654-1, got {shown}")
+
         no_model_title = "شورت زنانه دارما | 46-48 | چند رنگ | گارانتی اصالت و سلامت فیزیکی کالا"
-        if v12._resolve_product_v12("rah220", no_model_title, by_key) is not None:
-            errors.append("seller-code fallback is still active when title has no model")
-
+        if v12._resolve_product_v12("rah220", no_model_title, {"rah220": [object()]}) is not None:
+            errors.append("seller-code fallback is active when title has no model")
         unknown_title = "شورت زنانه دارما مدل UNKNOWN-999 مجموعه 3 عددی | 46-48 | چند رنگ"
-        if v12._resolve_product_v12("rah220", unknown_title, by_key) is not None:
-            errors.append("seller-code fallback is still active for unknown title model")
+        if v12._resolve_product_v12("rah220", unknown_title, {"rah220": [object()]}) is not None:
+            errors.append("seller-code fallback is active for unknown title model")
+
+        resolver_source = inspect.getsource(v12._resolve_product_v12)
+        if "resolve_product_from_title" not in resolver_source:
+            errors.append("active v12 resolver is not using strict v27 title resolver")
+        parse_source = inspect.getsource(v23.parse_delivery_report)
+        if 'seller_code=""' not in parse_source:
+            errors.append("active v23 parser is not discarding seller-code metadata")
 
         if errors:
             for error in errors:
@@ -84,8 +103,8 @@ class Command(BaseCommand):
 
         self.stdout.write("accepted current Digikala status: اماده ارسال/تحویل")
         self.stdout.write("negative return/cancel statuses remain blocked")
-        self.stdout.write("conflicting seller code rah220 + title D-220 resolves to D 220 / 4XL")
-        self.stdout.write("resolved D 220 / 4XL target is active")
-        self.stdout.write("seller-code column is ignored for product identity")
-        self.stdout.write("missing/unknown title model fails instead of falling back to seller code")
+        self.stdout.write("D-220 title -> D 220; rah-220 title -> rah-220")
+        self.stdout.write("contradictory seller code/by-key data cannot change title result")
+        self.stdout.write("seller-code column is discarded at parse time")
+        self.stdout.write("Takvin title 1-654 -> canonical 654-1")
         self.stdout.write(self.style.SUCCESS("V23 DELIVERY IMPORT CHECK OK"))
