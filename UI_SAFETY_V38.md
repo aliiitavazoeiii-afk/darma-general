@@ -1,6 +1,6 @@
 # UI SAFETY V38
 
-V38 is a presentation-only modernization pass.
+V38 is a presentation-only modernization pass and is now **confirmed live on production**.
 
 ## User requirement
 
@@ -14,7 +14,7 @@ The only application presentation asset intentionally changed in V38 is:
 static/core/ui-polish.css
 ```
 
-No V38 change is required in:
+No V38 application change was made in:
 
 - `core/*.py`
 - models or migrations
@@ -25,6 +25,15 @@ No V38 change is required in:
 - accounting settings
 
 The existing DOM, forms, URLs, POST targets, context values and calculations are retained.
+
+The confirmed deployment output explicitly stated:
+
+```text
+V38 application change: static/core/ui-polish.css only
+Routes/Python/templates/models/migrations/workflow JS: unchanged
+Accounting/inventory/sales/material/payment/return/calculator semantics: unchanged
+All protected economic invariants: unchanged
+```
 
 ## Visual changes
 
@@ -44,7 +53,7 @@ V38 adds a global visual layer for:
 
 ## Protected business boundary
 
-The V38 deploy must verify that the following source families are unchanged from the pre-V38 main baseline:
+The V38 deploy verifies that the following source families are unchanged from the pre-V38 main baseline:
 
 - sales/import/allocation/snapshot code;
 - finance and Digikala fee code;
@@ -59,7 +68,7 @@ The V38 deploy must verify that the following source families are unchanged from
 
 ## Economic invariant check
 
-The deploy must capture and compare before/preflight/after values for:
+The deploy captures and compares before/preflight/after values for:
 
 ```text
 CAPITAL
@@ -74,6 +83,26 @@ ACCOUNT_ENTRIES
 ```
 
 Every value must be byte-for-byte identical across a V38 cosmetic deploy. Any difference is a deployment failure and must not be normalized or manually balanced.
+
+Confirmed successful V38 final snapshot:
+
+```text
+CAPITAL=5430972371
+FINISHED=1115731500
+RAW=1994448050
+DIGI=812517154
+DARMA=12072
+TAKVIN=1195
+NOVANI=3630
+SALES=202
+ACCOUNT_ENTRIES=206
+```
+
+Backup:
+
+```text
+backups/before-ui-modernization-v38-20260829-223111.sql
+```
 
 ## Git safety
 
@@ -99,6 +128,14 @@ The rollback branch is a Git/code anchor only. It is not a database rollback.
 
 ## Live-state rule
 
-V38 must **not** be recorded as production-live until the VPS prints the explicit successful deployment marker from `server_ui_modernization_v38.sh` and its final invariant snapshot is available.
+V38 is confirmed live because the VPS printed:
 
-Until then, the latest confirmed production version remains V37.
+```text
+SUCCESS: UI MODERNIZATION V38 DEPLOYED
+```
+
+and the final economic snapshot matched the starting live snapshot exactly.
+
+The latest authoritative live checkpoint is maintained in `docs/PROJECT_CONTEXT/08_LIVE_STATE_AND_CHECKPOINTS.md`.
+
+Standing rule: future important changes must update the context pack; future confirmed deployments must also update the live checkpoint using actual server output.
