@@ -35,7 +35,7 @@ The current hard safety contract is also recorded in `UI_SAFETY_V37.md`.
 
 ---
 
-## What the new chat should say internally before changing code
+## What the new chat should know before changing code
 
 Before editing, be able to answer all of the following from the repo/docs:
 
@@ -47,9 +47,11 @@ Before editing, be able to answer all of the following from the repo/docs:
 - How do BusinessPayment V22 purchase/prepayment semantics work?
 - What is the difference between Save / Apply Materials / Apply Output in material reports?
 - What are the Darma HOME/KHORSHID rules and Novani single-bucket rule?
-- What are the current Darma/Takvin size sets?
+- What are the current Darma/Takvin/Novani size sets?
 - What is the title-first Digikala resolver rule, including `D-220` vs `rah-220`, Takvin `1-654`, and brandless model 400?
 - What does code `06` contain now?
+- Which model is authoritative for actual sold colors (`SaleAllocation`) versus current pack definition (`ProductComposition`)?
+- Which model is authoritative for cumulative material output (`MaterialReportOutputApplied`) versus saved form JSON?
 - What does standalone return V37 do, and what must it never do?
 - How does the V37 target-price calculator preserve current realized margin while using the existing Digikala fee engine?
 - Which deployment scripts are historical/destructive and must never be casually rerun?
@@ -59,7 +61,7 @@ If any of these are unclear, stop and read the context/code before modifying any
 
 ---
 
-## Reading order
+## Required reading order
 
 Read exactly in this order:
 
@@ -73,10 +75,15 @@ Read exactly in this order:
 8. `docs/PROJECT_CONTEXT/08_LIVE_STATE_AND_CHECKPOINTS.md`
 9. `docs/PROJECT_CONTEXT/09_UI_AND_USER_WORKFLOW_CONTRACT.md`
 10. `docs/PROJECT_CONTEXT/10_EXACT_BASELINES_CATALOG_AND_SPECIAL_CASES.md`
-11. `UI_SAFETY_V37.md`
-12. current `core/urls.py`
-13. relevant active implementation files
-14. `AI_START_HERE.md` and `PROJECT_HANDOFF.md` for history only
+11. `docs/PROJECT_CONTEXT/11_DATA_MODEL_AND_LEDGER_RELATIONSHIPS.md`
+12. `docs/PROJECT_CONTEXT/12_VERSION_TIMELINE_V18_TO_V37.md`
+13. `docs/PROJECT_CONTEXT/13_NEW_CHAT_OPERATING_PROTOCOL.md`
+14. `UI_SAFETY_V37.md`
+15. current `core/urls.py`
+16. relevant active implementation files from `03_ACTIVE_CODE_MAP.md`
+17. `AI_START_HERE.md` and `PROJECT_HANDOFF.md` for older history only
+
+`docs/PROJECT_CONTEXT/README.md` is the manifest for the pack.
 
 ---
 
@@ -84,6 +91,6 @@ Read exactly in this order:
 
 The user can paste only this:
 
-> Open my GitHub repo `aliiitavazoeiii-afk/darma-general`. Read `docs/00_NEW_CHAT_READ_FIRST.md` completely, then read every file it requires in order, then inspect the current active source files/routes before answering. Treat the context pack as authoritative over older handoff docs. Do not change anything until you understand all accounting/inventory/sales/material/payment invariants and the latest confirmed live state. Continue the project as if you were continuing the original development chat.
+> Open my GitHub repo `aliiitavazoeiii-afk/darma-general`. Read `docs/00_NEW_CHAT_READ_FIRST.md` completely, then read every file it requires in order, then inspect the current active source files/routes before answering. Treat the context pack as authoritative over older handoff docs. Do not change anything until you understand all accounting/inventory/sales/material/payment invariants, model/ledger sources of truth, historical pitfalls, and the latest confirmed live state. Continue the project as if you were continuing the original development chat.
 
 That prompt is intentionally enough; the new chat should retrieve the rest from GitHub.
