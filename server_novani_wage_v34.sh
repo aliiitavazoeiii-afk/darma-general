@@ -38,12 +38,12 @@ docker compose run --rm --entrypoint python web manage.py check_novani_wage_v34 
 
 step "5) DRY-RUN CURRENT MISSING WAGE REPAIR"
 DRY=$(docker compose run --rm --entrypoint python web manage.py repair_novani_wage_v34 \
-  --expected-pieces 3160 \
-  --expected-wage 26333333) || fail "repair dry-run failed; nothing was changed"
+  --expected-pieces 3630 \
+  --expected-wage 30250000) || fail "repair dry-run failed; nothing was changed"
 echo "$DRY"
-printf '%s\n' "$DRY" | grep -q '^NOVANI_V21_PIECES=3160$' || fail "latest Novani v21 output is not 3160 pieces"
+printf '%s\n' "$DRY" | grep -q '^NOVANI_V21_PIECES=3630$' || fail "latest Novani v21 output is not 3630 pieces"
 printf '%s\n' "$DRY" | grep -q '^DOZEN_WAGE=100000$' || fail "configured dozen wage is not 100,000"
-printf '%s\n' "$DRY" | grep -q '^MISSING_WAGE=26333333$' || fail "calculated missing wage is not 26,333,333"
+printf '%s\n' "$DRY" | grep -q '^MISSING_WAGE=30250000$' || fail "calculated missing wage is not 30,250,000"
 printf '%s\n' "$DRY" | grep -q '^REPAIR_ALREADY_APPLIED=0$' || fail "this block appears already repaired"
 BLOCK_ID=$(printf '%s\n' "$DRY" | awk -F= '/^BLOCK_ID=/{print $2}')
 [ -n "$BLOCK_ID" ] || fail "could not determine Novani block id"
@@ -63,8 +63,8 @@ echo "$INV_BEFORE"
 step "7) APPLY ONLY THE MISSING WAGE"
 APPLY=$(docker compose run --rm --entrypoint python web manage.py repair_novani_wage_v34 \
   --block-id "$BLOCK_ID" \
-  --expected-pieces 3160 \
-  --expected-wage 26333333 \
+  --expected-pieces 3630 \
+  --expected-wage 30250000 \
   --apply) || fail "wage repair failed"
 echo "$APPLY"
 printf '%s\n' "$APPLY" | grep -q 'SUCCESS: NOVANI MISSING WAGE V34 REPAIRED; INVENTORY UNCHANGED' || fail "repair did not report success"
@@ -102,7 +102,7 @@ echo "======================================"
 echo "SUCCESS: NOVANI DELIVERY WAGE V34 DEPLOYED + CURRENT BLOCK REPAIRED"
 echo "Backup: $BACKUP"
 echo "Current Novani block: $BLOCK_ID"
-echo "Missing wage deducted: 26,333,333"
+echo "Missing wage deducted: 30,250,000"
 echo "Inventory during repair: unchanged"
 echo "Future Novani wage: based only on newly delivered pieces"
 echo "Cut quantity does not create wage"
