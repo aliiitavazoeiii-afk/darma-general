@@ -2,7 +2,7 @@
 
 This file captures the user's accepted interaction model and visual constraints. UI work must not change business semantics.
 
-Last synchronized: 2026-08-29 after confirmed V37 live deployment.
+Last synchronized: 2026-08-29 after confirmed V38 UI modernization deployment.
 
 ---
 
@@ -20,6 +20,18 @@ The accepted interface direction is:
 - sticky columns/horizontal scrolling for wide operational tables;
 - money values displayed with Persian thousands separator `٬`;
 - quantities/weights remain practical numeric inputs.
+
+V38 is now the confirmed-live global presentation layer and further refines this direction with:
+
+- darker, quieter navy surfaces;
+- cleaner glass hierarchy;
+- improved sidebar/topbar spacing and active states;
+- stronger page/KPI typography;
+- cleaner buttons, inputs, tables, badges and alerts;
+- improved tablet/mobile spacing;
+- reduced-motion accessibility support.
+
+V38 intentionally modernizes the existing DOM rather than rebuilding business workflows. The only application presentation file changed in V38 was `static/core/ui-polish.css`.
 
 Do not regress to opaque old cards, default bootstrap-looking administration screens or Tahoma-heavy legacy styling.
 
@@ -49,7 +61,7 @@ Includes operational pages such as:
 - material report;
 - **standalone returns**.
 
-V37 injects standalone Returns under daily-work navigation using `static/core/number_format.js` without modifying the accounting logic.
+V37 injects standalone Returns under daily-work navigation using `static/core/number_format.js` without modifying the accounting logic. V38 only changes its presentation styling.
 
 ### مالی و ابزار
 
@@ -178,11 +190,11 @@ Contains existing raw fabric/elastic inventory UI and forms.
 
 Contains existing asset rows/forms.
 
-Important implementation principle used in V36:
+Important implementation principle used in V36 and preserved by V38:
 
-- move/reparent existing rendered elements visually;
-- keep their forms/routes/calculation contexts intact;
-- avoid rebuilding finance/material logic just for grouping.
+- move/reparent or style existing rendered elements visually;
+- keep forms/routes/calculation contexts intact;
+- avoid rebuilding finance/material logic just for grouping or cosmetics.
 
 ---
 
@@ -204,6 +216,8 @@ Current accepted output table behavior for both Darma and Novani:
 The user must be able to edit/clear a previously applied delivery cell and then synchronize it so stock/wage reverse appropriately.
 
 Do not make the cell visually editable while backend remains positive-only.
+
+V38 may improve the table surface visually but must not change these semantics.
 
 ---
 
@@ -253,6 +267,8 @@ The result should clearly show:
 - resulting profit-on-cost and profit-on-sale.
 
 Do not hide the fee or present a gross markup-only number.
+
+V38 changes appearance only; calculator formulas remain V37.
 
 ---
 
@@ -329,6 +345,8 @@ Any new large table must:
 - keep action buttons reachable;
 - use existing mobile shell rather than creating a second mobile navigation system.
 
+V38 responsive refinements are now the current live visual baseline.
+
 ---
 
 ## 15. UI-only work safety test
@@ -346,3 +364,13 @@ AccountEntry count
 ```
 
 If a cosmetic deployment changes one of these, treat it as a bug.
+
+V38 confirmed this discipline in production: the deploy succeeded only because the starting live snapshot and final snapshot matched exactly.
+
+---
+
+## 16. Standing documentation rule
+
+After every important UI/workflow change, update the relevant context-pack files.
+
+After every successful deployment confirmed by server output, also update `08_LIVE_STATE_AND_CHECKPOINTS.md` using the actual final production snapshot. Never copy an older checkpoint forward merely because the code change was cosmetic.
