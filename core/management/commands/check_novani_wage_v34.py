@@ -6,6 +6,7 @@ from django.db.models import Sum
 
 from core import material_report_v20 as v20
 from core import material_report_v21 as v21
+from core.material_report_v14 import _tailor_row
 from core.models import Brand, MaterialReportBlock, StockBalance
 
 
@@ -18,7 +19,7 @@ class Command(BaseCommand):
 
         darma_before = int(StockBalance.objects.filter(brand=darma).aggregate(v=Sum("qty"))["v"] or 0)
         novani_before = int(StockBalance.objects.filter(brand=novani).aggregate(v=Sum("qty"))["v"] or 0)
-        tailor_obj = v20._tailor_row(create=False)
+        tailor_obj = _tailor_row(create=False)
         tailor_before = int(tailor_obj.amount or 0) if tailor_obj else 0
         rate = int(v20._dozen_wage())
         expected_wage = int(v20._wage_for_pieces(12, rate))
@@ -45,7 +46,7 @@ class Command(BaseCommand):
 
             darma_inside = int(StockBalance.objects.filter(brand=darma).aggregate(v=Sum("qty"))["v"] or 0)
             novani_inside = int(StockBalance.objects.filter(brand=novani).aggregate(v=Sum("qty"))["v"] or 0)
-            tailor_inside_obj = v20._tailor_row(create=False)
+            tailor_inside_obj = _tailor_row(create=False)
             tailor_inside = int(tailor_inside_obj.amount or 0) if tailor_inside_obj else 0
 
             if darma_inside != darma_before:
@@ -61,7 +62,7 @@ class Command(BaseCommand):
 
         darma_after = int(StockBalance.objects.filter(brand=darma).aggregate(v=Sum("qty"))["v"] or 0)
         novani_after = int(StockBalance.objects.filter(brand=novani).aggregate(v=Sum("qty"))["v"] or 0)
-        tailor_after_obj = v20._tailor_row(create=False)
+        tailor_after_obj = _tailor_row(create=False)
         tailor_after = int(tailor_after_obj.amount or 0) if tailor_after_obj else 0
 
         if (darma_after, novani_after, tailor_after) != (darma_before, novani_before, tailor_before):
