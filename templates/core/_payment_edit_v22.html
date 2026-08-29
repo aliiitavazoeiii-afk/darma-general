@@ -1,3 +1,4 @@
+{% load jalali %}
 <form method="post" action="{% url 'payment_update' row.id %}" class="payment-form v22-edit-form">
   {% csrf_token %}
   <div class="row g-2 align-items-end">
