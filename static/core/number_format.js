@@ -33,12 +33,23 @@
 
   function injectToolNav() {
     const nav = document.querySelector('.erp-nav');
-    if (!nav || nav.querySelector('[data-business-tools-nav]')) return;
+    if (!nav) return;
     const definitionsTitle = [...nav.querySelectorAll('.erp-nav-title')].find((el) =>
       (el.textContent || '').trim() === 'تعاریف'
     );
     if (!definitionsTitle) return;
 
+    if (!nav.querySelector('[data-returns-nav]')) {
+      const path = window.location.pathname;
+      const link = document.createElement('a');
+      link.dataset.returnsNav = '1';
+      link.href = '/returns/';
+      link.className = path.startsWith('/returns/') ? 'active' : '';
+      link.innerHTML = '<span class="erp-dot"></span>مرجوعی';
+      definitionsTitle.parentNode.insertBefore(link, definitionsTitle);
+    }
+
+    if (nav.querySelector('[data-business-tools-nav]')) return;
     const wrap = document.createElement('div');
     wrap.dataset.businessToolsNav = '1';
     const path = window.location.pathname;
