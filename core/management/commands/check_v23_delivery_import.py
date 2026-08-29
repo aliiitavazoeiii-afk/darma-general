@@ -3,6 +3,7 @@ from django.core.management.base import BaseCommand, CommandError
 from core import daily_order_import_v12 as v12
 from core import daily_order_views_v8
 from core.daily_order_import_v23 import _status_is_delivery
+from core.models import ProductSize
 
 
 class Command(BaseCommand):
@@ -54,6 +55,9 @@ class Command(BaseCommand):
             errors.append(f"title-first regression failed: expected دارما/D 220, got {shown}")
         if size_name != "4XL":
             errors.append(f"46-48 size regression failed: expected 4XL, got {size_name}")
+        if product and size_name:
+            if not ProductSize.objects.filter(product=product, size__name=size_name, active=True).exists():
+                errors.append("resolved target دارما/D 220/4XL is not active in ProductSize")
 
         reverse_conflict_title = (
             "شورت زنانه دارما مدل rah-220 مجموعه 3 عددی | 3XL | چند رنگ | "
@@ -72,5 +76,6 @@ class Command(BaseCommand):
         self.stdout.write("accepted current Digikala status: اماده ارسال/تحویل")
         self.stdout.write("negative return/cancel statuses remain blocked")
         self.stdout.write("conflicting seller code rah220 + title D-220 resolves to D 220 / 4XL")
+        self.stdout.write("resolved D 220 / 4XL target is active")
         self.stdout.write("explicit title model is authoritative; seller code is fallback")
         self.stdout.write(self.style.SUCCESS("V23 DELIVERY IMPORT CHECK OK"))
