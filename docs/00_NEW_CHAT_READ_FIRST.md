@@ -2,7 +2,7 @@
 
 **Authoritative continuation entrypoint**
 
-Last synchronized with live/project conversation: **2026-08-29, after successful V37 deployment**
+Last synchronized with project conversation: **2026-08-29, V38 UI code prepared on GitHub; latest confirmed production remains V37 until successful V38 server output**
 Repository: `aliiitavazoeiii-afk/darma-general`
 Production domain: `gozaresh.filmjadiid.ir`
 Production server path: `/opt/darma-general`
@@ -17,12 +17,12 @@ This repository is a live business-management system replacing the user's Excel 
 A new AI/chat must **not** infer current behavior from filenames like `v14`, `v19`, `v21`, etc. The only valid way to identify active source is:
 
 1. Read this file completely.
-2. Read every file in `docs/PROJECT_CONTEXT/` in numeric order.
-3. Read `UI_SAFETY_V37.md`.
+2. Read every file in `docs/PROJECT_CONTEXT/` in numeric order, including the post-handoff V38 continuation file.
+3. Read `UI_SAFETY_V37.md`, then the newer `UI_SAFETY_V38.md` when working from/after the V38 Git state.
 4. Read current `core/urls.py` and map each requested feature to its active view/module.
 5. Read the exact active source files listed in `docs/PROJECT_CONTEXT/03_ACTIVE_CODE_MAP.md` before editing.
 6. Read `AI_START_HERE.md` and `PROJECT_HANDOFF.md` **after** the new context pack for historical rationale only. Where they conflict with `docs/PROJECT_CONTEXT/*`, the new context pack wins.
-7. Never assume code on `main` is already live. Use explicit user-posted server output to establish deployment status. The latest confirmed live deployment in this handoff is V37; see `08_LIVE_STATE_AND_CHECKPOINTS.md`.
+7. Never assume code on `main` is already live. Use explicit user-posted server output to establish deployment status. At this synchronization point, V38 presentation code exists on GitHub but the latest confirmed live deployment remains V37; see `08_LIVE_STATE_AND_CHECKPOINTS.md` and `16_UI_MODERNIZATION_V38.md`.
 8. Before any data-affecting change, preserve rollback/backup/preflight discipline described in `06_DEPLOYMENT_SAFETY_AND_RECOVERY.md`.
 
 ---
@@ -31,7 +31,7 @@ A new AI/chat must **not** infer current behavior from filenames like `v14`, `v1
 
 **The accounting formulas and existing operational semantics are frozen unless the user explicitly asks to change the business rule.** UI cleanup must not silently alter accounting, stock, sales, Digikala fee, receivable, payment, raw-material, production, COGS, or SaleSnapshot behavior.
 
-The current hard safety contract is also recorded in `UI_SAFETY_V37.md`.
+The inherited V37 safety contract remains relevant, and the current V38 presentation-only boundary is recorded in `UI_SAFETY_V38.md` and `docs/PROJECT_CONTEXT/16_UI_MODERNIZATION_V38.md`.
 
 ---
 
@@ -54,6 +54,7 @@ Before editing, be able to answer all of the following from the repo/docs:
 - Which model is authoritative for cumulative material output (`MaterialReportOutputApplied`) versus saved form JSON?
 - What does standalone return V37 do, and what must it never do?
 - How does the V37 target-price calculator preserve current realized margin while using the existing Digikala fee engine?
+- What changed in V38 and why is it presentation-only?
 - Which deployment scripts are historical/destructive and must never be casually rerun?
 - What is the most recent confirmed live state?
 
@@ -80,10 +81,12 @@ Read exactly in this order:
 13. `docs/PROJECT_CONTEXT/13_NEW_CHAT_OPERATING_PROTOCOL.md`
 14. `docs/PROJECT_CONTEXT/14_HANDOFF_SCOPE_AND_COMPLETENESS.md`
 15. `docs/PROJECT_CONTEXT/15_CODE_FINGERPRINT_AT_HANDOFF.md`
-16. `UI_SAFETY_V37.md`
-17. current `core/urls.py`
-18. relevant active implementation files from `03_ACTIVE_CODE_MAP.md`
-19. `AI_START_HERE.md` and `PROJECT_HANDOFF.md` for older history only
+16. `docs/PROJECT_CONTEXT/16_UI_MODERNIZATION_V38.md` — authoritative timeline/fingerprint delta after the V37 handoff
+17. `UI_SAFETY_V37.md`
+18. `UI_SAFETY_V38.md`
+19. current `core/urls.py`
+20. relevant active implementation files from `03_ACTIVE_CODE_MAP.md`
+21. `AI_START_HERE.md` and `PROJECT_HANDOFF.md` for older history only
 
 `docs/PROJECT_CONTEXT/README.md` is the manifest for the pack.
 
@@ -93,6 +96,6 @@ Read exactly in this order:
 
 The user can paste only this:
 
-> Open my GitHub repo `aliiitavazoeiii-afk/darma-general`. Read `docs/00_NEW_CHAT_READ_FIRST.md` completely, then read every file it requires in order, then inspect the current active source files/routes before answering. Treat the context pack as authoritative over older handoff docs. Do not change anything until you understand all accounting/inventory/sales/material/payment invariants, model/ledger sources of truth, historical pitfalls, and the latest confirmed live state. Continue the project as if you were continuing the original development chat.
+> Open my GitHub repo `aliiitavazoeiii-afk/darma-general`. Read `docs/00_NEW_CHAT_READ_FIRST.md` completely, then read every file it requires in order, then inspect the current active source files/routes before answering. Treat the context pack as authoritative over older handoff docs. Do not change anything until you understand all accounting/inventory/sales/material/payment invariants, model/ledger sources of truth, historical pitfalls, the V38 UI-only delta, and the latest confirmed live state. Continue the project as if you were continuing the original development chat.
 
 That prompt is intentionally enough; the new chat should retrieve the rest from GitHub.
