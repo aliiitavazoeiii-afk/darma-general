@@ -2,9 +2,9 @@
 
 This file records the first meaningful project change after the exhaustive V37 handoff pack.
 
-Status at creation: **committed to GitHub, NOT YET CONFIRMED LIVE**.
+Status: **CONFIRMED LIVE on production**.
 
-The latest confirmed production version remains V37 until the user posts successful VPS deployment output.
+Confirmed deployment date: 2026-08-29.
 
 ---
 
@@ -16,7 +16,7 @@ The user requested a site-wide visual cleanup and modernization with an absolute
 
 Therefore V38 is classified as **UI-only / presentation-only**.
 
-No business-rule change is authorized.
+No business-rule change was authorized or made.
 
 ---
 
@@ -40,7 +40,7 @@ This branch points to the pre-V38 Git state only. It is not a database rollback.
 
 ## 3. V38 application-code scope
 
-The only application presentation file intentionally modified in the initial V38 implementation is:
+The only application presentation file intentionally modified in V38 is:
 
 ```text
 static/core/ui-polish.css
@@ -63,13 +63,22 @@ No V38 business implementation change was made to:
 - database data;
 - accounting settings.
 
-This is intentional. Existing routes, forms, POST targets, view contexts and calculations remain the same.
+The confirmed production deployment output also explicitly stated:
+
+```text
+V38 application change: static/core/ui-polish.css only
+Routes/Python/templates/models/migrations/workflow JS: unchanged
+Accounting/inventory/sales/material/payment/return/calculator semantics: unchanged
+All protected economic invariants: unchanged
+```
+
+Existing routes, forms, POST targets, view contexts and calculations therefore remain the V37 operational baseline.
 
 ---
 
-## 4. Visual changes
+## 4. Visual changes now live
 
-The appended V38 global UI layer modernizes the existing DOM rather than rebuilding workflows.
+The V38 global UI layer modernizes the existing DOM rather than rebuilding workflows.
 
 It includes:
 
@@ -93,7 +102,7 @@ The existing Vazirmatn + orange-accent + dark-navy design contract remains in fo
 
 ## 5. Business invariants explicitly frozen in V38
 
-V38 must not change any behavior in:
+V38 did not change any behavior in:
 
 - capital equation;
 - finished inventory valuation;
@@ -115,7 +124,7 @@ V38 must not change any behavior in:
 - calculator V37;
 - dashboard alert query semantics.
 
-A cosmetic change that changes any economic value is a bug.
+A cosmetic change that changes any economic value remains a bug.
 
 ---
 
@@ -127,7 +136,7 @@ Purpose-specific deploy script:
 server_ui_modernization_v38.sh
 ```
 
-The script is intentionally stricter than an ordinary CSS deployment. It:
+The script:
 
 1. starts/checks PostgreSQL;
 2. takes a full `pg_dump` backup;
@@ -160,32 +169,57 @@ ACCOUNT_ENTRIES
 
 Any difference fails deployment.
 
-Explicit success marker:
+Confirmed success marker:
 
 ```text
 SUCCESS: UI MODERNIZATION V38 DEPLOYED
 ```
 
-Do not call V38 live until this marker and final snapshot are provided by the user.
-
 ---
 
-## 7. Live-state rule
+## 7. Confirmed live checkpoint
 
-At the time this file is written:
+Final production snapshot posted by the user:
 
-- GitHub contains the V38 UI implementation;
-- production has **not** been confirmed on V38;
-- `08_LIVE_STATE_AND_CHECKPOINTS.md` must therefore remain on the last confirmed V37 production state.
+```text
+CAPITAL=5430972371
+FINISHED=1115731500
+RAW=1994448050
+DIGI=812517154
+DARMA=12072
+TAKVIN=1195
+NOVANI=3630
+SALES=202
+ACCOUNT_ENTRIES=206
+```
 
-After successful V38 server output is posted, update `08_LIVE_STATE_AND_CHECKPOINTS.md` with:
+Deployment backup:
 
-- confirmed V38 success marker;
-- deployment date;
-- deployed commit if shown/verified;
-- final CAPITAL/FINISHED/RAW/DIGI/DARMA/TAKVIN/NOVANI/SALES/ACCOUNT_ENTRIES values.
+```text
+backups/before-ui-modernization-v38-20260829-223111.sql
+```
 
-Do not copy the old V37 checkpoint forward as though it were the current DB state; use the actual V38 server output.
+The older confirmed V37 capital checkpoint was:
+
+```text
+5441972371
+```
+
+The V38 deployment boundary shows:
+
+```text
+5430972371
+```
+
+Difference:
+
+```text
+-11000000
+```
+
+This difference must **not** be attributed to V38. The V38 deploy succeeded only because its starting live snapshot and final snapshot matched exactly. Therefore the 11,000,000 difference occurred before V38 deployment, through intervening production/business activity. The specific event was not identified in the provided output, so future debugging must not invent a cause.
+
+`08_LIVE_STATE_AND_CHECKPOINTS.md` is authoritative for this current live checkpoint.
 
 ---
 
@@ -197,4 +231,5 @@ For any follow-up visual refinement after V38:
 - inspect the exact active page/template before changing page-specific layout;
 - do not modify Python merely to make a visual number look different unless the user explicitly requests a semantic change;
 - preserve forms, field names, URL names, HTMX targets and POST behavior;
-- run the same economic invariant comparison on deployment.
+- run the same economic invariant comparison on deployment;
+- after successful deployment, update this context pack and the live checkpoint again.
