@@ -1,0 +1,39 @@
+{% extends 'base.html' %}{% load static jalali %}
+{% block title %}مرجوعی | DARMA{% endblock %}
+{% block content %}{% include 'core/_mobile_shell.html' %}
+<style>
+.return-step-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.return-choice{display:block;text-decoration:none;color:#fff;border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:18px;background:linear-gradient(145deg,rgba(255,255,255,.055),rgba(255,255,255,.018));transition:.15s}.return-choice:hover,.return-choice.active{color:#fff;border-color:rgba(251,101,20,.70);background:linear-gradient(145deg,rgba(251,101,20,.14),rgba(255,255,255,.025));transform:translateY(-1px)}.return-choice strong{display:block;font-size:1.05rem}.return-choice small{display:block;color:#9fb0c4;margin-top:4px}.return-size-row{display:flex;gap:8px;flex-wrap:wrap}.return-size{display:inline-flex;min-width:68px;justify-content:center;text-decoration:none;border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:8px 14px;color:#dce7f5;background:rgba(255,255,255,.035);font-weight:800}.return-size.active,.return-size:hover{color:#fff;border-color:rgba(251,101,20,.68);background:rgba(251,101,20,.13)}.return-entry-grid{display:grid;grid-template-columns:repeat(4,minmax(170px,1fr));gap:10px}.return-entry{border:1px solid rgba(255,255,255,.10);border-radius:13px;padding:12px;background:rgba(255,255,255,.025)}.return-entry-title{font-weight:900;min-height:24px}.return-entry-meta{color:#91a5bb;font-size:.7rem;min-height:18px;margin:2px 0 8px}.return-date{max-width:240px}@media(max-width:991.98px){.return-entry-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:575.98px){.return-step-grid{grid-template-columns:1fr 1fr;gap:8px}.return-choice{padding:13px}.return-entry-grid{grid-template-columns:1fr 1fr;gap:8px}.return-entry{padding:9px}.return-entry-title{font-size:.82rem}.return-entry-meta{font-size:.62rem}}
+</style>
+<div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4 mobile-page-head"><div><div class="page-kicker">کار روزانه</div><h1 class="page-title mb-1">مرجوعی</h1><div class="page-muted">هر چیزی که ثبت می‌کنی فقط به موجودی خانه همان برند برمی‌گردد.</div></div><a class="btn btn-outline-light" href="{% url 'dashboard' %}">داشبورد</a></div>
+
+{% if not mode %}
+<div class="return-step-grid">
+  <a class="return-choice" href="?mode=color"><strong>بر اساس رنگ</strong><small>شورت تکی را مستقیم با رنگ و سایز به خانه برگردان</small></a>
+  <a class="return-choice" href="?mode=code"><strong>بر اساس کد</strong><small>پک کامل را با کد محصول و سایز به خانه برگردان</small></a>
+</div>
+{% else %}
+<div class="card mb-3"><div class="card-body">
+  <div class="d-flex justify-content-between align-items-center gap-2 mb-3"><div><div class="subheader">روش ثبت</div><strong>{% if mode == 'color' %}بر اساس رنگ{% else %}بر اساس کد{% endif %}</strong></div><a href="{% url 'returns' %}" class="btn btn-sm btn-outline-light">تغییر روش</a></div>
+  <div class="return-step-grid">
+    {% for b in brands %}<a class="return-choice{% if brand and brand.id == b.id %} active{% endif %}" href="?mode={{ mode }}&brand={{ b.name|urlencode }}"><strong>{{ b.name }}</strong><small>انتخاب برند</small></a>{% endfor %}
+  </div>
+</div></div>
+
+{% if brand %}
+<div class="card mb-3"><div class="card-body"><div class="subheader mb-2">سایز {{ brand.name }}</div><div class="return-size-row">{% for s in sizes %}<a class="return-size{% if size and size.id == s.id %} active{% endif %}" href="?mode={{ mode }}&brand={{ brand.name|urlencode }}&size={{ s.name|urlencode }}">{{ s.name }}</a>{% endfor %}</div></div></div>
+{% endif %}
+
+{% if brand and size %}
+<form method="post" action="{% url 'return_apply' %}" class="card glass-strong">{% csrf_token %}<input type="hidden" name="mode" value="{{ mode }}"><input type="hidden" name="brand" value="{{ brand.name }}"><input type="hidden" name="size" value="{{ size.name }}">
+<div class="card-header d-flex justify-content-between align-items-center gap-2"><div><h3 class="card-title mb-1">{{ brand.name }} / {{ size.name }}</h3><div class="text-secondary small">{% if mode == 'color' %}تعداد شورت تکی هر رنگ{% else %}تعداد پک کامل هر کد{% endif %}</div></div><div class="return-date"><label class="form-label mb-1">تاریخ</label><input class="form-control ltr" name="date" value="{{ today_j }}"></div></div>
+<div class="card-body"><div class="return-entry-grid">
+{% if mode == 'color' %}
+  {% for color in colors %}<div class="return-entry"><div class="return-entry-title">{{ color.name }}</div><div class="return-entry-meta">شورت تکی</div><input class="form-control num" inputmode="numeric" name="qty_color_{{ color.id }}" placeholder="0"></div>{% empty %}<div class="empty-state">رنگ فعالی برای این برند پیدا نشد.</div>{% endfor %}
+{% else %}
+  {% for row in products %}<div class="return-entry"><div class="return-entry-title code-cell">{{ row.code }}</div><div class="return-entry-meta">{% if row.fixed %}هر پک {{ row.pack_qty }} شورت{% else %}رنگ متغیر؛ از مسیر رنگ ثبت کن{% endif %}</div><input class="form-control num" inputmode="numeric" name="qty_code_{{ row.ps.id }}" placeholder="0" {% if not row.fixed %}disabled{% endif %}></div>{% empty %}<div class="empty-state">کد فعالی برای این سایز پیدا نشد.</div>{% endfor %}
+{% endif %}
+</div></div><div class="card-footer d-flex justify-content-between align-items-center gap-3"><div class="text-secondary small">فقط HOME زیاد می‌شود؛ فروش، سود، کارمزد دیجی و طلب دیجی دست‌نخورده می‌مانند.</div><button class="btn btn-primary px-4" type="submit">ثبت مرجوعی</button></div></form>
+{% endif %}
+{% endif %}
+{% endblock %}
+{% block scripts %}<script src="{% static 'core/jalali_picker.js' %}"></script><script src="{% static 'core/number_format.js' %}"></script>{% endblock %}
