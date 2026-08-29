@@ -21,7 +21,7 @@ Then read all numbered files in order:
 13. `13_NEW_CHAT_OPERATING_PROTOCOL.md`
 14. `14_HANDOFF_SCOPE_AND_COMPLETENESS.md`
 15. `15_CODE_FINGERPRINT_AT_HANDOFF.md`
-16. `16_UI_MODERNIZATION_V38.md` — post-handoff V38 UI-only timeline/fingerprint delta; GitHub state does not imply live production.
+16. `16_UI_MODERNIZATION_V38.md` — post-handoff V38 UI-only timeline/fingerprint delta, now confirmed live.
 
 After these, read:
 
@@ -33,4 +33,22 @@ After these, read:
 
 When older docs conflict with this directory or current active code, this directory + current active code wins.
 
-For production status, `08_LIVE_STATE_AND_CHECKPOINTS.md` remains authoritative only for deployments explicitly confirmed by server output. The V38 continuation file may describe code that is committed but not yet live.
+For production status, `08_LIVE_STATE_AND_CHECKPOINTS.md` is authoritative only for deployments explicitly confirmed by server output.
+
+Latest confirmed live deployment at this synchronization point: **V38 UI modernization**.
+
+Latest confirmed production snapshot:
+
+```text
+CAPITAL=5430972371
+FINISHED=1115731500
+RAW=1994448050
+DIGI=812517154
+DARMA=12072
+TAKVIN=1195
+NOVANI=3630
+SALES=202
+ACCOUNT_ENTRIES=206
+```
+
+Standing continuation rule from the user: after every important change, update the relevant context-pack files; after every confirmed successful deployment, also update the live checkpoint using the actual server output.
