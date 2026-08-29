@@ -9,7 +9,7 @@ from django.urls import resolve
 from core.daily_returns_v36 import _apply_return_batch
 from core.finance_excel_v9 import digikala_receivable_total
 from core.inventory_valuation_v17 import finished_inventory_value_v17
-from core.models import AccountEntry, Brand, InventoryAdjustment, ProductSize, SaleDay, SaleLine, StockBalance, StockLocation
+from core.models import AccountEntry, Brand, InventoryAdjustment, ProductCode, ProductSize, SaleDay, SaleLine, StockBalance, StockLocation
 
 
 class Command(BaseCommand):
@@ -50,6 +50,26 @@ class Command(BaseCommand):
             except Exception as exc:
                 raise CommandError(f"template load failed for {template_name}: {exc}") from exc
 
+        # Every active fixed-composition Darma/Takvin code exposed as a full pack must
+        # be internally consistent. Variable-color/no-composition codes stay loose-only.
+        fixed_products = (
+            ProductCode.objects.filter(brand__name__in=["دارما", "تکوین"], active=True)
+            .select_related("brand")
+            .prefetch_related("composition")
+        )
+        audited_fixed = 0
+        for product in fixed_products:
+            components = list(product.composition.all())
+            if not components:
+                continue
+            audited_fixed += 1
+            comp_total = sum(int(c.qty or 0) for c in components)
+            if comp_total != int(product.pack_qty or 0):
+                raise CommandError(
+                    f"return pack catalog mismatch: {product.brand.name}/{product.code} "
+                    f"composition={comp_total}, pack_qty={product.pack_qty}"
+                )
+
         darma = Brand.objects.get(name="دارما")
         candidates = list(
             ProductSize.objects.filter(
@@ -76,16 +96,12 @@ class Command(BaseCommand):
         before = self._business_snapshot()
         before_loose_qty = self._qty(darma, ps.size, color)
 
-        # 1) Loose short: exact HOME increase, no sale/finance/Digikala side effects.
         with transaction.atomic():
             day, _ = SaleDay.objects.get_or_create(date=date(2099, 1, 1))
             loose_qty = 2
             result = _apply_return_batch(
-                day=day,
-                brand=darma,
-                size=ps.size,
-                loose_by_color=[(color, loose_qty)],
-                pack_by_product_size=[],
+                day=day, brand=darma, size=ps.size,
+                loose_by_color=[(color, loose_qty)], pack_by_product_size=[],
             )
             if result["shorts"] != loose_qty:
                 raise CommandError(f"loose return quantity mismatch: {result}")
@@ -105,19 +121,12 @@ class Command(BaseCommand):
         if self._business_snapshot() != before or self._qty(darma, ps.size, color) != before_loose_qty:
             raise CommandError("loose-return rollback test left business data changed")
 
-        # 2) Full pack: each configured composition color must return to HOME exactly.
-        component_before = {
-            comp.color_id: self._qty(darma, ps.size, comp.color)
-            for comp in components
-        }
+        component_before = {comp.color_id: self._qty(darma, ps.size, comp.color) for comp in components}
         with transaction.atomic():
             day, _ = SaleDay.objects.get_or_create(date=date(2099, 1, 2))
             result = _apply_return_batch(
-                day=day,
-                brand=darma,
-                size=ps.size,
-                loose_by_color=[],
-                pack_by_product_size=[(ps, 1)],
+                day=day, brand=darma, size=ps.size,
+                loose_by_color=[], pack_by_product_size=[(ps, 1)],
             )
             if result["shorts"] != int(ps.product.pack_qty or 0):
                 raise CommandError(f"full-pack return quantity mismatch: {result}")
@@ -147,6 +156,7 @@ class Command(BaseCommand):
         self.stdout.write("UI + DAILY RETURNS V36 CHECK OK")
         self.stdout.write("Dashboard/report formulas and active routes preserved")
         self.stdout.write("Daily/report/dashboard templates load successfully")
+        self.stdout.write(f"Fixed-pack catalog audited: {audited_fixed} Darma/Takvin product codes")
         self.stdout.write("Loose return: HOME stock only; no SaleLine/AccountEntry/Digikala movement")
         self.stdout.write("Full-pack return: ProductComposition restored to HOME exactly; no finance/sale movement")
         self.stdout.write("Both rollback tests left all business values unchanged")
