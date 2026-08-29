@@ -74,7 +74,12 @@ class Command(BaseCommand):
                     errors.append("real sale has allocations but report is not using allocation colors")
                 if color_total != allocation_total:
                     errors.append(f"displayed color total {color_total} != allocation total {allocation_total}")
-            if int(metrics["shorts"]) != int(line.quantity or 0) * int((getattr(getattr(line, "snapshot", None), "pack_qty", 0) or line.product_size.product.pack_qty or 0)):
+            try:
+                snapshot = line.snapshot
+            except Exception:
+                snapshot = None
+            pack_qty = int((snapshot.pack_qty if snapshot else 0) or line.product_size.product.pack_qty or 0)
+            if int(metrics["shorts"]) != int(line.quantity or 0) * pack_qty:
                 errors.append("reported shorts count does not match frozen/current pack quantity")
 
         if errors:
