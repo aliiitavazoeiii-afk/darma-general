@@ -69,11 +69,29 @@ def _product_maps_v19():
 
 
 def _resolve_product_v12(seller_code, title, by_key):
+    """Resolve the marketplace product with the explicit title model first.
+
+    Digikala seller-code metadata is not always trustworthy. A real export was
+    observed with seller_code=rah220 while the title explicitly said D-220.
+    Using seller code first incorrectly sold rah-220 / 4XL. When the title has
+    a resolvable model, it is therefore authoritative; seller code is fallback.
+    """
     candidate = _model_candidate(title)
     if candidate.lower() == VARIANT_PRODUCT_CODE and "دارما" in str(title or ""):
         return ProductCode.objects.filter(
             brand__name="دارما", code=VARIANT_PRODUCT_CODE, active=True
         ).first()
+
+    # Force title-only resolution first by passing a blank seller code. This
+    # still uses the existing aliases (D-220 -> D 220, model 6 -> 06, etc.) and
+    # brand hints embedded in the title (دارما/تکوین).
+    if candidate:
+        title_product = _resolve_product("", title, by_key)
+        if title_product and title_product.brand.name in IMPORT_BRANDS:
+            return title_product
+
+    # Only if the title cannot identify a configured product do we trust the
+    # seller code as a fallback for legacy/abbreviated exports.
     product = _resolve_product(seller_code, title, by_key)
     if product and product.brand.name in IMPORT_BRANDS:
         return product
