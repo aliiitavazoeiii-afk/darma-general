@@ -3,6 +3,7 @@ from django.db import transaction
 from django.db.models import Sum
 
 from core import material_report_v20 as v20
+from core.material_report_v14 import _tailor_row
 from core.models import AppSetting, Brand, InventoryMovement, MaterialReportBlock
 
 
@@ -57,7 +58,7 @@ class Command(BaseCommand):
         wage = int(v20._wage_for_pieces(pieces, rate))
         marker = f"{MARKER_PREFIX}{block.id}"
         already = AppSetting.objects.filter(key=marker, value="1").exists()
-        tailor = v20._tailor_row(create=False)
+        tailor = _tailor_row(create=False)
         tailor_before = int(tailor.amount or 0) if tailor else 0
 
         self.stdout.write(f"BLOCK_ID={block.id}")
@@ -91,7 +92,7 @@ class Command(BaseCommand):
                 key=marker,
                 defaults={"value": "1", "label": f"Novani missing wage repaired for material block {block.id}"},
             )
-            tailor_after_obj = v20._tailor_row(create=False)
+            tailor_after_obj = _tailor_row(create=False)
             tailor_after = int(tailor_after_obj.amount or 0) if tailor_after_obj else 0
             if tailor_after != tailor_before - wage:
                 raise CommandError(
