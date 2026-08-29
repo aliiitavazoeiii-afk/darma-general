@@ -21,12 +21,14 @@ Then read all numbered files in order:
 13. `13_NEW_CHAT_OPERATING_PROTOCOL.md`
 14. `14_HANDOFF_SCOPE_AND_COMPLETENESS.md`
 15. `15_CODE_FINGERPRINT_AT_HANDOFF.md`
-16. `16_UI_MODERNIZATION_V38.md` — post-handoff V38 UI-only timeline/fingerprint delta, now confirmed live.
+16. `16_UI_MODERNIZATION_V38.md` — post-handoff V38 UI-only timeline/fingerprint delta, confirmed live.
+17. `17_LOGO_TYPOGRAPHY_V39.md` — Darma logo + cleaner Persian typography; committed on GitHub, not confirmed live until successful V39 server output.
 
 After these, read:
 
 - `/UI_SAFETY_V37.md`
 - `/UI_SAFETY_V38.md`
+- `/UI_SAFETY_V39.md`
 - current `/core/urls.py`
 - exact active source files relevant to the requested change
 - `/AI_START_HERE.md` and `/PROJECT_HANDOFF.md` only for older historical context.
@@ -35,7 +37,7 @@ When older docs conflict with this directory or current active code, this direct
 
 For production status, `08_LIVE_STATE_AND_CHECKPOINTS.md` is authoritative only for deployments explicitly confirmed by server output.
 
-Latest confirmed live deployment at this synchronization point: **V38 UI modernization**.
+Latest confirmed live deployment at this synchronization point: **V38 UI modernization**. V39 is prepared on GitHub but not yet confirmed live.
 
 Latest confirmed production snapshot:
 
