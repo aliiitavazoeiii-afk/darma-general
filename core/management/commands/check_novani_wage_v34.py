@@ -9,6 +9,8 @@ from core import material_report_v21 as v21
 from core.material_report_v14 import _tailor_row
 from core.models import Brand, MaterialReportBlock, StockBalance
 
+EXPECTED_DOZEN_WAGE = 110000
+
 
 class Command(BaseCommand):
     help = "Transactional regression check: Novani output changes only Novani stock + tailor wage."
@@ -22,6 +24,8 @@ class Command(BaseCommand):
         tailor_obj = _tailor_row(create=False)
         tailor_before = int(tailor_obj.amount or 0) if tailor_obj else 0
         rate = int(v20._dozen_wage())
+        if rate != EXPECTED_DOZEN_WAGE:
+            raise CommandError(f"dozen wage mismatch: expected {EXPECTED_DOZEN_WAGE}, found {rate}")
         expected_wage = int(v20._wage_for_pieces(12, rate))
 
         with transaction.atomic():
