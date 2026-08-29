@@ -77,6 +77,15 @@
       stockNote.textContent = 'برای هر دو برند Darma و Novani جدول تحویل دوطرفه است: افزایش، موجودی و مزد را زیاد می‌کند؛ کاهش یا پاک‌کردن، پس از همگام‌سازی همان مقدار را از موجودی همان برند کم و مزدش را برمی‌گرداند. ستون برش و کسری/مازاد فقط مقایسه‌ای است.';
     }
 
+    document.querySelectorAll('.material-card form').forEach((form) => {
+      const outputGrid = form.querySelector('.output-grid');
+      const scroll = outputGrid?.closest('.table-responsive');
+      const note = scroll?.previousElementSibling;
+      if (note?.classList.contains('mobile-scroll-note')) {
+        note.textContent = 'عددهای این جدول تجمعی‌اند. برای Darma و Novani می‌توانی عدد اعمال‌شده را کم یا کاملاً پاک کنی؛ «فقط ذخیره» داده را نگه می‌دارد و دکمه همگام‌سازی اختلاف را روی موجودی همان برند و مزد اعمال می‌کند.';
+      }
+    });
+
     document.querySelectorAll('button[formaction*="/apply-output/"]').forEach((button) => {
       button.textContent = 'همگام‌سازی تحویل و موجودی';
       button.onclick = () => window.confirm('تحویل با موجودی و مزد همان برند همگام شود؟ افزایش اضافه می‌شود و کاهش/پاک‌کردن از موجودی و مزد برمی‌گردد.');

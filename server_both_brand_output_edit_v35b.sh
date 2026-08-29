@@ -140,10 +140,11 @@ else:
     applied=int(block.output_applications.aggregate(v=Sum("quantity"))["v"] or 0)
     repaired=AppSetting.objects.filter(key=f"novani_wage_repair_v34_block_{block.id}", value="1").exists()
     ledger=AppSetting.objects.filter(key=f"novani_output_wage_pieces_v35_{block.id}").values_list("value",flat=True).first()
+    ledger_text=ledger if ledger is not None else "NONE"
     print(f"CURRENT_NOVANI_BLOCK={block.id}")
     print(f"CURRENT_NOVANI_APPLIED={applied}")
     print(f"V34_WAGE_REPAIR_MARKER={1 if repaired else 0}")
-    print(f"V35_WAGE_LEDGER={ledger if ledger is not None else 'NONE'}")
+    print(f"V35_WAGE_LEDGER={ledger_text}")
 '
 
 echo ""
