@@ -6,7 +6,7 @@ from django.shortcuts import get_object_or_404, redirect
 from django.views.decorators.http import require_POST
 
 from .daily_order_import_v8 import DailyOrderImportError
-from .daily_order_import_v12 import apply_delivery_report
+from .daily_order_import_v23 import apply_delivery_report
 from .finance_excel_v9 import sync_sale_receivable
 from .models import SaleDay, StockBalance
 
