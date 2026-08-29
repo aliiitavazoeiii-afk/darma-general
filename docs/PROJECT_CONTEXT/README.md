@@ -20,6 +20,7 @@ Then read all numbered files in order:
 12. `12_VERSION_TIMELINE_V18_TO_V37.md`
 13. `13_NEW_CHAT_OPERATING_PROTOCOL.md`
 14. `14_HANDOFF_SCOPE_AND_COMPLETENESS.md`
+15. `15_CODE_FINGERPRINT_AT_HANDOFF.md`
 
 After these, read:
 
