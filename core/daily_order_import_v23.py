@@ -32,7 +32,8 @@ NEGATIVE_STATUS_MARKERS = (
 
 # Digikala sometimes exposes the same Takvin model with the numeric groups
 # reversed versus the site's long-standing internal code. Keep the site's
-# canonical ProductCode unchanged and normalize only the import input.
+# canonical ProductCode unchanged and normalize only the MODEL TEXT IN TITLE.
+# Seller-code metadata is preserved but deliberately ignored by the resolver.
 TAKVIN_PRODUCT_ALIASES = {
     "1-654": "654-1",
 }
@@ -69,7 +70,6 @@ def _normalize_takvin_product_aliases(parsed_rows):
     normalized = []
     for row in parsed_rows:
         title = str(row.title or "")
-        seller_code = str(row.seller_code or "")
         if "تکوین" in title:
             candidate = v12._model_candidate(title)
             canonical = TAKVIN_PRODUCT_ALIASES.get(candidate)
@@ -81,13 +81,10 @@ def _normalize_takvin_product_aliases(parsed_rows):
                     count=1,
                     flags=re.IGNORECASE,
                 )
-            raw_seller = base._norm_text(seller_code)
-            if raw_seller in TAKVIN_PRODUCT_ALIASES:
-                seller_code = TAKVIN_PRODUCT_ALIASES[raw_seller]
         normalized.append(
             base.ParsedOrderRow(
                 source_row=row.source_row,
-                seller_code=seller_code,
+                seller_code=row.seller_code,  # preserved only; resolver ignores it
                 title=title,
                 quantity=row.quantity,
                 status=row.status,
