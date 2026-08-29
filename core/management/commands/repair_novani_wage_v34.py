@@ -10,6 +10,10 @@ from core.models import AppSetting, Brand, InventoryMovement, MaterialReportBloc
 MARKER_PREFIX = "novani_wage_repair_v34_block_"
 
 
+class BaseCommandWithRepair(BaseCommand):
+    pass
+
+
 class Command(BaseCommand):
     help = "Repair missing tailor wage for Novani output-v21 movements without touching inventory."
 
@@ -65,6 +69,7 @@ class Command(BaseCommand):
         self.stdout.write(f"NOVANI_V21_PIECES={pieces}")
         self.stdout.write(f"DOZEN_WAGE={rate}")
         self.stdout.write(f"MISSING_WAGE={wage}")
+        self.stdout.write(f"BLOCK_DELIVERY_WAGE_BEFORE={int(block.delivery_wage or 0)}")
         self.stdout.write(f"TAILOR_BEFORE={tailor_before}")
         self.stdout.write(f"REPAIR_ALREADY_APPLIED={1 if already else 0}")
         self.stdout.write("INVENTORY_CHANGE=0")
@@ -87,6 +92,12 @@ class Command(BaseCommand):
             block = MaterialReportBlock.objects.select_for_update().get(pk=block.pk)
             if AppSetting.objects.select_for_update().filter(key=marker, value="1").exists():
                 raise CommandError("repair marker appeared concurrently; refusing duplicate deduction")
+
+            # Keep the saved report metadata aligned with the actual delivered-piece wage.
+            # This changes no stock/material quantity and does not recalculate from cut quantity.
+            block.delivery_wage = wage
+            block.save(update_fields=["delivery_wage", "updated_at"])
+
             v20._adjust_tailor_balance(-wage)
             AppSetting.objects.update_or_create(
                 key=marker,
@@ -99,5 +110,6 @@ class Command(BaseCommand):
                     f"tailor verification failed: expected {tailor_before - wage}, found {tailor_after}"
                 )
 
+        self.stdout.write(f"BLOCK_DELIVERY_WAGE_AFTER={wage}")
         self.stdout.write(f"TAILOR_AFTER={tailor_before - wage}")
         self.stdout.write("SUCCESS: NOVANI MISSING WAGE V34 REPAIRED; INVENTORY UNCHANGED")
