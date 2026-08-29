@@ -24,8 +24,8 @@ docker compose exec -T web python manage.py check >/dev/null || fail "current li
 snapshot_state(){
   service="$1"
   CAPITAL=$(docker compose $service python manage.py capital_audit_v9 | awk -F'= ' '/CAPITAL TOTAL/{gsub(/[[:space:]]/,"",$2);print $2}' | tail -1)
-  STOCK=$(docker compose $service python manage.py shell -c 'from django.db.models import Sum; from core.models import StockBalance; rows=StockBalance.objects.values("brand__name").annotate(q=Sum("qty")).order_by("brand__name"); print("|".join(f"{r[\"brand__name\"]}={int(r[\"q\"] or 0)}" for r in rows))' 2>/dev/null | tail -1)
-  SALES=$(docker compose $service python manage.py shell -c 'from django.db.models import Sum; from core.models import SaleLine,SaleAllocation; print(f"lines={SaleLine.objects.count()}|qty={int(SaleLine.objects.aggregate(v=Sum(\"quantity\"))[\"v\"] or 0)}|allocs={SaleAllocation.objects.count()}|allocqty={int(SaleAllocation.objects.aggregate(v=Sum(\"qty\"))[\"v\"] or 0)}")' 2>/dev/null | tail -1)
+  STOCK=$(docker compose $service python manage.py shell -c 'from django.db.models import Sum; from core.models import StockBalance; rows=StockBalance.objects.values("brand__name").annotate(q=Sum("qty")).order_by("brand__name"); print("|".join("%s=%s" % (r["brand__name"], int(r["q"] or 0)) for r in rows))' 2>/dev/null | tail -1)
+  SALES=$(docker compose $service python manage.py shell -c 'from django.db.models import Sum; from core.models import SaleDay,SaleLine,SaleAllocation; vals=(SaleDay.objects.count(),SaleLine.objects.count(),int(SaleLine.objects.aggregate(v=Sum("quantity"))["v"] or 0),SaleAllocation.objects.count(),int(SaleAllocation.objects.aggregate(v=Sum("qty"))["v"] or 0)); print("days=%s|lines=%s|qty=%s|allocs=%s|allocqty=%s" % vals)' 2>/dev/null | tail -1)
   [ -n "$CAPITAL" ] || fail "could not read capital snapshot"
   [ -n "$STOCK" ] || fail "could not read stock snapshot"
   [ -n "$SALES" ] || fail "could not read sales snapshot"
@@ -60,7 +60,7 @@ docker compose run --rm --entrypoint python web manage.py check_v19_features || 
 docker compose run --rm --entrypoint python web manage.py check_capital_integrity_v14 || fail "capital integrity check failed"
 
 step "5) VERIFY PREFLIGHT WAS READ-ONLY"
-snapshot_state "run --rm --entrypoint python web"
+snapshot_state "run --rm web"
 [ "$CAPITAL" = "$CAP_BEFORE" ] || fail "capital changed during preflight: before=$CAP_BEFORE now=$CAPITAL"
 [ "$STOCK" = "$STOCK_BEFORE" ] || fail "stock changed during preflight: before=$STOCK_BEFORE now=$STOCK"
 [ "$SALES" = "$SALES_BEFORE" ] || fail "sales/allocations changed during preflight: before=$SALES_BEFORE now=$SALES"
