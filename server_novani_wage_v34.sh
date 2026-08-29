@@ -47,7 +47,6 @@ printf '%s\n' "$DRY" | grep -q '^MISSING_WAGE=26333333$' || fail "calculated mis
 printf '%s\n' "$DRY" | grep -q '^REPAIR_ALREADY_APPLIED=0$' || fail "this block appears already repaired"
 BLOCK_ID=$(printf '%s\n' "$DRY" | awk -F= '/^BLOCK_ID=/{print $2}')
 [ -n "$BLOCK_ID" ] || fail "could not determine Novani block id"
-
 echo "TARGET BLOCK = $BLOCK_ID"
 
 step "6) CAPTURE INVENTORY BEFORE REPAIR"
@@ -91,9 +90,9 @@ docker compose exec -T web python manage.py check_novani_wage_v34 || fail "live 
 
 step "10) FINAL STATE"
 docker compose exec -T web python manage.py shell -c "
-from core import material_report_v20 as v20
+from core.material_report_v14 import _tailor_row
 from core.models import AppSetting
-r=v20._tailor_row(create=False)
+r=_tailor_row(create=False)
 print('TAILOR_BALANCE=', int(r.amount or 0) if r else 0)
 print('REPAIR_MARKER=', AppSetting.objects.filter(key='novani_wage_repair_v34_block_${BLOCK_ID}', value='1').exists())
 "
