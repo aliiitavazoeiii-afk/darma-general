@@ -16,22 +16,9 @@ def seed_novani_s(apps, schema_editor):
     if novani is None:
         return
 
-    s, _ = Size.objects.get_or_create(name="S", defaults={"sort_order": 5})
-    if s.sort_order != 5:
-        s.sort_order = 5
-        s.save(update_fields=["sort_order"])
-
-    # Keep the existing size order stable while making S the first Novani size.
-    desired = {
-        "M": 10,
-        "L": 20,
-        "XL": 30,
-        "XXL": 40,
-        "3XL": 50,
-        "4XL": 60,
-    }
-    for name, order in desired.items():
-        Size.objects.filter(name=name).update(sort_order=order)
+    # S is a global Size row because StockBalance references Size globally, but it is
+    # exposed/used only by Novani in v33. Existing size rows and their sort_order are untouched.
+    s, _ = Size.objects.get_or_create(name="S", defaults={"sort_order": 0})
 
     home = StockLocation.objects.get(key="home")
     color_ids = list(
