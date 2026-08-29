@@ -63,6 +63,16 @@
     definitionsTitle.parentNode.insertBefore(wrap, definitionsTitle);
   }
 
+  function injectV39Styles() {
+    if (document.getElementById('darma-ui-v39')) return;
+    const link = document.createElement('link');
+    link.id = 'darma-ui-v39';
+    link.rel = 'stylesheet';
+    link.href = '/static/core/ui-v39.css?v=39';
+    document.head.appendChild(link);
+  }
+
+  injectV39Styles();
   window.DarmaNumber = { raw, grouped, separator: SEP };
   document.addEventListener('DOMContentLoaded', () => {
     bind();
