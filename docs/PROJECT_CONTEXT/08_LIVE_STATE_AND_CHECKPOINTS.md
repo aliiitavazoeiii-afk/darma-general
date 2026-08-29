@@ -2,24 +2,24 @@
 
 This file records confirmed production/historical checkpoints. These numbers are for continuity and forensic reconciliation. They are **not permanent targets** and must never be force-restored after legitimate later activity unless the user explicitly requests a rollback to that checkpoint.
 
-Last synchronized: 2026-08-29 after confirmed V37 live deployment.
+Last synchronized: 2026-08-29 after confirmed V38 UI modernization deployment.
 
 ---
 
-## 1. Latest confirmed live deployment: V37
+## 1. Latest confirmed live deployment: V38
 
-User posted successful production output from:
+The user posted successful production output after running the V38 UI-only deployment.
 
-```bash
-cd /opt/darma-general
-git pull --ff-only
-bash server_standalone_returns_calculator_v37.sh
+Explicit success marker:
+
+```text
+SUCCESS: UI MODERNIZATION V38 DEPLOYED
 ```
 
 Final invariant output:
 
 ```text
-CAPITAL=5441972371
+CAPITAL=5430972371
 FINISHED=1115731500
 RAW=1994448050
 DIGI=812517154
@@ -30,29 +30,61 @@ SALES=202
 ACCOUNT_ENTRIES=206
 ```
 
-Explicit success marker:
-
-```text
-SUCCESS: STANDALONE RETURNS + CALCULATOR V37 DEPLOYED
-```
-
 Backup created by that deployment:
 
 ```text
-backups/before-standalone-returns-calculator-v37-20260829-205844.sql
+backups/before-ui-modernization-v38-20260829-223111.sql
 ```
 
-Therefore as of this handoff:
+The deploy output explicitly stated:
 
-- V37 standalone returns is confirmed live;
-- V37 calculator is confirmed live;
-- old inline daily-report return route/box is retired;
-- protected accounting/finance/material formula files passed deploy guard;
-- deploy itself did not change the final economic/inventory invariants.
+```text
+V38 application change: static/core/ui-polish.css only
+Routes/Python/templates/models/migrations/workflow JS: unchanged
+Accounting/inventory/sales/material/payment/return/calculator semantics: unchanged
+All protected economic invariants: unchanged
+```
+
+Therefore V38 is now the latest confirmed production version.
+
+### Important capital continuity note
+
+The prior confirmed V37 checkpoint was:
+
+```text
+CAPITAL=5441972371
+```
+
+The confirmed V38 deployment boundary was:
+
+```text
+CAPITAL=5430972371
+```
+
+Difference from the older V37 checkpoint:
+
+```text
+-11000000
+```
+
+Do **not** attribute this 11,000,000 decrease to V38. The V38 deployment script captured the live snapshot before the UI deployment and compared it byte-for-byte with the final snapshot; deployment succeeded only because all protected economic invariants were unchanged during the deploy.
+
+Therefore the 11,000,000 difference occurred through legitimate production activity or business-data changes **between the historical V37 checkpoint and the start of the V38 deployment**. The provided deployment output does not identify the specific business event, so do not guess or force-reconcile it.
+
+The V38 numbers above are now the latest confirmed live checkpoint, not a reset target.
 
 ---
 
-## 2. Latest confirmed feature semantics live at V37 checkpoint
+## 2. Latest confirmed feature semantics live at V38 checkpoint
+
+V38 changed presentation only. Operational/economic behavior remains the V37 business baseline.
+
+### Global UI
+
+- V38 presentation layer is live through `static/core/ui-polish.css`;
+- darker/refined navy glass visual language;
+- refined sidebar/topbar/cards/tables/forms/buttons/responsive presentation;
+- no route/view/template/model/migration/workflow-JS semantic change in V38.
 
 ### Daily report
 
@@ -79,18 +111,52 @@ Therefore as of this handoff:
 ### Comprehensive report
 
 - V36 visual grouping remains active through `report_excel_v36.html`;
-- calculation remains `report_v9`.
+- calculation remains `report_v9`;
+- V38 global CSS modernizes presentation without changing report arithmetic/forms.
 
 ### Material report
 
 - V22 routes / V35 template behavior active;
 - Darma + Novani cumulative delivery editable both directions;
 - sewing wage 110,000 per 12 delivered pieces;
-- cut comparison display with reverse-model cut fix.
+- cut comparison display with reverse-model cut fix;
+- V38 changes presentation only.
 
 ---
 
-## 3. 31 Mordad capital checkpoint
+## 3. Previous confirmed live deployment: V37
+
+The V37 production deployment previously succeeded with:
+
+```text
+SUCCESS: STANDALONE RETURNS + CALCULATOR V37 DEPLOYED
+```
+
+Historical V37 invariant snapshot:
+
+```text
+CAPITAL=5441972371
+FINISHED=1115731500
+RAW=1994448050
+DIGI=812517154
+DARMA=12072
+TAKVIN=1195
+NOVANI=3630
+SALES=202
+ACCOUNT_ENTRIES=206
+```
+
+Historical V37 backup:
+
+```text
+backups/before-standalone-returns-calculator-v37-20260829-205844.sql
+```
+
+These V37 values are retained for forensic continuity only. They are superseded as the latest live checkpoint by V38.
+
+---
+
+## 4. 31 Mordad capital checkpoint
 
 User stated the correct total capital on end of 31 Mordad was:
 
@@ -118,7 +184,7 @@ However the project correctly noted that other capital-changing inventory/purcha
 
 ---
 
-## 4. Digikala 31 Mordad base/reference mentioned by user
+## 5. Digikala 31 Mordad base/reference mentioned by user
 
 User stated a 31 Mordad Digikala receivable reference of:
 
@@ -132,7 +198,7 @@ Important: the editable comprehensive-report Digikala field stores desired curre
 
 ---
 
-## 5. Historical Shahrivar rebuild checkpoint after days 1-3
+## 6. Historical Shahrivar rebuild checkpoint after days 1-3
 
 User reset/re-entered daily sales and then stated that after entering through 3 Shahrivar, total capital was correct at:
 
@@ -146,7 +212,7 @@ Do not assume it remains the correct current capital after subsequent physical r
 
 ---
 
-## 6. Authoritative physical Darma end-of-day 3 Shahrivar baseline
+## 7. Authoritative physical Darma end-of-day 3 Shahrivar baseline
 
 Physical sheets for HOME and KHORSHID established:
 
@@ -198,7 +264,7 @@ This is a historical physical truth point after day-3 sales; do not reapply day-
 
 ---
 
-## 7. Historical pre-physical audit immediately around V18
+## 8. Historical pre-physical audit immediately around V18
 
 Older audited Darma quantity:
 
@@ -240,7 +306,7 @@ These are historical continuity values only.
 
 ---
 
-## 8. Historical 31 Mordad Darma workbook baseline
+## 9. Historical 31 Mordad Darma workbook baseline
 
 During the sales bug reconstruction, a workbook `mojodi 31 mordad.xlsx` was treated as the authoritative aggregate Darma end-of-31-Mordad starting inventory.
 
@@ -270,7 +336,7 @@ This baseline is historical and must not be applied on current production unless
 
 ---
 
-## 9. Novani current block / inventory continuity
+## 10. Novani current block / inventory continuity
 
 A real Novani material-report delivery contained:
 
@@ -283,15 +349,13 @@ A real Novani material-report delivery contained:
 TOTAL 3,630
 ```
 
-This is why the V37 invariant snapshot shows:
+The confirmed V38 checkpoint still shows:
 
 ```text
 NOVANI=3630
 ```
 
-assuming no other Novani stock operations occurred between that block and the V37 deployment.
-
-Current sewing wage for that 3,630-piece delivered block:
+Current sewing wage for that 3,630-piece delivered block was historically established as:
 
 ```text
 33,275,000 toman
@@ -301,7 +365,7 @@ at 110,000 per 12.
 
 ---
 
-## 10. Elastic payment #6 historical checkpoint
+## 11. Elastic payment #6 historical checkpoint
 
 Diagnostic details:
 
@@ -320,13 +384,13 @@ Capital difference from goods value - actual paid:
 +416,000
 ```
 
-At one diagnostic moment aggregate stock showed 10/10 instead of purchase-ledger 5/5, leading to V28 forensic work. Do not infer current raw stock from that historical anomaly; V37 RAW checkpoint is the current confirmed aggregate value at handoff.
+At one diagnostic moment aggregate stock showed 10/10 instead of purchase-ledger 5/5, leading to V28 forensic work. Do not infer current raw stock from that historical anomaly; the V38 RAW checkpoint above is the latest confirmed aggregate value.
 
 ---
 
-## 11. Current production values are mutable after handoff
+## 12. Current production values are mutable after this checkpoint
 
-The V37 checkpoint is the last value known to this documentation. As soon as the user records any new:
+The V38 checkpoint is the latest value known to this documentation. As soon as the user records any new:
 
 - sale;
 - return;
@@ -340,11 +404,11 @@ The V37 checkpoint is the last value known to this documentation. As soon as the
 
 one or more checkpoint values can legitimately change.
 
-A new AI/chat should treat the V37 numbers as **"last known before later operations"**, not as a database constraint.
+A new AI/chat should treat the V38 numbers as **last confirmed at the successful V38 deployment boundary**, not as a database constraint or reset target.
 
 ---
 
-## 12. How to establish a new live checkpoint
+## 13. How to establish a new live checkpoint
 
 For a new phase, run a read-only snapshot using the same components used in guarded deploy scripts:
 
@@ -360,4 +424,4 @@ SaleLine count
 AccountEntry count
 ```
 
-Record the date/time and the business action boundary (e.g. "after importing 4 Shahrivar", "before new production block") so comparisons remain meaningful.
+Record the date/time and the business action boundary so comparisons remain meaningful.
