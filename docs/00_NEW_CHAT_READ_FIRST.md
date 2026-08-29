@@ -2,7 +2,7 @@
 
 **Authoritative continuation entrypoint**
 
-Last synchronized with project conversation: **2026-08-29, V38 UI code prepared on GitHub; latest confirmed production remains V37 until successful V38 server output**
+Last synchronized with project conversation: **2026-08-29, V38 UI modernization confirmed live on production**
 Repository: `aliiitavazoeiii-afk/darma-general`
 Production domain: `gozaresh.filmjadiid.ir`
 Production server path: `/opt/darma-general`
@@ -18,12 +18,13 @@ A new AI/chat must **not** infer current behavior from filenames like `v14`, `v1
 
 1. Read this file completely.
 2. Read every file in `docs/PROJECT_CONTEXT/` in numeric order, including the post-handoff V38 continuation file.
-3. Read `UI_SAFETY_V37.md`, then the newer `UI_SAFETY_V38.md` when working from/after the V38 Git state.
+3. Read `UI_SAFETY_V37.md`, then the current `UI_SAFETY_V38.md`.
 4. Read current `core/urls.py` and map each requested feature to its active view/module.
 5. Read the exact active source files listed in `docs/PROJECT_CONTEXT/03_ACTIVE_CODE_MAP.md` before editing.
 6. Read `AI_START_HERE.md` and `PROJECT_HANDOFF.md` **after** the new context pack for historical rationale only. Where they conflict with `docs/PROJECT_CONTEXT/*`, the new context pack wins.
-7. Never assume code on `main` is already live. Use explicit user-posted server output to establish deployment status. At this synchronization point, V38 presentation code exists on GitHub but the latest confirmed live deployment remains V37; see `08_LIVE_STATE_AND_CHECKPOINTS.md` and `16_UI_MODERNIZATION_V38.md`.
+7. Never assume code on `main` is already live. Use explicit user-posted server output to establish deployment status. At this synchronization point, V38 is explicitly confirmed live; `08_LIVE_STATE_AND_CHECKPOINTS.md` contains the latest production snapshot and `16_UI_MODERNIZATION_V38.md` records the V38 scope.
 8. Before any data-affecting change, preserve rollback/backup/preflight discipline described in `06_DEPLOYMENT_SAFETY_AND_RECOVERY.md`.
+9. After every important change and every confirmed successful deployment, update the relevant context-pack documents; after confirmed deployment also update `08_LIVE_STATE_AND_CHECKPOINTS.md` with the actual server snapshot rather than copying an older checkpoint.
 
 ---
 
@@ -32,6 +33,38 @@ A new AI/chat must **not** infer current behavior from filenames like `v14`, `v1
 **The accounting formulas and existing operational semantics are frozen unless the user explicitly asks to change the business rule.** UI cleanup must not silently alter accounting, stock, sales, Digikala fee, receivable, payment, raw-material, production, COGS, or SaleSnapshot behavior.
 
 The inherited V37 safety contract remains relevant, and the current V38 presentation-only boundary is recorded in `UI_SAFETY_V38.md` and `docs/PROJECT_CONTEXT/16_UI_MODERNIZATION_V38.md`.
+
+---
+
+## Latest confirmed live checkpoint
+
+The successful V38 UI deployment posted by the user ended with:
+
+```text
+SUCCESS: UI MODERNIZATION V38 DEPLOYED
+```
+
+Latest confirmed production snapshot:
+
+```text
+CAPITAL=5430972371
+FINISHED=1115731500
+RAW=1994448050
+DIGI=812517154
+DARMA=12072
+TAKVIN=1195
+NOVANI=3630
+SALES=202
+ACCOUNT_ENTRIES=206
+```
+
+Backup:
+
+```text
+backups/before-ui-modernization-v38-20260829-223111.sql
+```
+
+The older V37 capital checkpoint was 5,441,972,371, while the V38 boundary is 5,430,972,371. The V38 deploy script proved its starting and final snapshots were identical, so the 11,000,000 difference occurred before the V38 deployment and must not be attributed to the UI change or force-reconciled without evidence.
 
 ---
 
@@ -81,7 +114,7 @@ Read exactly in this order:
 13. `docs/PROJECT_CONTEXT/13_NEW_CHAT_OPERATING_PROTOCOL.md`
 14. `docs/PROJECT_CONTEXT/14_HANDOFF_SCOPE_AND_COMPLETENESS.md`
 15. `docs/PROJECT_CONTEXT/15_CODE_FINGERPRINT_AT_HANDOFF.md`
-16. `docs/PROJECT_CONTEXT/16_UI_MODERNIZATION_V38.md` — authoritative timeline/fingerprint delta after the V37 handoff
+16. `docs/PROJECT_CONTEXT/16_UI_MODERNIZATION_V38.md` — authoritative V38 timeline/fingerprint/live delta after the V37 handoff
 17. `UI_SAFETY_V37.md`
 18. `UI_SAFETY_V38.md`
 19. current `core/urls.py`
@@ -96,6 +129,6 @@ Read exactly in this order:
 
 The user can paste only this:
 
-> Open my GitHub repo `aliiitavazoeiii-afk/darma-general`. Read `docs/00_NEW_CHAT_READ_FIRST.md` completely, then read every file it requires in order, then inspect the current active source files/routes before answering. Treat the context pack as authoritative over older handoff docs. Do not change anything until you understand all accounting/inventory/sales/material/payment invariants, model/ledger sources of truth, historical pitfalls, the V38 UI-only delta, and the latest confirmed live state. Continue the project as if you were continuing the original development chat.
+> Open my GitHub repo `aliiitavazoeiii-afk/darma-general`. Read `docs/00_NEW_CHAT_READ_FIRST.md` completely, then read every file it requires in order, then inspect the current active source files/routes before answering. Treat the context pack as authoritative over older handoff docs. Do not change anything until you understand all accounting/inventory/sales/material/payment invariants, model/ledger sources of truth, historical pitfalls, the confirmed-live V38 UI-only delta, and the latest confirmed live state. Continue the project as if you were continuing the original development chat.
 
 That prompt is intentionally enough; the new chat should retrieve the rest from GitHub.
