@@ -21,12 +21,16 @@ Then read all numbered files in order:
 13. `13_NEW_CHAT_OPERATING_PROTOCOL.md`
 14. `14_HANDOFF_SCOPE_AND_COMPLETENESS.md`
 15. `15_CODE_FINGERPRINT_AT_HANDOFF.md`
+16. `16_UI_MODERNIZATION_V38.md` — post-handoff V38 UI-only timeline/fingerprint delta; GitHub state does not imply live production.
 
 After these, read:
 
 - `/UI_SAFETY_V37.md`
+- `/UI_SAFETY_V38.md`
 - current `/core/urls.py`
 - exact active source files relevant to the requested change
 - `/AI_START_HERE.md` and `/PROJECT_HANDOFF.md` only for older historical context.
 
 When older docs conflict with this directory or current active code, this directory + current active code wins.
+
+For production status, `08_LIVE_STATE_AND_CHECKPOINTS.md` remains authoritative only for deployments explicitly confirmed by server output. The V38 continuation file may describe code that is committed but not yet live.
