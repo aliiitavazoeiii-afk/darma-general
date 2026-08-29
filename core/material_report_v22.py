@@ -9,6 +9,7 @@ from . import material_report_v20 as v20
 from . import material_report_v21 as v21
 from .dateutils import parse_jalali_date
 from .models import (
+    AppSetting,
     Brand,
     InventoryMovement,
     MaterialReportBlock,
@@ -32,6 +33,8 @@ CUT_SOURCE = {
     "reverse_white": "white",
     "reverse_navy": "navy",
 }
+WAGE_LEDGER_PREFIX = "novani_output_wage_pieces_v35_"
+V34_REPAIR_PREFIX = "novani_wage_repair_v34_block_"
 
 
 def _validate_output_editable(block):
@@ -171,6 +174,44 @@ def material_block_apply_materials(request, block_id):
     return redirect(f"/material-report/#block-{block_id}")
 
 
+def _lock_or_initialize_wage_ledger(block, applied_total_before):
+    """
+    From v35 onward the wage ledger stores the cumulative Novani delivered-piece basis.
+    Existing legacy blocks may initialize only when their pre-v35 wage was explicitly
+    repaired by v34. New blocks with zero applied output initialize safely at zero.
+    """
+    key = f"{WAGE_LEDGER_PREFIX}{block.id}"
+    ledger = AppSetting.objects.select_for_update().filter(key=key).first()
+    if ledger:
+        ledger_pieces = max(0, v20._int(ledger.value))
+        if ledger_pieces != applied_total_before:
+            raise ValueError(
+                f"دفتر مزد Novani با موجودی تحویل این صورت همخوان نیست: مزد={ledger_pieces} عدد، "
+                f"تحویل اعمال‌شده={applied_total_before} عدد. برای جلوگیری از تغییر اشتباه، عملیات متوقف شد."
+            )
+        return ledger
+
+    if applied_total_before > 0:
+        repaired = AppSetting.objects.filter(
+            key=f"{V34_REPAIR_PREFIX}{block.id}",
+            value="1",
+        ).exists()
+        if not repaired:
+            raise ValueError(
+                "این صورت قبل از سیستم مزد دوطرفه تحویل داشته ولی تأیید تعمیر مزد V34 برای آن پیدا نشد. "
+                "فعلاً موجودی و مزد تغییر نکرد؛ ابتدا مزد پایه این صورت باید تأیید/تعمیر شود."
+            )
+
+    ledger, _ = AppSetting.objects.update_or_create(
+        key=key,
+        defaults={
+            "value": str(applied_total_before),
+            "label": f"Novani cumulative wage pieces for material block {block.id}",
+        },
+    )
+    return ledger
+
+
 def _sync_novani_output(block):
     """
     Synchronize cumulative Novani delivery quantities in either direction.
@@ -228,6 +269,7 @@ def _sync_novani_output(block):
                 (applied, target, delta, brand, color, size, destination, destination_label, label, size_name)
             )
 
+    wage_ledger = _lock_or_initialize_wage_ledger(block, applied_total_before)
     rate = int(v20._dozen_wage())
     wage_before = int(v20._wage_for_pieces(applied_total_before, rate))
     wage_after = int(v20._wage_for_pieces(target_total, rate))
@@ -253,6 +295,8 @@ def _sync_novani_output(block):
         # Increasing delivered total creates wage debt; reducing it returns that wage to the tailor balance.
         v20._adjust_tailor_balance(-wage_change)
 
+    wage_ledger.value = str(target_total)
+    wage_ledger.save(update_fields=["value"])
     block.delivery_wage = wage_after
     block.save(update_fields=["delivery_wage", "updated_at"])
 
