@@ -10,9 +10,12 @@ from .models import InventoryMovement, MaterialReportBlock, MaterialReportOutput
 
 def _apply_output_delta(block):
     """
-    Darma keeps the existing production behavior.
-    Novani output is intentionally isolated: only Novani finished inventory + its
-    production ledger are changed. No Darma stock/cost and no tailor balance are touched.
+    Apply only newly delivered finished goods.
+
+    Darma keeps its existing production behavior.
+    Novani remains physically isolated from Darma and writes only to Novani finished
+    inventory, but sewing wage is a shared business rule: it is deducted from the
+    tailor balance strictly from the NEW delivered-piece delta, never from cut quantity.
     """
     v20._validate_output_floor(block)
     total_delta = 0
@@ -61,11 +64,12 @@ def _apply_output_delta(block):
             total_delta += delta
             details.append(f"{label}/{size_name}: +{delta}")
 
-    if total_delta and block.brand.name == "دارما":
+    # Wage is always based on actual NEW delivered pieces, for both Darma and Novani.
+    # Cut quantity and Apply Materials do not create any sewing-wage deduction.
+    if total_delta:
         wage_delta = v20._wage_for_pieces(total_delta, v20._dozen_wage())
         v20._adjust_tailor_balance(-wage_delta)
     else:
-        # Novani output changes nothing except Novani finished inventory/ledger.
         wage_delta = 0
 
     return total_delta, wage_delta, details
@@ -85,7 +89,8 @@ def material_block_apply_output(request, block_id):
             if block.brand.name == "Novani":
                 messages.success(
                     request,
-                    f"{delta} شورت فقط به {destination_label} اضافه شد. هیچ موجودی دارما و هیچ حساب دیگری تغییر نکرد. "
+                    f"{delta} شورت به {destination_label} اضافه شد و مزد فقط همین {delta} عدد "
+                    f"({wage:,} تومان) از حساب خیاط کم شد. موجودی دارما تغییری نکرد. "
                     + " | ".join(details),
                 )
             else:
@@ -95,7 +100,7 @@ def material_block_apply_output(request, block_id):
                     f"({wage:,} تومان) اعمال شد. " + " | ".join(details),
                 )
         else:
-            messages.info(request, "هیچ تحویل جدیدی برای اعمال وجود نداشت؛ موجودی تغییر نکرد.")
+            messages.info(request, "هیچ تحویل جدیدی برای اعمال وجود نداشت؛ موجودی و مزد تغییر نکرد.")
     except MaterialReportBlock.DoesNotExist:
         messages.error(request, "صورت پیدا نشد.")
     except Exception as exc:
