@@ -1,13 +1,11 @@
 from collections import defaultdict
 
 from django.contrib.auth.decorators import login_required
-from django.db.models import Sum
 from django.shortcuts import get_object_or_404, render
 
-from .daily_returns_v36 import RETURN_BRANDS, RETURN_NOTE_PREFIX
 from .dateutils import format_jalali
 from .finance import sale_line_metrics
-from .models import Brand, Color, InventoryAdjustment, ProductSize, SaleDay, SaleLine, Size, StockBalance
+from .models import SaleDay, SaleLine
 from .telegram_inventory_alerts_v20 import notify_after_daily_report
 
 
@@ -94,50 +92,6 @@ def _build_filter_brands(detail_rows):
     return result
 
 
-def _build_return_catalog():
-    """UI catalog only. Existing ProductSize/ProductComposition remain authoritative."""
-    result = []
-    for brand_name in RETURN_BRANDS:
-        brand = Brand.objects.filter(name=brand_name, active=True).first()
-        if not brand:
-            continue
-        size_names = FILTER_SIZES[brand_name]
-        sizes = list(Size.objects.filter(name__in=size_names).order_by("sort_order", "id"))
-        color_ids = list(
-            StockBalance.objects.filter(brand=brand).values_list("color_id", flat=True).distinct()
-        )
-        colors = list(Color.objects.filter(id__in=color_ids, active=True).order_by("id"))
-        size_rows = []
-        for size in sizes:
-            products = []
-            qs = (
-                ProductSize.objects.filter(
-                    product__brand=brand,
-                    product__active=True,
-                    active=True,
-                    size=size,
-                )
-                .select_related("product")
-                .prefetch_related("product__composition")
-                .order_by("product__code", "id")
-            )
-            for ps in qs:
-                products.append({
-                    "id": ps.id,
-                    "code": ps.product.code,
-                    "pack_qty": int(ps.product.pack_qty or 0),
-                    "has_composition": bool(list(ps.product.composition.all())),
-                })
-            size_rows.append({"id": size.id, "name": size.name, "products": products})
-        result.append({
-            "id": brand.id,
-            "name": brand.name,
-            "colors": colors,
-            "sizes": size_rows,
-        })
-    return result
-
-
 @login_required
 def daily_report(request, day_id):
     day = get_object_or_404(SaleDay, id=day_id)
@@ -206,24 +160,13 @@ def daily_report(request, day_id):
     if not any(row["brand_name"] == "دارما" for row in primary_detail_rows):
         default_brand = "تکوین"
 
-    return_today_shorts = int(
-        InventoryAdjustment.objects.filter(
-            date=day.date,
-            applied=True,
-            delta__gt=0,
-            note__startswith=RETURN_NOTE_PREFIX,
-        ).aggregate(v=Sum("delta"))["v"] or 0
-    )
-
-    # At most one automatic stock alert is sent for this sale date. Telegram
-    # failure must never prevent the business report from opening.
     if lines:
         try:
             notify_after_daily_report(day)
         except Exception:
             pass
 
-    return render(request, "core/daily_report_v36.html", {
+    return render(request, "core/daily_report_v21.html", {
         "day": day,
         "jalali_date": format_jalali(day.date),
         "detail_rows": detail_rows,
@@ -233,6 +176,4 @@ def daily_report(request, day_id):
         "default_brand": default_brand,
         "by_brand": ordered_brands,
         "total": total,
-        "return_catalog": _build_return_catalog(),
-        "return_today_shorts": return_today_shorts,
     })
