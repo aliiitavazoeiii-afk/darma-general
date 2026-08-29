@@ -79,10 +79,11 @@ Read exactly in this order:
 12. `docs/PROJECT_CONTEXT/12_VERSION_TIMELINE_V18_TO_V37.md`
 13. `docs/PROJECT_CONTEXT/13_NEW_CHAT_OPERATING_PROTOCOL.md`
 14. `docs/PROJECT_CONTEXT/14_HANDOFF_SCOPE_AND_COMPLETENESS.md`
-15. `UI_SAFETY_V37.md`
-16. current `core/urls.py`
-17. relevant active implementation files from `03_ACTIVE_CODE_MAP.md`
-18. `AI_START_HERE.md` and `PROJECT_HANDOFF.md` for older history only
+15. `docs/PROJECT_CONTEXT/15_CODE_FINGERPRINT_AT_HANDOFF.md`
+16. `UI_SAFETY_V37.md`
+17. current `core/urls.py`
+18. relevant active implementation files from `03_ACTIVE_CODE_MAP.md`
+19. `AI_START_HERE.md` and `PROJECT_HANDOFF.md` for older history only
 
 `docs/PROJECT_CONTEXT/README.md` is the manifest for the pack.
 
