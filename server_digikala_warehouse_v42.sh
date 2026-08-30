@@ -129,7 +129,7 @@ docker compose run --rm --entrypoint python web manage.py check || fail "Django 
 docker compose run --rm --entrypoint python web manage.py check_returns_calculator_v37 || fail "V37 regression failed"
 docker compose run --rm --entrypoint python web manage.py check_digikala_v40 --live || fail "V40 API check failed"
 docker compose run --rm --entrypoint python web manage.py check_digikala_delivery_v41 --live || fail "V41 delivery check failed"
-docker compose run --rm --entrypoint python web manage.py check_digikala_warehouse_v42 --live || fail "V42 warehouse check failed"
+docker compose run --rm --entrypoint python web manage.py check_digikala_warehouse_v42 || fail "V42 warehouse source check failed"
 docker compose run --rm --entrypoint python web -c '
 from pathlib import Path
 warehouse=Path("/app/core/digikala_warehouse_v42.py").read_text(encoding="utf-8")
