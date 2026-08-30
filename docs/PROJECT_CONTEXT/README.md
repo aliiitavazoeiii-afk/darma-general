@@ -26,6 +26,7 @@ Then read all numbered files in order:
 18. `18_DIGIKALA_API_V40.md` — direct Digikala Open API read-only integration and token isolation.
 19. `19_DIGIKALA_DELIVERIES_V41.md` — effective-commitment delivery board and itemized must-deliver list; committed on GitHub, not separately confirmed live before V42.
 20. `20_DIGIKALA_FREE_WAREHOUSE_V42.md` — separate read-only free/sellable Digikala warehouse board using the live reconciled inventory/reservation formula; committed on GitHub, not confirmed live until successful V42 server output.
+21. `21_DIGIKALA_CENTER_V43.md` — isolated Digikala mini-app with DKP/DKPC daily commitments, package visibility, quantity sales report, V42 warehouse and return-stock visibility; GitHub-prepared, not production-confirmed until V43 deploy output.
 
 After these, read:
 
@@ -35,13 +36,14 @@ After these, read:
 - `/UI_SAFETY_V40.md`
 - `/UI_SAFETY_V41.md`
 - `/UI_SAFETY_V42.md`
+- `/UI_SAFETY_V43.md`
 - current `/core/urls.py`
 - exact active source files relevant to the requested change
 - `/AI_START_HERE.md` and `/PROJECT_HANDOFF.md` only for older historical context.
 
 When older docs conflict with this directory or current active code, this directory + current active code wins.
 
-For production accounting checkpoints, `08_LIVE_STATE_AND_CHECKPOINTS.md` is authoritative only for deployments with actual server invariant output. The user reported V40 came up successfully, but the full final V40 invariant block was not supplied in chat, so the last numerically recorded checkpoint remains V38. V42 includes the V41 Git state and must not be considered live until its own successful server output is posted.
+For production accounting checkpoints, `08_LIVE_STATE_AND_CHECKPOINTS.md` is authoritative only for deployments with actual server invariant output. The user reported V40 came up successfully, but the full final V40 invariant block was not supplied in chat, so the last numerically recorded checkpoint remains V38. V41/V42 were prepared but not separately production-confirmed before V43. V43 includes the prior Digikala Git state and must not be considered live until its own successful server output is posted.
 
 Latest confirmed numeric production snapshot:
 
