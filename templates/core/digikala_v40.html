@@ -1,0 +1,86 @@
+{% extends 'base.html' %}{% load jalali %}{% block title %}دیجی‌کالا | DARMA{% endblock %}{% block content %}{% include 'core/_mobile_shell.html' %}
+<div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4 mobile-page-head">
+  <div>
+    <div class="page-kicker">Open API دیجی‌کالا</div>
+    <h1 class="page-title mb-1">دیجی‌کالا</h1>
+    <div class="page-muted">اتصال مستقیم و فقط خواندنی در V40 · بدون تغییر فروش، موجودی یا حسابداری داخلی</div>
+  </div>
+  <div class="mobile-page-actions d-flex gap-2">
+    <a class="btn btn-outline-light" href="{% url 'digikala' %}?refresh=1">بروزرسانی API</a>
+    <a class="btn btn-primary" href="{% url 'dashboard' %}">داشبورد اصلی</a>
+  </div>
+</div>
+
+{% if digikala_error %}
+<div class="alert alert-danger glass-card mb-4">{{ digikala_error }}</div>
+{% endif %}
+
+<div class="row g-2 g-md-3 mb-4">
+  <div class="col-6 col-xl-3"><div class="card glass-card h-100"><div class="card-body"><div class="subheader">وضعیت اتصال</div><div class="kpi mt-2 {% if digikala.connected %}text-success{% else %}text-danger{% endif %}">{% if digikala.connected %}متصل{% else %}قطع{% endif %}</div><div class="text-secondary small">توکن به‌صورت خودکار رفرش می‌شود</div></div></div></div>
+  <div class="col-6 col-xl-3"><div class="card glass-card h-100"><div class="card-body"><div class="subheader">سفارش‌های جاری</div><div class="kpi num mt-2">{{ digikala.orders_total|default:0|groupnum }}</div><div class="text-secondary small">از API سفارش‌ها</div></div></div></div>
+  <div class="col-6 col-xl-3"><div class="card glass-card h-100"><div class="card-body"><div class="subheader">تنوع‌های موجودی</div><div class="kpi num mt-2">{{ digikala.inventory_total|default:0|groupnum }}</div><div class="text-secondary small">رکوردهای موجودی دیجی‌کالا</div></div></div></div>
+  <div class="col-6 col-xl-3"><div class="card glass-card h-100"><div class="card-body"><div class="subheader">صورتحساب‌ها</div><div class="kpi num mt-2">{{ digikala.invoices_total|default:0|groupnum }}</div><div class="text-secondary small">سوابق صورتحساب قابل مشاهده</div></div></div></div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-xl-6">
+    <div class="card glass-card h-100">
+      <div class="card-header"><h3 class="card-title mb-0">سفارش و ارسال</h3></div>
+      <div class="card-body">
+        <div class="row g-2">
+          <div class="col-6"><div class="summary-cell"><span>ارسال توسط دیجی‌کالا</span><strong class="num">{{ digikala.all_shipped_by_dk|default:0|groupnum }}</strong></div></div>
+          <div class="col-6"><div class="summary-cell"><span>ارسال توسط فروشنده</span><strong class="num">{{ digikala.shipped_by_seller_count|default:0|groupnum }}</strong></div></div>
+          <div class="col-6"><div class="summary-cell"><span>سفارش فروشگاه نزدیک</span><strong class="num">{{ digikala.nearby_orders|default:0|groupnum }}</strong></div></div>
+          <div class="col-6"><div class="summary-cell"><span>فروشگاه نزدیک در انتظار</span><strong class="num">{{ digikala.nearby_pending|default:0|groupnum }}</strong></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-xl-6">
+    <div class="card glass-card h-100">
+      <div class="card-header"><h3 class="card-title mb-0">تعهدات</h3></div>
+      <div class="card-body">
+        <div class="row g-2">
+          <div class="col-6"><div class="summary-cell"><span>کل تعهدات</span><strong class="num">{{ digikala.commitments_total|default:0|groupnum }}</strong></div></div>
+          <div class="col-6"><div class="summary-cell"><span>تعهد مؤثر</span><strong class="num text-success">{{ digikala.effective_commitments|default:0|groupnum }}</strong></div></div>
+          <div class="col-6"><div class="summary-cell"><span>تعهد غیرمؤثر</span><strong class="num">{{ digikala.non_effective_commitments|default:0|groupnum }}</strong></div></div>
+          <div class="col-6"><div class="summary-cell"><span>جریمه گزارش‌شده</span><strong class="money {% if digikala.total_penalty_rial %}text-danger{% endif %}">{{ digikala.total_penalty_rial|default:0|groupnum }}</strong><small class="d-block text-secondary mt-1">ریال</small></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-xl-7">
+    <div class="card glass-card h-100">
+      <div class="card-header"><h3 class="card-title mb-0">وضعیت اتصال V40</h3></div>
+      <div class="card-body">
+        {% if digikala.store_title %}<div class="mb-3"><span class="text-secondary">فروشگاه:</span> <strong>{{ digikala.store_title }}</strong></div>{% endif %}
+        <div class="mb-2"><span class="text-secondary">انقضای Access Token:</span> <span class="ltr">{{ digikala.access_token_expires_at.date|default:'—' }}</span></div>
+        <div class="mb-2"><span class="text-secondary">انقضای Refresh Token:</span> <span class="ltr">{{ digikala.refresh_token_expires_at.date|default:'—' }}</span></div>
+        <div><span class="text-secondary">آخرین خواندن داشبورد:</span> <span class="ltr">{{ digikala.updated_at|default:'—' }}</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-xl-5">
+    <div class="card glass-card h-100">
+      <div class="card-header"><h3 class="card-title mb-0">مرز ایمنی</h3></div>
+      <div class="card-body">
+        <div class="text-success fw-bold mb-2">فقط خواندنی</div>
+        <div class="text-secondary">این نسخه فقط GETهای سفارش، موجودی، پروفایل، تعهدات و صورتحساب را می‌خواند. تنها POST مجاز، رفرش توکن رسمی دیجی‌کالاست.</div>
+        <div class="text-secondary mt-3">Endpointهای Insight که در تست واقعی HTTP 500/400 دادند فعلاً وارد داشبورد نشده‌اند تا رفتارشان جداگانه مشخص شود.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if digikala.errors %}
+<div class="card glass-card mt-4">
+  <div class="card-header"><h3 class="card-title mb-0">خطاهای جزئی API</h3></div>
+  <div class="card-body">
+    {% for name, error in digikala.errors.items %}<div class="mb-2"><strong>{{ name }}</strong>: <span class="text-secondary">{{ error }}</span></div>{% endfor %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}
