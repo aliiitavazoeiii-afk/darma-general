@@ -26,22 +26,25 @@ class Command(BaseCommand):
             return
 
         orders = get_daily_orders_center(force=True)
+        if not orders.get("date_split_ok"):
+            raise CommandError(f"future commitment date split failed: {orders.get('date_split_error') or orders.get('split_issue_variants')}")
         if int(orders.get("tomorrow_total") or 0) + int(orders.get("day_after_total") or 0) + int(orders.get("later_total") or 0) != int(orders.get("future_total") or 0):
             raise CommandError("future commitment split identity mismatch")
         self.stdout.write("V44 DAILY SPLIT")
-        self.stdout.write(f"TOMORROW={orders.get('tomorrow_total', 0)}")
-        self.stdout.write(f"DAY_AFTER={orders.get('day_after_total', 0)}")
-        self.stdout.write(f"LATER={orders.get('later_total', 0)}")
+        self.stdout.write(f"TOMORROW={orders.get('tomorrow_total', 0)} PRODUCTS={len(orders.get('tomorrow_products') or [])}")
+        self.stdout.write(f"DAY_AFTER={orders.get('day_after_total', 0)} PRODUCTS={len(orders.get('day_after_products') or [])}")
+        self.stdout.write(f"LATER={orders.get('later_total', 0)} PRODUCTS={len(orders.get('later_products') or [])}")
         self.stdout.write(f"FUTURE={orders.get('future_total', 0)}")
-        self.stdout.write(f"SPLIT_OK={orders.get('date_split_ok', False)}")
+        self.stdout.write("SPLIT_OK=True")
 
         products = get_products_board(force=True)
+        if int(products.get("variant_count") or 0) <= 0 or int(products.get("product_count") or 0) <= 0:
+            raise CommandError("inventory-backed products page returned no products")
         self.stdout.write("V44 PRODUCTS")
         self.stdout.write(f"DKP={products.get('product_count', 0)}")
         self.stdout.write(f"DKPC={products.get('variant_count', 0)}")
 
-        # Reuse the inventory cache loaded by products; this must not trigger another
-        # 1,300-row inventory fetch during the same live check.
+        # Reuse the inventory cache loaded by products; do not fetch ~1,300 rows again.
         returns = get_returns_board(force=False)
         self.stdout.write("V44 RETURN WAREHOUSE")
         self.stdout.write(f"RETURN_QTY={returns.get('total', 0)}")
@@ -61,8 +64,10 @@ class Command(BaseCommand):
             sales = get_sales_board(force=True)
         except Exception as exc:
             raise CommandError(f"sales board failed: {exc}") from exc
+        if not sales.get("source"):
+            raise CommandError("sales board has no active source")
         self.stdout.write("V44 SALES")
-        self.stdout.write(f"SOURCE={sales.get('source') or 'NONE'}")
+        self.stdout.write(f"SOURCE={sales.get('source')}")
         self.stdout.write(f"MONTH={sales.get('jalali_month', '—')}")
         self.stdout.write(f"QTY={sales.get('total_quantity', 0)}")
         self.stdout.write(f"ROWS={sales.get('order_rows', 0)}")
