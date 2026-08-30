@@ -53,6 +53,21 @@ DATABASES = {
     }
 }
 
+# V44: Gunicorn runs multiple workers. LocMemCache is process-local, which made
+# the Digikala API cache miss when a later request landed on another worker.
+# FileBasedCache keeps the small read-only API cache shared inside the web container.
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.filebased.FileBasedCache",
+        "LOCATION": "/tmp/darma-shared-cache",
+        "TIMEOUT": 300,
+        "OPTIONS": {
+            "MAX_ENTRIES": 800,
+            "CULL_FREQUENCY": 3,
+        },
+    }
+}
+
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
