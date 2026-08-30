@@ -5,6 +5,7 @@ from django.views.decorators.http import require_GET
 
 from .digikala_client_v40 import DigikalaAPIError, get_summary
 from .digikala_delivery_v41 import get_delivery_board
+from .digikala_warehouse_v42 import get_free_warehouse_board
 
 
 @login_required
@@ -45,3 +46,32 @@ def digikala_summary(request):
         return JsonResponse({"ok": True, "data": summary})
     except DigikalaAPIError as exc:
         return JsonResponse({"ok": False, "error": str(exc)}, status=503)
+
+
+@login_required
+@require_GET
+def digikala_warehouse(request):
+    force = request.GET.get("refresh") == "1"
+    try:
+        warehouse = get_free_warehouse_board(force=force)
+        page_error = ""
+    except DigikalaAPIError as exc:
+        warehouse = {
+            "rows": [],
+            "sellable_total": 0,
+            "reserved_total": 0,
+            "free_total": 0,
+            "variant_count": 0,
+            "free_variant_count": 0,
+            "zero_variant_count": 0,
+            "reserve_over_stock_total": 0,
+        }
+        page_error = str(exc)
+    return render(
+        request,
+        "core/digikala_warehouse_v42.html",
+        {
+            "warehouse": warehouse,
+            "digikala_error": page_error,
+        },
+    )
