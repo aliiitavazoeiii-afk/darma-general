@@ -1,5 +1,5 @@
 {% extends 'base.html' %}{% load jalali %}{% block title %}موجودی آزاد دیجی‌کالا | DARMA{% endblock %}{% block content %}{% include 'core/_mobile_shell.html' %}
-<div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4 mobile-page-head">
+<div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-3 mobile-page-head">
   <div>
     <div class="page-kicker">انبار دیجی‌کالا · Read Only</div>
     <h1 class="page-title mb-1">موجودی آزاد و فروش‌نرفته</h1>
@@ -7,10 +7,11 @@
   </div>
   <div class="mobile-page-actions d-flex flex-wrap gap-2">
     <a class="btn btn-outline-light" href="{% url 'digikala_warehouse' %}?refresh=1">بروزرسانی موجودی</a>
-    <a class="btn btn-outline-light" href="{% url 'digikala' %}">تعهدات دیجی‌کالا</a>
+    <a class="btn btn-outline-light" href="{% url 'digikala' %}">مرکز دیجی‌کالا</a>
     <a class="btn btn-primary" href="{% url 'dashboard' %}">داشبورد اصلی</a>
   </div>
 </div>
+{% include 'core/_digikala_nav_v43.html' with dk_section='warehouse' %}
 
 {% if digikala_error %}<div class="alert alert-danger glass-card mb-4">{{ digikala_error }}</div>{% endif %}
 {% if warehouse.reserve_over_stock_total %}<div class="alert alert-warning glass-card mb-4">در بعضی Variantها رزرو لحظه‌ای از موجودی قابل‌فروش فعلی بیشتر است. برای موجودی آزاد، محاسبه به‌صورت ردیفی و حداقل صفر انجام شده؛ مجموع کسری لحظه‌ای: <strong class="num">{{ warehouse.reserve_over_stock_total|groupnum }}</strong>.</div>{% endif %}
