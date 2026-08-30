@@ -3,6 +3,13 @@ from django.http import JsonResponse
 from django.shortcuts import render
 from django.views.decorators.http import require_GET
 
+from .digikala_center_v43 import (
+    get_daily_orders_center,
+    get_package_detail,
+    get_packages_board,
+    get_returns_board,
+    get_sales_board,
+)
 from .digikala_client_v40 import DigikalaAPIError, get_summary
 from .digikala_delivery_v41 import get_delivery_board
 from .digikala_warehouse_v42 import get_free_warehouse_board
@@ -22,11 +29,12 @@ def digikala_home(request):
         page_error = str(exc)
     return render(
         request,
-        "core/digikala_v40.html",
+        "core/digikala_center_v43.html",
         {
             "digikala": summary,
             "delivery": delivery,
             "digikala_error": page_error,
+            "dk_section": "home",
         },
     )
 
@@ -46,6 +54,112 @@ def digikala_summary(request):
         return JsonResponse({"ok": True, "data": summary})
     except DigikalaAPIError as exc:
         return JsonResponse({"ok": False, "error": str(exc)}, status=503)
+
+
+@login_required
+@require_GET
+def digikala_orders(request):
+    force = request.GET.get("refresh") == "1"
+    try:
+        orders = get_daily_orders_center(force=force)
+        page_error = ""
+    except DigikalaAPIError as exc:
+        orders = {
+            "today_products": [],
+            "tomorrow_products": [],
+            "day_after_products": [],
+            "later_products": [],
+            "delayed_products": [],
+            "today_total": 0,
+            "tomorrow_total": 0,
+            "day_after_total": 0,
+            "later_total": 0,
+            "delayed_total": 0,
+            "date_split_ok": False,
+            "date_split_error": str(exc),
+        }
+        page_error = str(exc)
+    order_sections = [
+        (f"تحویل فردا · {orders.get('tomorrow_jalali', '—')}", orders.get("tomorrow_products", []), orders.get("tomorrow_total", 0)),
+        (f"تحویل پس‌فردا · {orders.get('day_after_jalali', '—')}", orders.get("day_after_products", []), orders.get("day_after_total", 0)),
+        ("روزهای بعد", orders.get("later_products", []), orders.get("later_total", 0)),
+        ("عقب‌افتاده", orders.get("delayed_products", []), orders.get("delayed_total", 0)),
+    ]
+    return render(
+        request,
+        "core/digikala_orders_v43.html",
+        {
+            "orders": orders,
+            "order_sections": order_sections,
+            "digikala_error": page_error,
+            "dk_section": "orders",
+        },
+    )
+
+
+@login_required
+@require_GET
+def digikala_packages(request):
+    force = request.GET.get("refresh") == "1"
+    packages = get_packages_board(force=force)
+    return render(
+        request,
+        "core/digikala_packages_v43.html",
+        {
+            "packages": packages,
+            "dk_section": "packages",
+        },
+    )
+
+
+@login_required
+@require_GET
+def digikala_package_detail(request, package_id):
+    try:
+        package = get_package_detail(package_id)
+        page_error = ""
+    except DigikalaAPIError as exc:
+        package = {"package_id": package_id, "status": "—", "variants": [], "total_quantity": 0}
+        page_error = str(exc)
+    return render(
+        request,
+        "core/digikala_package_detail_v43.html",
+        {
+            "package": package,
+            "digikala_error": page_error,
+            "dk_section": "packages",
+        },
+    )
+
+
+@login_required
+@require_GET
+def digikala_sales(request):
+    force = request.GET.get("refresh") == "1"
+    try:
+        sales = get_sales_board(force=force)
+        page_error = ""
+    except DigikalaAPIError as exc:
+        sales = {
+            "jalali_month": "—",
+            "total_quantity": 0,
+            "order_rows": 0,
+            "product_count": 0,
+            "top_products": [],
+            "bottom_products": [],
+            "source_rows_scanned": 0,
+            "price_ready": False,
+        }
+        page_error = str(exc)
+    return render(
+        request,
+        "core/digikala_sales_v43.html",
+        {
+            "sales": sales,
+            "digikala_error": page_error,
+            "dk_section": "sales",
+        },
+    )
 
 
 @login_required
@@ -73,5 +187,27 @@ def digikala_warehouse(request):
         {
             "warehouse": warehouse,
             "digikala_error": page_error,
+            "dk_section": "warehouse",
+        },
+    )
+
+
+@login_required
+@require_GET
+def digikala_returns(request):
+    force = request.GET.get("refresh") == "1"
+    try:
+        returns = get_returns_board(force=force)
+        page_error = ""
+    except DigikalaAPIError as exc:
+        returns = {"rows": [], "total": 0, "variant_count": 0, "source_rows_scanned": 0}
+        page_error = str(exc)
+    return render(
+        request,
+        "core/digikala_returns_v43.html",
+        {
+            "returns": returns,
+            "digikala_error": page_error,
+            "dk_section": "returns",
         },
     )
