@@ -20,7 +20,7 @@ services:
     restart: unless-stopped
     env_file: .env
     volumes:
-      - /opt/darma-secrets/digikala:/run/secrets/digikala
+      - /opt/darma-secrets/digikala/runtime:/run/secrets/digikala
     depends_on:
       db:
         condition: service_healthy
