@@ -1,8 +1,8 @@
 # 03 — ACTIVE CODE MAP
 
-This is the current source-of-truth map for `main` after V37. Historical version numbers in filenames are not enough to determine what is active. Always verify `core/urls.py` first.
+This is the current source-of-truth map for `main`. Historical version numbers in filenames are not enough to determine what is active. Always verify `core/urls.py` first.
 
-Last synchronized: 2026-08-29 after confirmed V37 live deployment.
+Last synchronized: 2026-08-30 after V40 Digikala read-only code was prepared on GitHub. V40 is not production-confirmed until successful server output.
 
 ---
 
@@ -18,6 +18,14 @@ Last synchronized: 2026-08-29 after confirmed V37 live deployment.
 - dark navy / glass UI
 - project path `/opt/darma-general`
 - production domain `gozaresh.filmjadiid.ir`
+
+V40 adds a bind-mounted token-only Digikala runtime directory for the `web` service:
+
+```text
+/opt/darma-secrets/digikala/runtime -> /run/secrets/digikala
+```
+
+The RSA private key remains outside that runtime directory and must not be mounted into web.
 
 ---
 
@@ -35,6 +43,29 @@ Important files:
 - `templates/core/dashboard_excel.html`
 
 Current requested dashboard alert display is Darma HOME < 10, excluding red/yellow.
+
+V40 adds an asynchronous Digikala summary card to the dashboard template. The internal dashboard calculation view remains unchanged; Digikala network I/O happens through `/digikala/summary/` after the page loads.
+
+### Digikala Open API V40
+
+```text
+/digikala/ -> core.digikala_views_v40.digikala_home
+/digikala/summary/ -> core.digikala_views_v40.digikala_summary
+```
+
+Important files:
+
+- `core/digikala_client_v40.py`
+- `core/digikala_views_v40.py`
+- `templates/core/digikala_v40.html`
+- `core/management/commands/check_digikala_v40.py`
+- `compose.yml`
+- `static/core/number_format.js` adds the sidebar navigation entry
+- `server_digikala_readonly_v40.sh`
+
+Both DARMA routes are login-protected and `@require_GET`.
+
+Allowed external V40 calls are GET-only for orders, order statistics, inventory, profile, commitments and invoices. The only external POST is the official `/open-api/v1/auth/refresh-token` credential-maintenance endpoint. No Digikala API response is applied to internal SaleLine, inventory or accounting ledgers in V40.
 
 ### Calendar/sales entry
 
@@ -78,7 +109,7 @@ Therefore active parser/apply path is:
 - `core/cost_accounting_v14.py` for sale snapshot
 - `core/finance_excel_v9.py` for receivable sync
 
-Do not edit an older importer and assume it is active.
+V40 does **not** replace this importer. Do not connect API orders to this flow without a separate accounting/stock-safe phase.
 
 ### Daily report
 
@@ -121,7 +152,7 @@ The old route:
 /sales/<day_id>/return/
 ```
 
-must not exist in V37.
+must not exist in V37+.
 
 ### Comprehensive report
 
@@ -199,7 +230,7 @@ Important files:
 /payments/receipts/<receipt_id>/delete/ -> core.business_tools_v21.receipt_delete
 ```
 
-Do not accidentally route receipt operations back to v14.
+Do not confuse these internal receivable/cash settlement routes with the external Open API V40 integration.
 
 ### Calculator V37
 
@@ -267,7 +298,7 @@ Do not assume these are the primary current UI for raw materials/capital. Check 
 
 ## 3. Protected calculation files
 
-During V37 the deploy source-scope guard explicitly protects these from accidental modification:
+V40 deployment explicitly protects these from accidental modification:
 
 - `core/finance.py`
 - `core/report_v9.py`
@@ -275,8 +306,15 @@ During V37 the deploy source-scope guard explicitly protects these from accident
 - `core/business_tools_v22.py`
 - `core/material_report_v22.py`
 - `core/final_services.py`
+- `core/cost_accounting_v14.py`
+- `core/finance_excel_v9.py`
+- `core/daily_order_import_v23.py`
+- `core/returns_v37.py`
+- `core/calculator_v37.py`
+- `core/models.py`
+- `core/migrations/`
 
-A future UI-only change should generally preserve the same discipline.
+A future UI/external-read change should preserve the same discipline unless the user explicitly requests a business-rule change.
 
 ---
 
@@ -293,6 +331,15 @@ A future UI-only change should generally preserve the same discipline.
 
 - `core/finance.py`
 - `core/cost_accounting_v14.py` snapshot creation
+
+### External Digikala Open API read visibility
+
+- `core/digikala_client_v40.py`
+- `core/digikala_views_v40.py`
+- `templates/core/digikala_v40.html`
+- `templates/core/dashboard_excel.html` async summary UI
+
+This is separate from the internal Digikala fee/receivable/XLSX-import business flows.
 
 ### Sale physical allocation
 
@@ -338,14 +385,16 @@ Do not blindly run all historical checks; some are tied to old states. Current/h
 ```text
 python manage.py check
 python manage.py check_returns_calculator_v37
+python manage.py check_digikala_v40 --live
 python manage.py check_operational_roundtrip_v36
-python manage.py check_ui_returns_v36   # historical V36 regression; may need review after V37 route retirement
 python manage.py check_v23_delivery_import
 python manage.py check_current_delivery_file_v27
 python manage.py check_daily_report_v26
 python manage.py check_capital_integrity_v14
 python manage.py capital_audit_v9
 ```
+
+`check_digikala_v40 --live` reads external Digikala data and may rotate the API token if the Access Token expired; it does not write internal business data.
 
 Before running an old versioned check, inspect its expectations against current routes. A check that expects an intentionally retired V36 route can fail for the correct reason.
 
@@ -355,14 +404,17 @@ Before running an old versioned check, inspect its expectations against current 
 
 Most `server_*.sh` files are historical one-time deployment/reconcile scripts. Do not choose one based on the highest version number alone.
 
-Latest confirmed live feature deployment:
+Prepared V40 deployment script:
 
 ```text
-server_standalone_returns_calculator_v37.sh
+server_digikala_readonly_v40.sh
 ```
 
-That script:
+It is the correct deployment path for the V40 Git state. It also builds the current presentation tree already on `main`, including V39 assets.
 
+The script:
+
+- isolates runtime API tokens from the RSA private key;
 - starts DB;
 - takes full pg_dump;
 - captures capital/inventory/receivable/sales invariants;
@@ -370,12 +422,19 @@ That script:
 - builds new web image;
 - verifies no migration drift;
 - runs V37 regression;
-- verifies preflight changed nothing;
+- runs the live read-only Digikala check;
+- verifies preflight changed no business values;
 - recreates web/restarts Caddy;
-- reruns live regression;
+- reruns live checks;
 - compares final invariants.
 
-For any new change, create a new purpose-specific deploy script instead of rerunning an unrelated historical reconcile.
+Expected marker:
+
+```text
+SUCCESS: DIGIKALA READ-ONLY V40 DEPLOYED
+```
+
+Do not call V40 live until that output is posted by the user.
 
 ---
 
