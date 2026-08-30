@@ -113,7 +113,7 @@ CHANGED=$(git diff --name-only "$BASE"..HEAD)
 echo "$CHANGED"
 for f in $CHANGED; do
   case "$f" in
-    core/digikala_center_v43.py|core/digikala_views_v40.py|core/urls.py|core/management/commands/check_digikala_center_v43.py|templates/core/_digikala_nav_v43.html|templates/core/digikala_center_v43.html|templates/core/digikala_orders_v43.html|templates/core/digikala_packages_v43.html|templates/core/digikala_package_detail_v43.html|templates/core/digikala_sales_v43.html|templates/core/digikala_returns_v43.html|server_digikala_center_v43.sh|UI_SAFETY_V43.md|docs/00_NEW_CHAT_READ_FIRST.md|docs/PROJECT_CONTEXT/README.md|docs/PROJECT_CONTEXT/03_ACTIVE_CODE_MAP.md|docs/PROJECT_CONTEXT/08_LIVE_STATE_AND_CHECKPOINTS.md|docs/PROJECT_CONTEXT/21_DIGIKALA_CENTER_V43.md) ;;
+    core/digikala_center_v43.py|core/digikala_views_v40.py|core/urls.py|core/management/commands/check_digikala_center_v43.py|templates/core/_digikala_nav_v43.html|templates/core/digikala_center_v43.html|templates/core/digikala_orders_v43.html|templates/core/digikala_packages_v43.html|templates/core/digikala_package_detail_v43.html|templates/core/digikala_sales_v43.html|templates/core/digikala_returns_v43.html|templates/core/digikala_warehouse_v42.html|server_digikala_center_v43.sh|UI_SAFETY_V43.md|docs/00_NEW_CHAT_READ_FIRST.md|docs/PROJECT_CONTEXT/README.md|docs/PROJECT_CONTEXT/03_ACTIVE_CODE_MAP.md|docs/PROJECT_CONTEXT/08_LIVE_STATE_AND_CHECKPOINTS.md|docs/PROJECT_CONTEXT/21_DIGIKALA_CENTER_V43.md) ;;
     *) fail "unexpected V43 file changed: $f" ;;
   esac
 done
