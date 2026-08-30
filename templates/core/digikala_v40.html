@@ -5,7 +5,8 @@
     <h1 class="page-title mb-1">تعهدات و تحویل دیجی‌کالا</h1>
     <div class="page-muted">اطلاعات زنده و فقط خواندنی · بدون تغییر فروش، موجودی یا حسابداری داخلی</div>
   </div>
-  <div class="mobile-page-actions d-flex gap-2">
+  <div class="mobile-page-actions d-flex flex-wrap gap-2">
+    <a class="btn btn-outline-light" href="{% url 'digikala_warehouse' %}">موجودی آزاد انبار</a>
     <a class="btn btn-outline-light" href="{% url 'digikala' %}?refresh=1">بروزرسانی API</a>
     <a class="btn btn-primary" href="{% url 'dashboard' %}">داشبورد اصلی</a>
   </div>
@@ -55,6 +56,13 @@
   </div>
 
   <div class="col-xl-4">
+    <div class="card glass-card mb-3">
+      <div class="card-header"><h3 class="card-title mb-0">دسترسی سریع</h3></div>
+      <div class="card-body">
+        <a class="btn btn-outline-light w-100" href="{% url 'digikala_warehouse' %}">مشاهده موجودی آزاد و فروش‌نرفته انبار دیجی‌کالا</a>
+      </div>
+    </div>
+
     <div class="card glass-card mb-3">
       <div class="card-header"><h3 class="card-title mb-0">خلاصه تعهد</h3></div>
       <div class="card-body">
