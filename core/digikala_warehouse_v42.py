@@ -1,13 +1,11 @@
-from urllib.parse import urlencode
-
 from django.core.cache import cache
 from django.utils import timezone
 
-from .digikala_client_v40 import DigikalaAPIError, get_json
+from .digikala_shared_v44 import get_commitment_rows, get_inventory_rows
 
 
 WAREHOUSE_CACHE_KEY = "digikala-v42-free-warehouse"
-WAREHOUSE_CACHE_SECONDS = 60
+WAREHOUSE_CACHE_SECONDS = 300
 
 
 def _int(value):
@@ -15,13 +13,6 @@ def _int(value):
         return int(value or 0)
     except (TypeError, ValueError):
         return 0
-
-
-def _data(response):
-    if not isinstance(response, dict):
-        return {}
-    value = response.get("data")
-    return value if isinstance(value, dict) else {}
 
 
 def _extract_size(title):
@@ -36,35 +27,9 @@ def _extract_size(title):
     return "—"
 
 
-def _paginated_items(path, *, size, max_pages):
-    page = 1
-    rows = []
-    while True:
-        separator = "&" if "?" in path else "?"
-        response = get_json(f"{path}{separator}{urlencode({'page': page, 'size': size})}")
-        data = _data(response)
-        items = data.get("items")
-        if isinstance(items, list):
-            rows.extend(item for item in items if isinstance(item, dict))
-
-        pager = data.get("pager") if isinstance(data.get("pager"), dict) else {}
-        total_pages = max(_int(pager.get("total_pages")), 1)
-        if page >= total_pages:
-            break
-        page += 1
-        if page > max_pages:
-            raise DigikalaAPIError("تعداد صفحات API دیجی‌کالا غیرمنتظره است؛ خواندن موجودی متوقف شد.")
-    return rows
-
-
-def _commitment_map():
-    rows = _paginated_items(
-        "/open-api/v1/commitments?sort=variant_id&order=asc",
-        size=50,
-        max_pages=20,
-    )
+def _commitment_map(*, force=False):
     result = {}
-    for row in rows:
+    for row in get_commitment_rows(force=force):
         variant_id = _int(row.get("variantId"))
         if not variant_id:
             continue
@@ -74,34 +39,15 @@ def _commitment_map():
     return result
 
 
-def _inventory_rows():
-    return _paginated_items(
-        "/open-api/v1/inventories",
-        size=100,
-        max_pages=30,
-    )
-
-
 def get_free_warehouse_board(*, force=False):
-    """Return the seller's current free/sellable stock physically held by Digikala.
-
-    This reproduces the live reconciliation tested against the seller account:
-
-      sellable_dk_stock = available - marketplace_seller_stock + reserve
-      requested_dk_reserve = reserve - seller_commitment
-      reserved_from_current_dk_stock = min(sellable_dk_stock, requested_dk_reserve)
-      free_dk_stock = sellable_dk_stock - reserved_from_current_dk_stock
-
-    Calculations are per variant and clamped at zero. Return/dead stock is not counted
-    as sellable stock. Nothing is persisted to the DARMA database.
-    """
+    """Return current free/sellable Digikala warehouse stock without internal writes."""
     if not force:
         cached = cache.get(WAREHOUSE_CACHE_KEY)
-        if cached:
+        if cached is not None:
             return cached
 
-    commitments = _commitment_map()
-    inventories = _inventory_rows()
+    commitments = _commitment_map(force=force)
+    inventories = get_inventory_rows(force=force)
 
     rows = []
     sellable_total = 0
@@ -144,11 +90,9 @@ def get_free_warehouse_board(*, force=False):
             "seller_commitment": seller_commitment,
             "raw_reserve": reserve,
             "warehouse_stock": _int(item.get("warehouse_stock")),
-            "return_stock": _int(item.get("return_stock")),
             "status": "free" if free_stock > 0 else "zero",
         }
         rows.append(row)
-
         sellable_total += sellable_stock
         reserved_total += reserved_from_stock
         free_total += free_stock
@@ -164,17 +108,14 @@ def get_free_warehouse_board(*, force=False):
         )
     )
 
-    free_variant_count = sum(1 for row in rows if row["free_stock"] > 0)
-    zero_variant_count = sum(1 for row in rows if row["free_stock"] == 0)
-
     board = {
         "rows": rows,
         "sellable_total": sellable_total,
         "reserved_total": reserved_total,
         "free_total": free_total,
         "variant_count": len(rows),
-        "free_variant_count": free_variant_count,
-        "zero_variant_count": zero_variant_count,
+        "free_variant_count": sum(1 for row in rows if row["free_stock"] > 0),
+        "zero_variant_count": sum(1 for row in rows if row["free_stock"] == 0),
         "reserve_over_stock_total": reserve_over_stock_total,
         "inventory_rows_scanned": len(inventories),
         "commitment_variant_count": len(commitments),
