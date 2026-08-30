@@ -22,8 +22,9 @@ Then read all numbered files in order:
 14. `14_HANDOFF_SCOPE_AND_COMPLETENESS.md`
 15. `15_CODE_FINGERPRINT_AT_HANDOFF.md`
 16. `16_UI_MODERNIZATION_V38.md` — post-handoff V38 UI-only timeline/fingerprint delta, confirmed live.
-17. `17_LOGO_TYPOGRAPHY_V39.md` — Darma logo + cleaner Persian typography; committed on GitHub, not separately confirmed live.
-18. `18_DIGIKALA_API_V40.md` — direct Digikala Open API read-only dashboard integration, automatic token refresh and token/private-key isolation; committed on GitHub, not confirmed live until successful V40 server output.
+17. `17_LOGO_TYPOGRAPHY_V39.md` — Darma logo + cleaner Persian typography.
+18. `18_DIGIKALA_API_V40.md` — direct Digikala Open API read-only integration and token isolation.
+19. `19_DIGIKALA_DELIVERIES_V41.md` — effective-commitment delivery board and itemized must-deliver list; committed on GitHub, not confirmed live until successful V41 server output.
 
 After these, read:
 
@@ -31,17 +32,16 @@ After these, read:
 - `/UI_SAFETY_V38.md`
 - `/UI_SAFETY_V39.md`
 - `/UI_SAFETY_V40.md`
+- `/UI_SAFETY_V41.md`
 - current `/core/urls.py`
 - exact active source files relevant to the requested change
 - `/AI_START_HERE.md` and `/PROJECT_HANDOFF.md` only for older historical context.
 
 When older docs conflict with this directory or current active code, this directory + current active code wins.
 
-For production status, `08_LIVE_STATE_AND_CHECKPOINTS.md` is authoritative only for deployments explicitly confirmed by server output.
+For production accounting checkpoints, `08_LIVE_STATE_AND_CHECKPOINTS.md` is authoritative only for deployments with actual server invariant output. The user reported V40 came up successfully, but the full final V40 invariant block was not supplied in chat, so the last numerically recorded checkpoint remains V38.
 
-Latest confirmed live deployment at this synchronization point: **V38 UI modernization**. V39 and V40 code are on GitHub but V40 is not production-confirmed until `SUCCESS: DIGIKALA READ-ONLY V40 DEPLOYED` is posted from the VPS.
-
-Latest confirmed production snapshot:
+Latest confirmed numeric production snapshot:
 
 ```text
 CAPITAL=5430972371
