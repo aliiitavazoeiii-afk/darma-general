@@ -1,11 +1,13 @@
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.shortcuts import render
+from django.views.decorators.http import require_GET
 
 from .digikala_client_v40 import DigikalaAPIError, get_summary
 
 
 @login_required
+@require_GET
 def digikala_home(request):
     force = request.GET.get("refresh") == "1"
     try:
@@ -25,6 +27,7 @@ def digikala_home(request):
 
 
 @login_required
+@require_GET
 def digikala_summary(request):
     try:
         summary = get_summary(force=request.GET.get("refresh") == "1")
