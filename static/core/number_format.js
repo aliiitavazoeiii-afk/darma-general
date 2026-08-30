@@ -49,6 +49,16 @@
       definitionsTitle.parentNode.insertBefore(link, definitionsTitle);
     }
 
+    if (!nav.querySelector('[data-digikala-nav]')) {
+      const path = window.location.pathname;
+      const link = document.createElement('a');
+      link.dataset.digikalaNav = '1';
+      link.href = '/digikala/';
+      link.className = path.startsWith('/digikala/') ? 'active' : '';
+      link.innerHTML = '<span class="erp-dot"></span>دیجی‌کالا';
+      definitionsTitle.parentNode.insertBefore(link, definitionsTitle);
+    }
+
     if (nav.querySelector('[data-business-tools-nav]')) return;
     const wrap = document.createElement('div');
     wrap.dataset.businessToolsNav = '1';
