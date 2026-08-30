@@ -6,6 +6,7 @@ urlpatterns = [
     path("", excel_dashboard.dashboard, name="dashboard"),
     path("digikala/", digikala_views_v40.digikala_home, name="digikala"),
     path("digikala/summary/", digikala_views_v40.digikala_summary, name="digikala_summary"),
+    path("digikala/warehouse/", digikala_views_v40.digikala_warehouse, name="digikala_warehouse"),
     path("calendar/picker/", calendar_views.jalali_picker, name="jalali_picker"),
     path("sales/", daily_views.sale_calendar, name="sale_start"),
     path("sales/select/<int:jy>/<int:jm>/<int:jd>/", daily_views.select_sale_day, name="select_sale_day"),
