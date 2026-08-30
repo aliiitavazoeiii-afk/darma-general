@@ -7,6 +7,7 @@ urlpatterns = [
     path("digikala/", digikala_views_v40.digikala_home, name="digikala"),
     path("digikala/summary/", digikala_views_v40.digikala_summary, name="digikala_summary"),
     path("digikala/orders/", digikala_views_v40.digikala_orders, name="digikala_orders"),
+    path("digikala/products/", digikala_views_v40.digikala_products, name="digikala_products"),
     path("digikala/packages/", digikala_views_v40.digikala_packages, name="digikala_packages"),
     path("digikala/packages/<int:package_id>/", digikala_views_v40.digikala_package_detail, name="digikala_package_detail"),
     path("digikala/sales/", digikala_views_v40.digikala_sales, name="digikala_sales"),
