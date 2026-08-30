@@ -1,9 +1,11 @@
 from django.urls import path
 
-from . import business_tools_v14, business_tools_v21, business_tools_v22, calculator_v37, calendar_views, catalog_v5, daily_order_views_v8, daily_report_actions_v21, daily_report_v8, daily_views, excel_dashboard, excel_sales, final_views, inventory_operations_v15, inventory_v20, material_report_v20, material_report_v21, material_report_v22, pricing_v7, report_v9, returns_v37, sale_brand_v19, settings_rules_v17, settings_stock_v5, takvin_v5, views
+from . import business_tools_v14, business_tools_v21, business_tools_v22, calculator_v37, calendar_views, catalog_v5, daily_order_views_v8, daily_report_actions_v21, daily_report_v8, daily_views, digikala_views_v40, excel_dashboard, excel_sales, final_views, inventory_operations_v15, inventory_v20, material_report_v20, material_report_v21, material_report_v22, pricing_v7, report_v9, returns_v37, sale_brand_v19, settings_rules_v17, settings_stock_v5, takvin_v5, views
 
 urlpatterns = [
     path("", excel_dashboard.dashboard, name="dashboard"),
+    path("digikala/", digikala_views_v40.digikala_home, name="digikala"),
+    path("digikala/summary/", digikala_views_v40.digikala_summary, name="digikala_summary"),
     path("calendar/picker/", calendar_views.jalali_picker, name="jalali_picker"),
     path("sales/", daily_views.sale_calendar, name="sale_start"),
     path("sales/select/<int:jy>/<int:jm>/<int:jd>/", daily_views.select_sale_day, name="select_sale_day"),
