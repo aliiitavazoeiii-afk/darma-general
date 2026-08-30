@@ -21,29 +21,19 @@ Then read all numbered files in order:
 13. `13_NEW_CHAT_OPERATING_PROTOCOL.md`
 14. `14_HANDOFF_SCOPE_AND_COMPLETENESS.md`
 15. `15_CODE_FINGERPRINT_AT_HANDOFF.md`
-16. `16_UI_MODERNIZATION_V38.md` — post-handoff V38 UI-only timeline/fingerprint delta, confirmed live.
-17. `17_LOGO_TYPOGRAPHY_V39.md` — Darma logo + cleaner Persian typography.
-18. `18_DIGIKALA_API_V40.md` — direct Digikala Open API read-only integration and token isolation.
-19. `19_DIGIKALA_DELIVERIES_V41.md` — effective-commitment delivery board and itemized must-deliver list; committed on GitHub, not separately confirmed live before V42.
-20. `20_DIGIKALA_FREE_WAREHOUSE_V42.md` — separate read-only free/sellable Digikala warehouse board using the live reconciled inventory/reservation formula; committed on GitHub, not confirmed live until successful V42 server output.
-21. `21_DIGIKALA_CENTER_V43.md` — isolated Digikala mini-app with DKP/DKPC daily commitments, package visibility, quantity sales report, V42 warehouse and return-stock visibility; GitHub-prepared, not production-confirmed until V43 deploy output.
+16. `16_UI_MODERNIZATION_V38.md`
+17. `17_LOGO_TYPOGRAPHY_V39.md`
+18. `18_DIGIKALA_API_V40.md`
+19. `19_DIGIKALA_DELIVERIES_V41.md`
+20. `20_DIGIKALA_FREE_WAREHOUSE_V42.md`
+21. `21_DIGIKALA_CENTER_V43.md`
+22. `22_DIGIKALA_CENTER_V44.md` — fixes future-date commitment split, inventory-backed old/current products, sales endpoint fallback, physical return-warehouse detection, and multi-worker/shared API caching.
 
-After these, read:
-
-- `/UI_SAFETY_V37.md`
-- `/UI_SAFETY_V38.md`
-- `/UI_SAFETY_V39.md`
-- `/UI_SAFETY_V40.md`
-- `/UI_SAFETY_V41.md`
-- `/UI_SAFETY_V42.md`
-- `/UI_SAFETY_V43.md`
-- current `/core/urls.py`
-- exact active source files relevant to the requested change
-- `/AI_START_HERE.md` and `/PROJECT_HANDOFF.md` only for older historical context.
+After these, read `UI_SAFETY_V37.md` through `UI_SAFETY_V44.md`, then current `core/urls.py`, exact active source files, and older handoff docs last.
 
 When older docs conflict with this directory or current active code, this directory + current active code wins.
 
-For production accounting checkpoints, `08_LIVE_STATE_AND_CHECKPOINTS.md` is authoritative only for deployments with actual server invariant output. The user reported V40 came up successfully, but the full final V40 invariant block was not supplied in chat, so the last numerically recorded checkpoint remains V38. V41/V42 were prepared but not separately production-confirmed before V43. V43 includes the prior Digikala Git state and must not be considered live until its own successful server output is posted.
+The last numerically recorded production checkpoint remains V38 until a newer deployment's actual final invariant block is posted by the user. V44 is GitHub-prepared and must not be called production-confirmed merely because the user had opened the earlier V43 pages.
 
 Latest confirmed numeric production snapshot:
 
@@ -59,4 +49,4 @@ SALES=202
 ACCOUNT_ENTRIES=206
 ```
 
-Standing continuation rule from the user: after every important change, update the relevant context-pack files; after every confirmed successful deployment, also update the live checkpoint using the actual server output.
+Standing rule: after every important change update context; after every confirmed successful deployment update the live checkpoint with actual server output.
