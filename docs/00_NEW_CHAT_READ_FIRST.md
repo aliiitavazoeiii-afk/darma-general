@@ -2,7 +2,7 @@
 
 **Authoritative continuation entrypoint**
 
-Last synchronized with project conversation: **2026-08-30, V43 Digikala Center prepared on GitHub; V43 is not confirmed live until successful V43 server output**
+Last synchronized with project conversation: **2026-08-30, V44 Digikala Center corrections prepared on GitHub; V44 is not production-confirmed until successful V44 server output**
 Repository: `aliiitavazoeiii-afk/darma-general`
 Production domain: `gozaresh.filmjadiid.ir`
 Production server path: `/opt/darma-general`
@@ -12,39 +12,33 @@ Default branch: `main`
 
 ## STOP: read this before doing any work
 
-This repository is a live business-management system replacing the user's Excel workflow. It contains real inventory, sales, receivables, cash/accounts, material stock, production and capital accounting. The application has been developed interactively over many revisions; some older files and older handoff documents remain for forensic/history purposes and are **not necessarily active**.
+This repository is a live business-management system replacing the user's Excel workflow. It contains real inventory, sales, receivables, cash/accounts, material stock, production and capital accounting. Older versioned files remain for history and are not necessarily active.
 
-A new AI/chat must **not** infer current behavior from filenames like `v14`, `v19`, `v21`, etc. The only valid way to identify active source is:
+A new AI/chat must:
 
 1. Read this file completely.
-2. Read every file in `docs/PROJECT_CONTEXT/` in numeric order, including V38, V39, V40, V41, V42 and V43 continuation files.
-3. Read `UI_SAFETY_V37.md` through `UI_SAFETY_V43.md` when working from the current Git state.
-4. Read current `core/urls.py` and map each requested feature to its active view/module.
-5. Read the exact active source files listed in `docs/PROJECT_CONTEXT/03_ACTIVE_CODE_MAP.md` and any later numbered context file before editing.
-6. Read `AI_START_HERE.md` and `PROJECT_HANDOFF.md` **after** the new context pack for historical rationale only. Where they conflict with `docs/PROJECT_CONTEXT/*`, the new context pack wins.
-7. Never assume code on `main` is already live. Use explicit user-posted server output to establish deployment status. The user reported the V40 web integration came up, but the full final V40 invariant block was not supplied in chat; V41 and V42 were then prepared on GitHub. V43 now reorganizes the Digikala Git state into the isolated Digikala Center. V43 is not confirmed live. See `08_LIVE_STATE_AND_CHECKPOINTS.md`, `18_DIGIKALA_API_V40.md`, `19_DIGIKALA_DELIVERIES_V41.md`, `20_DIGIKALA_FREE_WAREHOUSE_V42.md` and `21_DIGIKALA_CENTER_V43.md`.
-8. Before any data-affecting change, preserve rollback/backup/preflight discipline described in `06_DEPLOYMENT_SAFETY_AND_RECOVERY.md`.
-9. After every important change and every confirmed successful deployment, update the relevant context-pack documents; after confirmed deployment also update `08_LIVE_STATE_AND_CHECKPOINTS.md` with the actual server snapshot rather than copying an older checkpoint.
+2. Read every file in `docs/PROJECT_CONTEXT/` in numeric order, now through `22_DIGIKALA_CENTER_V44.md`.
+3. Read `UI_SAFETY_V37.md` through `UI_SAFETY_V44.md`.
+4. Read current `core/urls.py` before deciding which source is active.
+5. Read exact active source files for the requested subsystem.
+6. Read `AI_START_HERE.md` and `PROJECT_HANDOFF.md` last for historical rationale only.
+7. Never equate GitHub `main` with production. Require user-posted successful server output before calling a revision live.
+8. Preserve backup/preflight/invariant discipline from `06_DEPLOYMENT_SAFETY_AND_RECOVERY.md`.
+9. After every important change update context docs; after every confirmed deployment update `08_LIVE_STATE_AND_CHECKPOINTS.md` using the actual final server snapshot.
 
 ---
 
 ## Non-negotiable project rule
 
-**The accounting formulas and existing operational semantics are frozen unless the user explicitly asks to change the business rule.** UI cleanup and external API visibility must not silently alter accounting, stock, sales, Digikala fee, receivable, payment, raw-material, production, COGS, or SaleSnapshot behavior.
+**Accounting formulas and existing operational semantics are frozen unless the user explicitly changes a business rule.** External Digikala visibility must not silently alter internal stock, sales, fees, receivable, payments, materials, production, COGS, SaleSnapshots or capital.
 
-V38 is the last numerically checkpointed presentation deployment. V39 adds the user's Darma logo and cleaner Persian typography. V40 adds a read-only Digikala Open API dashboard connection and automatic token refresh. V41 refines that external read visibility so the operational headline is Digikala `effectiveCommitments`, not the misleading `/orders` row count, and shows itemized must-deliver variants. V42 adds a separate on-demand read-only board for free/sellable Digikala warehouse stock after current reservations. V43 reorganizes the Digikala area into a self-contained mini-app with separate daily-orders, packages, sales, warehouse and returns sections. V40/V41/V42/V43 must not convert API data into internal sales, stock movements or accounting entries unless a later explicit bridge phase is designed and guarded.
+V40 introduced read-only Digikala API access. V41 corrected the operational commitment number. V42 derived free/sellable Digikala warehouse stock. V43 reorganized Digikala into a separate mini-app. V44 corrects real V43 observations while keeping the same read-only boundary.
 
 ---
 
 ## Latest confirmed numeric live checkpoint
 
-The successful V38 UI deployment posted by the user ended with:
-
-```text
-SUCCESS: UI MODERNIZATION V38 DEPLOYED
-```
-
-Latest numerically recorded production snapshot:
+The last numerically confirmed production deployment remains V38:
 
 ```text
 CAPITAL=5430972371
@@ -64,105 +58,118 @@ Backup:
 backups/before-ui-modernization-v38-20260829-223111.sql
 ```
 
-The older V37 capital checkpoint was 5,441,972,371, while the V38 boundary is 5,430,972,371. The V38 deploy script proved its starting and final snapshots were identical, so the 11,000,000 difference occurred before the V38 deployment and must not be attributed to the UI change or force-reconciled without evidence.
-
-Do **not** invent a newer numeric checkpoint without actual server invariant output.
+Do not invent or copy forward a newer numeric checkpoint without actual server invariant output. The user has interacted with later Digikala pages, but no newer final invariant block has been posted in chat.
 
 ---
 
-## Digikala Open API status
+## Digikala Open API status and evolution
 
-Authentication against the official Digikala seller Open API has been successfully completed on the VPS. Tokens are stored outside GitHub. V40 isolates runtime token files under `/opt/darma-secrets/digikala/runtime`; the RSA private key remains outside the web container. Access-token expiry uses the official refresh endpoint and replaces both returned Access and rotated Refresh tokens atomically.
+Authentication is complete. Runtime access/refresh tokens live under `/opt/darma-secrets/digikala/runtime` and are mounted at `/run/secrets/digikala`; the RSA private key remains outside the web container. Refresh rotates both access and refresh tokens atomically.
 
-Real read-only probes confirmed HTTP 200 for orders, order statistics, inventory, profile, commitments, commitment metadata and invoices. `insight/overview` returned HTTP 500 and `insight/sales-reports` returned HTTP 400 Validation failed, so both remain excluded.
+Initial read-only probes confirmed HTTP 200 for orders, order statistics, inventory, profile, commitments, commitment metadata and invoices. Insight endpoints remain excluded because they returned server/validation errors.
 
-The original V40 probe showed `/orders` total rows=396. The user later clarified that this is not the daily operational quantity. A V41 reconciliation against commitments established:
+V41 reconciliation established the seller-panel commitment semantics:
 
 ```text
-user seller panel: total commitments=202, effective commitments=201
+total commitments=202
+effective commitments=201
 commitments list: 69 variants, nextDays=201, today=0, delayed=1, all=202
 ```
 
-Therefore V41 uses metadata `summary_statistics.effectiveCommitments` as the "باید تحویل بدهم" headline and item-level `nextDays + today` for the actionable table. It never invents a subtraction such as `onTheWay`; if metadata and row sums differ, it shows the mismatch explicitly.
+V42 established the read-only free warehouse formula from live inventory/reservation evidence. Those observed counts are not constants.
 
-V42 was derived from a separate live inventory/reservation reconciliation. For each variant it computes current Digikala sellable warehouse stock from the observed relation `available - marketplace_seller_stock + reserve`, derives the reservation attributable to Digikala's own pool as `reserve - seller_commitment`, caps that reservation to current stock, and displays the remainder as free/unsold stock. The first full diagnostic returned 63 free units across 26 variants, but those figures are live evidence only and must never be hard-coded. See `20_DIGIKALA_FREE_WAREHOUSE_V42.md` for the exact formula and safety boundary.
+V43 created the isolated `/digikala/` mini-app with daily orders, packages, sales, warehouse and returns.
 
-V43 makes `/digikala/` the Digikala Center. Its daily-orders view groups commitments by DKP (`productId`) and expands to DKPC (`variantId`), size, seller code and quantity. It attempts a defensive tomorrow/day-after split using the documented commitments date filters; if that split cannot be reconciled, future quantities fall back to the generic later bucket rather than showing a fabricated date. Package read routes are probed but package write/import is disabled until the exact live endpoint/schema is verified. The sales report is quantity-only until a live price field is reconciled. The returns section shows `return_stock` only; it never increases HOME merely because a return exists or a take-back request was submitted. See `21_DIGIKALA_CENTER_V43.md`.
+### V44 corrections — current Git source of truth
+
+The user opened the V43 pages and reported:
+
+- tomorrow/day-after were empty while all future quantity stayed in later;
+- old/current products were not visible through the attempted product path;
+- sales report request failed;
+- opening Digikala sections was slow;
+- the returns page showed sellable items, while actual returns physically live in a warehouse titled `انبار مرجوعی` / `انبار مرجوعی مرکزی`.
+
+V44 therefore:
+
+- removes `search[is_effective]=true` from future cumulative commitment cutoffs; the official schema defines that filter relative to today's performance date;
+- derives tomorrow/day-after using cumulative `search[to_commitment_date]` and preserves the identity `tomorrow + day_after + later = nextDays`;
+- adds `/digikala/products/`, derived from current Inventory API rows grouped by DKP, so old/current products do not depend on product creation history;
+- tries order history first for sales and removes speculative sort parameters that could trigger validation errors;
+- defines the returns page only by nested inventory warehouse entries whose title contains `مرجوعی`, using warehouse `count` (or `physical_stock` fallback), not top-level `return_stock`;
+- shares inventory/commitment raw caches, uses bounded concurrent pagination, gives products/packages/sales/returns longer cache windows, and changes Django cache to a filesystem-backed cache shared by all 3 Gunicorn workers;
+- makes `/digikala/` home API-light/instant instead of synchronously calling the V40/V41 fan-out.
+
+See `22_DIGIKALA_CENTER_V44.md` and `UI_SAFETY_V44.md`.
 
 ---
 
-## What the new chat should know before changing code
+## Core business facts that must remain understood before editing
 
-Before editing, be able to answer all of the following from the repo/docs:
+A new chat must know from the context pack:
 
-- What is the exact capital equation?
-- How is finished inventory valued for Darma, Takvin, Novani and Anbaresh?
-- Which brand/location does each sale or production flow affect?
-- What is a SaleSnapshot and why must historical snapshots remain frozen?
-- How does Digikala receivable move on sale, receipt and deletion?
-- How do BusinessPayment V22 purchase/prepayment semantics work?
-- What is the difference between Save / Apply Materials / Apply Output in material reports?
-- What are the Darma HOME/KHORSHID rules and Novani single-bucket rule?
-- What are the current Darma/Takvin/Novani size sets?
-- What is the title-first Digikala resolver rule, including `D-220` vs `rah-220`, Takvin `1-654`, and brandless model 400?
-- What does code `06` contain now?
-- Which model is authoritative for actual sold colors (`SaleAllocation`) versus current pack definition (`ProductComposition`)?
-- Which model is authoritative for cumulative material output (`MaterialReportOutputApplied`) versus saved form JSON?
-- What does standalone return V37 do, and what must it never do?
-- How does the V37 target-price calculator preserve current realized margin while using the existing Digikala fee engine?
-- What changed in V38 and why is it presentation-only?
-- What changed in V39, including the Darma logo asset and cleaner Persian typography?
-- What changed in V40, which Digikala endpoints are allowed, where tokens are mounted, and why API data must not yet feed internal sale/stock/accounting flows?
-- What changed in V41, why `/orders` count is not the must-deliver number, and which commitments fields are authoritative for the read-only delivery board?
-- What changed in V42, how free/sellable Digikala warehouse stock is derived from inventory + commitments, why return stock is excluded, and why the board is loaded only on demand?
-- What changed in V43, why Digikala is now isolated as a mini-app, how DKP/DKPC daily grouping works, which package/sales/return functions remain deliberately read-only/unverified, and why neither package nor return may yet mutate the internal panel?
-- Which deployment scripts are historical/destructive and must never be casually rerun?
-- What is the most recent confirmed numeric live state?
+- the exact capital equation and valuation sources;
+- SaleSnapshot freeze semantics;
+- SaleAllocation as historical physical color source;
+- title-first Digikala XLSX resolution and seller-code discard;
+- Darma/Takvin/Novani size/location rules;
+- V22 payment and material-report semantics;
+- standalone return V37 HOME-only behavior;
+- the exact Digikala fee engine;
+- V40 token/security boundary;
+- V41 commitment semantics;
+- V42 free warehouse derivation;
+- V43 isolated Digikala-center architecture;
+- V44 future-date split, inventory-backed products, physical return-warehouse rule and shared-cache performance changes;
+- which historical deploy/reset scripts are unsafe to rerun;
+- that the latest numerically confirmed checkpoint is still V38 until a newer actual server block is posted.
 
-If any of these are unclear, stop and read the context/code before modifying anything.
+If any are unclear, stop and read the numbered context files and active code before changing anything.
 
 ---
 
 ## Required reading order
 
-Read exactly in this order:
+Read exactly:
 
 1. `docs/PROJECT_CONTEXT/01_BUSINESS_RULES_AND_INVARIANTS.md`
-2. `docs/PROJECT_CONTEXT/02_ACCOUNTING_FORMULAS_AND_LEDGER_SEMANTICS.md`
-3. `docs/PROJECT_CONTEXT/03_ACTIVE_CODE_MAP.md`
-4. `docs/PROJECT_CONTEXT/04_SALES_DIGIKALA_AND_RETURNS.md`
-5. `docs/PROJECT_CONTEXT/05_INVENTORY_MATERIALS_PRODUCTION_PAYMENTS.md`
-6. `docs/PROJECT_CONTEXT/06_DEPLOYMENT_SAFETY_AND_RECOVERY.md`
-7. `docs/PROJECT_CONTEXT/07_BUG_HISTORY_AND_DO_NOT_REPEAT.md`
-8. `docs/PROJECT_CONTEXT/08_LIVE_STATE_AND_CHECKPOINTS.md`
-9. `docs/PROJECT_CONTEXT/09_UI_AND_USER_WORKFLOW_CONTRACT.md`
-10. `docs/PROJECT_CONTEXT/10_EXACT_BASELINES_CATALOG_AND_SPECIAL_CASES.md`
-11. `docs/PROJECT_CONTEXT/11_DATA_MODEL_AND_LEDGER_RELATIONSHIPS.md`
-12. `docs/PROJECT_CONTEXT/12_VERSION_TIMELINE_V18_TO_V37.md`
-13. `docs/PROJECT_CONTEXT/13_NEW_CHAT_OPERATING_PROTOCOL.md`
-14. `docs/PROJECT_CONTEXT/14_HANDOFF_SCOPE_AND_COMPLETENESS.md`
-15. `docs/PROJECT_CONTEXT/15_CODE_FINGERPRINT_AT_HANDOFF.md`
-16. `docs/PROJECT_CONTEXT/16_UI_MODERNIZATION_V38.md`
-17. `docs/PROJECT_CONTEXT/17_LOGO_TYPOGRAPHY_V39.md`
-18. `docs/PROJECT_CONTEXT/18_DIGIKALA_API_V40.md`
-19. `docs/PROJECT_CONTEXT/19_DIGIKALA_DELIVERIES_V41.md`
-20. `docs/PROJECT_CONTEXT/20_DIGIKALA_FREE_WAREHOUSE_V42.md`
-21. `docs/PROJECT_CONTEXT/21_DIGIKALA_CENTER_V43.md`
-22. `UI_SAFETY_V37.md`
-23. `UI_SAFETY_V38.md`
-24. `UI_SAFETY_V39.md`
-25. `UI_SAFETY_V40.md`
-26. `UI_SAFETY_V41.md`
-27. `UI_SAFETY_V42.md`
-28. `UI_SAFETY_V43.md`
-29. current `core/urls.py`
-30. relevant active implementation files
-31. `AI_START_HERE.md` and `PROJECT_HANDOFF.md` for older history only
+2. `02_ACCOUNTING_FORMULAS_AND_LEDGER_SEMANTICS.md`
+3. `03_ACTIVE_CODE_MAP.md`
+4. `04_SALES_DIGIKALA_AND_RETURNS.md`
+5. `05_INVENTORY_MATERIALS_PRODUCTION_PAYMENTS.md`
+6. `06_DEPLOYMENT_SAFETY_AND_RECOVERY.md`
+7. `07_BUG_HISTORY_AND_DO_NOT_REPEAT.md`
+8. `08_LIVE_STATE_AND_CHECKPOINTS.md`
+9. `09_UI_AND_USER_WORKFLOW_CONTRACT.md`
+10. `10_EXACT_BASELINES_CATALOG_AND_SPECIAL_CASES.md`
+11. `11_DATA_MODEL_AND_LEDGER_RELATIONSHIPS.md`
+12. `12_VERSION_TIMELINE_V18_TO_V37.md`
+13. `13_NEW_CHAT_OPERATING_PROTOCOL.md`
+14. `14_HANDOFF_SCOPE_AND_COMPLETENESS.md`
+15. `15_CODE_FINGERPRINT_AT_HANDOFF.md`
+16. `16_UI_MODERNIZATION_V38.md`
+17. `17_LOGO_TYPOGRAPHY_V39.md`
+18. `18_DIGIKALA_API_V40.md`
+19. `19_DIGIKALA_DELIVERIES_V41.md`
+20. `20_DIGIKALA_FREE_WAREHOUSE_V42.md`
+21. `21_DIGIKALA_CENTER_V43.md`
+22. `22_DIGIKALA_CENTER_V44.md`
+23. `UI_SAFETY_V37.md`
+24. `UI_SAFETY_V38.md`
+25. `UI_SAFETY_V39.md`
+26. `UI_SAFETY_V40.md`
+27. `UI_SAFETY_V41.md`
+28. `UI_SAFETY_V42.md`
+29. `UI_SAFETY_V43.md`
+30. `UI_SAFETY_V44.md`
+31. current `core/urls.py`
+32. relevant active implementation files
+33. `AI_START_HERE.md` and `PROJECT_HANDOFF.md` last
 
-`docs/PROJECT_CONTEXT/README.md` is the manifest for the pack.
+`docs/PROJECT_CONTEXT/README.md` is the manifest.
 
 ---
 
-## One-line prompt for a new ChatGPT conversation
+## One-line continuation prompt
 
-> Open my GitHub repo `aliiitavazoeiii-afk/darma-general`. Read `docs/00_NEW_CHAT_READ_FIRST.md` completely, then read every file it requires in order, then inspect the current active source files/routes before answering. Treat the context pack as authoritative over older handoff docs. Do not change anything until you understand all accounting/inventory/sales/material/payment invariants, model/ledger sources of truth, historical pitfalls, Digikala V40/V41/V42/V43 read-only boundaries and the latest confirmed live state. Continue the project as if you were continuing the original development chat.
+> Open my GitHub repo `aliiitavazoeiii-afk/darma-general`. Read `docs/00_NEW_CHAT_READ_FIRST.md`, then every required context file in order through V44, then current routes and exact active source. Treat the context pack as authoritative. Preserve all frozen accounting/inventory/sales/material/payment invariants and the Digikala read-only boundary. Never assume GitHub code is live without user-posted deploy output.
