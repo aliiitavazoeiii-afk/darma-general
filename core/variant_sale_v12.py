@@ -124,7 +124,6 @@ def sync_variant_inventory(line, color_quantities):
     brand = product.brand
     size = line.product_size.size
     home = StockLocation.objects.get(key=StockLocation.HOME)
-    khorshid = StockLocation.objects.get(key=StockLocation.KHORSHID)
     ref = f"sale:{line.id}"
 
     # Return the previous allocation first; this makes re-upload idempotent.
@@ -165,29 +164,8 @@ def sync_variant_inventory(line, color_quantities):
         )
         home_row = StockBalance.objects.select_for_update().get(pk=home_row.pk)
 
-        if home_row.qty < needed:
-            kh_row, _ = StockBalance.objects.get_or_create(
-                brand=brand, size=size, color=color, location=khorshid, defaults={"qty": 0}
-            )
-            kh_row = StockBalance.objects.select_for_update().get(pk=kh_row.pk)
-            move = min(max(0, needed - max(home_row.qty, 0)), max(kh_row.qty, 0))
-            if move:
-                kh_row.qty -= move
-                home_row.qty += move
-                kh_row.save(update_fields=["qty"])
-                home_row.save(update_fields=["qty"])
-                transferred += move
-                InventoryMovement.objects.create(
-                    movement_type=InventoryMovement.TRANSFER,
-                    brand=brand, size=size, color=color, location=khorshid,
-                    delta=-move, reference=f"{ref}:variant-auto-transfer",
-                )
-                InventoryMovement.objects.create(
-                    movement_type=InventoryMovement.TRANSFER,
-                    brand=brand, size=size, color=color, location=home,
-                    delta=move, reference=f"{ref}:variant-auto-transfer",
-                )
-
+        # V46 business rule: every sale is deducted from HOME only, even below zero.
+        # KHORSHID changes only when the user records an explicit physical transfer.
         available = max(0, int(home_row.qty or 0))
         home_row.qty -= needed
         home_row.save(update_fields=["qty"])
