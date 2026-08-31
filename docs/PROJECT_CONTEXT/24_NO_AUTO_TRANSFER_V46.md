@@ -148,3 +148,33 @@ The deploy script must:
 - run a rollback regression proving the exact `HOME=-10`, transfer `30` -> `HOME=20` arithmetic;
 - apply the historical reversal atomically;
 - prove combined Darma quantity/value and capital are unchanged.
+
+---
+
+## First production attempt — 2026-08-31
+
+The first production run reached and successfully committed the historical location repair:
+
+```text
+After  HOME=2620 KHORSHID=8890 COMBINED=11510
+SUCCESS: V46 REVERSED 19 PHANTOM AUTO-TRANSFER UNITS
+```
+
+The following final shell guard then stopped with:
+
+```text
+FAILED: V46 changed economic totals/capital
+```
+
+This failure occurred after the 19-unit repair had already committed; the shell exit did not roll that transaction back.
+
+The guard compared the complete stdout of `manage.py shell -c`. Django 5.2 also emits a non-business automatic-import banner such as `54 objects imported automatically` / `55 objects imported automatically`. A changed banner across web image recreation can therefore make two otherwise identical economic snapshots compare unequal.
+
+The deploy script was corrected to:
+
+- filter snapshots to explicit invariant `KEY=value` lines only;
+- exclude the Django shell import banner from comparisons;
+- print both invariant snapshots if a real mismatch remains;
+- remain safe to rerun because the historical repair command is idempotent.
+
+V46 still must not be marked production-confirmed until the corrected deploy script completes with the final success marker.
