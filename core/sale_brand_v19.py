@@ -30,4 +30,4 @@ def sale_brand(request, day_id):
             qs = qs.exclude(size__name__in=["3XL", "4XL"])
         first_ps = qs.first()
         cards.append({"brand": brand, "first": first_ps.size if first_ps else None})
-    return render(request, "core/sale_brand_final.html", {"day": day, "cards": cards})
+    return render(request, "core/sale_brand_v45.html", {"day": day, "cards": cards})
