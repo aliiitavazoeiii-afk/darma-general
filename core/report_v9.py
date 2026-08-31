@@ -6,6 +6,7 @@ from django.shortcuts import redirect, render
 from django.views.decorators.http import require_POST
 
 from .dateutils import format_jalali
+from .dia_gallery_v45 import dia_gallery_period_metrics, dia_gallery_receivable_total
 from .excel_views import DISPLAY_SIZES, _add_metrics, _empty_metrics, _finish_metrics, _int, _period_range
 from .finance import sale_line_metrics
 from .finance_excel_v9 import digikala_ledger_total, digikala_receivable_total
@@ -45,6 +46,16 @@ def report(request):
                 for comp in line.product_size.product.composition.all():
                     color_sales[comp.color.name][size] += int(line.quantity) * int(comp.qty)
 
+    dia_gallery = dia_gallery_period_metrics(start, end)
+    if int(dia_gallery["total"].get("shorts") or 0) > 0:
+        _add_metrics(brand_totals["Dia Gallery"], dia_gallery["total"])
+        _add_metrics(overall, dia_gallery["total"])
+        for size_name, metrics in dia_gallery["by_size"].items():
+            _add_metrics(brand_sizes["Dia Gallery"][size_name], metrics)
+        for color_name, sizes in dia_gallery["color_sizes"].items():
+            for size_name, qty in sizes.items():
+                color_sales[color_name][size_name] += int(qty or 0)
+
     for values in brand_totals.values():
         _finish_metrics(values)
     for size_map in brand_sizes.values():
@@ -53,7 +64,7 @@ def report(request):
     _finish_metrics(overall)
 
     brands_view = []
-    for brand_name in ["تکوین", "دارما", "انبارش"]:
+    for brand_name in ["تکوین", "دارما", "انبارش", "Dia Gallery"]:
         sizes = ["M", "L", "XL", "XXL"] if brand_name == "تکوین" else DISPLAY_SIZES
         brands_view.append({"name": brand_name, "total": brand_totals[brand_name], "sizes": [(size, brand_sizes[brand_name][size]) for size in sizes]})
 
@@ -78,8 +89,9 @@ def report(request):
     digikala_base = int(settings.get("digikala_receivable").value or 0) if settings.get("digikala_receivable") else 0
     digikala_ledger = digikala_ledger_total()
     digikala_receivable = digikala_receivable_total()
+    dia_gallery_receivable = dia_gallery_receivable_total()
 
-    accounts_total = sum(row.amount for row in accounts_rows) + sum(row.amount for row in person_rows)
+    accounts_total = sum(row.amount for row in accounts_rows) + sum(row.amount for row in person_rows) + dia_gallery_receivable
     assets_total = sum(row.amount for row in asset_rows)
     finished_inventory_total = finished_inventory_value_v17()
     raw = _raw_material_context()
@@ -94,9 +106,11 @@ def report(request):
         "inventory_total": inventory_total, "capital_total": capital_total, "takvin_debt": takvin_debt,
         "digikala_receivable": digikala_receivable, "digikala_base_receivable": digikala_base,
         "digikala_ledger_total": digikala_ledger,
+        "dia_gallery_receivable": dia_gallery_receivable,
+        "dia_gallery": dia_gallery,
     }
     context.update(raw)
-    return render(request, "core/report_excel_v36.html", context)
+    return render(request, "core/report_excel_v45.html", context)
 
 
 @login_required
