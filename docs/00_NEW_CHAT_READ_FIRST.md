@@ -2,7 +2,7 @@
 
 **Authoritative continuation entrypoint**
 
-Last synchronized with project conversation: **2026-08-30, V44 Digikala Center corrections prepared on GitHub; V44 is not production-confirmed until successful V44 server output**
+Last synchronized with project conversation: **2026-08-31, V45 Dia Gallery daily-sales channel prepared on GitHub; V44/V45 are not production-confirmed without successful server output**
 Repository: `aliiitavazoeiii-afk/darma-general`
 Production domain: `gozaresh.filmjadiid.ir`
 Production server path: `/opt/darma-general`
@@ -17,8 +17,8 @@ This repository is a live business-management system replacing the user's Excel 
 A new AI/chat must:
 
 1. Read this file completely.
-2. Read every file in `docs/PROJECT_CONTEXT/` in numeric order, now through `22_DIGIKALA_CENTER_V44.md`.
-3. Read `UI_SAFETY_V37.md` through `UI_SAFETY_V44.md`.
+2. Read every file in `docs/PROJECT_CONTEXT/` in numeric order, now through `23_DIA_GALLERY_V45.md`.
+3. Read `UI_SAFETY_V37.md` through `UI_SAFETY_V45.md`.
 4. Read current `core/urls.py` before deciding which source is active.
 5. Read exact active source files for the requested subsystem.
 6. Read `AI_START_HERE.md` and `PROJECT_HANDOFF.md` last for historical rationale only.
@@ -32,7 +32,7 @@ A new AI/chat must:
 
 **Accounting formulas and existing operational semantics are frozen unless the user explicitly changes a business rule.** External Digikala visibility must not silently alter internal stock, sales, fees, receivable, payments, materials, production, COGS, SaleSnapshots or capital.
 
-V40 introduced read-only Digikala API access. V41 corrected the operational commitment number. V42 derived free/sellable Digikala warehouse stock. V43 reorganized Digikala into a separate mini-app. V44 corrects real V43 observations while keeping the same read-only boundary.
+V40 introduced read-only Digikala API access. V41 corrected the operational commitment number. V42 derived free/sellable Digikala warehouse stock. V43 reorganized Digikala into a separate mini-app. V44 corrects real V43 observations while keeping the same read-only boundary. V45 is a separate explicitly requested business feature: a Dia Gallery daily-sales channel that consumes Darma stock, sells each short at a fixed 71,000 toman, creates its own receivable, and contributes sale profit to capital.
 
 ---
 
@@ -80,7 +80,7 @@ V42 established the read-only free warehouse formula from live inventory/reserva
 
 V43 created the isolated `/digikala/` mini-app with daily orders, packages, sales, warehouse and returns.
 
-### V44 corrections — current Git source of truth
+### V44 corrections — current Digikala Git source of truth
 
 The user opened the V43 pages and reported:
 
@@ -92,15 +92,46 @@ The user opened the V43 pages and reported:
 
 V44 therefore:
 
-- removes `search[is_effective]=true` from future cumulative commitment cutoffs; the official schema defines that filter relative to today's performance date;
-- derives tomorrow/day-after using cumulative `search[to_commitment_date]` and preserves the identity `tomorrow + day_after + later = nextDays`;
-- adds `/digikala/products/`, derived from current Inventory API rows grouped by DKP, so old/current products do not depend on product creation history;
-- tries order history first for sales and removes speculative sort parameters that could trigger validation errors;
-- defines the returns page only by nested inventory warehouse entries whose title contains `مرجوعی`, using warehouse `count` (or `physical_stock` fallback), not top-level `return_stock`;
-- shares inventory/commitment raw caches, uses bounded concurrent pagination, gives products/packages/sales/returns longer cache windows, and changes Django cache to a filesystem-backed cache shared by all 3 Gunicorn workers;
-- makes `/digikala/` home API-light/instant instead of synchronously calling the V40/V41 fan-out.
+- removes `search[is_effective]=true` from future cumulative commitment cutoffs;
+- derives tomorrow/day-after using cumulative `search[to_commitment_date]` and preserves the future-quantity identity;
+- adds `/digikala/products/` from Inventory API rows grouped by DKP;
+- tries order history first for sales and removes speculative sort parameters;
+- defines returns by nested warehouse entries whose title contains `مرجوعی` rather than top-level `return_stock`;
+- shares API caches between Gunicorn workers and uses bounded concurrent pagination;
+- makes Digikala home API-light.
 
 See `22_DIGIKALA_CENTER_V44.md` and `UI_SAFETY_V44.md`.
+
+---
+
+## Dia Gallery V45 — new explicit business rule
+
+V45 adds a separate box under the existing daily-sales date screen:
+
+```text
+Dia Gallery
+```
+
+It is not a new inventory brand. It is a sales channel for physical Darma goods.
+
+Rules:
+
+- enter direct Darma color × Darma size quantities;
+- one entered unit = one short;
+- fixed price = **71,000 toman per short**;
+- no Digikala fee;
+- physical stock is deducted from Darma using existing HOME/KHORSHID primitives;
+- dedicated receivable account title = `فروش Dia Gallery`;
+- receivable delta = `quantity × 71,000`;
+- Dia receivable is included in the accounts component of capital;
+- historical Dia row freezes its Darma inventory unit cost for COGS/profit;
+- Dia sales are separate from `SaleLine`, so Digikala XLSX replacement must never erase or replace them;
+- dashboard, daily report and comprehensive report include Dia sales;
+- the accounts / ریز حساب‌ها UI shows the Dia receivable as an automatic row.
+
+Capital logic is not replaced. Dia enters the existing equation through the accounts asset side while Darma stock value decreases, so a sale changes capital by `gross - COGS`.
+
+See `23_DIA_GALLERY_V45.md` and `UI_SAFETY_V45.md`.
 
 ---
 
@@ -121,6 +152,7 @@ A new chat must know from the context pack:
 - V42 free warehouse derivation;
 - V43 isolated Digikala-center architecture;
 - V44 future-date split, inventory-backed products, physical return-warehouse rule and shared-cache performance changes;
+- V45 Dia Gallery fixed-price sale, Darma-stock, dedicated-receivable and capital semantics;
 - which historical deploy/reset scripts are unsafe to rerun;
 - that the latest numerically confirmed checkpoint is still V38 until a newer actual server block is posted.
 
@@ -154,17 +186,19 @@ Read exactly:
 20. `20_DIGIKALA_FREE_WAREHOUSE_V42.md`
 21. `21_DIGIKALA_CENTER_V43.md`
 22. `22_DIGIKALA_CENTER_V44.md`
-23. `UI_SAFETY_V37.md`
-24. `UI_SAFETY_V38.md`
-25. `UI_SAFETY_V39.md`
-26. `UI_SAFETY_V40.md`
-27. `UI_SAFETY_V41.md`
-28. `UI_SAFETY_V42.md`
-29. `UI_SAFETY_V43.md`
-30. `UI_SAFETY_V44.md`
-31. current `core/urls.py`
-32. relevant active implementation files
-33. `AI_START_HERE.md` and `PROJECT_HANDOFF.md` last
+23. `23_DIA_GALLERY_V45.md`
+24. `UI_SAFETY_V37.md`
+25. `UI_SAFETY_V38.md`
+26. `UI_SAFETY_V39.md`
+27. `UI_SAFETY_V40.md`
+28. `UI_SAFETY_V41.md`
+29. `UI_SAFETY_V42.md`
+30. `UI_SAFETY_V43.md`
+31. `UI_SAFETY_V44.md`
+32. `UI_SAFETY_V45.md`
+33. current `core/urls.py`
+34. relevant active implementation files
+35. `AI_START_HERE.md` and `PROJECT_HANDOFF.md` last
 
 `docs/PROJECT_CONTEXT/README.md` is the manifest.
 
@@ -172,4 +206,4 @@ Read exactly:
 
 ## One-line continuation prompt
 
-> Open my GitHub repo `aliiitavazoeiii-afk/darma-general`. Read `docs/00_NEW_CHAT_READ_FIRST.md`, then every required context file in order through V44, then current routes and exact active source. Treat the context pack as authoritative. Preserve all frozen accounting/inventory/sales/material/payment invariants and the Digikala read-only boundary. Never assume GitHub code is live without user-posted deploy output.
+> Open my GitHub repo `aliiitavazoeiii-afk/darma-general`. Read `docs/00_NEW_CHAT_READ_FIRST.md`, then every required context file in order through V45, then current routes and exact active source. Treat the context pack as authoritative. Preserve all frozen accounting/inventory/sales/material/payment invariants and the Digikala read-only boundary. Understand Dia Gallery V45 as its own direct Darma-stock sales channel. Never assume GitHub code is live without user-posted deploy output.
