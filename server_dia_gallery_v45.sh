@@ -70,7 +70,7 @@ CHANGED=$(git diff --name-only "$BASE"..HEAD)
 echo "$CHANGED"
 for f in $CHANGED; do
   case "$f" in
-    UI_SAFETY_V45.md|core/daily_report_v8.py|core/dia_gallery_v45.py|core/excel_dashboard.py|core/management/commands/check_dia_gallery_v45.py|core/migrations/0015_dia_gallery_sale.py|core/models.py|core/report_v9.py|core/sale_brand_v19.py|core/urls.py|templates/core/daily_report_v45.html|templates/core/dia_gallery_sale_v45.html|templates/core/report_excel_v45.html|templates/core/sale_brand_v45.html|docs/00_NEW_CHAT_READ_FIRST.md|docs/PROJECT_CONTEXT/README.md|docs/PROJECT_CONTEXT/23_DIA_GALLERY_V45.md|server_dia_gallery_v45.sh) ;;
+    UI_SAFETY_V45.md|core/daily_report_v8.py|core/daily_views.py|core/dia_gallery_v45.py|core/excel_dashboard.py|core/management/commands/check_dia_gallery_v45.py|core/migrations/0015_dia_gallery_sale.py|core/models.py|core/report_v9.py|core/sale_brand_v19.py|core/urls.py|templates/core/daily_report_v45.html|templates/core/dia_gallery_sale_v45.html|templates/core/report_excel_v45.html|templates/core/sale_brand_v45.html|docs/00_NEW_CHAT_READ_FIRST.md|docs/PROJECT_CONTEXT/README.md|docs/PROJECT_CONTEXT/23_DIA_GALLERY_V45.md|server_dia_gallery_v45.sh) ;;
     *) fail "unexpected V45 file changed: $f" ;;
   esac
 done
