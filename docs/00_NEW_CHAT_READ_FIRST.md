@@ -2,7 +2,7 @@
 
 **Authoritative continuation entrypoint**
 
-Last synchronized with project conversation: **2026-08-31, V45 Dia Gallery daily-sales channel prepared on GitHub; V44/V45 are not production-confirmed without successful server output**
+Last synchronized with project conversation: **2026-08-31, V46 HOME-only sale / no automatic KHORSHID transfer prepared on GitHub; V46 is not production-confirmed without successful server output**
 Repository: `aliiitavazoeiii-afk/darma-general`
 Production domain: `gozaresh.filmjadiid.ir`
 Production server path: `/opt/darma-general`
@@ -17,8 +17,8 @@ This repository is a live business-management system replacing the user's Excel 
 A new AI/chat must:
 
 1. Read this file completely.
-2. Read every file in `docs/PROJECT_CONTEXT/` in numeric order, now through `23_DIA_GALLERY_V45.md`.
-3. Read `UI_SAFETY_V37.md` through `UI_SAFETY_V45.md`.
+2. Read every file in `docs/PROJECT_CONTEXT/` in numeric order, now through `24_NO_AUTO_TRANSFER_V46.md`.
+3. Read `UI_SAFETY_V37.md` through `UI_SAFETY_V46.md`.
 4. Read current `core/urls.py` before deciding which source is active.
 5. Read exact active source files for the requested subsystem.
 6. Read `AI_START_HERE.md` and `PROJECT_HANDOFF.md` last for historical rationale only.
@@ -33,6 +33,8 @@ A new AI/chat must:
 **Accounting formulas and existing operational semantics are frozen unless the user explicitly changes a business rule.** External Digikala visibility must not silently alter internal stock, sales, fees, receivable, payments, materials, production, COGS, SaleSnapshots or capital.
 
 V40 introduced read-only Digikala API access. V41 corrected the operational commitment number. V42 derived free/sellable Digikala warehouse stock. V43 reorganized Digikala into a separate mini-app. V44 corrects real V43 observations while keeping the same read-only boundary. V45 is a separate explicitly requested business feature: a Dia Gallery daily-sales channel that consumes Darma stock, sells each short at a fixed 71,000 toman, creates its own receivable, and contributes sale profit to capital.
+
+V46 is another explicit user business-rule change and supersedes all older automatic sale-replenishment behavior: **every Darma-backed sale deducts HOME only, HOME may become negative, and KHORSHID must never change because of a sale. Only an explicit manual stock transfer may move KHORSHID -> HOME.**
 
 ---
 
@@ -58,7 +60,7 @@ Backup:
 backups/before-ui-modernization-v38-20260829-223111.sql
 ```
 
-Do not invent or copy forward a newer numeric checkpoint without actual server invariant output. The user has interacted with later Digikala pages, but no newer final invariant block has been posted in chat.
+Do not invent or copy forward a newer numeric checkpoint without actual server invariant output. The user has interacted with later project features, but no newer final invariant block has been posted in chat.
 
 ---
 
@@ -104,7 +106,7 @@ See `22_DIGIKALA_CENTER_V44.md` and `UI_SAFETY_V44.md`.
 
 ---
 
-## Dia Gallery V45 — new explicit business rule
+## Dia Gallery V45 — explicit sales channel
 
 V45 adds a separate box under the existing daily-sales date screen:
 
@@ -120,7 +122,6 @@ Rules:
 - one entered unit = one short;
 - fixed price = **71,000 toman per short**;
 - no Digikala fee;
-- physical stock is deducted from Darma using existing HOME/KHORSHID primitives;
 - dedicated receivable account title = `فروش Dia Gallery`;
 - receivable delta = `quantity × 71,000`;
 - Dia receivable is included in the accounts component of capital;
@@ -129,9 +130,48 @@ Rules:
 - dashboard, daily report and comprehensive report include Dia sales;
 - the accounts / ریز حساب‌ها UI shows the Dia receivable as an automatic row.
 
+V46 changes only the location side of Dia inventory deduction: Dia sales now deduct HOME only and can make it negative; they must not auto-transfer KHORSHID.
+
 Capital logic is not replaced. Dia enters the existing equation through the accounts asset side while Darma stock value decreases, so a sale changes capital by `gross - COGS`.
 
 See `23_DIA_GALLERY_V45.md` and `UI_SAFETY_V45.md`.
+
+---
+
+## No automatic KHORSHID transfer V46 — explicit inventory-location rule
+
+The user explicitly rejected all automatic location movement during sales.
+
+Authoritative rule:
+
+```text
+sale -> deduct HOME only
+HOME may go negative
+KHORSHID sale delta = 0
+```
+
+Physical transfer is entered later by the user:
+
+```text
+HOME=-10
+manual KHORSHID->HOME transfer=30
+HOME becomes 20
+KHORSHID decreases 30
+```
+
+This rule applies to:
+
+- normal Darma sales;
+- Anbaresh sales backed by Darma stock;
+- variable-color `s3` sales;
+- replacement-color sale paths;
+- Dia Gallery.
+
+The one-time V46 reconcile reverses only phantom automatic sale transfers created **after** the authoritative end-of-day 3 Shahrivar physical baseline. It must not reverse pre-baseline history. The repair changes only HOME/KHORSHID split; combined Darma quantity/value and capital must remain unchanged.
+
+This explicitly supersedes older sentences in context files `01` and `05` that say current sale logic may auto-transfer KHORSHID -> HOME.
+
+See `24_NO_AUTO_TRANSFER_V46.md` and `UI_SAFETY_V46.md`.
 
 ---
 
@@ -153,6 +193,7 @@ A new chat must know from the context pack:
 - V43 isolated Digikala-center architecture;
 - V44 future-date split, inventory-backed products, physical return-warehouse rule and shared-cache performance changes;
 - V45 Dia Gallery fixed-price sale, Darma-stock, dedicated-receivable and capital semantics;
+- V46 HOME-only sale deduction, negative HOME allowance, explicit-only KHORSHID transfer, and post-day-3 phantom-transfer reversal;
 - which historical deploy/reset scripts are unsafe to rerun;
 - that the latest numerically confirmed checkpoint is still V38 until a newer actual server block is posted.
 
@@ -187,18 +228,20 @@ Read exactly:
 21. `21_DIGIKALA_CENTER_V43.md`
 22. `22_DIGIKALA_CENTER_V44.md`
 23. `23_DIA_GALLERY_V45.md`
-24. `UI_SAFETY_V37.md`
-25. `UI_SAFETY_V38.md`
-26. `UI_SAFETY_V39.md`
-27. `UI_SAFETY_V40.md`
-28. `UI_SAFETY_V41.md`
-29. `UI_SAFETY_V42.md`
-30. `UI_SAFETY_V43.md`
-31. `UI_SAFETY_V44.md`
-32. `UI_SAFETY_V45.md`
-33. current `core/urls.py`
-34. relevant active implementation files
-35. `AI_START_HERE.md` and `PROJECT_HANDOFF.md` last
+24. `24_NO_AUTO_TRANSFER_V46.md`
+25. `UI_SAFETY_V37.md`
+26. `UI_SAFETY_V38.md`
+27. `UI_SAFETY_V39.md`
+28. `UI_SAFETY_V40.md`
+29. `UI_SAFETY_V41.md`
+30. `UI_SAFETY_V42.md`
+31. `UI_SAFETY_V43.md`
+32. `UI_SAFETY_V44.md`
+33. `UI_SAFETY_V45.md`
+34. `UI_SAFETY_V46.md`
+35. current `core/urls.py`
+36. relevant active implementation files
+37. `AI_START_HERE.md` and `PROJECT_HANDOFF.md` last
 
 `docs/PROJECT_CONTEXT/README.md` is the manifest.
 
@@ -206,4 +249,4 @@ Read exactly:
 
 ## One-line continuation prompt
 
-> Open my GitHub repo `aliiitavazoeiii-afk/darma-general`. Read `docs/00_NEW_CHAT_READ_FIRST.md`, then every required context file in order through V45, then current routes and exact active source. Treat the context pack as authoritative. Preserve all frozen accounting/inventory/sales/material/payment invariants and the Digikala read-only boundary. Understand Dia Gallery V45 as its own direct Darma-stock sales channel. Never assume GitHub code is live without user-posted deploy output.
+> Open my GitHub repo `aliiitavazoeiii-afk/darma-general`. Read `docs/00_NEW_CHAT_READ_FIRST.md`, then every required context file in order through V46, then current routes and exact active source. Treat the later explicit V46 business rule as authoritative over older auto-transfer text. Preserve all frozen accounting/sales/material/payment invariants and the Digikala read-only boundary. Every Darma-backed sale deducts HOME only and may make HOME negative; KHORSHID changes only through explicit manual transfer. Never assume GitHub code is live without user-posted deploy output.
