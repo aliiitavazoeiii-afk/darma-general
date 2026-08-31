@@ -31,7 +31,7 @@ docker compose exec -T db pg_dump -U "$DB_USER" "$DB_NAME" > "$BACKUP" || fail "
 echo "BACKUP=$BACKUP"
 
 snapshot_economic() {
-  # Keep only invariant key=value lines. Django 5.2 can print an automatic-import
+  # Keep only invariant key=value lines. Django can print an automatic-import
   # banner whose object count may differ before/after image recreation; that is
   # not business state and must never trip the economic guard.
   docker compose exec -T web python manage.py shell -c '
@@ -89,7 +89,7 @@ CHANGED=$(git diff --name-only "$BASE"..HEAD)
 echo "$CHANGED"
 for f in $CHANGED; do
   case "$f" in
-    core/final_services.py|core/variant_sale_v12.py|core/management/commands/reconcile_no_auto_transfer_v46.py|core/management/commands/check_no_auto_transfer_v46.py|docs/00_NEW_CHAT_READ_FIRST.md|docs/PROJECT_CONTEXT/README.md|docs/PROJECT_CONTEXT/24_NO_AUTO_TRANSFER_V46.md|UI_SAFETY_V46.md|server_no_auto_transfer_v46.sh) ;;
+    core/final_services.py|core/variant_sale_v12.py|core/management/commands/reconcile_no_auto_transfer_v46.py|core/management/commands/check_no_auto_transfer_v46.py|templates/core/report_excel_v45.html|docs/00_NEW_CHAT_READ_FIRST.md|docs/PROJECT_CONTEXT/README.md|docs/PROJECT_CONTEXT/24_NO_AUTO_TRANSFER_V46.md|UI_SAFETY_V46.md|server_no_auto_transfer_v46.sh) ;;
     *) fail "unexpected V46 file changed: $f" ;;
   esac
 done
@@ -100,6 +100,7 @@ step "5) BUILD + SOURCE PREFLIGHT"
 docker compose build web || fail "web build failed"
 docker compose run --rm --entrypoint python web manage.py makemigrations --check --dry-run || fail "migration drift"
 docker compose run --rm --entrypoint python web manage.py check || fail "Django check failed"
+docker compose run --rm --entrypoint python web manage.py shell -c 'from django.template.loader import get_template; get_template("core/report_excel_v45.html"); print("COMPREHENSIVE REPORT TEMPLATE OK")' || fail "comprehensive report template compile failed"
 docker compose run --rm --entrypoint python web manage.py check_no_auto_transfer_v46 --source-only || fail "V46 source check failed"
 docker compose run --rm --entrypoint python web manage.py reconcile_no_auto_transfer_v46 || fail "V46 reversal dry-run failed"
 
@@ -118,6 +119,7 @@ docker compose restart caddy || fail "caddy restart failed"
 sleep 5
 docker compose exec -T web python manage.py migrate --check || fail "migration check failed"
 docker compose exec -T web python manage.py check || fail "live Django check failed"
+docker compose exec -T web python manage.py shell -c 'from django.template.loader import get_template; get_template("core/report_excel_v45.html"); print("LIVE COMPREHENSIVE REPORT TEMPLATE OK")' || fail "live comprehensive report template compile failed"
 docker compose exec -T web python manage.py check_no_auto_transfer_v46 || fail "V46 functional rollback test failed"
 
 step "8) REVERSE HISTORICAL PHANTOM AUTO-TRANSFERS AFTER DAY-3 BASELINE"
@@ -143,5 +145,6 @@ echo "Sales: HOME only; negative HOME is allowed"
 echo "KHORSHID: never touched by a sale automatically"
 echo "Manual transfer: KHORSHID decreases and HOME increases by entered quantity"
 echo "Historical phantom auto-transfers after the 3-Shahrivar physical baseline were reversed"
+echo "Comprehensive report template: compiled successfully"
 echo "Combined Darma quantity/value and capital were preserved"
 echo "======================================"
