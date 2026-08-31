@@ -103,6 +103,28 @@ class SaleLine(models.Model):
     def shorts_count(self): return self.quantity * self.product_size.product.pack_qty
 
 
+class DiaGallerySale(models.Model):
+    day = models.ForeignKey(SaleDay, on_delete=models.CASCADE, related_name="dia_gallery_sales")
+    size = models.ForeignKey(Size, on_delete=models.PROTECT)
+    color = models.ForeignKey(Color, on_delete=models.PROTECT)
+    quantity = models.PositiveIntegerField(default=0)
+    inventory_applied_quantity = models.PositiveIntegerField(default=0)
+    unit_price = models.PositiveBigIntegerField(default=71000)
+    unit_cost = models.PositiveBigIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["day", "size", "color"], name="uniq_dia_gallery_day_size_color")
+        ]
+        ordering = ["id"]
+
+    @property
+    def gross_sales(self):
+        return int(self.quantity or 0) * int(self.unit_price or 0)
+
+
 class Replacement(models.Model):
     sale_line = models.ForeignKey(SaleLine, on_delete=models.CASCADE, related_name="replacements")
     source_color = models.ForeignKey(Color, on_delete=models.PROTECT, related_name="replacement_sources")
@@ -139,6 +161,7 @@ class Account(models.Model):
     DIGIKALA = "digikala"
     PEDRAM = "pedram"
     TAKVIN = "takvin"
+    DIA_GALLERY = "dia_gallery"
     key = models.CharField(max_length=30, unique=True)
     title = models.CharField(max_length=100)
     opening_balance = models.BigIntegerField(default=0)
