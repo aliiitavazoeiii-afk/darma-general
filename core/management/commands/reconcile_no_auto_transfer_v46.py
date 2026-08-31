@@ -3,7 +3,6 @@ from collections import defaultdict
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.db.models import Sum
-from django.db.models.functions import Coalesce
 
 from core.models import (
     AccountEntry,
@@ -21,7 +20,7 @@ REVERSAL_PREFIX = "v46-reverse-auto:"
 
 
 def _sum(qs, field="qty"):
-    return int(qs.aggregate(v=Coalesce(Sum(field), 0))["v"] or 0)
+    return int(qs.aggregate(v=Sum(field))["v"] or 0)
 
 
 def _business_fingerprint():
