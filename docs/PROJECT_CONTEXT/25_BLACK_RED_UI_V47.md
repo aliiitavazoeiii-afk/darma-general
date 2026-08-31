@@ -7,6 +7,7 @@ V47 is presentation-only. It was requested after the user showed the comprehensi
 - a black/red visual identity instead of the existing navy/brown/orange feel;
 - the Darma logo to be visible in the sidebar instead of appearing as a blank/light plaque;
 - a cleaner, equal four-column KPI strip in the comprehensive report;
+- professional inventory tables with stronger hierarchy and scanability;
 - a safe backup and one-command rollback if the new look is not preferred.
 
 ## Absolute boundary
@@ -27,13 +28,19 @@ V47 must not change:
 
 V47 intentionally does **not** rewrite the tracked production CSS or templates.
 
-Deploy script:
+Base deploy script:
 
 ```bash
 bash server_black_red_ui_v47.sh
 ```
 
-The script:
+Full deploy including the professional inventory-table extension:
+
+```bash
+bash server_black_red_ui_v47_full.sh
+```
+
+The base script:
 
 1. creates a PostgreSQL backup;
 2. backs up the tracked current `static/core/ui-polish.css`, logo asset and Git HEAD under `backups/before-black-red-ui-v47-*`;
@@ -45,7 +52,9 @@ The script:
 8. reruns `collectstatic` and restarts the same container so WhiteNoise's manifest uses the themed stylesheet;
 9. proves the business snapshot is unchanged.
 
-Because the tracked CSS source is left untouched, rollback is deterministic: recreating/rebuilding the web container from Git source removes the runtime overlay.
+The full script runs the safe base deploy first, then adds a second runtime-only inventory overlay. It compiles `core/inventory_v19.html`, captures the economic snapshot again, backs up the live V47 CSS, applies only CSS, reruns `collectstatic`, and requires the before/after business snapshot to remain exactly equal.
+
+Because tracked CSS and inventory templates are left untouched, rollback is deterministic: recreating/rebuilding the web container from Git source removes the runtime overlays.
 
 Rollback script:
 
@@ -82,6 +91,31 @@ Comprehensive report KPI strip:
 - two columns on tablet/mobile;
 - one column only on very narrow screens.
 
+Inventory table extension:
+
+- dark professional data-grid treatment scoped only to the inventory page;
+- sticky table header for easier scanning;
+- sticky `رنگ / مدل` column while horizontally scrolling;
+- zebra rows and controlled hover emphasis;
+- tabular numeric alignment;
+- distinct total column in the main inventory table;
+- stronger total and capital footer rows while preserving green positive-capital semantics;
+- cleaner card headers, scroll hint, brand tabs and add-model box;
+- responsive sizing on mobile;
+- no inventory data, model, view, route or business-rule changes.
+
+To remove only the professional inventory-table overlay while keeping the base black/red V47 theme, rerun:
+
+```bash
+bash server_black_red_ui_v47.sh
+```
+
+To remove all V47 presentation changes and return to the pre-V47 source appearance, run:
+
+```bash
+bash server_rollback_black_red_ui_v47.sh
+```
+
 ## Operational note
 
-V47 is a runtime overlay by design. Any later `--force-recreate`/fresh image deployment removes the overlay unless `server_black_red_ui_v47.sh` is run again afterward. This is intentional because the user explicitly wanted an easy reversible visual trial without risking business source.
+V47 is a runtime overlay by design. Any later `--force-recreate`/fresh image deployment removes the overlay unless the corresponding V47 deploy script is run again afterward. This is intentional because the user explicitly wanted an easy reversible visual trial without risking business source.
