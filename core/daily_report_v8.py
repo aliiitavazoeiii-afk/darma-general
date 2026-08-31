@@ -4,6 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, render
 
 from .dateutils import format_jalali
+from .dia_gallery_v45 import dia_gallery_day_metrics
 from .finance import sale_line_metrics
 from .models import SaleDay, SaleLine
 from .telegram_inventory_alerts_v20 import notify_after_daily_report
@@ -139,11 +140,19 @@ def daily_report(request, day_id):
             **metrics,
         })
 
+    dia_gallery = dia_gallery_day_metrics(day)
+    if int(dia_gallery["total"].get("shorts") or 0) > 0:
+        dia_values = by_brand["Dia Gallery"]
+        for key in ["gross", "digikala_fee", "cogs", "profit", "shorts", "packs"]:
+            value = int(dia_gallery["total"].get(key) or 0)
+            dia_values[key] += value
+            total[key] += value
+
     for values in by_brand.values():
         values["margin"] = (values["profit"] / values["gross"] * 100) if values["gross"] else 0
     total["margin"] = (total["profit"] / total["gross"] * 100) if total["gross"] else 0
 
-    preferred = ["تکوین", "دارما", "انبارش"]
+    preferred = ["تکوین", "دارما", "انبارش", "Dia Gallery"]
     ordered_brands = []
     for brand_name in preferred:
         if brand_name in by_brand:
@@ -160,13 +169,13 @@ def daily_report(request, day_id):
     if not any(row["brand_name"] == "دارما" for row in primary_detail_rows):
         default_brand = "تکوین"
 
-    if lines:
+    if lines or int(dia_gallery["total"].get("shorts") or 0) > 0:
         try:
             notify_after_daily_report(day)
         except Exception:
             pass
 
-    return render(request, "core/daily_report_v21.html", {
+    return render(request, "core/daily_report_v45.html", {
         "day": day,
         "jalali_date": format_jalali(day.date),
         "detail_rows": detail_rows,
@@ -176,4 +185,5 @@ def daily_report(request, day_id):
         "default_brand": default_brand,
         "by_brand": ordered_brands,
         "total": total,
+        "dia_gallery": dia_gallery,
     })
