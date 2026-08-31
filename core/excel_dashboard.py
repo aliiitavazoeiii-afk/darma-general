@@ -7,6 +7,7 @@ from django.db.models import Sum
 from django.shortcuts import render
 
 from .dateutils import format_jalali
+from .dia_gallery_v45 import dia_gallery_period_metrics
 from .finance import sale_line_metrics
 from .models import MaterialReportBlock, SaleDay, SaleLine, StockBalance, StockLocation, TakvinPurchase
 
@@ -45,6 +46,7 @@ def dashboard(request):
             "product_size__product", "product_size__size"
         ):
             _add_metrics(today_metrics, sale_line_metrics(line))
+    _add_metrics(today_metrics, dia_gallery_period_metrics(today, today)["total"])
     _finish_metrics(today_metrics)
 
     tj = jdatetime.date.fromgregorian(date=today)
@@ -55,6 +57,7 @@ def dashboard(request):
     ).select_related("day", "product_size__product", "product_size__size")
     for line in month_lines:
         _add_metrics(month_metrics, sale_line_metrics(line))
+    _add_metrics(month_metrics, dia_gallery_period_metrics(month_start, today)["total"])
     _finish_metrics(month_metrics)
 
     # 14-day chart, including days with zero sales.
@@ -67,6 +70,9 @@ def dashboard(request):
         metrics = sale_line_metrics(line)
         daily[line.day.date]["gross"] += metrics["gross"]
         daily[line.day.date]["profit"] += metrics["profit"]
+    for row in dia_gallery_period_metrics(chart_start, today)["rows"]:
+        daily[row["date"]]["gross"] += int(row["gross"] or 0)
+        daily[row["date"]]["profit"] += int(row["profit"] or 0)
 
     chart_labels, chart_sales, chart_profit = [], [], []
     for offset in range(14):
