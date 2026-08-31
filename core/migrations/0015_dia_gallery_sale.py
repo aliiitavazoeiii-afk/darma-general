@@ -24,7 +24,7 @@ class Migration(migrations.Migration):
                 ("size", models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to="core.size")),
             ],
             options={
-                "ordering": ["size__sort_order", "color__name", "id"],
+                "ordering": ["id"],
             },
         ),
         migrations.AddConstraint(
