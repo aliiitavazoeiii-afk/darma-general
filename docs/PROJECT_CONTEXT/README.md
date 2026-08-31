@@ -30,14 +30,15 @@ Then read all numbered files in order:
 22. `22_DIGIKALA_CENTER_V44.md` — fixes future-date commitment split, inventory-backed old/current products, sales endpoint fallback, physical return-warehouse detection, and multi-worker/shared API caching.
 23. `23_DIA_GALLERY_V45.md` — separate daily sales channel consuming Darma color/size stock at fixed 71,000 toman per short, with its own receivable included in accounts/capital.
 24. `24_NO_AUTO_TRANSFER_V46.md` — explicit new rule: every Darma-backed sale deducts HOME only and may make HOME negative; KHORSHID changes only through explicit manual transfer; post-day-3 phantom auto-transfers are reversed without changing combined stock/capital.
+25. `25_BLACK_RED_UI_V47.md` — reversible presentation-only black/charcoal/red runtime theme, dark Darma logo plaque, aligned comprehensive-report KPI grid, DB/UI backup, and one-command rollback.
 
 Important supersession rule for V46: older statements in `01`/`05` that sale logic may auto-transfer KHORSHID -> HOME are obsolete. `24_NO_AUTO_TRANSFER_V46.md` is authoritative for sale location behavior.
 
-After these, read `UI_SAFETY_V37.md` through `UI_SAFETY_V46.md`, then current `core/urls.py`, exact active source files, and older handoff docs last.
+After these, read `UI_SAFETY_V37.md` through `UI_SAFETY_V47.md`, then current `core/urls.py`, exact active source files, and older handoff docs last.
 
 When older docs conflict with this directory or current active code, the later explicit business-rule document + current active code wins.
 
-The last numerically recorded production checkpoint remains V38 until a newer deployment's actual final invariant block is posted by the user. V46 is GitHub-prepared and must not be called production-confirmed without successful server output.
+The last numerically recorded production checkpoint remains V38 until a newer deployment's actual final invariant block is posted by the user. V46/V47 must not be called fully production-confirmed without their successful server output markers. V47 is a runtime visual overlay and does not alter tracked business/template/CSS source.
 
 Latest confirmed numeric production snapshot:
 
