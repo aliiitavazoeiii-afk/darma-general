@@ -51,18 +51,13 @@ def _record_stock(*, movement_type, brand, size, color, location, delta, referen
 
 
 def _transfer_for_need(*, brand, size, color, needed, reference):
+    """Return HOME stock only; sales must never move KHORSHID automatically.
+
+    Negative HOME stock is intentional. Physical KHORSHID -> HOME movement happens
+    only through an explicit StockTransfer entered by the user.
+    """
     home = StockLocation.objects.get(key=StockLocation.HOME)
-    kh = StockLocation.objects.get(key=StockLocation.KHORSHID)
-    home_bal = _stock(brand=brand,size=size,color=color,location=home)
-    if brand.name != "دارما" or home_bal.qty >= needed: return home_bal
-    kh_bal = _stock(brand=brand,size=size,color=color,location=kh)
-    move = min(max(0, needed-max(home_bal.qty,0)), max(kh_bal.qty,0))
-    if move:
-        kh_bal.qty -= move; home_bal.qty += move
-        kh_bal.save(update_fields=["qty"]); home_bal.save(update_fields=["qty"])
-        _record_stock(movement_type=InventoryMovement.TRANSFER,brand=brand,size=size,color=color,location=kh,delta=-move,reference=reference)
-        _record_stock(movement_type=InventoryMovement.TRANSFER,brand=brand,size=size,color=color,location=home,delta=move,reference=reference)
-    return home_bal
+    return _stock(brand=brand,size=size,color=color,location=home)
 
 
 @transaction.atomic
@@ -166,7 +161,6 @@ def sync_takvin_payment(obj):
 
 
 def sync_expense(obj): _replace_account_entry(account_key=Account.MELAT,date=obj.date,delta=-obj.amount,title=f"خرج: {obj.title}",reference=f"expense:{obj.id}",entry_type="expense",note=obj.note)
-
 
 def sync_bank_transfer(obj):
     _replace_account_entry(account_key=obj.from_account.key,date=obj.date,delta=-obj.amount,title=f"انتقال به {obj.to_account.title}",reference=f"bank-transfer:{obj.id}:out",entry_type="transfer",note=obj.note)
