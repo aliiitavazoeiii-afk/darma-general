@@ -1,0 +1,15 @@
+{% extends 'core/daily_report_v21.html' %}
+{% block content %}
+{{ block.super }}
+{% if dia_gallery.total.shorts %}
+<div class="card glass-card mt-4 mb-4">
+  <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+    <div><h3 class="card-title mb-1">فروش Dia Gallery</h3><div class="text-secondary small">فروش مستقیم از موجودی دارما · بدون هزینه دیجی‌کالا</div></div>
+    <a class="btn btn-sm btn-outline-light" href="{% url 'dia_gallery_sales' day.id %}">ویرایش فروش</a>
+  </div>
+  <div class="table-responsive"><table class="table table-vcenter mb-0"><thead><tr><th>رنگ</th><th>سایز</th><th class="text-center">تعداد</th><th>فی</th><th>فروش</th><th>بهای کالا</th><th>سود</th></tr></thead><tbody>
+  {% for row in dia_gallery.rows %}<tr><td class="fw-bold">{{ row.color }}</td><td>{{ row.size }}</td><td class="text-center num">{{ row.quantity|groupnum }}</td><td class="money">{{ row.line.unit_price|groupnum }}</td><td class="money">{{ row.gross|groupnum }}</td><td class="money">{{ row.cogs|groupnum }}</td><td class="money {% if row.profit >= 0 %}text-success{% else %}text-danger{% endif %}">{{ row.profit|groupnum }}</td></tr>{% endfor %}
+  </tbody><tfoot><tr class="fw-bold"><td colspan="2">جمع Dia Gallery</td><td class="text-center num">{{ dia_gallery.total.shorts|groupnum }}</td><td></td><td class="money">{{ dia_gallery.total.gross|groupnum }}</td><td class="money">{{ dia_gallery.total.cogs|groupnum }}</td><td class="money {% if dia_gallery.total.profit >= 0 %}text-success{% else %}text-danger{% endif %}">{{ dia_gallery.total.profit|groupnum }}</td></tr></tfoot></table></div>
+</div>
+{% endif %}
+{% endblock %}
