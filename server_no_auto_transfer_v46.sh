@@ -31,6 +31,9 @@ docker compose exec -T db pg_dump -U "$DB_USER" "$DB_NAME" > "$BACKUP" || fail "
 echo "BACKUP=$BACKUP"
 
 snapshot_economic() {
+  # Keep only invariant key=value lines. Django 5.2 can print an automatic-import
+  # banner whose object count may differ before/after image recreation; that is
+  # not business state and must never trip the economic guard.
   docker compose exec -T web python manage.py shell -c '
 from django.db.models import Sum
 from core.finance_excel_v9 import digikala_receivable_total
@@ -57,7 +60,7 @@ print(f"DARMA={bqty(chr(1583)+chr(1575)+chr(1585)+chr(1605)+chr(1575))}")
 print(f"TAKVIN={bqty(chr(1578)+chr(1705)+chr(1608)+chr(1740)+chr(1606))}")
 print(f"NOVANI={bqty(chr(78)+chr(111)+chr(118)+chr(97)+chr(110)+chr(105))}")
 print(f"SALES={SaleLine.objects.count()}"); print(f"ACCOUNT_ENTRIES={AccountEntry.objects.count()}")
-' 2>/dev/null
+' 2>/dev/null | grep -E '^(CAPITAL|FINISHED|RAW|DIGI|DIA|DARMA|TAKVIN|NOVANI|SALES|ACCOUNT_ENTRIES)='
 }
 
 snapshot_locations() {
@@ -71,7 +74,7 @@ def q(loc): return int(StockBalance.objects.filter(brand=b,location=loc).aggrega
 print(f"DARMA_HOME={q(h)}")
 print(f"DARMA_KHORSHID={q(k)}")
 print(f"DARMA_COMBINED={q(h)+q(k)}")
-' 2>/dev/null
+' 2>/dev/null | grep -E '^DARMA_(HOME|KHORSHID|COMBINED)='
 }
 
 step "3) LIVE ECONOMIC SNAPSHOT"
@@ -102,7 +105,12 @@ docker compose run --rm --entrypoint python web manage.py reconcile_no_auto_tran
 
 step "6) VERIFY PREFLIGHT DID NOT CHANGE LIVE ECONOMICS"
 PREFLIGHT=$(snapshot_economic) || fail "could not capture post-preflight values"
-[ "$LIVE" = "$PREFLIGHT" ] || fail "economic values changed during preflight"
+echo "$PREFLIGHT"
+[ "$LIVE" = "$PREFLIGHT" ] || {
+  echo "--- LIVE ---"; echo "$LIVE"
+  echo "--- PREFLIGHT ---"; echo "$PREFLIGHT"
+  fail "economic values changed during preflight"
+}
 
 step "7) RECREATE WEB WITH HOME-ONLY SALE POLICY"
 docker compose up -d --force-recreate web || fail "web recreate failed"
@@ -118,8 +126,13 @@ docker compose exec -T web python manage.py reconcile_no_auto_transfer_v46 --app
 step "9) VERIFY LOCATION + ECONOMIC INVARIANTS"
 FINAL=$(snapshot_economic) || fail "could not capture final economic values"
 LOC_AFTER=$(snapshot_locations) || fail "could not capture final Darma locations"
+echo "$FINAL"
 echo "$LOC_AFTER"
-[ "$LIVE" = "$FINAL" ] || fail "V46 changed economic totals/capital"
+[ "$LIVE" = "$FINAL" ] || {
+  echo "--- LIVE ---"; echo "$LIVE"
+  echo "--- FINAL ---"; echo "$FINAL"
+  fail "V46 changed economic totals/capital"
+}
 docker compose exec -T web python manage.py reconcile_no_auto_transfer_v46 || fail "V46 post-apply verification failed"
 
 echo ""
