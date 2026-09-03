@@ -72,7 +72,7 @@
           <div class="text-secondary">رنگ فعالی برای انتقال پیدا نشد.</div>
           {% endfor %}
         </div>
-        <div class="text-secondary compact-help mt-2">فیلد خالی یا صفر نادیده گرفته می‌شود. جهت انتقال همیشه خورشید ← خانه است.</div>
+        <div class="text-secondary compact-help mt-2">فیلد خالی یا صفر نادیده گرفته می‌شود. جهت انتقال همیشه از خورشید به خانه است.</div>
         <button class="btn btn-primary btn-sm mt-3">ثبت انتقال</button>
       </form>
     </div>
@@ -120,7 +120,7 @@
             {% for color in group.colors %}
             <div class="color-entry-cell">
               <label class="form-label" for="adjust-{{ group.brand.id }}-{{ color.id }}">{{ color.name }}</label>
-              <input id="adjust-{{ group.brand.id }}-{{ color.id }}" type="number" min="0" class="form-control" name="target_{{ color.id }}" placeholder="موجودی اصلی" inputmode="numeric">
+              <input id="adjust-{{ group.brand.id }}-{{ color.id }}" type="number" min="0" class="form-control" name="target_{{ group.brand.id }}_{{ color.id }}" placeholder="موجودی اصلی" inputmode="numeric">
             </div>
             {% empty %}
             <div class="text-secondary">رنگ فعالی برای این برند پیدا نشد.</div>
