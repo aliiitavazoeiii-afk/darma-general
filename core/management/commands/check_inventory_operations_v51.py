@@ -13,6 +13,7 @@ from core.inventory_operations_v15 import (
     _bulk_set_inventory_targets,
     _bulk_transfer_khorshid_to_home,
     _delete_inventory_adjustment,
+    _set_inventory_target,
 )
 from core.models import (
     Brand,
@@ -71,16 +72,17 @@ class Command(BaseCommand):
 
         self.stdout.write("V51 SOURCE CHECK OK")
         self.stdout.write("- delete route is POST-only and lives in inventory_operations_v15")
-        self.stdout.write("- delete button is exposed only for movements tied to InventoryAdjustment")
+        self.stdout.write("- delete button is limited to blank-note manual correction adjustments")
+        self.stdout.write("- standalone-return and other marked adjustments are excluded")
 
     def _roundtrip_check(self):
         darma = Brand.objects.get(name="دارما")
         home = StockLocation.objects.get(key=StockLocation.HOME)
         khorshid = StockLocation.objects.get(key=StockLocation.KHORSHID)
-        colors = list(colors_for_brand(darma)[:1])
-        if not colors:
-            raise CommandError("need at least one Darma color for V51 rollback test")
-        color = colors[0]
+        colors = list(colors_for_brand(darma)[:2])
+        if len(colors) < 2:
+            raise CommandError("need at least two Darma colors for V51 rollback test")
+        color, protected_color = colors
 
         size_id = (
             StockBalance.objects.filter(brand=darma)
@@ -104,10 +106,15 @@ class Command(BaseCommand):
             kh_row, _ = StockBalance.objects.get_or_create(
                 brand=darma, size=size, color=color, location=khorshid, defaults={"qty": 0}
             )
+            protected_row, _ = StockBalance.objects.get_or_create(
+                brand=darma, size=size, color=protected_color, location=home, defaults={"qty": 0}
+            )
             home_row.qty = 160
             kh_row.qty = 500
+            protected_row.qty = 50
             home_row.save(update_fields=["qty"])
             kh_row.save(update_fields=["qty"])
+            protected_row.save(update_fields=["qty"])
 
             first = _bulk_set_inventory_targets(
                 adjustment_date=date(2099, 12, 27),
@@ -124,14 +131,38 @@ class Command(BaseCommand):
             if int(home_row.qty) != 140:
                 raise CommandError(f"absolute correction failed before delete: {home_row.qty}")
 
-            result = _delete_inventory_adjustment(adjustment.id)
+            adjustment_id = adjustment.id
+            result = _delete_inventory_adjustment(adjustment_id)
             home_row.refresh_from_db()
             if int(home_row.qty) != 160 or result["after"] != 160:
                 raise CommandError(f"delete did not restore previous stock: result={result}, qty={home_row.qty}")
-            if InventoryAdjustment.objects.filter(id=adjustment.id).exists():
+            if InventoryAdjustment.objects.filter(id=adjustment_id).exists():
                 raise CommandError("deleted InventoryAdjustment row still exists")
-            if InventoryMovement.objects.filter(reference=f"adjust:{adjustment.id}").exists():
+            if InventoryMovement.objects.filter(reference=f"adjust:{adjustment_id}").exists():
                 raise CommandError("deleted adjustment movement still exists")
+
+            protected_result = _set_inventory_target(
+                adjustment_date=date(2099, 12, 27),
+                brand=darma,
+                size=size,
+                color=protected_color,
+                location=home,
+                target_qty=55,
+                note="[standalone-return-v37] regression-protected",
+            )
+            protected_adjustment = protected_result["adjustment"]
+            marker_blocked = False
+            try:
+                _delete_inventory_adjustment(protected_adjustment.id)
+            except ValueError as exc:
+                marker_blocked = "اصلاح دستی" in str(exc)
+            if not marker_blocked:
+                raise CommandError("marked/non-manual InventoryAdjustment was deletable from V51")
+            protected_row.refresh_from_db()
+            if int(protected_row.qty) != 55:
+                raise CommandError("blocked non-manual adjustment delete changed stock")
+            if not InventoryAdjustment.objects.filter(id=protected_adjustment.id, applied=True).exists():
+                raise CommandError("blocked non-manual adjustment delete removed its row")
 
             second = _bulk_set_inventory_targets(
                 adjustment_date=date(2099, 12, 28),
@@ -168,6 +199,7 @@ class Command(BaseCommand):
                 raise CommandError("blocked delete removed the adjustment movement")
 
             self.stdout.write("DELETE ROUNDTRIP OK: 160 -> 140 -> delete -> 160")
+            self.stdout.write("NON-MANUAL ADJUSTMENT GUARD OK: standalone-return style adjustment is not deletable")
             self.stdout.write("NEWER-MOVEMENT GUARD OK: old correction cannot cross a later transfer/sale/correction")
             transaction.set_rollback(True)
 
