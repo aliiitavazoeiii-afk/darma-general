@@ -74,6 +74,50 @@ def _set_inventory_target(*, adjustment_date, brand, size, color, location, targ
 
 
 @transaction.atomic
+def _bulk_set_inventory_targets(*, adjustment_date, brand, size, location, color_targets):
+    """Set multiple color cells to absolute physical counts in one atomic submit.
+
+    Blank fields are filtered by the caller. An explicit zero means the counted
+    stock for that color is zero. Existing InventoryAdjustment/Movement semantics
+    remain unchanged because every target is converted to a delta under lock.
+    """
+    prepared = []
+    for color, target_qty in color_targets:
+        target_qty = int(target_qty)
+        if target_qty < 0:
+            raise ValueError(f"{color.name}: موجودی اصلی نمی‌تواند منفی باشد.")
+        prepared.append((color, target_qty))
+
+    if not prepared:
+        raise ValueError("حداقل موجودی اصلی یک رنگ را وارد کن.")
+
+    changed = []
+    unchanged = []
+    for color, target_qty in prepared:
+        result = _set_inventory_target(
+            adjustment_date=adjustment_date,
+            brand=brand,
+            size=size,
+            color=color,
+            location=location,
+            target_qty=target_qty,
+            note="",
+        )
+        row = {"color": color, **result}
+        if result["delta"]:
+            changed.append(row)
+        else:
+            unchanged.append(row)
+
+    return {
+        "changed": changed,
+        "unchanged": unchanged,
+        "entered_count": len(prepared),
+        "net_delta": sum(int(row["delta"]) for row in changed),
+    }
+
+
+@transaction.atomic
 def _bulk_transfer_khorshid_to_home(*, transfer_date, brand, size, color_quantities):
     """Apply one form submission as multiple explicit KHORSHID -> HOME transfers.
 
@@ -135,10 +179,13 @@ def inventory_operations(request):
     brands = Brand.objects.filter(active=True, name__in=INVENTORY_BRANDS).order_by("id")
     transfer_brands = brands.filter(name="دارما")
     sizes = Size.objects.all()
-    colors = Color.objects.filter(active=True)
     locations = StockLocation.objects.all()
     darma = transfer_brands.first()
     transfer_colors = colors_for_brand(darma) if darma else Color.objects.none()
+    adjustment_groups = [
+        {"brand": brand, "colors": list(colors_for_brand(brand))}
+        for brand in brands
+    ]
 
     if request.method == "POST":
         try:
@@ -176,10 +223,6 @@ def inventory_operations(request):
                 )
 
             elif action == "adjust":
-                color = Color.objects.filter(id=request.POST.get("color"), active=True).first()
-                if not color:
-                    raise ValueError("رنگ معتبر نیست.")
-
                 location_id = request.POST.get("location")
                 if brand.name == "Novani":
                     location = StockLocation.objects.get(key=StockLocation.HOME)
@@ -188,29 +231,34 @@ def inventory_operations(request):
                     if not location:
                         raise ValueError("محل موجودی معتبر نیست.")
 
-                raw_target = request.POST.get("target_qty")
-                if raw_target in (None, ""):
-                    raise ValueError("موجودی اصلی را وارد کن.")
-                target_qty = _int(raw_target, -1)
-                if target_qty < 0:
-                    raise ValueError("موجودی اصلی نمی‌تواند منفی باشد.")
+                brand_colors = list(colors_for_brand(brand))
+                color_targets = []
+                for color in brand_colors:
+                    raw_target = request.POST.get(f"target_{color.id}")
+                    if raw_target in (None, ""):
+                        continue
+                    target_qty = _int(raw_target, -1)
+                    if target_qty < 0:
+                        raise ValueError(f"{color.name}: موجودی اصلی نمی‌تواند منفی باشد.")
+                    color_targets.append((color, target_qty))
 
-                result = _set_inventory_target(
+                result = _bulk_set_inventory_targets(
                     adjustment_date=_date(request.POST.get("date")),
                     brand=brand,
                     size=size,
-                    color=color,
                     location=location,
-                    target_qty=target_qty,
-                    note=request.POST.get("note", ""),
+                    color_targets=color_targets,
                 )
-                if result["delta"] == 0:
-                    messages.info(request, "موجودی همین مقدار است؛ تغییری ثبت نشد.")
-                else:
+                changed_count = len(result["changed"])
+                unchanged_count = len(result["unchanged"])
+                if changed_count:
                     messages.success(
                         request,
-                        f"موجودی اصلی ثبت شد: {result['before']} ← {result['after']} عدد.",
+                        f"اصلاح موجودی ثبت شد؛ {changed_count} رنگ بروزرسانی شد"
+                        + (f" و {unchanged_count} رنگ از قبل همان مقدار بود." if unchanged_count else "."),
                     )
+                else:
+                    messages.info(request, "همه موجودی‌های واردشده از قبل همین مقدار بودند؛ تغییری ثبت نشد.")
             else:
                 raise ValueError("نوع عملیات موجودی معتبر نیست.")
 
@@ -228,8 +276,8 @@ def inventory_operations(request):
             "brands": brands,
             "transfer_brands": transfer_brands,
             "transfer_colors": transfer_colors,
+            "adjustment_groups": adjustment_groups,
             "sizes": sizes,
-            "colors": colors,
             "locations": locations,
             "recent": recent,
             "today_j": format_jalali(date.today()),
