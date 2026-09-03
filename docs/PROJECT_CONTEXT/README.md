@@ -2,7 +2,7 @@
 
 This directory is the authoritative, detailed continuation pack for a new AI/chat.
 
-Read `../00_NEW_CHAT_READ_FIRST.md` first. As of 2026-09-03 that entrypoint contains the complete current-chat handoff through V50, including canonical formulas/rules, the daily-report V48 incident, V49/V50 inventory-operation semantics, deployment-status uncertainty, the UI rollback history, exact do-not-repeat rules, and the one-shot next-chat prompt.
+Read `../00_NEW_CHAT_READ_FIRST.md` first. As of 2026-09-03 that entrypoint contains the complete current-chat handoff through V50, including canonical formulas/rules, the daily-report V48 incident, V49/V50 inventory-operation semantics, deployment-status uncertainty, the UI rollback history, exact do-not-repeat rules, and the one-shot next-chat prompt. Then continue through the numbered context files below; V51 is the newest follow-up after that handoff.
 
 Then read all numbered files in order:
 
@@ -34,6 +34,7 @@ Then read all numbered files in order:
 26. `26_DAILY_REPORT_STABILITY_V48.md` — fixes the active saved-day daily-report HTTP 500 caused by a missing child-template tag-library load and adds a read-only runtime render smoke test for every historical sales day.
 27. `27_INVENTORY_OPERATIONS_V49.md` — changes manual stock correction input from delta to absolute counted stock while preserving delta audit records, and replaces one-color-at-a-time Darma transfer entry with one size + all colors in a single atomic fixed KHORSHID -> HOME batch.
 28. `28_INVENTORY_OPERATIONS_V50.md` — makes both inventory-operation cards compact and changes absolute stock correction to one date/brand/size/location selection plus all colors for that brand in one atomic physical-count submit; blank means unchanged and explicit zero means final stock zero.
+29. `29_INVENTORY_ADJUSTMENT_DELETE_V51.md` — adds a guarded delete/reversal action only for manual `InventoryAdjustment` rows in the recent movement table; exact delta is reversed to restore the pre-correction quantity, while deletion is blocked if any newer movement exists on that same stock cell.
 
 Important supersession rule for V46: older statements in `01`/`05` that sale logic may auto-transfer KHORSHID -> HOME are obsolete. `24_NO_AUTO_TRANSFER_V46.md` and the explicit V46 section in `00_NEW_CHAT_READ_FIRST.md` are authoritative for sale location behavior.
 
@@ -41,7 +42,7 @@ After these, read `UI_SAFETY_V37.md` through `UI_SAFETY_V47.md`, then current `c
 
 When older docs conflict with this directory or current active code, the later explicit business-rule document + current active code wins.
 
-The last numerically recorded production checkpoint remains V38 until a newer deployment's actual final invariant block is posted by the user. V46/V47/V48/V49/V50 must not be called fully production-confirmed without their successful server output markers. V49 does have direct behavioral confirmation from the user that the new KHORSHID -> HOME transfer worked and was "عالی", but that is not the same as a preserved full invariant success block. V50 current source exists on GitHub, but the recorded first attempt used the V49 deploy script and stopped safely at the source-scope guard because V50 files were present; the correct V50 final success marker has not yet been posted in the handoff.
+The last numerically recorded production checkpoint remains V38 until a newer deployment's actual final invariant block is posted by the user. V46/V47/V48/V49/V50/V51 must not be called fully production-confirmed without their successful server output markers. V49 does have direct behavioral confirmation from the user that the new KHORSHID -> HOME transfer worked and was "عالی", but that is not the same as a preserved full invariant success block. V50 current source exists on GitHub, but the recorded first attempt used the V49 deploy script and stopped safely at the source-scope guard because V50 files were present; the correct V50 final success marker has not yet been posted in the handoff. V51 is currently GitHub-prepared only and requires `SUCCESS: INVENTORY ADJUSTMENT DELETE V51 DEPLOYED` from the VPS before it can be called live.
 
 Latest confirmed numeric production snapshot:
 
