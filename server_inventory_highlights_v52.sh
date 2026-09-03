@@ -87,10 +87,12 @@ done
 
 git diff --quiet "$BASE"..HEAD -- core/models.py core/models_final.py core/migrations core/final_services.py core/variant_sale_v12.py core/finance.py core/finance_excel_v9.py core/inventory_valuation_v17.py core/report_v9.py core/daily_order_import_v23.py core/business_tools_v22.py core/material_report_v22.py core/returns_v37.py core/calculator_v37.py core/inventory_operations_v15.py core/urls.py || fail "protected business/ledger/route source changed in V52"
 
-step "4) BUILD + READ-ONLY PREFLIGHT"
+step "4) BUILD + READ-ONLY / ROLLBACK PREFLIGHT"
 docker compose build web || fail "web build failed"
 docker compose run --rm --entrypoint python web manage.py makemigrations --check --dry-run || fail "migration drift"
 docker compose run --rm --entrypoint python web manage.py check || fail "Django check failed"
+docker compose run --rm --entrypoint python web manage.py check_inventory_operations_v50 || fail "V50 rollback regression failed"
+docker compose run --rm --entrypoint python web manage.py check_inventory_operations_v51 || fail "V51 rollback regression failed"
 docker compose run --rm --entrypoint python web manage.py check_inventory_highlights_v52 || fail "V52 highlight regression failed"
 
 step "5) VERIFY PREFLIGHT CHANGED NOTHING"
@@ -108,6 +110,8 @@ docker compose restart caddy >/dev/null || fail "caddy restart failed"
 sleep 6
 docker compose exec -T web python manage.py migrate --check || fail "migration check failed"
 docker compose exec -T web python manage.py check || fail "live Django check failed"
+docker compose exec -T web python manage.py check_inventory_operations_v50 || fail "live V50 regression failed"
+docker compose exec -T web python manage.py check_inventory_operations_v51 || fail "live V51 regression failed"
 docker compose exec -T web python manage.py check_inventory_highlights_v52 || fail "live V52 highlight regression failed"
 
 step "7) VERIFY DEPLOYMENT CHANGED NO BUSINESS VALUES"
@@ -126,3 +130,4 @@ echo "HOME size cells: below 30 = red"
 echo "TOTAL size cells: below 50 = red; 50-99 = orange"
 echo "Exempt colors/models: yellow, red, bear, black ribbed, navy stripe, leopard"
 echo "KHORSHID table and all quantities/formulas: unchanged"
+echo "V50/V51 regressions: passed in the same deployment"
