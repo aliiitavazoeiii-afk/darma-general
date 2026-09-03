@@ -10,7 +10,7 @@ set -a
 . ./.env || fail "could not load .env"
 set +a
 
-BASE=e4b43f977ebabd200d0e4ba6d90c4cd1dc208c61
+BASE=1b9055e8c4a4a1aca1516de3a79cb95f44e80fad
 
 snapshot_business() {
   docker compose exec -T web python manage.py shell -c '
