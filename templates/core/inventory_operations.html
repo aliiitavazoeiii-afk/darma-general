@@ -12,11 +12,13 @@
 .color-entry-cell{border:1px solid rgba(255,255,255,.09);border-radius:10px;padding:7px;background:rgba(255,255,255,.022)}
 .color-entry-cell .form-label{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:700}
 .compact-help{font-size:.72rem;line-height:1.55}
+.movement-delete-form{display:inline}
+.movement-delete-form .btn{white-space:nowrap}
 @media(max-width:1199.98px){.color-entry-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:767.98px){
   .inventory-op-form .row>div{flex:0 0 100%;max-width:100%}
   .inventory-op-form .btn{width:100%}
-  .inventory-moves{min-width:760px}
+  .inventory-moves{min-width:860px}
   .color-entry-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 </style>
@@ -137,11 +139,16 @@
 </div>
 
 <div class="card">
-  <div class="card-header"><h3 class="card-title">آخرین گردش‌های موجودی</h3></div>
+  <div class="card-header">
+    <div>
+      <h3 class="card-title mb-1">آخرین گردش‌های موجودی</h3>
+      <div class="text-secondary compact-help">حذف فقط برای «اصلاح موجودی» دستی فعال است. اگر بعد از آن روی همان موجودی گردش جدیدی ثبت شده باشد، سیستم برای حفظ تاریخچه حذف را متوقف می‌کند.</div>
+    </div>
+  </div>
   <div class="mobile-scroll-note">برای دیدن همه ستون‌ها جدول را بکش</div>
   <div class="table-responsive">
     <table class="table card-table table-vcenter inventory-moves">
-      <thead><tr><th>نوع</th><th>برند</th><th>رنگ</th><th>سایز</th><th>محل</th><th>تغییر</th><th>مرجع</th></tr></thead>
+      <thead><tr><th>نوع</th><th>برند</th><th>رنگ</th><th>سایز</th><th>محل</th><th>تغییر</th><th>مرجع</th><th>عملیات</th></tr></thead>
       <tbody>
         {% for r in recent %}
         <tr>
@@ -152,9 +159,19 @@
           <td>{{ r.location.title }}</td>
           <td class="num {% if r.delta < 0 %}text-danger{% else %}text-success{% endif %}">{{ r.delta|groupnum }}</td>
           <td class="code-cell small">{{ r.reference }}</td>
+          <td>
+            {% if r.adjustment_delete_id %}
+            <form method="post" action="{% url 'inventory_adjustment_delete' r.adjustment_delete_id %}" class="movement-delete-form" onsubmit="return confirm('این اصلاح موجودی حذف شود و موجودی دقیقاً به قبل از همین اصلاح برگردد؟');">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-outline-danger btn-sm">حذف</button>
+            </form>
+            {% else %}
+            <span class="text-secondary">—</span>
+            {% endif %}
+          </td>
         </tr>
         {% empty %}
-        <tr><td colspan="7" class="empty-state">گردشی ثبت نشده.</td></tr>
+        <tr><td colspan="8" class="empty-state">گردشی ثبت نشده.</td></tr>
         {% endfor %}
       </tbody>
     </table>
