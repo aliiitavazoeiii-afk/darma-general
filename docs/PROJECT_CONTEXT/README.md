@@ -33,6 +33,7 @@ Then read all numbered files in order:
 25. `25_BLACK_RED_UI_V47.md` — reversible presentation-only black/charcoal/red runtime theme, dark Darma logo plaque, aligned comprehensive-report KPI grid, DB/UI backup, and one-command rollback.
 26. `26_DAILY_REPORT_STABILITY_V48.md` — fixes the active saved-day daily-report HTTP 500 caused by a missing child-template tag-library load and adds a read-only runtime render smoke test for every historical sales day.
 27. `27_INVENTORY_OPERATIONS_V49.md` — changes manual stock correction input from delta to absolute counted stock while preserving delta audit records, and replaces one-color-at-a-time Darma transfer entry with one size + all colors in a single atomic fixed KHORSHID -> HOME batch.
+28. `28_INVENTORY_OPERATIONS_V50.md` — makes both inventory-operation cards compact and changes absolute stock correction to one date/brand/size/location selection plus all colors for that brand in one atomic physical-count submit; blank means unchanged and explicit zero means final stock zero.
 
 Important supersession rule for V46: older statements in `01`/`05` that sale logic may auto-transfer KHORSHID -> HOME are obsolete. `24_NO_AUTO_TRANSFER_V46.md` is authoritative for sale location behavior.
 
@@ -40,7 +41,7 @@ After these, read `UI_SAFETY_V37.md` through `UI_SAFETY_V47.md`, then current `c
 
 When older docs conflict with this directory or current active code, the later explicit business-rule document + current active code wins.
 
-The last numerically recorded production checkpoint remains V38 until a newer deployment's actual final invariant block is posted by the user. V46/V47/V48/V49 must not be called fully production-confirmed without their successful server output markers. V47 is a runtime visual overlay and does not alter tracked business/template/CSS source. V48 intentionally changes only daily-report presentation/runtime-check files and documentation, not business formulas or ledgers. V49 changes only the manual inventory-operations workflow and preserves existing models, stock synchronization services, sales behavior and accounting formulas.
+The last numerically recorded production checkpoint remains V38 until a newer deployment's actual final invariant block is posted by the user. V46/V47/V48/V49/V50 must not be called fully production-confirmed without their successful server output markers. V47 is a runtime visual overlay and does not alter tracked business/template/CSS source. V48 intentionally changes only daily-report presentation/runtime-check files and documentation, not business formulas or ledgers. V49 changes only the manual inventory-operations workflow and preserves existing models, stock synchronization services, sales behavior and accounting formulas. V50 keeps those V49 semantics and makes correction multi-color/absolute per selected brand-size-location, with compact side-by-side operation cards.
 
 Latest confirmed numeric production snapshot:
 
