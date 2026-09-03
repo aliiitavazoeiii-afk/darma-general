@@ -30,14 +30,23 @@ The delete endpoint is login-protected and POST-only.
 
 ## Delete scope
 
-A delete button is exposed only when an `InventoryMovement` is an exact applied manual correction movement:
+`InventoryAdjustment` is also used by other workflows, especially standalone returns V37, so V51 must not treat every `adjust:<id>` movement as a user correction.
+
+The current V50 inventory-correction form deliberately stores an empty note because the correction-reason field was removed. Standalone returns and historical/other structured adjustments use non-empty marker/provenance notes, for example:
 
 ```text
-movement_type = adjust
-reference = adjust:<InventoryAdjustment.id>
+[standalone-return-v37] ...
 ```
 
-and its brand/size/color/location/delta still match that `InventoryAdjustment` row.
+Therefore V51 exposes delete only when all of these are true:
+
+```text
+InventoryAdjustment.applied = true
+InventoryAdjustment.note = ""
+movement_type = adjust
+reference = adjust:<InventoryAdjustment.id>
+movement brand/size/color/location/delta exactly match the adjustment
+```
 
 No delete button is shown for:
 
@@ -45,9 +54,12 @@ No delete button is shown for:
 - manual transfers;
 - production;
 - purchases;
+- standalone returns V37;
+- marked historical repair/reconcile adjustments;
 - sale recalculation/reversal movements;
-- historical repair/reconcile movements;
-- any adjustment movement that cannot be matched exactly to a live applied `InventoryAdjustment`.
+- any adjustment movement that cannot be matched exactly to a live applied blank-note inventory correction.
+
+The backend repeats these checks even if a crafted POST bypasses the UI.
 
 ## Safe reversal semantics
 
@@ -72,6 +84,8 @@ The reversal is atomic and locks:
 - the `InventoryAdjustment`;
 - its exact `InventoryMovement`;
 - the affected `StockBalance`.
+
+The `StockBalance` lock is acquired before the final newer-movement check so a concurrent sale/transfer/correction using the normal stock services cannot slip between the guard and the reversal.
 
 Only after the stock quantity has been restored successfully are the original adjustment row and its exact `adjust:<id>` movement deleted.
 
@@ -110,6 +124,7 @@ V51 does not change:
 - V50 fixed KHORSHID -> HOME transfer workflow;
 - V50 correction input semantics: blank = unchanged, explicit 0 = final zero, entered number = absolute physical final stock;
 - internal delta calculation `target-current`;
+- V50 user-facing removal of the correction-reason field;
 - stock transfer combined-quantity neutrality.
 
 ## Files changed
@@ -138,9 +153,10 @@ Protected unchanged source includes:
 - `core/models_final.py`
 - `core/final_services.py`
 - `core/variant_sale_v12.py`
+- `core/returns_v37.py`;
 - finance/capital/valuation sources;
 - sale/XLSX importer sources;
-- material/payment/return sources.
+- material/payment sources.
 
 ## Regression contract
 
@@ -153,7 +169,15 @@ safe delete -> HOME returns to 160
 InventoryAdjustment and exact adjust:<id> movement are removed
 ```
 
-It then proves the safety guard:
+It also proves a standalone-return-style marked adjustment is not deletable from this page:
+
+```text
+manual test adjustment note = [standalone-return-v37] ...
+delete attempt -> blocked
+stock/adjustment remain unchanged
+```
+
+Finally it proves the newer-movement safety guard:
 
 ```text
 HOME 160 -> correction 140
