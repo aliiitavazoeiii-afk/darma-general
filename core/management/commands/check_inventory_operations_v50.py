@@ -53,7 +53,7 @@ class Command(BaseCommand):
         source = (Path(settings.BASE_DIR) / "templates" / "core" / "inventory_operations.html").read_text(encoding="utf-8")
         required = [
             'class="col-12 col-lg-6"',
-            'name="target_{{ color.id }}"',
+            'name="target_{{ group.brand.id }}_{{ color.id }}"',
             'data-brand-id="{{ group.brand.id }}"',
             "موجودی اصلی",
             "خالی = بدون تغییر",
