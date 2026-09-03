@@ -3,52 +3,58 @@
 {% block content %}
 {% include 'core/_mobile_shell.html' %}
 <style>
+.inventory-op-card .card-header{padding:.8rem 1rem}
+.inventory-op-card .card-body{padding:1rem}
+.inventory-op-card .card-title{font-size:1rem}
+.inventory-op-card .form-label{font-size:.78rem;margin-bottom:.3rem}
+.inventory-op-card .form-control,.inventory-op-card .form-select{min-height:36px;padding:.4rem .55rem}
+.color-entry-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.color-entry-cell{border:1px solid rgba(255,255,255,.09);border-radius:10px;padding:7px;background:rgba(255,255,255,.022)}
+.color-entry-cell .form-label{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:700}
+.compact-help{font-size:.72rem;line-height:1.55}
+@media(max-width:1199.98px){.color-entry-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:767.98px){
   .inventory-op-form .row>div{flex:0 0 100%;max-width:100%}
   .inventory-op-form .btn{width:100%}
   .inventory-moves{min-width:760px}
+  .color-entry-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
-.transfer-color-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
-.transfer-color-cell{border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:10px;background:rgba(255,255,255,.025)}
-.transfer-color-cell .form-label{margin-bottom:6px;font-weight:700}
-@media(max-width:991.98px){.transfer-color-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
-@media(max-width:767.98px){.transfer-color-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 </style>
 
-<div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4 mobile-page-head">
+<div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-3 mobile-page-head">
   <div>
     <div class="text-secondary">عملیات انبار</div>
     <h1 class="page-title mb-0">انتقال و اصلاح موجودی</h1>
   </div>
   <div class="mobile-page-actions">
-    <a href="{% url 'inventory' %}" class="btn btn-outline-light">بازگشت به موجودی</a>
+    <a href="{% url 'inventory' %}" class="btn btn-outline-light btn-sm">بازگشت به موجودی</a>
   </div>
 </div>
 
-<div class="row row-cards mb-4">
-  <div class="col-12 col-xl-7">
-    <div class="card h-100">
+<div class="row g-3 mb-4 align-items-start">
+  <div class="col-12 col-lg-6">
+    <div class="card inventory-op-card">
       <div class="card-header">
         <div>
-          <h3 class="card-title">انتقال از خورشید به خانه</h3>
-          <div class="text-secondary small">تاریخ، برند و سایز را یک‌بار انتخاب کن؛ تعداد همه رنگ‌های همان سایز را پایین وارد کن. خانه مقصد ثابت انتقال است.</div>
+          <h3 class="card-title mb-1">انتقال از خورشید به خانه</h3>
+          <div class="text-secondary compact-help">یک سایز را انتخاب کن و تعداد همه رنگ‌هایی که از خورشید به خانه آورده‌ای یکجا وارد کن.</div>
         </div>
       </div>
       <form method="post" class="card-body inventory-op-form">
         {% csrf_token %}
         <input type="hidden" name="action" value="transfer">
-        <div class="row g-2 g-md-3 mb-3">
-          <div class="col-md-4">
+        <div class="row g-2 mb-3">
+          <div class="col-4">
             <label class="form-label">تاریخ</label>
             <input class="form-control ltr" name="date" value="{{ today_j }}" required>
           </div>
-          <div class="col-md-4">
+          <div class="col-4">
             <label class="form-label">برند</label>
             <select class="form-select" name="brand">
               {% for x in transfer_brands %}<option value="{{ x.id }}">{{ x.name }}</option>{% endfor %}
             </select>
           </div>
-          <div class="col-md-4">
+          <div class="col-4">
             <label class="form-label">سایز</label>
             <select class="form-select" name="size">
               {% for x in sizes %}<option value="{{ x.id }}">{{ x.name }}</option>{% endfor %}
@@ -56,11 +62,9 @@
           </div>
         </div>
 
-        <div class="form-label mb-2">تعداد انتقال هر رنگ</div>
-        <div class="text-secondary small mb-3">فقط رنگ‌هایی را که از خورشید برداشته‌ای پر کن؛ خانه مقصد است و فیلد خالی یا صفر نادیده گرفته می‌شود.</div>
-        <div class="transfer-color-grid">
+        <div class="color-entry-grid">
           {% for color in transfer_colors %}
-          <div class="transfer-color-cell">
+          <div class="color-entry-cell">
             <label class="form-label" for="transfer-color-{{ color.id }}">{{ color.name }}</label>
             <input id="transfer-color-{{ color.id }}" type="number" min="0" class="form-control" name="qty_{{ color.id }}" placeholder="0" inputmode="numeric">
           </div>
@@ -68,61 +72,65 @@
           <div class="text-secondary">رنگ فعالی برای انتقال پیدا نشد.</div>
           {% endfor %}
         </div>
-        <button class="btn btn-primary mt-3">ثبت انتقال</button>
+        <div class="text-secondary compact-help mt-2">فیلد خالی یا صفر نادیده گرفته می‌شود. جهت انتقال همیشه خورشید ← خانه است.</div>
+        <button class="btn btn-primary btn-sm mt-3">ثبت انتقال</button>
       </form>
     </div>
   </div>
 
-  <div class="col-12 col-xl-5">
-    <div class="card h-100">
+  <div class="col-12 col-lg-6">
+    <div class="card inventory-op-card">
       <div class="card-header">
         <div>
-          <h3 class="card-title">اصلاح موجودی</h3>
-          <div class="text-secondary small">عدد نهایی شمارش‌شده را وارد کن؛ سیستم اختلاف با موجودی فعلی را خودش محاسبه و ثبت می‌کند. برای Novani محل همان موجودی واحد برند است.</div>
+          <h3 class="card-title mb-1">اصلاح موجودی</h3>
+          <div class="text-secondary compact-help">تاریخ، برند، سایز و محل را انتخاب کن؛ موجودی واقعی همه رنگ‌های همان ردیف را سریع وارد و یکجا ثبت کن.</div>
         </div>
       </div>
-      <form method="post" class="card-body inventory-op-form">
+      <form method="post" class="card-body inventory-op-form" id="bulk-adjust-form">
         {% csrf_token %}
         <input type="hidden" name="action" value="adjust">
-        <div class="row g-2 g-md-3">
-          <div class="col-6">
+        <div class="row g-2 mb-3">
+          <div class="col-6 col-md-3">
             <label class="form-label">تاریخ</label>
             <input class="form-control ltr" name="date" value="{{ today_j }}" required>
           </div>
-          <div class="col-6">
+          <div class="col-6 col-md-3">
             <label class="form-label">برند</label>
-            <select class="form-select" name="brand">
+            <select class="form-select" name="brand" id="adjust-brand">
               {% for x in brands %}<option value="{{ x.id }}">{{ x.name }}</option>{% endfor %}
             </select>
           </div>
-          <div class="col-6">
+          <div class="col-6 col-md-3">
             <label class="form-label">سایز</label>
             <select class="form-select" name="size">
               {% for x in sizes %}<option value="{{ x.id }}">{{ x.name }}</option>{% endfor %}
             </select>
           </div>
-          <div class="col-6">
-            <label class="form-label">رنگ</label>
-            <select class="form-select" name="color">
-              {% for x in colors %}<option value="{{ x.id }}">{{ x.name }}</option>{% endfor %}
-            </select>
-          </div>
-          <div class="col-6">
+          <div class="col-6 col-md-3">
             <label class="form-label">محل</label>
             <select class="form-select" name="location">
               {% for x in locations %}<option value="{{ x.id }}">{{ x.title }}</option>{% endfor %}
             </select>
           </div>
-          <div class="col-6">
-            <label class="form-label">موجودی اصلی</label>
-            <input type="number" min="0" class="form-control" name="target_qty" placeholder="مثلاً 140" required inputmode="numeric">
-          </div>
-          <div class="col-12">
-            <label class="form-label">دلیل اصلاح</label>
-            <input class="form-control" name="note" required placeholder="مثلاً شمارش فیزیکی">
+        </div>
+
+        {% for group in adjustment_groups %}
+        <div class="adjust-color-group" data-brand-id="{{ group.brand.id }}"{% if not forloop.first %} style="display:none"{% endif %}>
+          <div class="color-entry-grid">
+            {% for color in group.colors %}
+            <div class="color-entry-cell">
+              <label class="form-label" for="adjust-{{ group.brand.id }}-{{ color.id }}">{{ color.name }}</label>
+              <input id="adjust-{{ group.brand.id }}-{{ color.id }}" type="number" min="0" class="form-control" name="target_{{ color.id }}" placeholder="موجودی اصلی" inputmode="numeric">
+            </div>
+            {% empty %}
+            <div class="text-secondary">رنگ فعالی برای این برند پیدا نشد.</div>
+            {% endfor %}
           </div>
         </div>
-        <button class="btn btn-primary mt-3">ثبت اصلاح</button>
+        {% endfor %}
+
+        <div class="text-secondary compact-help mt-2">خالی = بدون تغییر. اگر موجودی واقعی یک رنگ صفر است، عدد 0 را صریح وارد کن. موجودی کل بعد از ثبت طبق همان جمع خانه + خورشید محاسبه می‌شود.</div>
+        <button class="btn btn-primary btn-sm mt-3">ثبت اصلاح موجودی</button>
       </form>
     </div>
   </div>
@@ -153,4 +161,17 @@
   </div>
 </div>
 {% endblock %}
-{% block scripts %}<script src="{% static 'core/jalali_picker.js' %}"></script>{% endblock %}
+{% block scripts %}
+<script src="{% static 'core/jalali_picker.js' %}"></script>
+<script>
+document.addEventListener('DOMContentLoaded',function(){
+  const brand=document.getElementById('adjust-brand');
+  const groups=[...document.querySelectorAll('.adjust-color-group')];
+  function syncGroups(){
+    const id=brand ? brand.value : '';
+    groups.forEach(group=>{ group.style.display=(group.dataset.brandId===id)?'block':'none'; });
+  }
+  if(brand){brand.addEventListener('change',syncGroups);syncGroups();}
+});
+</script>
+{% endblock %}
