@@ -188,12 +188,14 @@ def _bulk_transfer_khorshid_to_home(*, transfer_date, brand, size, color_quantit
 
 @transaction.atomic
 def _delete_inventory_adjustment(adjustment_id):
-    """Reverse and delete one manual InventoryAdjustment safely.
+    """Reverse and delete one manual inventory-operations correction safely.
 
-    This is intentionally limited to the exact `adjust:<id>` movement created by
-    sync_inventory_adjustment(). Deletion is refused if a newer movement exists on
-    the same stock cell, because then "return to the previous stock" would cross a
-    later sale/transfer/production/correction and invalidate newer history.
+    The V50 correction form stores an empty note. Other workflows such as standalone
+    returns use InventoryAdjustment too, with their own note markers, and must never
+    become deletable from this table.
+
+    Deletion is also refused if a newer movement exists on the same stock cell,
+    because then "return to the previous stock" would cross newer history.
     """
     try:
         adjustment = (
@@ -206,6 +208,8 @@ def _delete_inventory_adjustment(adjustment_id):
 
     if not adjustment.applied:
         raise ValueError("این اصلاح موجودی اعمال نشده و قابل حذف از گردش اعمال‌شده نیست.")
+    if str(adjustment.note or "").strip():
+        raise ValueError("این گردش مربوط به اصلاح دستی موجودی نیست و از این بخش قابل حذف نیست.")
 
     reference = f"adjust:{adjustment.id}"
     movements = list(
@@ -252,13 +256,14 @@ def _delete_inventory_adjustment(adjustment_id):
     balance.qty = before - int(adjustment.delta)
     balance.save(update_fields=["qty"])
     after = int(balance.qty or 0)
+    reversed_delta = -int(adjustment.delta)
 
     movement.delete()
     adjustment.delete()
     return {
         "before": before,
         "after": after,
-        "delta_reversed": -int(movement.delta),
+        "delta_reversed": reversed_delta,
     }
 
 
@@ -380,7 +385,7 @@ def inventory_operations(request):
     }
     adjustments = {
         row.id: row
-        for row in InventoryAdjustment.objects.filter(id__in=candidate_ids, applied=True)
+        for row in InventoryAdjustment.objects.filter(id__in=candidate_ids, applied=True, note="")
     }
     for movement in recent:
         movement.adjustment_delete_id = None
