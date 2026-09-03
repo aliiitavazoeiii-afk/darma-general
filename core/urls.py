@@ -55,6 +55,11 @@ urlpatterns = [
     path("inventory/", inventory_v20.inventory, name="inventory"),
     path("inventory/color-model/add/", inventory_v20.add_color_model, name="inventory_add_color_model"),
     path("inventory/operations/", inventory_operations_v15.inventory_operations, name="inventory_operations"),
+    path(
+        "inventory/operations/adjustments/<int:adjustment_id>/delete/",
+        inventory_operations_v15.inventory_adjustment_delete,
+        name="inventory_adjustment_delete",
+    ),
 
     path("materials/", final_views.materials, name="materials"),
     path("production/", final_views.production, name="production"),
