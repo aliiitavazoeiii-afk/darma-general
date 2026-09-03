@@ -4,6 +4,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.shortcuts import redirect, render
+from django.views.decorators.http import require_POST
 
 from .brand_colors import colors_for_brand
 from .dateutils import format_jalali, parse_jalali_date
@@ -28,6 +29,17 @@ def _int(value, default=0):
 
 def _date(value=None):
     return parse_jalali_date(value) if value else date.today()
+
+
+def _adjustment_id_from_reference(reference):
+    raw = str(reference or "")
+    if not raw.startswith("adjust:"):
+        return None
+    value = raw.split(":", 1)[1]
+    if not value.isdigit():
+        return None
+    adjustment_id = int(value)
+    return adjustment_id if raw == f"adjust:{adjustment_id}" else None
 
 
 @transaction.atomic
@@ -174,6 +186,96 @@ def _bulk_transfer_khorshid_to_home(*, transfer_date, brand, size, color_quantit
     return {"transfers": created, "total_qty": total_qty}
 
 
+@transaction.atomic
+def _delete_inventory_adjustment(adjustment_id):
+    """Reverse and delete one manual InventoryAdjustment safely.
+
+    This is intentionally limited to the exact `adjust:<id>` movement created by
+    sync_inventory_adjustment(). Deletion is refused if a newer movement exists on
+    the same stock cell, because then "return to the previous stock" would cross a
+    later sale/transfer/production/correction and invalidate newer history.
+    """
+    try:
+        adjustment = (
+            InventoryAdjustment.objects.select_for_update()
+            .select_related("brand", "size", "color", "location")
+            .get(pk=adjustment_id)
+        )
+    except InventoryAdjustment.DoesNotExist as exc:
+        raise ValueError("این اصلاح موجودی دیگر وجود ندارد.") from exc
+
+    if not adjustment.applied:
+        raise ValueError("این اصلاح موجودی اعمال نشده و قابل حذف از گردش اعمال‌شده نیست.")
+
+    reference = f"adjust:{adjustment.id}"
+    movements = list(
+        InventoryMovement.objects.select_for_update().filter(
+            movement_type=InventoryMovement.ADJUST,
+            reference=reference,
+        )
+    )
+    if len(movements) != 1:
+        raise ValueError("گردش دقیق این اصلاح پیدا نشد؛ برای حفظ موجودی حذف انجام نشد.")
+
+    movement = movements[0]
+    if (
+        movement.brand_id != adjustment.brand_id
+        or movement.size_id != adjustment.size_id
+        or movement.color_id != adjustment.color_id
+        or movement.location_id != adjustment.location_id
+        or int(movement.delta) != int(adjustment.delta)
+    ):
+        raise ValueError("اطلاعات اصلاح با گردش موجودی آن همخوان نیست؛ حذف امن متوقف شد.")
+
+    if InventoryMovement.objects.filter(
+        brand_id=adjustment.brand_id,
+        size_id=adjustment.size_id,
+        color_id=adjustment.color_id,
+        location_id=adjustment.location_id,
+        id__gt=movement.id,
+    ).exists():
+        raise ValueError(
+            "بعد از این اصلاح روی همین موجودی گردش جدید ثبت شده است؛ "
+            "برای جلوگیری از خراب‌شدن فروش/انتقال/شمارش جدیدتر، این رکورد قدیمی حذف نمی‌شود. "
+            "یک اصلاح موجودی جدید با مقدار فیزیکی درست ثبت کن."
+        )
+
+    balance, _ = StockBalance.objects.get_or_create(
+        brand=adjustment.brand,
+        size=adjustment.size,
+        color=adjustment.color,
+        location=adjustment.location,
+        defaults={"qty": 0},
+    )
+    balance = StockBalance.objects.select_for_update().get(pk=balance.pk)
+    before = int(balance.qty or 0)
+    balance.qty = before - int(adjustment.delta)
+    balance.save(update_fields=["qty"])
+    after = int(balance.qty or 0)
+
+    movement.delete()
+    adjustment.delete()
+    return {
+        "before": before,
+        "after": after,
+        "delta_reversed": -int(movement.delta),
+    }
+
+
+@login_required
+@require_POST
+def inventory_adjustment_delete(request, adjustment_id):
+    try:
+        result = _delete_inventory_adjustment(adjustment_id)
+        messages.success(
+            request,
+            f"اصلاح موجودی حذف شد و موجودی از {result['before']} به {result['after']} برگشت.",
+        )
+    except Exception as exc:
+        messages.error(request, str(exc))
+    return redirect("inventory_operations")
+
+
 @login_required
 def inventory_operations(request):
     brands = Brand.objects.filter(active=True, name__in=INVENTORY_BRANDS).order_by("id")
@@ -266,9 +368,36 @@ def inventory_operations(request):
             messages.error(request, str(exc))
         return redirect("inventory_operations")
 
-    recent = InventoryMovement.objects.select_related(
-        "brand", "size", "color", "location"
-    ).order_by("-id")[:50]
+    recent = list(
+        InventoryMovement.objects.select_related(
+            "brand", "size", "color", "location"
+        ).order_by("-id")[:50]
+    )
+    candidate_ids = {
+        adjustment_id
+        for movement in recent
+        if (adjustment_id := _adjustment_id_from_reference(movement.reference)) is not None
+    }
+    adjustments = {
+        row.id: row
+        for row in InventoryAdjustment.objects.filter(id__in=candidate_ids, applied=True)
+    }
+    for movement in recent:
+        movement.adjustment_delete_id = None
+        adjustment_id = _adjustment_id_from_reference(movement.reference)
+        adjustment = adjustments.get(adjustment_id)
+        if not adjustment:
+            continue
+        if (
+            movement.movement_type == InventoryMovement.ADJUST
+            and movement.brand_id == adjustment.brand_id
+            and movement.size_id == adjustment.size_id
+            and movement.color_id == adjustment.color_id
+            and movement.location_id == adjustment.location_id
+            and int(movement.delta) == int(adjustment.delta)
+        ):
+            movement.adjustment_delete_id = adjustment.id
+
     return render(
         request,
         "core/inventory_operations.html",
