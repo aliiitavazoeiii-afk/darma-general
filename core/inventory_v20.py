@@ -5,7 +5,7 @@ from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
 
-from .brand_colors import colors_for_brand
+from .brand_colors import colors_for_brand, norm
 from .models import Brand, Color, InventoryModelCost, Size, StockBalance, StockLocation
 from .takvin_pricing_v17 import takvin_cost_for
 
@@ -17,6 +17,40 @@ SIZE_NAMES = {
     "تکوین": ["M", "L", "XL", "XXL"],
     "Novani": ["S", "M", "L", "XL", "XXL", "3XL"],
 }
+
+
+# V52 is presentation-only. These colors/models are intentionally excluded from
+# low-stock highlighting at the user's request. norm() makes Persian spacing/ZWNJ
+# variants equivalent, while the keyword pairs cover reversed naming order such as
+# «مشکی کبریتی» / «کبریتی مشکی».
+def _inventory_alert_exempt(color_name):
+    value = norm(color_name)
+    if value in {norm("زرد"), norm("قرمز")}:
+        return True
+    if "خرسی" in value or "پلنگی" in value:
+        return True
+    if "کبریتی" in value and "مشکی" in value:
+        return True
+    if norm("راه راه") in value and norm("سرمه ای") in value:
+        return True
+    return False
+
+
+def _home_alert_level(qty, *, exempt=False):
+    if exempt:
+        return ""
+    return "red" if int(qty) < 30 else ""
+
+
+def _total_alert_level(qty, *, exempt=False):
+    if exempt:
+        return ""
+    qty = int(qty)
+    if qty < 50:
+        return "red"
+    if qty < 100:
+        return "orange"
+    return ""
 
 
 def _sizes_for_brand(brand):
@@ -63,6 +97,7 @@ def inventory(request):
             cells = []
             row_total = 0
             row_value = 0
+            alert_exempt = _inventory_alert_exempt(color.name)
             for index, size in enumerate(sizes):
                 qs = StockBalance.objects.filter(brand=brand, size=size, color=color)
                 home = int(qs.filter(location__key=StockLocation.HOME).aggregate(v=Sum("qty"))["v"] or 0)
@@ -84,6 +119,8 @@ def inventory(request):
                     "total": total,
                     "unit_cost": unit_cost,
                     "capital": capital,
+                    "home_alert": _home_alert_level(home, exempt=alert_exempt),
+                    "total_alert": _total_alert_level(total, exempt=alert_exempt),
                 })
                 row_total += total
                 row_value += capital
@@ -91,7 +128,13 @@ def inventory(request):
                 size_summaries[index]["value"] += capital
             grand_qty += row_total
             grand_value += row_value
-            rows.append({"color": color, "cells": cells, "row_total": row_total, "row_value": row_value})
+            rows.append({
+                "color": color,
+                "cells": cells,
+                "row_total": row_total,
+                "row_value": row_value,
+                "alert_exempt": alert_exempt,
+            })
 
     return render(request, "core/inventory_v19.html", {
         "brands": brands,
