@@ -231,6 +231,15 @@ def _delete_inventory_adjustment(adjustment_id):
     ):
         raise ValueError("اطلاعات اصلاح با گردش موجودی آن همخوان نیست؛ حذف امن متوقف شد.")
 
+    balance, _ = StockBalance.objects.get_or_create(
+        brand=adjustment.brand,
+        size=adjustment.size,
+        color=adjustment.color,
+        location=adjustment.location,
+        defaults={"qty": 0},
+    )
+    balance = StockBalance.objects.select_for_update().get(pk=balance.pk)
+
     if InventoryMovement.objects.filter(
         brand_id=adjustment.brand_id,
         size_id=adjustment.size_id,
@@ -244,14 +253,6 @@ def _delete_inventory_adjustment(adjustment_id):
             "یک اصلاح موجودی جدید با مقدار فیزیکی درست ثبت کن."
         )
 
-    balance, _ = StockBalance.objects.get_or_create(
-        brand=adjustment.brand,
-        size=adjustment.size,
-        color=adjustment.color,
-        location=adjustment.location,
-        defaults={"qty": 0},
-    )
-    balance = StockBalance.objects.select_for_update().get(pk=balance.pk)
     before = int(balance.qty or 0)
     balance.qty = before - int(adjustment.delta)
     balance.save(update_fields=["qty"])
