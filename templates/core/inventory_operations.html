@@ -1,1 +1,156 @@
-{% extends 'base.html' %}{% load jalali static %}{% block title %}گردش موجودی | DARMA{% endblock %}{% block content %}{% include 'core/_mobile_shell.html' %}<style>@media(max-width:767.98px){.inventory-op-form .row>div{flex:0 0 100%;max-width:100%}.inventory-op-form .btn{width:100%}.inventory-moves{min-width:760px}}</style><div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4 mobile-page-head"><div><div class="text-secondary">عملیات انبار</div><h1 class="page-title mb-0">انتقال و اصلاح موجودی</h1></div><div class="mobile-page-actions"><a href="{% url 'inventory' %}" class="btn btn-outline-light">بازگشت به موجودی</a></div></div><div class="row row-cards mb-4"><div class="col-12 col-xl-7"><div class="card h-100"><div class="card-header"><div><h3 class="card-title">انتقال بین خانه و خورشید</h3><div class="text-secondary small">این انتقال فقط برای دارما است. Novani یک موجودی واحد دارد و انبارش اصلاً موجودی مستقل ندارد.</div></div></div><form method="post" class="card-body inventory-op-form">{% csrf_token %}<input type="hidden" name="action" value="transfer"><div class="row g-2 g-md-3"><div class="col-md-3"><label class="form-label">تاریخ</label><input class="form-control ltr" name="date" value="{{ today_j }}" required></div><div class="col-md-3"><label class="form-label">برند</label><select class="form-select" name="brand">{% for x in transfer_brands %}<option value="{{ x.id }}">{{ x.name }}</option>{% endfor %}</select></div><div class="col-md-3"><label class="form-label">سایز</label><select class="form-select" name="size">{% for x in sizes %}<option value="{{ x.id }}">{{ x.name }}</option>{% endfor %}</select></div><div class="col-md-3"><label class="form-label">رنگ</label><select class="form-select" name="color">{% for x in colors %}<option value="{{ x.id }}">{{ x.name }}</option>{% endfor %}</select></div><div class="col-md-4"><label class="form-label">از</label><select class="form-select" name="from_location">{% for x in locations %}<option value="{{ x.id }}">{{ x.title }}</option>{% endfor %}</select></div><div class="col-md-4"><label class="form-label">به</label><select class="form-select" name="to_location">{% for x in locations reversed %}<option value="{{ x.id }}">{{ x.title }}</option>{% endfor %}</select></div><div class="col-md-4"><label class="form-label">تعداد</label><input type="number" min="1" class="form-control" name="qty" placeholder="تعداد" required></div><div class="col-12"><label class="form-label">توضیح</label><input class="form-control" name="note" placeholder="اختیاری"></div></div><button class="btn btn-primary mt-3">ثبت انتقال</button></form></div></div><div class="col-12 col-xl-5"><div class="card h-100"><div class="card-header"><div><h3 class="card-title">اصلاح موجودی</h3><div class="text-secondary small">برای Novani محل به‌صورت خودکار همان موجودی واحد برند در نظر گرفته می‌شود.</div></div></div><form method="post" class="card-body inventory-op-form">{% csrf_token %}<input type="hidden" name="action" value="adjust"><div class="row g-2 g-md-3"><div class="col-6"><label class="form-label">تاریخ</label><input class="form-control ltr" name="date" value="{{ today_j }}" required></div><div class="col-6"><label class="form-label">برند</label><select class="form-select" name="brand">{% for x in brands %}<option value="{{ x.id }}">{{ x.name }}</option>{% endfor %}</select></div><div class="col-6"><label class="form-label">سایز</label><select class="form-select" name="size">{% for x in sizes %}<option value="{{ x.id }}">{{ x.name }}</option>{% endfor %}</select></div><div class="col-6"><label class="form-label">رنگ</label><select class="form-select" name="color">{% for x in colors %}<option value="{{ x.id }}">{{ x.name }}</option>{% endfor %}</select></div><div class="col-6"><label class="form-label">محل</label><select class="form-select" name="location">{% for x in locations %}<option value="{{ x.id }}">{{ x.title }}</option>{% endfor %}</select></div><div class="col-6"><label class="form-label">تغییر</label><input type="number" class="form-control" name="delta" placeholder="مثلاً -3 یا 5" required></div><div class="col-12"><label class="form-label">دلیل اصلاح</label><input class="form-control" name="note" required placeholder="مثلاً شمارش فیزیکی"></div></div><button class="btn btn-primary mt-3">ثبت اصلاح</button></form></div></div></div><div class="card"><div class="card-header"><h3 class="card-title">آخرین گردش‌های موجودی</h3></div><div class="mobile-scroll-note">برای دیدن همه ستون‌ها جدول را بکش</div><div class="table-responsive"><table class="table card-table table-vcenter inventory-moves"><thead><tr><th>نوع</th><th>برند</th><th>رنگ</th><th>سایز</th><th>محل</th><th>تغییر</th><th>مرجع</th></tr></thead><tbody>{% for r in recent %}<tr><td>{{ r.get_movement_type_display }}</td><td>{{ r.brand.name }}</td><td>{{ r.color.name }}</td><td>{{ r.size.name }}</td><td>{{ r.location.title }}</td><td class="num {% if r.delta < 0 %}text-danger{% else %}text-success{% endif %}">{{ r.delta|groupnum }}</td><td class="code-cell small">{{ r.reference }}</td></tr>{% empty %}<tr><td colspan="7" class="empty-state">گردشی ثبت نشده.</td></tr>{% endfor %}</tbody></table></div></div>{% endblock %}{% block scripts %}<script src="{% static 'core/jalali_picker.js' %}"></script>{% endblock %}
+{% extends 'base.html' %}{% load jalali static %}
+{% block title %}گردش موجودی | DARMA{% endblock %}
+{% block content %}
+{% include 'core/_mobile_shell.html' %}
+<style>
+@media(max-width:767.98px){
+  .inventory-op-form .row>div{flex:0 0 100%;max-width:100%}
+  .inventory-op-form .btn{width:100%}
+  .inventory-moves{min-width:760px}
+}
+.transfer-color-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.transfer-color-cell{border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:10px;background:rgba(255,255,255,.025)}
+.transfer-color-cell .form-label{margin-bottom:6px;font-weight:700}
+@media(max-width:991.98px){.transfer-color-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:767.98px){.transfer-color-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style>
+
+<div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4 mobile-page-head">
+  <div>
+    <div class="text-secondary">عملیات انبار</div>
+    <h1 class="page-title mb-0">انتقال و اصلاح موجودی</h1>
+  </div>
+  <div class="mobile-page-actions">
+    <a href="{% url 'inventory' %}" class="btn btn-outline-light">بازگشت به موجودی</a>
+  </div>
+</div>
+
+<div class="row row-cards mb-4">
+  <div class="col-12 col-xl-7">
+    <div class="card h-100">
+      <div class="card-header">
+        <div>
+          <h3 class="card-title">انتقال از خورشید به خانه</h3>
+          <div class="text-secondary small">تاریخ، برند و سایز را یک‌بار انتخاب کن؛ تعداد همه رنگ‌های همان سایز را پایین وارد کن. خانه مقصد ثابت انتقال است.</div>
+        </div>
+      </div>
+      <form method="post" class="card-body inventory-op-form">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="transfer">
+        <div class="row g-2 g-md-3 mb-3">
+          <div class="col-md-4">
+            <label class="form-label">تاریخ</label>
+            <input class="form-control ltr" name="date" value="{{ today_j }}" required>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">برند</label>
+            <select class="form-select" name="brand">
+              {% for x in transfer_brands %}<option value="{{ x.id }}">{{ x.name }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">سایز</label>
+            <select class="form-select" name="size">
+              {% for x in sizes %}<option value="{{ x.id }}">{{ x.name }}</option>{% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <div class="form-label mb-2">تعداد انتقال هر رنگ</div>
+        <div class="text-secondary small mb-3">فقط رنگ‌هایی را که از خورشید برداشته‌ای پر کن؛ خانه مقصد است و فیلد خالی یا صفر نادیده گرفته می‌شود.</div>
+        <div class="transfer-color-grid">
+          {% for color in transfer_colors %}
+          <div class="transfer-color-cell">
+            <label class="form-label" for="transfer-color-{{ color.id }}">{{ color.name }}</label>
+            <input id="transfer-color-{{ color.id }}" type="number" min="0" class="form-control" name="qty_{{ color.id }}" placeholder="0" inputmode="numeric">
+          </div>
+          {% empty %}
+          <div class="text-secondary">رنگ فعالی برای انتقال پیدا نشد.</div>
+          {% endfor %}
+        </div>
+        <button class="btn btn-primary mt-3">ثبت انتقال</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="col-12 col-xl-5">
+    <div class="card h-100">
+      <div class="card-header">
+        <div>
+          <h3 class="card-title">اصلاح موجودی</h3>
+          <div class="text-secondary small">عدد نهایی شمارش‌شده را وارد کن؛ سیستم اختلاف با موجودی فعلی را خودش محاسبه و ثبت می‌کند. برای Novani محل همان موجودی واحد برند است.</div>
+        </div>
+      </div>
+      <form method="post" class="card-body inventory-op-form">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="adjust">
+        <div class="row g-2 g-md-3">
+          <div class="col-6">
+            <label class="form-label">تاریخ</label>
+            <input class="form-control ltr" name="date" value="{{ today_j }}" required>
+          </div>
+          <div class="col-6">
+            <label class="form-label">برند</label>
+            <select class="form-select" name="brand">
+              {% for x in brands %}<option value="{{ x.id }}">{{ x.name }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="col-6">
+            <label class="form-label">سایز</label>
+            <select class="form-select" name="size">
+              {% for x in sizes %}<option value="{{ x.id }}">{{ x.name }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="col-6">
+            <label class="form-label">رنگ</label>
+            <select class="form-select" name="color">
+              {% for x in colors %}<option value="{{ x.id }}">{{ x.name }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="col-6">
+            <label class="form-label">محل</label>
+            <select class="form-select" name="location">
+              {% for x in locations %}<option value="{{ x.id }}">{{ x.title }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="col-6">
+            <label class="form-label">موجودی اصلی</label>
+            <input type="number" min="0" class="form-control" name="target_qty" placeholder="مثلاً 140" required inputmode="numeric">
+          </div>
+          <div class="col-12">
+            <label class="form-label">دلیل اصلاح</label>
+            <input class="form-control" name="note" required placeholder="مثلاً شمارش فیزیکی">
+          </div>
+        </div>
+        <button class="btn btn-primary mt-3">ثبت اصلاح</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header"><h3 class="card-title">آخرین گردش‌های موجودی</h3></div>
+  <div class="mobile-scroll-note">برای دیدن همه ستون‌ها جدول را بکش</div>
+  <div class="table-responsive">
+    <table class="table card-table table-vcenter inventory-moves">
+      <thead><tr><th>نوع</th><th>برند</th><th>رنگ</th><th>سایز</th><th>محل</th><th>تغییر</th><th>مرجع</th></tr></thead>
+      <tbody>
+        {% for r in recent %}
+        <tr>
+          <td>{{ r.get_movement_type_display }}</td>
+          <td>{{ r.brand.name }}</td>
+          <td>{{ r.color.name }}</td>
+          <td>{{ r.size.name }}</td>
+          <td>{{ r.location.title }}</td>
+          <td class="num {% if r.delta < 0 %}text-danger{% else %}text-success{% endif %}">{{ r.delta|groupnum }}</td>
+          <td class="code-cell small">{{ r.reference }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" class="empty-state">گردشی ثبت نشده.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}<script src="{% static 'core/jalali_picker.js' %}"></script>{% endblock %}
