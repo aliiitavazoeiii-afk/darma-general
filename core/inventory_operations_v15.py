@@ -234,7 +234,7 @@ def inventory_operations(request):
                 brand_colors = list(colors_for_brand(brand))
                 color_targets = []
                 for color in brand_colors:
-                    raw_target = request.POST.get(f"target_{color.id}")
+                    raw_target = request.POST.get(f"target_{brand.id}_{color.id}")
                     if raw_target in (None, ""):
                         continue
                     target_qty = _int(raw_target, -1)
