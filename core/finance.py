@@ -1,5 +1,6 @@
 from decimal import Decimal, ROUND_HALF_UP
 
+from .darma_cost_v55 import darma_cost_for
 from .models import AppSetting
 
 
@@ -45,7 +46,19 @@ def sale_line_metrics(line):
     fee_unit = int((snap.digikala_fee_unit if snap else 0) or digikala_fee_for_unit(line.sale_price))
     digikala_fee = qty * fee_unit
     shorts = qty * pack_qty
-    unit_cost = int((snap.unit_cost if snap else 0) or line.product_size.unit_cost or 0)
+
+    if snap and int(snap.unit_cost or 0) > 0:
+        unit_cost = int(snap.unit_cost)
+    else:
+        brand_name = line.product_size.product.brand.name
+        if brand_name in {"دارما", "انبارش"}:
+            # V55 safety fallback: even a legacy/missing Snapshot must resolve Darma
+            # COGS from the one date-effective source of truth, never ProductSize or
+            # color/size InventoryModelCost.
+            unit_cost = int(darma_cost_for(line.day.date))
+        else:
+            unit_cost = int(line.product_size.unit_cost or 0)
+
     cogs = shorts * unit_cost
     profit = gross - digikala_fee - cogs
     margin = (profit / gross * 100) if gross else 0
