@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
 
 from .darma_cost_v55 import (
+    LEGACY_FALLBACK_KEY,
     RULE_PREFIX,
     darma_cost_for,
     delete_darma_cost_rule,
@@ -23,9 +24,14 @@ def _money(value):
 
 @login_required
 def settings_rules(request):
-    # Date-effective Darma rules have their own controlled UI and must not also
-    # appear as editable raw AppSetting rows.
-    settings = list(AppSetting.objects.exclude(key__startswith=RULE_PREFIX).order_by("id"))
+    # Date-effective Darma rules have their own controlled UI. Hide both those
+    # rows and the old single-value fallback from the generic raw settings table
+    # so the user sees exactly one authoritative Darma cost control.
+    settings = list(
+        AppSetting.objects.exclude(key__startswith=RULE_PREFIX)
+        .exclude(key=LEGACY_FALLBACK_KEY)
+        .order_by("id")
+    )
 
     if request.method == "POST":
         action = request.POST.get("action", "base_settings")
