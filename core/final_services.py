@@ -3,7 +3,9 @@ from decimal import Decimal, ROUND_HALF_UP
 from django.db import transaction
 from django.db.models import Avg, Sum
 
+from .darma_cost_v55 import darma_cost_for
 from .finance import sale_line_metrics
+from .inventory_valuation_v17 import finished_inventory_value_v17
 from .models import (
     Account, AccountEntry, AppSetting, BankTransfer, Brand, DigikalaSettlement,
     ElasticBalance, ElasticMovement, Expense, FabricRoll, InventoryAdjustment,
@@ -237,13 +239,13 @@ def sync_return(obj):
 
 
 def inventory_unit_cost(brand,size):
-    if brand.name=="دارما": return int(setting_decimal("darma_accounting_unit_cost",61000))
+    if brand.name=="دارما": return int(darma_cost_for())
     latest=TakvinPurchase.objects.filter(size=size).order_by("-date","-id").values_list("net_unit_price",flat=True).first()
     if latest: return int(latest)
     avg=ProductSize.objects.filter(product__brand=brand,size=size,active=True).aggregate(v=Avg("unit_cost"))["v"]; return int(avg or 0)
 
 
-def finished_inventory_value(): return sum(int(row.qty)*inventory_unit_cost(row.brand,row.size) for row in StockBalance.objects.select_related("brand","size").all())
+def finished_inventory_value(): return int(finished_inventory_value_v17())
 
 
 def raw_material_value():
