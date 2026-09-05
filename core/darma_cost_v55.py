@@ -127,7 +127,12 @@ def reprice_darma_backed_rows_from(effective_from):
 
 @transaction.atomic
 def apply_darma_cost_rule(effective_from, unit_cost):
-    """Save a rule and make existing reports from that date onward obey it."""
+    """Save a user rule and make existing reports from that date onward obey it."""
+    if effective_from <= BASELINE_EFFECTIVE_FROM:
+        raise ValueError(
+            "نرخ پایه دارما از 1400/01/01 برابر 61,000 تومان و قفل است؛ "
+            "برای تغییر بهای تمام‌شده یک تاریخ بعد از 1400/01/01 ثبت کن."
+        )
     obj = set_darma_cost_rule(effective_from, unit_cost)
     updated = reprice_darma_backed_rows_from(effective_from)
     return obj, updated
