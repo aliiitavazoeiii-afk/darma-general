@@ -2,6 +2,13 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
 
+from .darma_cost_v55 import (
+    RULE_PREFIX,
+    darma_cost_for,
+    delete_darma_cost_rule,
+    list_darma_cost_rules,
+    set_darma_cost_rule,
+)
 from .dateutils import format_jalali, parse_jalali_date
 from .models import AppSetting, TakvinCostRule
 from .takvin_pricing_v17 import TAKVIN_SIZES, create_rule_set, current_takvin_costs
@@ -16,12 +23,30 @@ def _money(value):
 
 @login_required
 def settings_rules(request):
-    settings = list(AppSetting.objects.all().order_by("id"))
+    # Date-effective Darma rules have their own controlled UI and must not also
+    # appear as editable raw AppSetting rows.
+    settings = list(AppSetting.objects.exclude(key__startswith=RULE_PREFIX).order_by("id"))
 
     if request.method == "POST":
         action = request.POST.get("action", "base_settings")
         try:
-            if action == "takvin_cost_rule":
+            if action == "darma_cost_rule":
+                effective_from = parse_jalali_date(request.POST.get("effective_from") or "")
+                unit_cost = _money(request.POST.get("darma_unit_cost"))
+                set_darma_cost_rule(effective_from, unit_cost)
+                messages.success(
+                    request,
+                    f"بهای تمام‌شده هر شورت دارما از تاریخ {format_jalali(effective_from)} روی {unit_cost:,} تومان ذخیره شد. "
+                    "فروش‌های قبلی که Snapshot دارند تغییر نمی‌کنند؛ ارزش موجودی فعلی از زمان مؤثرشدن قانون با نرخ جدید محاسبه می‌شود.",
+                )
+            elif action == "darma_delete_rule":
+                effective_from = parse_jalali_date(request.POST.get("effective_from") or "")
+                deleted = delete_darma_cost_rule(effective_from)
+                if deleted:
+                    messages.success(request, f"قانون بهای دارما از تاریخ {format_jalali(effective_from)} حذف شد.")
+                else:
+                    messages.info(request, "برای این تاریخ قانون بهای دارما پیدا نشد.")
+            elif action == "takvin_cost_rule":
                 effective_from = parse_jalali_date(request.POST.get("effective_from") or "")
                 prices = {size: _money(request.POST.get(f"takvin_{size}")) for size in TAKVIN_SIZES}
                 create_rule_set(effective_from, prices)
@@ -53,12 +78,23 @@ def settings_rules(request):
         grouped.setdefault(key, {"date": rule.effective_from, "jalali": format_jalali(rule.effective_from), "prices": {}})
         grouped[key]["prices"][rule.size.name] = int(rule.unit_cost)
 
+    darma_history = [
+        {
+            "date": row["effective_from"],
+            "jalali": format_jalali(row["effective_from"]),
+            "unit_cost": int(row["unit_cost"]),
+        }
+        for row in list_darma_cost_rules()
+    ]
+
     history = list(grouped.values())
     return render(
         request,
         "core/settings_rules_v17.html",
         {
             "settings": settings,
+            "darma_current": int(darma_cost_for()),
+            "darma_history": darma_history,
             "takvin_sizes": TAKVIN_SIZES,
             "takvin_current": current,
             "takvin_history": history,
