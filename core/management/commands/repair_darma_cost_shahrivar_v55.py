@@ -25,6 +25,12 @@ class Command(BaseCommand):
         apply = bool(options["apply"])
         dates = [parse_jalali_date(value) for value in TARGET_JALALI_DATES]
 
+        # An explicit apply also establishes the user's confirmed 61,000 baseline
+        # before planning, so target costs are deterministic. Dry-run remains
+        # strictly read-only; the deploy script seeds the baseline before dry-run.
+        if apply:
+            ensure_darma_cost_baseline()
+
         lines = list(
             SaleLine.objects.filter(
                 day__date__in=dates,
@@ -92,14 +98,7 @@ class Command(BaseCommand):
             return
 
         with transaction.atomic():
-            # Apply the confirmed historical baseline only inside the explicit
-            # destructive/apply path. Dry-run above is strictly read-only.
-            ensure_darma_cost_baseline()
-
             for kind, line, snap, old_unit, target_cost, pack_qty in planned:
-                # Re-resolve after baseline creation; on the target dates this is
-                # the confirmed 61,000 unless a more specific historical rule exists.
-                target_cost = int(darma_cost_for(line.day.date))
                 if kind == "sale":
                     if snap is None:
                         snap = SaleSnapshot.objects.create(
@@ -115,8 +114,6 @@ class Command(BaseCommand):
                     line.unit_cost = target_cost
                     line.save(update_fields=["unit_cost", "updated_at"])
 
-            # Hard postcondition: every active target Darma-backed sale and Dia row
-            # now carries the canonical cost effective on its own date.
             for line in lines:
                 snap = SaleSnapshot.objects.filter(sale_line=line).first()
                 if snap is None or int(snap.unit_cost or 0) != int(darma_cost_for(line.day.date)):
