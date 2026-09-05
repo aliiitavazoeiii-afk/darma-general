@@ -8,9 +8,10 @@ from django.db.models import Sum
 from django.template.loader import get_template
 
 from core.cost_accounting_v14 import snapshot_sale_line
-from core.darma_cost_v55 import darma_cost_for, set_darma_cost_rule
+from core.darma_cost_v55 import apply_darma_cost_rule, darma_cost_for, set_darma_cost_rule
 from core.dia_gallery_v45 import sync_dia_gallery_sale
 from core.final_services import sync_inventory_adjustment
+from core.finance import sale_line_metrics
 from core.inventory_valuation_v17 import finished_inventory_value_v17
 from core.models import (
     AccountEntry,
@@ -95,6 +96,18 @@ class Command(BaseCommand):
                 if darma_ps is None:
                     raise CommandError("V55 regression needs one active Darma ProductSize")
 
+                # A pre-effective-date snapshot must remain historical.
+                old_day = SaleDay.objects.create(date=self._free_day(date(2098, 1, 15)))
+                old_line = SaleLine.objects.create(
+                    day=old_day,
+                    product_size=darma_ps,
+                    quantity=1,
+                    sale_price=max(1, int(darma_ps.default_sale_price or 100_000)),
+                )
+                old_snap = snapshot_sale_line(old_line, darma_ps, old_line.sale_price)
+                if int(old_snap.unit_cost or 0) != 61_000:
+                    raise CommandError(f"V55 pre-rule historical snapshot mismatch: {old_snap.unit_cost}")
+
                 test_date = self._free_day(date(2098, 2, 15))
                 day = SaleDay.objects.create(date=test_date)
                 line = SaleLine.objects.create(
@@ -130,7 +143,22 @@ class Command(BaseCommand):
                 if int(anbaresh_snap.unit_cost or 0) != 67_000:
                     raise CommandError(f"V55 Anbaresh SaleSnapshot cost mismatch: {anbaresh_snap.unit_cost}")
 
-                # 3) Dia Gallery freezes the rule effective on its SaleDay.
+                # 3) Missing-Snapshot reports must still use the canonical rule.
+                fallback_day = SaleDay.objects.create(date=self._free_day(test_date + timedelta(days=1)))
+                fallback_line = SaleLine.objects.create(
+                    day=fallback_day,
+                    product_size=darma_ps,
+                    quantity=1,
+                    sale_price=max(1, int(darma_ps.default_sale_price or 100_000)),
+                )
+                fallback_metrics = sale_line_metrics(fallback_line)
+                expected_fallback_cogs = int(darma_ps.product.pack_qty or 0) * 67_000
+                if int(fallback_metrics["cogs"]) != expected_fallback_cogs:
+                    raise CommandError(
+                        f"V55 missing-Snapshot Darma fallback mismatch: {fallback_metrics['cogs']} != {expected_fallback_cogs}"
+                    )
+
+                # 4) Dia Gallery freezes the rule effective on its SaleDay.
                 home = StockLocation.objects.get(key=StockLocation.HOME)
                 stock = (
                     StockBalance.objects.filter(brand=darma, location=home)
@@ -152,7 +180,27 @@ class Command(BaseCommand):
                 if int(dia.unit_cost or 0) != 67_000:
                     raise CommandError(f"V55 Dia frozen Darma cost mismatch: {dia.unit_cost}")
 
-                # 4) Current finished inventory must be a single Darma rate, not
+                # 5) User-facing rule application must immediately update already
+                # recorded reports on/after its effective date, but never earlier.
+                _, updated = apply_darma_cost_rule(test_date, 68_000)
+                snap.refresh_from_db()
+                anbaresh_snap.refresh_from_db()
+                old_snap.refresh_from_db()
+                dia.refresh_from_db()
+                if int(snap.unit_cost or 0) != 68_000 or int(anbaresh_snap.unit_cost or 0) != 68_000:
+                    raise CommandError("V55 effective-date rule did not reprice existing Darma/Anbaresh snapshots")
+                if int(dia.unit_cost or 0) != 68_000:
+                    raise CommandError("V55 effective-date rule did not reprice existing Dia row")
+                if int(old_snap.unit_cost or 0) != 61_000:
+                    raise CommandError("V55 effective-date rule rewrote a pre-effective historical snapshot")
+                fallback_metrics = sale_line_metrics(fallback_line)
+                expected_fallback_cogs = int(darma_ps.product.pack_qty or 0) * 68_000
+                if int(fallback_metrics["cogs"]) != expected_fallback_cogs:
+                    raise CommandError("V55 missing-Snapshot fallback did not follow newly effective rule")
+                if updated["sale_snapshots"] < 2 or updated["dia_rows"] < 1:
+                    raise CommandError(f"V55 rule-application update counts unexpected: {updated}")
+
+                # 6) Current finished inventory must be a single Darma rate, not
                 # InventoryModelCost. Revalue at today's rule and verify exact delta.
                 current_before = int(finished_inventory_value_v17())
                 old_rate = int(darma_cost_for(date.today()))
@@ -166,7 +214,7 @@ class Command(BaseCommand):
                         f"V55 current inventory revaluation mismatch: {current_after} != {expected_after}"
                     )
 
-                # 5) A standalone physical Darma return/adjustment must increase
+                # 7) A standalone physical Darma return/adjustment must increase
                 # finished value by exactly qty * central current rate.
                 stock = StockBalance.objects.select_for_update().get(pk=stock.pk)
                 value_before_return = int(finished_inventory_value_v17())
@@ -193,9 +241,11 @@ class Command(BaseCommand):
             raise CommandError(f"V55 regression left persistent business data changed: {before} != {after}")
 
         self.stdout.write("DARMA COST RULE V55 CHECK OK")
-        self.stdout.write("DATE RULES: 61,000 -> 67,000 resolved by effective sale date")
-        self.stdout.write("DARMA + ANBARESH SNAPSHOTS: canonical date-effective cost")
-        self.stdout.write("DIA: canonical cost frozen on Dia sale date")
+        self.stdout.write("DATE RULES: resolve by effective sale date")
+        self.stdout.write("DARMA + ANBARESH + s3: canonical SaleSnapshot cost")
+        self.stdout.write("MISSING SNAPSHOT: canonical date-effective fallback")
+        self.stdout.write("EXISTING REPORTS: rows on/after a new effective date reprice; earlier snapshots stay frozen")
+        self.stdout.write("DIA: canonical cost frozen/repriced by effective date")
         self.stdout.write("CURRENT INVENTORY: all Darma stock revalues at one effective current rate")
         self.stdout.write("RETURNS/ADJUSTMENTS: exact qty * canonical current Darma rate")
         self.stdout.write("NO TEST DATA CHANGED")
