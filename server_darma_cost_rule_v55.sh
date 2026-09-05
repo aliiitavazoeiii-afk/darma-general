@@ -12,7 +12,6 @@ set -a
 set +a
 
 BASE=f97f157f7206bcec0340789d822ca17e05888980
-BASELINE_COST=61000
 
 snapshot_business() {
   docker compose exec -T web python manage.py shell -c '
@@ -73,11 +72,8 @@ print(f"BASELINE_DARMA_VALUE={darma_qty*61000}")
 }
 
 assert_same_field(){
-  field="$1"
-  before="$2"
-  after="$3"
-  b=$(getv "$before" "$field")
-  a=$(getv "$after" "$field")
+  field="$1"; before="$2"; after="$3"
+  b=$(getv "$before" "$field"); a=$(getv "$after" "$field")
   [ "$b" = "$a" ] || fail "$field changed unexpectedly: before=$b after=$a"
 }
 
@@ -88,8 +84,7 @@ i=1
 while [ "$i" -le 30 ]; do
   docker compose exec -T db pg_isready -U "$DB_USER" -d "$DB_NAME" >/dev/null 2>&1 && break
   [ "$i" -eq 30 ] && fail "PostgreSQL not ready"
-  sleep 1
-  i=$((i+1))
+  sleep 1; i=$((i+1))
 done
 mkdir -p backups
 STAMP=$(date +%Y%m%d-%H%M%S)
@@ -98,13 +93,11 @@ docker compose exec -T db pg_dump -U "$DB_USER" "$DB_NAME" > "$BACKUP" || fail "
 [ -s "$BACKUP" ] || fail "database backup is empty"
 echo "BACKUP=$BACKUP"
 
-step "2) CAPTURE PRE-V55 LIVE BUSINESS STATE"
+step "2) CAPTURE PRE-V55 LIVE STATE"
 docker compose up -d web || fail "web start failed"
 sleep 3
 LIVE_ALREADY_V55=0
-if docker compose exec -T web python manage.py shell -c 'import core.darma_cost_v55' >/dev/null 2>&1; then
-  LIVE_ALREADY_V55=1
-fi
+if docker compose exec -T web python manage.py shell -c 'import core.darma_cost_v55' >/dev/null 2>&1; then LIVE_ALREADY_V55=1; fi
 echo "LIVE_ALREADY_V55=$LIVE_ALREADY_V55"
 LIVE=$(snapshot_business) || fail "could not capture live business snapshot"
 echo "$LIVE"
@@ -117,13 +110,7 @@ TARGET_MISSING=$(getv "$LIVE" TARGET_MISSING_SNAPSHOTS)
 OLD_SNAPSHOTS=$(getv "$LIVE" SALE_SNAPSHOTS)
 [ -n "$OLD_FINISHED" ] && [ -n "$OLD_CAPITAL" ] && [ -n "$OLD_DARMA_VALUE" ] && [ -n "$NEW_DARMA_VALUE" ] || fail "could not parse baseline values"
 
-if [ "$LIVE_ALREADY_V55" -eq 1 ]; then
-  # Retry after the new image has already become live: its FINISHED/CAPITAL are
-  # already centrally valued, so never apply the initial model-cost delta twice.
-  EXPECTED_DELTA=0
-else
-  EXPECTED_DELTA=$((NEW_DARMA_VALUE - OLD_DARMA_VALUE))
-fi
+if [ "$LIVE_ALREADY_V55" -eq 1 ]; then EXPECTED_DELTA=0; else EXPECTED_DELTA=$((NEW_DARMA_VALUE - OLD_DARMA_VALUE)); fi
 EXPECTED_FINISHED=$((OLD_FINISHED + EXPECTED_DELTA))
 EXPECTED_CAPITAL=$((OLD_CAPITAL + EXPECTED_DELTA))
 EXPECTED_SNAPSHOTS=$((OLD_SNAPSHOTS + TARGET_MISSING))
@@ -138,20 +125,20 @@ CHANGED=$(git diff --name-only "$BASE"..HEAD)
 echo "$CHANGED"
 for f in $CHANGED; do
   case "$f" in
-    core/darma_cost_v55.py|core/cost_accounting_v14.py|core/inventory_valuation_v17.py|core/dia_gallery_v45.py|core/finance.py|core/settings_rules_v17.py|templates/core/settings_rules_v17.html|core/management/commands/check_darma_cost_rule_v55.py|core/management/commands/repair_darma_cost_shahrivar_v55.py|server_darma_cost_rule_v55.sh|docs/PROJECT_CONTEXT/33_DARMA_COST_RULE_V55.md|docs/PROJECT_CONTEXT/README.md) ;;
+    core/darma_cost_v55.py|core/cost_accounting_v14.py|core/inventory_valuation_v17.py|core/dia_gallery_v45.py|core/finance.py|core/settings_rules_v17.py|core/darma_pricing.py|templates/core/settings_rules_v17.html|templates/core/settings_product_form.html|core/management/commands/check_darma_cost_rule_v55.py|core/management/commands/repair_darma_cost_shahrivar_v55.py|server_darma_cost_rule_v55.sh|docs/PROJECT_CONTEXT/33_DARMA_COST_RULE_V55.md|docs/PROJECT_CONTEXT/README.md) ;;
     *) fail "unexpected V55 file changed: $f" ;;
   esac
 done
 
 git diff --quiet "$BASE"..HEAD -- \
-  core/models.py core/models_final.py core/migrations \
-  core/final_services.py core/sale_inventory_v19.py core/variant_sale_v12.py \
-  core/finance_excel_v9.py core/daily_order_import_v23.py core/daily_order_views_v8.py core/daily_report_v8.py \
-  core/report_v9.py core/business_tools_v22.py core/material_report_v22.py core/returns_v37.py core/calculator_v37.py \
-  core/inventory_operations_v15.py core/inventory_v20.py core/urls.py \
+  core/models.py core/models_final.py core/migrations core/final_services.py \
+  core/sale_inventory_v19.py core/variant_sale_v12.py core/finance_excel_v9.py \
+  core/daily_order_import_v23.py core/daily_order_views_v8.py core/daily_report_v8.py \
+  core/report_v9.py core/business_tools_v22.py core/material_report_v22.py core/returns_v37.py \
+  core/calculator_v37.py core/inventory_operations_v15.py core/inventory_v20.py core/urls.py core/views.py \
   || fail "protected non-V55 business source changed"
 
-step "4) BUILD + ROLLBACK/READ-ONLY REGRESSIONS"
+step "4) BUILD + REGRESSIONS"
 docker compose build web || fail "web build failed"
 docker compose run --rm --entrypoint python web manage.py makemigrations --check --dry-run || fail "migration drift"
 docker compose run --rm --entrypoint python web manage.py check || fail "Django check failed"
@@ -164,28 +151,22 @@ docker compose run --rm --entrypoint python web manage.py check_inventory_highli
 docker compose run --rm --entrypoint python web manage.py check_daily_sale_day_delete_v54 || fail "V54 full-day delete regression failed"
 docker compose run --rm --entrypoint python web manage.py check_darma_cost_rule_v55 || fail "V55 Darma cost regression failed"
 
-step "5) VERIFY PREFLIGHT CHANGED NO BUSINESS DATA"
+step "5) VERIFY PREFLIGHT CHANGED NOTHING"
 PREFLIGHT=$(snapshot_business) || fail "could not capture post-preflight snapshot"
 echo "$PREFLIGHT"
-[ "$LIVE" = "$PREFLIGHT" ] || {
-  echo "--- BEFORE ---"; echo "$LIVE"
-  echo "--- AFTER PREFLIGHT ---"; echo "$PREFLIGHT"
-  fail "V55 preflight changed persistent business data"
-}
+[ "$LIVE" = "$PREFLIGHT" ] || { echo "--- BEFORE ---"; echo "$LIVE"; echo "--- AFTER PREFLIGHT ---"; echo "$PREFLIGHT"; fail "V55 preflight changed persistent business data"; }
 
-step "6) SEED 61,000 BASELINE + DRY-RUN TARGETED REPAIR"
+step "6) SEED CONFIRMED 61,000 BASELINE + DRY RUN REPAIR"
 docker compose run --rm --entrypoint python web manage.py shell -c 'from core.darma_cost_v55 import ensure_darma_cost_baseline; x=ensure_darma_cost_baseline(); print(f"DARMA_BASELINE={x.key}:{x.value}")' || fail "could not seed Darma baseline"
 docker compose run --rm --entrypoint python web manage.py repair_darma_cost_shahrivar_v55 || fail "V55 repair dry-run failed"
 
-step "7) APPLY ONLY 12 + 14 SHAHRIVAR COST REPAIR"
+step "7) APPLY ONLY 12 + 14 SHAHRIVAR REPAIR"
 docker compose run --rm --entrypoint python web manage.py repair_darma_cost_shahrivar_v55 --apply || fail "V55 targeted repair failed"
 
-step "8) VERIFY REPAIR DID NOT MOVE PHYSICAL/FINANCIAL LEDGERS"
+step "8) VERIFY REPAIR MOVED NO PHYSICAL/FINANCIAL LEDGERS"
 POST_REPAIR=$(snapshot_business) || fail "could not capture post-repair snapshot"
 echo "$POST_REPAIR"
-for field in RAW DIGI DIA DARMA TAKVIN NOVANI SALE_DAYS SALES DIA_SALES ACCOUNT_ENTRIES ADJUSTMENTS TRANSFERS MOVEMENTS OLD_DARMA_MODEL_VALUE BASELINE_DARMA_VALUE; do
-  assert_same_field "$field" "$LIVE" "$POST_REPAIR"
-done
+for field in RAW DIGI DIA DARMA TAKVIN NOVANI SALE_DAYS SALES DIA_SALES ACCOUNT_ENTRIES ADJUSTMENTS TRANSFERS MOVEMENTS OLD_DARMA_MODEL_VALUE BASELINE_DARMA_VALUE; do assert_same_field "$field" "$LIVE" "$POST_REPAIR"; done
 POST_SNAPSHOTS=$(getv "$POST_REPAIR" SALE_SNAPSHOTS)
 [ "$POST_SNAPSHOTS" = "$EXPECTED_SNAPSHOTS" ] || fail "target repair changed unexpected SaleSnapshot count: expected=$EXPECTED_SNAPSHOTS actual=$POST_SNAPSHOTS"
 
@@ -200,36 +181,29 @@ docker compose exec -T web python manage.py check_returns_calculator_v37 || fail
 docker compose exec -T web python manage.py check_daily_sale_day_delete_v54 || fail "live V54 regression failed"
 docker compose exec -T web python manage.py check_darma_cost_rule_v55 || fail "live V55 regression failed"
 
-step "10) VERIFY TARGET DAYS NOW USE CANONICAL COST"
+step "10) VERIFY 12 + 14 SHAHRIVAR CANONICAL COST"
 docker compose exec -T web python manage.py shell -c '
 from core.darma_cost_v55 import darma_cost_for
 from core.dateutils import parse_jalali_date
 from core.models import DiaGallerySale,SaleLine,SaleSnapshot
 
 dates=[parse_jalali_date("1405/06/12"),parse_jalali_date("1405/06/14")]
-lines=SaleLine.objects.filter(day__date__in=dates,quantity__gt=0,product_size__product__brand__name__in=["دارما","انبارش"]).select_related("day")
-for line in lines:
-    snap=SaleSnapshot.objects.filter(sale_line=line).first()
-    expected=int(darma_cost_for(line.day.date))
+for line in SaleLine.objects.filter(day__date__in=dates,quantity__gt=0,product_size__product__brand__name__in=["دارما","انبارش"]).select_related("day"):
+    snap=SaleSnapshot.objects.filter(sale_line=line).first(); expected=int(darma_cost_for(line.day.date))
     assert snap is not None and int(snap.unit_cost or 0)==expected, (line.id,getattr(snap,"unit_cost",None),expected)
 for line in DiaGallerySale.objects.filter(day__date__in=dates,quantity__gt=0).select_related("day"):
-    expected=int(darma_cost_for(line.day.date))
-    assert int(line.unit_cost or 0)==expected, (line.id,line.unit_cost,expected)
+    expected=int(darma_cost_for(line.day.date)); assert int(line.unit_cost or 0)==expected, (line.id,line.unit_cost,expected)
 print("TARGET_DAYS_COST_VERIFIED=YES")
 ' || fail "target-day canonical cost verification failed"
 
-step "11) VERIFY EXPECTED REVALUATION + ALL OTHER INVARIANTS"
+step "11) VERIFY EXPECTED REVALUATION + INVARIANTS"
 FINAL=$(snapshot_business) || fail "could not capture final business snapshot"
 echo "$FINAL"
-FINAL_FINISHED=$(getv "$FINAL" FINISHED)
-FINAL_CAPITAL=$(getv "$FINAL" CAPITAL)
-FINAL_SNAPSHOTS=$(getv "$FINAL" SALE_SNAPSHOTS)
+FINAL_FINISHED=$(getv "$FINAL" FINISHED); FINAL_CAPITAL=$(getv "$FINAL" CAPITAL); FINAL_SNAPSHOTS=$(getv "$FINAL" SALE_SNAPSHOTS)
 [ "$FINAL_FINISHED" = "$EXPECTED_FINISHED" ] || fail "FINISHED revaluation mismatch: expected=$EXPECTED_FINISHED actual=$FINAL_FINISHED"
 [ "$FINAL_CAPITAL" = "$EXPECTED_CAPITAL" ] || fail "CAPITAL revaluation mismatch: expected=$EXPECTED_CAPITAL actual=$FINAL_CAPITAL"
 [ "$FINAL_SNAPSHOTS" = "$EXPECTED_SNAPSHOTS" ] || fail "SaleSnapshot count mismatch: expected=$EXPECTED_SNAPSHOTS actual=$FINAL_SNAPSHOTS"
-for field in RAW DIGI DIA DARMA TAKVIN NOVANI SALE_DAYS SALES DIA_SALES ACCOUNT_ENTRIES ADJUSTMENTS TRANSFERS MOVEMENTS OLD_DARMA_MODEL_VALUE BASELINE_DARMA_VALUE; do
-  assert_same_field "$field" "$LIVE" "$FINAL"
-done
+for field in RAW DIGI DIA DARMA TAKVIN NOVANI SALE_DAYS SALES DIA_SALES ACCOUNT_ENTRIES ADJUSTMENTS TRANSFERS MOVEMENTS OLD_DARMA_MODEL_VALUE BASELINE_DARMA_VALUE; do assert_same_field "$field" "$LIVE" "$FINAL"; done
 
 step "12) SUCCESS"
 echo "SUCCESS: DARMA COST RULE V55 DEPLOYED"
@@ -238,4 +212,4 @@ echo "Backup: $BACKUP"
 echo "Darma baseline: 61,000 toman per short from 1400/01/01"
 echo "12 + 14 Shahrivar: Darma/Anbaresh/s3 snapshots and Dia costs repaired only"
 echo "Current Darma inventory revaluation delta: $EXPECTED_DELTA toman"
-echo "New rules: Settings -> Rules and base prices -> Darma cost"
+echo "New cost source: Settings -> Rules and base prices -> Darma cost"
