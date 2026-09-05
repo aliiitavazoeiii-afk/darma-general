@@ -125,13 +125,13 @@ CHANGED=$(git diff --name-only "$BASE"..HEAD)
 echo "$CHANGED"
 for f in $CHANGED; do
   case "$f" in
-    core/darma_cost_v55.py|core/cost_accounting_v14.py|core/inventory_valuation_v17.py|core/dia_gallery_v45.py|core/finance.py|core/settings_rules_v17.py|core/darma_pricing.py|templates/core/settings_rules_v17.html|templates/core/settings_product_form.html|core/management/commands/check_darma_cost_rule_v55.py|core/management/commands/repair_darma_cost_shahrivar_v55.py|server_darma_cost_rule_v55.sh|docs/PROJECT_CONTEXT/33_DARMA_COST_RULE_V55.md|docs/PROJECT_CONTEXT/README.md) ;;
+    core/darma_cost_v55.py|core/cost_accounting_v14.py|core/inventory_valuation_v17.py|core/dia_gallery_v45.py|core/finance.py|core/final_services.py|core/settings_rules_v17.py|core/darma_pricing.py|templates/core/settings_rules_v17.html|templates/core/settings_product_form.html|core/management/commands/check_darma_cost_rule_v55.py|core/management/commands/repair_darma_cost_shahrivar_v55.py|server_darma_cost_rule_v55.sh|docs/PROJECT_CONTEXT/33_DARMA_COST_RULE_V55.md|docs/PROJECT_CONTEXT/README.md) ;;
     *) fail "unexpected V55 file changed: $f" ;;
   esac
 done
 
 git diff --quiet "$BASE"..HEAD -- \
-  core/models.py core/models_final.py core/migrations core/final_services.py \
+  core/models.py core/models_final.py core/migrations \
   core/sale_inventory_v19.py core/variant_sale_v12.py core/finance_excel_v9.py \
   core/daily_order_import_v23.py core/daily_order_views_v8.py core/daily_report_v8.py \
   core/report_v9.py core/business_tools_v22.py core/material_report_v22.py core/returns_v37.py \
@@ -150,6 +150,7 @@ docker compose run --rm --entrypoint python web manage.py check_inventory_highli
 docker compose run --rm --entrypoint python web manage.py check_inventory_highlights_v53 || fail "V53 inventory-red-strength regression failed"
 docker compose run --rm --entrypoint python web manage.py check_daily_sale_day_delete_v54 || fail "V54 full-day delete regression failed"
 docker compose run --rm --entrypoint python web manage.py check_darma_cost_rule_v55 || fail "V55 Darma cost regression failed"
+docker compose run --rm --entrypoint python web manage.py shell -c 'from core.darma_cost_v55 import darma_cost_for; from core.final_services import finished_inventory_value, inventory_unit_cost; from core.inventory_valuation_v17 import finished_inventory_value_v17; from core.models import Brand; b=Brand.objects.get(name="دارما"); assert int(inventory_unit_cost(b,None))==int(darma_cost_for()); assert int(finished_inventory_value())==int(finished_inventory_value_v17()); print("V55_LEGACY_HELPERS_CENTRALIZED=YES")' || fail "V55 legacy helper centralization regression failed"
 
 step "5) VERIFY PREFLIGHT CHANGED NOTHING"
 PREFLIGHT=$(snapshot_business) || fail "could not capture post-preflight snapshot"
@@ -180,6 +181,7 @@ docker compose exec -T web python manage.py check_daily_report_runtime_v48 || fa
 docker compose exec -T web python manage.py check_returns_calculator_v37 || fail "live V37 returns regression failed"
 docker compose exec -T web python manage.py check_daily_sale_day_delete_v54 || fail "live V54 regression failed"
 docker compose exec -T web python manage.py check_darma_cost_rule_v55 || fail "live V55 regression failed"
+docker compose exec -T web python manage.py shell -c 'from core.darma_cost_v55 import darma_cost_for; from core.final_services import finished_inventory_value, inventory_unit_cost; from core.inventory_valuation_v17 import finished_inventory_value_v17; from core.models import Brand; b=Brand.objects.get(name="دارما"); assert int(inventory_unit_cost(b,None))==int(darma_cost_for()); assert int(finished_inventory_value())==int(finished_inventory_value_v17()); print("LIVE_V55_LEGACY_HELPERS_CENTRALIZED=YES")' || fail "live V55 legacy helper centralization regression failed"
 
 step "10) VERIFY 12 + 14 SHAHRIVAR CANONICAL COST"
 docker compose exec -T web python manage.py shell -c '
