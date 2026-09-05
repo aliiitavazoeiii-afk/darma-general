@@ -1,5 +1,6 @@
 from django.db import transaction
 
+from .darma_cost_v55 import darma_cost_for
 from .models import AppSetting, Brand, ProductCode, ProductSize, Size
 
 
@@ -70,6 +71,7 @@ def apply_group_prices(pack_qty, prices=None):
     brand = Brand.objects.get(name="دارما")
     sizes = {row.name: row for row in Size.objects.filter(name__in=SIZE_NAMES)}
     products = list(ProductCode.objects.filter(brand=brand, pack_qty=pack_qty, active=True))
+    current_cost = int(darma_cost_for())
     updated_rows = 0
     for product in products:
         for size_name in SIZE_NAMES:
@@ -81,14 +83,15 @@ def apply_group_prices(pack_qty, prices=None):
                 size=size,
                 defaults={
                     "default_sale_price": prices[size_name],
-                    "unit_cost": 61000,
+                    # Compatibility only. Darma accounting never reads this field
+                    # as its source of truth after V55; keep it aligned anyway.
+                    "unit_cost": current_cost,
                     "active": True,
                 },
             )
             ps.default_sale_price = prices[size_name]
             ps.active = True
-            if not ps.unit_cost:
-                ps.unit_cost = 61000
+            ps.unit_cost = current_cost
             ps.save(update_fields=["default_sale_price", "active", "unit_cost"])
             updated_rows += 1
     return {"products": len(products), "rows": updated_rows}
