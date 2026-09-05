@@ -1,233 +1,197 @@
 # V55 — CENTRALIZED DATE-EFFECTIVE DARMA COST + SHAHRIVAR REPAIR
 
-## Authoritative user rule
+## User rule
 
-Darma has exactly one accounting cost per short. The cost is not color-dependent and not size-dependent.
+Darma has one accounting cost per short. It is not color-dependent and not size-dependent.
 
-There must be one user-facing source of truth with an effective date. Example only:
+The user needs one authoritative place to enter a new cost with an effective date, for example:
 
 ```text
 through 1405/06/14: 61,000 toman per short
 from    1405/06/15: 67,000 toman per short
 ```
 
-When a rule is entered for a date, every Darma-backed report on or after that effective date must follow the date-rule history. Reports before the effective date stay unchanged.
+From the effective date forward, every Darma-backed accounting path must use that rate. Historical completed sales before the date remain frozen by their SaleSnapshot.
 
-The currently owned Darma inventory is always valued at the rate effective today. Therefore a new rule that is effective today may legitimately revalue finished inventory and capital immediately.
+## Root cause of the 18,549 return discrepancy
 
-## Root cause of the 18,549 discrepancy
+Before V55, two separate Darma accounting bases existed:
 
-Before V55, Darma accounting had conflicting sources:
+- generic/default Darma cost around 61,000;
+- `InventoryModelCost` values per Darma color + size.
 
-- the intended generic/current Darma cost around 61,000;
-- `InventoryModelCost` per Darma color + size.
-
-`core/inventory_valuation_v17.py` used the color/size model costs for current Darma stock, while `core/cost_accounting_v14.py` also averaged actual allocated color costs into some new Darma/Anbaresh SaleSnapshots.
-
-That is why a 3-pack return of pack5 / M = 15 shorts could increase current finished inventory by 933,549 instead of:
+`core/inventory_valuation_v17.py` valued current Darma stock from `InventoryModelCost`, while `core/cost_accounting_v14.py` also averaged the actual allocated Darma colors into new SaleSnapshots. Therefore a 3-pack return of pack5 / M (15 shorts) could add 933,549 to finished inventory instead of the intended:
 
 ```text
 15 * 61,000 = 915,000
 ```
 
-The 18,549 difference was not a fee. It was color/size cost drift.
+The difference was 18,549 toman. This was not a fee; it was the difference between the five M color-specific model costs and the single real Darma cost.
 
-## Single source of truth
+## V55 source of truth
 
-New service:
+New module:
 
 `core/darma_cost_v55.py`
 
-Rules are controlled `AppSetting` rows:
+Date-effective rules are stored as controlled `AppSetting` rows with keys:
 
 `darma_cost_rule_YYYY-MM-DD`
 
-No schema migration is required.
+This avoids a schema migration while still giving a date-effective rule history. The old `darma_accounting_unit_cost` remains only as a safe fallback for a database that has no dated rule. The dedicated settings UI hides that legacy key so there is only one user-facing Darma cost control.
 
-Confirmed/protected baseline:
+Confirmed baseline:
 
 ```text
 1400/01/01 -> 61,000 toman per short
 ```
 
-The baseline cannot be deleted or overwritten through the user-facing rule action. To change cost, the user adds a later effective date.
-
 `darma_cost_for(on_date)` selects the newest rule with `effective_from <= on_date`.
 
-The older `darma_accounting_unit_cost` setting remains backend fallback only for a database with no dated rule. It is hidden from the generic settings table so there is only one visible Darma cost control.
+The baseline rule itself is protected from deletion. To change Darma cost, add a newer effective-date rule rather than removing the historical base.
 
-## Rule application semantics
+## Active accounting paths changed
 
-User-facing `apply_darma_cost_rule(effective_from, unit_cost)` is atomic:
-
-1. save/update the date-effective rule;
-2. re-evaluate existing Darma/Anbaresh SaleSnapshot `unit_cost` rows on or after that date using the complete rule history;
-3. re-evaluate existing Dia Gallery `unit_cost` rows on or after that date;
-4. leave all dates before the effective date untouched.
-
-This changes COGS/profit reporting only. It does not change sale quantity, sale price, Digikala fee, receivables, StockBalance, InventoryMovement or AccountEntry.
-
-Deleting a non-baseline rule similarly recalculates affected later rows from the remaining rule history.
-
-Missing Darma/Anbaresh SaleSnapshots are not created during general rule repricing. `sale_line_metrics()` has a canonical date-effective fallback, so those reports still follow the new rule without freezing unrelated fee/pack fields.
-
-## Active accounting paths
-
-### Darma / Anbaresh / s3 SaleSnapshot
+### SaleSnapshot / COGS
 
 `core/cost_accounting_v14.py`
 
 - Darma -> `darma_cost_for(line.day.date)`
-- Anbaresh -> same Darma rule because it is Darma-backed
-- variable-color `s3` is a Darma SaleLine and therefore uses the same rate
-- no Darma `InventoryModelCost` averaging remains
-- Takvin stays on `takvin_cost_for()`
+- Anbaresh -> same Darma rule because Anbaresh is Darma-backed
+- Takvin remains on its own `takvin_cost_for()` system
+- no Darma color/size `InventoryModelCost` averaging remains in the snapshot path
 
-### Daily report / missing snapshot fallback
+### Missing-Snapshot fallback
 
 `core/finance.py`
 
-If a Darma/Anbaresh SaleLine lacks a usable snapshot, `sale_line_metrics()` uses `darma_cost_for(line.day.date)` instead of ProductSize cost.
+If a Darma or Anbaresh SaleLine has no usable SaleSnapshot, `sale_line_metrics()` falls back to `darma_cost_for(line.day.date)` instead of `ProductSize.unit_cost`.
 
-This closes the legacy/missing-snapshot path that could otherwise reintroduce a second Darma cost.
+This prevents an incomplete/legacy row from reintroducing a second Darma cost source.
 
 ### Current finished inventory / capital
 
 `core/inventory_valuation_v17.py`
 
-Every current Darma short across HOME + KHORSHID is valued using the single rate effective today.
+All current Darma `StockBalance` quantity, across HOME and KHORSHID, is valued at one current effective Darma rate.
 
-A current-rate change therefore revalues current finished inventory/capital by exactly:
+Therefore a new rule that becomes effective today intentionally revalues the entire currently owned Darma inventory and changes `finished inventory` and `capital` by:
 
 ```text
-current Darma total qty * (new current rate - previous current rate)
+current Darma total qty * (new rate - previous rate)
 ```
 
-This is inventory revaluation, not sale profit and not cash.
+This is an inventory revaluation, not sales profit and not cash movement.
 
-`InventoryModelCost` is no longer an accounting source for Darma.
+`InventoryModelCost` remains available for other brands/internal data but is no longer the accounting value source for Darma.
+
+### Legacy helper convergence
+
+`core/final_services.py` still had an older `inventory_unit_cost()` / `finished_inventory_value()` path used by legacy dashboard/view helpers. V55 now routes Darma `inventory_unit_cost()` to `darma_cost_for()` and delegates `finished_inventory_value()` to `finished_inventory_value_v17()`.
+
+This prevents a later 67,000 effective rule from showing 67,000 in the modern reports but stale 61,000 in an older helper-backed page. The V55 deploy script verifies both helpers resolve to the same central source before and after live recreate.
 
 ### Standalone returns and physical corrections
 
-`core/returns_v37.py` remains physically unchanged: a standalone return adds positive HOME stock and creates no sale/cash/Digikala entry.
+Standalone returns still only create positive HOME inventory adjustments. They create no sale, Digikala receivable or cash entry.
 
-Because current Darma valuation is central, returning N Darma shorts changes current finished inventory/capital by exactly:
+Because finished Darma inventory is now valued from the central rate, a return of N Darma shorts increases current inventory/capital by exactly:
 
 ```text
 N * current effective Darma cost
 ```
 
-Thus 15 shorts at 61,000 = exactly 915,000.
+Thus 15 returned shorts at 61,000 increase finished inventory/capital by exactly 915,000.
 
 ### Dia Gallery
 
 `core/dia_gallery_v45.py`
 
-New Dia rows freeze `darma_cost_for(line.day.date)` into `DiaGallerySale.unit_cost`. Existing rows on/after a newly entered effective date are repriced by the central rule service.
+A new Dia sale freezes `darma_cost_for(line.day.date)` into `DiaGallerySale.unit_cost` when its unit cost is first established. Existing nonzero historical Dia unit costs stay frozen unless explicitly repriced by a user-entered effective-date rule or the targeted repair.
 
-### Bulk Darma sale-price compatibility
+### s3
 
-`core/darma_pricing.py`
+Variable-color `s3` is still a Darma SaleLine, so its SaleSnapshot now freezes the same date-effective Darma cost. Its selected colors affect physical quantity allocation only, not accounting cost per short.
 
-The old hardcoded ProductSize compatibility cost `61000` was removed. When bulk sale prices create/update ProductSize rows, the compatibility `unit_cost` is aligned to `darma_cost_for()`.
+### Darma product setup / group pricing
 
-This field is not the Darma accounting source of truth after V55.
+The product edit form no longer exposes a Darma accounting unit-cost field as an independent source. Darma accounting cost is managed only from Settings -> Rules and base prices.
 
-## User interfaces
+`core/darma_pricing.py` also uses the central current Darma cost when it needs to maintain legacy `ProductSize.unit_cost` compatibility data, so even non-authoritative compatibility values do not retain a hardcoded 61,000 after a later rule.
 
-### Settings -> Rules and base prices
+## Settings UI
 
-`core/settings_rules_v17.py`
-`templates/core/settings_rules_v17.html`
+Existing route/page:
 
-The Darma card contains:
+Settings -> Rules and base prices (`settings_rules_v17`)
 
-- effective Jalali date;
-- one cost per Darma short;
-- current effective rate;
-- rule history;
-- protected baseline badge;
-- guarded delete for later rules.
+New Darma card contains:
 
-When a rule is saved, the message reports how many SaleSnapshots and Dia rows were repriced from that date onward.
+- effective Jalali date
+- one cost per Darma short
+- current effective rate
+- rule history
+- guarded delete action
 
-### Product definition/edit form
+When a new rule is saved, existing Darma-backed SaleSnapshots and Dia rows on/after its effective date are repriced to the rule effective on each row's date; pre-effective historical snapshots remain unchanged. Deleting a non-baseline rule similarly recalculates affected later rows from the remaining dated rules.
 
-`templates/core/settings_product_form.html`
-
-Darma no longer exposes per-size accounting-cost controls as a competing source. When Darma is selected:
-
-- the cost columns are hidden;
-- the old `بهای دارما 61 000` fill button is gone;
-- the page links directly to `قوانین محاسبات` as the central cost reference.
-
-The hidden legacy ProductSize inputs remain submitted unchanged for backward data compatibility, but Darma accounting does not read them as its source.
+Deleting a currently effective non-baseline rule may revalue current Darma inventory by falling back to the previous effective rule, so the UI confirmation states this.
 
 ## Targeted repair — only 12 and 14 Shahrivar 1405
 
-Command:
+New command:
 
 `repair_darma_cost_shahrivar_v55`
 
-Dry-run is default. `--apply` is explicit.
+It is dry-run by default. `--apply` changes only:
 
-Repair scope:
-
-- active Darma/Anbaresh/s3 SaleLines on `1405/06/12` and `1405/06/14`;
-- active Dia Gallery rows on the same two dates.
-
-It changes only:
-
-- `SaleSnapshot.unit_cost`;
-- `DiaGallerySale.unit_cost`.
-
-If a target normal SaleLine unexpectedly has no SaleSnapshot, the targeted repair may create one using its existing pack quantity and the canonical existing Digikala fee, then freeze the correct Darma unit cost.
+- `SaleSnapshot.unit_cost` for active Darma/Anbaresh-backed SaleLines on 1405/06/12 and 1405/06/14;
+- `DiaGallerySale.unit_cost` for active Dia rows on those two dates.
 
 It does NOT change:
 
 - sale quantity;
 - sale price;
-- Digikala fee formula;
+- Digikala fee;
 - Digikala receivable;
 - Dia receivable;
 - StockBalance quantity;
 - AccountEntry;
 - payments;
 - transfers;
-- adjustments;
+- inventory adjustments;
 - any other date.
 
-Expected repair marker:
-
-`SUCCESS: DARMA COST SHAHRIVAR V55 REPAIR APPLIED`
+If an affected normal SaleLine unexpectedly has no SaleSnapshot, the repair creates the snapshot using the line's existing pack quantity and the canonical existing Digikala fee, then freezes only the correct Darma cost.
 
 ## Regression
 
-Command:
+New command:
 
 `check_darma_cost_rule_v55`
 
-Rollback-only checks verify:
+Transactional rollback checks verify:
 
 - date-effective rule resolution;
-- baseline protection;
-- Darma/Anbaresh/s3 snapshots use canonical sale-date cost;
-- missing-Snapshot fallback is canonical;
-- existing reports on/after a new effective date reprice while earlier snapshots stay unchanged;
-- Dia follows the same effective-date rule;
-- current inventory revalues by exact Darma qty * rate delta;
-- return/adjustment valuation is exact qty * current Darma rate;
-- product form contains no independent Darma cost control;
-- bulk Darma pricing contains no independent 61,000 accounting hardcode;
-- all regression test writes roll back.
+- Darma snapshots use the sale-date central cost;
+- Anbaresh snapshots use the same Darma cost;
+- missing-Snapshot Darma report fallback uses the same central cost;
+- a newly saved effective-date rule reprices existing rows on/after that date only;
+- pre-effective historical snapshots stay frozen;
+- Dia freezes/reprices by effective date;
+- current Darma inventory revalues by exact total-qty * rate-delta;
+- a Darma return/adjustment changes finished value by exact returned qty * central current rate;
+- all regression test data rolls back.
+
+The deployment script separately verifies legacy `final_services` helpers also resolve to the same central source.
 
 Expected marker:
 
 `SUCCESS: DARMA COST RULE V55 CHECK PASSED`
 
-## Deployment safety
+## Deployment / revaluation safety
 
-Rollback branch:
+Rollback branch before V55:
 
 `before-darma-cost-rule-v55-20260905`
 
@@ -241,25 +205,21 @@ Deploy script:
 
 The script:
 
-1. takes a pg_dump backup;
-2. captures old business state;
-3. computes the old Darma color/size valuation and expected 61,000 central valuation;
-4. builds the new image;
-5. runs migration drift, Django, V37, V48, V50, V51, V52, V53, V54 and V55 checks;
-6. verifies preflight wrote no business data;
-7. seeds the protected 61,000 baseline;
-8. dry-runs and applies only the 12+14 Shahrivar repair;
-9. verifies repair moved no physical/financial ledgers;
-10. recreates live web;
-11. verifies target-day canonical costs;
-12. verifies FINISHED/CAPITAL changed only by the exact expected Darma revaluation and all other business invariants stayed unchanged.
+1. takes pg_dump backup;
+2. captures pre-V55 business state;
+3. computes old Darma color/size model value and the expected 61,000 central value;
+4. runs V37/V48/V50/V51/V52/V53/V54/V55 regressions plus legacy-helper centralization check;
+5. seeds the 61,000 baseline;
+6. dry-runs and then applies only the 12+14 Shahrivar repair;
+7. verifies repair did not move physical/financial ledgers;
+8. recreates web;
+9. verifies final FINISHED and CAPITAL changed by exactly the expected Darma revaluation delta;
+10. requires all other quantities/receivables/ledger counts to stay unchanged.
 
-The deploy script is retry-safe if a previous attempt already recreated the V55 image.
-
-Final required markers:
+Expected final markers:
 
 `SUCCESS: DARMA COST RULE V55 DEPLOYED`
 
 `SUCCESS: DARMA COST SHAHRIVAR V55 REPAIR APPLIED`
 
-Do not call V55 production-confirmed until the user posts these actual VPS markers/output.
+Production status must not be called confirmed until the user posts those actual VPS success markers.
