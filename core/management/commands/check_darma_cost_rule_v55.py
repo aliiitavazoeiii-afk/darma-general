@@ -8,7 +8,12 @@ from django.db.models import Sum
 from django.template.loader import get_template
 
 from core.cost_accounting_v14 import snapshot_sale_line
-from core.darma_cost_v55 import apply_darma_cost_rule, darma_cost_for, set_darma_cost_rule
+from core.darma_cost_v55 import (
+    BASELINE_EFFECTIVE_FROM,
+    apply_darma_cost_rule,
+    darma_cost_for,
+    set_darma_cost_rule,
+)
 from core.dia_gallery_v45 import sync_dia_gallery_sale
 from core.final_services import sync_inventory_adjustment
 from core.finance import sale_line_metrics
@@ -58,15 +63,28 @@ class Command(BaseCommand):
         raise CommandError("could not find free V55 regression SaleDay")
 
     def handle(self, *args, **options):
-        try:
-            get_template("core/settings_rules_v17.html")
-        except Exception as exc:
-            raise CommandError(f"V55 settings template failed to compile: {exc}") from exc
+        for template_name in ("core/settings_rules_v17.html", "core/settings_product_form.html"):
+            try:
+                get_template(template_name)
+            except Exception as exc:
+                raise CommandError(f"V55 template failed to compile: {template_name}: {exc}") from exc
 
-        template_source = (Path(settings.BASE_DIR) / "templates" / "core" / "settings_rules_v17.html").read_text(encoding="utf-8")
-        for marker in ("darma_cost_rule", "بهای تمام‌شده هر شورت دارما", "darma_delete_rule"):
-            if marker not in template_source:
+        rules_source = (Path(settings.BASE_DIR) / "templates" / "core" / "settings_rules_v17.html").read_text(encoding="utf-8")
+        for marker in ("darma_cost_rule", "بهای تمام‌شده هر شورت دارما", "darma_delete_rule", "نرخ پایه"):
+            if marker not in rules_source:
                 raise CommandError(f"V55 settings marker missing: {marker}")
+
+        product_form_source = (Path(settings.BASE_DIR) / "templates" / "core" / "settings_product_form.html").read_text(encoding="utf-8")
+        for marker in ("darmaCostReference", "قوانین محاسبات", "cost-col"):
+            if marker not in product_form_source:
+                raise CommandError(f"V55 product-form central-cost marker missing: {marker}")
+        for forbidden in ("fillDarmaCost", "بهای دارما 61 000"):
+            if forbidden in product_form_source:
+                raise CommandError(f"V55 stale per-product Darma cost control survived: {forbidden}")
+
+        pricing_source = (Path(settings.BASE_DIR) / "core" / "darma_pricing.py").read_text(encoding="utf-8")
+        if "darma_cost_for" not in pricing_source or '"unit_cost": 61000' in pricing_source:
+            raise CommandError("V55 Darma pricing compatibility path still has an independent hardcoded cost")
 
         before = self._state()
 
@@ -81,6 +99,14 @@ class Command(BaseCommand):
                     raise CommandError("V55 first date-effective Darma rule did not resolve")
                 if darma_cost_for(date(2098, 2, 15)) != 67_000:
                     raise CommandError("V55 second date-effective Darma rule did not resolve")
+
+                # User-facing path must not overwrite the confirmed 1400/01/01 baseline.
+                try:
+                    apply_darma_cost_rule(BASELINE_EFFECTIVE_FROM, 67_000)
+                except ValueError:
+                    pass
+                else:
+                    raise CommandError("V55 baseline rule was not protected from user overwrite")
 
                 darma = Brand.objects.get(name="دارما")
                 darma_ps = (
@@ -241,9 +267,10 @@ class Command(BaseCommand):
             raise CommandError(f"V55 regression left persistent business data changed: {before} != {after}")
 
         self.stdout.write("DARMA COST RULE V55 CHECK OK")
-        self.stdout.write("DATE RULES: resolve by effective sale date")
+        self.stdout.write("DATE RULES: resolve by effective sale date; baseline is protected")
         self.stdout.write("DARMA + ANBARESH + s3: canonical SaleSnapshot cost")
         self.stdout.write("MISSING SNAPSHOT: canonical date-effective fallback")
+        self.stdout.write("PRODUCT UI + BULK PRICING: no independent Darma accounting-cost control/hardcode")
         self.stdout.write("EXISTING REPORTS: rows on/after a new effective date reprice; earlier snapshots stay frozen")
         self.stdout.write("DIA: canonical cost frozen/repriced by effective date")
         self.stdout.write("CURRENT INVENTORY: all Darma stock revalues at one effective current rate")
