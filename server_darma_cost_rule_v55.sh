@@ -101,6 +101,11 @@ echo "BACKUP=$BACKUP"
 step "2) CAPTURE PRE-V55 LIVE BUSINESS STATE"
 docker compose up -d web || fail "web start failed"
 sleep 3
+LIVE_ALREADY_V55=0
+if docker compose exec -T web python manage.py shell -c 'import core.darma_cost_v55' >/dev/null 2>&1; then
+  LIVE_ALREADY_V55=1
+fi
+echo "LIVE_ALREADY_V55=$LIVE_ALREADY_V55"
 LIVE=$(snapshot_business) || fail "could not capture live business snapshot"
 echo "$LIVE"
 
@@ -112,7 +117,13 @@ TARGET_MISSING=$(getv "$LIVE" TARGET_MISSING_SNAPSHOTS)
 OLD_SNAPSHOTS=$(getv "$LIVE" SALE_SNAPSHOTS)
 [ -n "$OLD_FINISHED" ] && [ -n "$OLD_CAPITAL" ] && [ -n "$OLD_DARMA_VALUE" ] && [ -n "$NEW_DARMA_VALUE" ] || fail "could not parse baseline values"
 
-EXPECTED_DELTA=$((NEW_DARMA_VALUE - OLD_DARMA_VALUE))
+if [ "$LIVE_ALREADY_V55" -eq 1 ]; then
+  # Retry after the new image has already become live: its FINISHED/CAPITAL are
+  # already centrally valued, so never apply the initial model-cost delta twice.
+  EXPECTED_DELTA=0
+else
+  EXPECTED_DELTA=$((NEW_DARMA_VALUE - OLD_DARMA_VALUE))
+fi
 EXPECTED_FINISHED=$((OLD_FINISHED + EXPECTED_DELTA))
 EXPECTED_CAPITAL=$((OLD_CAPITAL + EXPECTED_DELTA))
 EXPECTED_SNAPSHOTS=$((OLD_SNAPSHOTS + TARGET_MISSING))
