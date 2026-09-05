@@ -25,10 +25,6 @@ class Command(BaseCommand):
         apply = bool(options["apply"])
         dates = [parse_jalali_date(value) for value in TARGET_JALALI_DATES]
 
-        # The user's confirmed baseline is 61,000. Do not overwrite an existing
-        # baseline if one is already present.
-        ensure_darma_cost_baseline()
-
         lines = list(
             SaleLine.objects.filter(
                 day__date__in=dates,
@@ -92,11 +88,18 @@ class Command(BaseCommand):
                 )
 
         if not apply:
-            self.stdout.write(self.style.WARNING("DRY RUN ONLY — no sale/Dia row changed. Re-run with --apply."))
+            self.stdout.write(self.style.WARNING("DRY RUN ONLY — no row or setting changed. Re-run with --apply."))
             return
 
         with transaction.atomic():
+            # Apply the confirmed historical baseline only inside the explicit
+            # destructive/apply path. Dry-run above is strictly read-only.
+            ensure_darma_cost_baseline()
+
             for kind, line, snap, old_unit, target_cost, pack_qty in planned:
+                # Re-resolve after baseline creation; on the target dates this is
+                # the confirmed 61,000 unless a more specific historical rule exists.
+                target_cost = int(darma_cost_for(line.day.date))
                 if kind == "sale":
                     if snap is None:
                         snap = SaleSnapshot.objects.create(
