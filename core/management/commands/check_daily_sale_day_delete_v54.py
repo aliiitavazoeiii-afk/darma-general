@@ -96,6 +96,7 @@ class Command(BaseCommand):
         with transaction.atomic():
             try:
                 darma = Brand.objects.get(name="دارما")
+                anbaresh = Brand.objects.get(name="انبارش")
                 home = StockLocation.objects.get(key=StockLocation.HOME)
                 size = Size.objects.get(name="M")
                 color = (
@@ -129,17 +130,16 @@ class Command(BaseCommand):
 
                 # 1) Normal Darma line: fixed composition, exact SaleAllocation,
                 # Digikala receivable and SaleSnapshot.
-                code = f"__V54_NORMAL_{uuid4().hex[:10]}__"
-                product = ProductCode.objects.create(
-                    code=code,
+                normal_product = ProductCode.objects.create(
+                    code=f"__V54_NORMAL_{uuid4().hex[:10]}__",
                     brand=darma,
                     pack_qty=1,
                     active=True,
                     note="[v54-regression]",
                 )
-                ProductComposition.objects.create(product=product, color=color, qty=1)
-                ps = ProductSize.objects.create(
-                    product=product,
+                ProductComposition.objects.create(product=normal_product, color=color, qty=1)
+                normal_ps = ProductSize.objects.create(
+                    product=normal_product,
                     size=size,
                     default_sale_price=100_000,
                     unit_cost=61_000,
@@ -147,16 +147,44 @@ class Command(BaseCommand):
                 )
                 normal = SaleLine.objects.create(
                     day=day,
-                    product_size=ps,
+                    product_size=normal_ps,
                     quantity=2,
                     sale_price=100_000,
                 )
                 sync_sale_inventory_v19(normal)
-                snapshot_sale_line(normal, ps, normal.sale_price)
+                snapshot_sale_line(normal, normal_ps, normal.sale_price)
                 sync_sale_receivable(normal)
                 normal_id = normal.id
 
-                # 2) Variable-color s3: no fixed composition; deletion must use the
+                # 2) Anbaresh channel: its SaleLine belongs to Anbaresh while the
+                # physical allocation is Darma HOME and must roundtrip there.
+                anbaresh_product = ProductCode.objects.create(
+                    code=f"__V54_ANBARESH_{uuid4().hex[:10]}__",
+                    brand=anbaresh,
+                    pack_qty=1,
+                    active=True,
+                    note="[v54-regression]",
+                )
+                ProductComposition.objects.create(product=anbaresh_product, color=color, qty=1)
+                anbaresh_ps = ProductSize.objects.create(
+                    product=anbaresh_product,
+                    size=size,
+                    default_sale_price=100_000,
+                    unit_cost=61_000,
+                    active=True,
+                )
+                anbaresh_line = SaleLine.objects.create(
+                    day=day,
+                    product_size=anbaresh_ps,
+                    quantity=1,
+                    sale_price=100_000,
+                )
+                sync_sale_inventory_v19(anbaresh_line)
+                snapshot_sale_line(anbaresh_line, anbaresh_ps, anbaresh_line.sale_price)
+                sync_sale_receivable(anbaresh_line)
+                anbaresh_id = anbaresh_line.id
+
+                # 3) Variable-color s3: no fixed composition; deletion must use the
                 # variant engine and return the exact allocated color.
                 variant_product = ensure_variant_product()
                 variant_ps = ProductSize.objects.get(product=variant_product, size=size)
@@ -171,7 +199,7 @@ class Command(BaseCommand):
                 sync_sale_receivable(variant)
                 variant_id = variant.id
 
-                # 3) Dia Gallery: exact color/size + its own receivable.
+                # 4) Dia Gallery: exact color/size + its own receivable.
                 dia = DiaGallerySale.objects.create(
                     day=day,
                     size=size,
@@ -183,7 +211,7 @@ class Command(BaseCommand):
                 dia_id = dia.id
 
                 # Same-date non-sale finance data must NOT be removed by day delete.
-                unrelated_account = Account.objects.get(key=Account.DIGIKALA)
+                unrelated_account = Account.objects.get(key=Account.MELAT)
                 unrelated_ref = f"v54-unrelated:{uuid4().hex}"
                 AccountEntry.objects.create(
                     date=test_date,
@@ -199,9 +227,9 @@ class Command(BaseCommand):
                         brand=darma, size=size, color=color, location=home
                     ).qty
                 )
-                if applied_home != start_home - 4:
+                if applied_home != start_home - 5:
                     raise CommandError(
-                        f"V54 setup stock mismatch: {applied_home} != {start_home - 4}"
+                        f"V54 setup stock mismatch: {applied_home} != {start_home - 5}"
                     )
                 if int(digikala_receivable_total()) <= start_digi:
                     raise CommandError("V54 setup did not increase Digikala receivable")
@@ -209,15 +237,17 @@ class Command(BaseCommand):
                     raise CommandError("V54 setup did not increase Dia receivable")
 
                 result = delete_sale_day(day.id)
-                if result["sale_lines"] != 2 or result["dia_lines"] != 1:
+                if result["sale_lines"] != 3 or result["dia_lines"] != 1:
                     raise CommandError(f"V54 deletion count mismatch: {result}")
                 if SaleDay.objects.filter(id=day.id).exists():
                     raise CommandError("V54 SaleDay still exists after deletion")
-                if SaleLine.objects.filter(id__in=[normal_id, variant_id]).exists():
+                if SaleLine.objects.filter(id__in=[normal_id, anbaresh_id, variant_id]).exists():
                     raise CommandError("V54 SaleLine survived full day deletion")
                 if DiaGallerySale.objects.filter(id=dia_id).exists():
                     raise CommandError("V54 DiaGallerySale survived full day deletion")
-                if SaleSnapshot.objects.filter(sale_line_id__in=[normal_id, variant_id]).exists():
+                if SaleSnapshot.objects.filter(
+                    sale_line_id__in=[normal_id, anbaresh_id, variant_id]
+                ).exists():
                     raise CommandError("V54 SaleSnapshot survived SaleLine cascade deletion")
                 if not AccountEntry.objects.filter(reference=unrelated_ref).exists():
                     raise CommandError("V54 removed unrelated same-date AccountEntry")
@@ -233,18 +263,14 @@ class Command(BaseCommand):
                     )
                 if int(finished_inventory_value_v17()) != start_finished:
                     raise CommandError("V54 finished inventory value did not roundtrip")
-                if int(digikala_receivable_total()) != start_digi + 123:
-                    raise CommandError(
-                        "V54 Digikala receivable did not return to pre-sale value plus unrelated test entry"
-                    )
+                if int(digikala_receivable_total()) != start_digi:
+                    raise CommandError("V54 Digikala receivable did not roundtrip")
                 if int(dia_gallery_receivable_total()) != start_dia:
                     raise CommandError("V54 Dia receivable did not roundtrip")
 
                 # Remove only the unrelated test entry so the within-transaction
                 # state matches the exact pre-test business state before rollback.
                 AccountEntry.objects.filter(reference=unrelated_ref).delete()
-                if int(digikala_receivable_total()) != start_digi:
-                    raise CommandError("V54 Digikala receivable did not fully roundtrip")
 
                 # Guard test: an applied historical line with no authoritative
                 # allocations must block the whole destructive action.
@@ -254,7 +280,7 @@ class Command(BaseCommand):
                 guard_day = SaleDay.objects.create(date=guard_date)
                 guard_line = SaleLine.objects.create(
                     day=guard_day,
-                    product_size=ps,
+                    product_size=normal_ps,
                     quantity=1,
                     inventory_applied_quantity=1,
                     sale_price=100_000,
@@ -277,7 +303,7 @@ class Command(BaseCommand):
             raise CommandError(f"V54 regression changed persistent business data: {before} != {after}")
 
         self.stdout.write("V54 DAILY SALE DAY DELETE CHECK OK")
-        self.stdout.write("NORMAL + s3 + DIA: inventory and receivables roundtrip")
+        self.stdout.write("DARMA + ANBARESH + s3 + DIA: inventory and receivables roundtrip")
         self.stdout.write("SALE SNAPSHOTS: removed with deleted SaleLines")
         self.stdout.write("SAME-DATE NON-SALE DATA: preserved")
         self.stdout.write("UNSAFE APPLIED LINE WITHOUT ALLOCATIONS: blocked atomically")
