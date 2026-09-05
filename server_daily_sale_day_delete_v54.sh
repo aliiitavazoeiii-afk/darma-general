@@ -99,7 +99,11 @@ step "4) BUILD + READ-ONLY/ROLLBACK PREFLIGHT"
 docker compose build web || fail "web build failed"
 docker compose run --rm --entrypoint python web manage.py makemigrations --check --dry-run || fail "migration drift"
 docker compose run --rm --entrypoint python web manage.py check || fail "Django check failed"
-docker compose run --rm --entrypoint python web manage.py check_daily_report_runtime_v48 || fail "V48 daily-report runtime regression failed"
+# V48 renders templates that resolve ManifestStaticFilesStorage URLs. Because the
+# one-off preflight intentionally bypasses entrypoint.sh, collectstatic has not run
+# inside that container yet. Run collectstatic + the V48 regression in the SAME
+# ephemeral container so the manifest exists without touching business data.
+docker compose run --rm --entrypoint sh web -c 'python manage.py collectstatic --noinput >/dev/null && python manage.py check_daily_report_runtime_v48' || fail "V48 daily-report runtime regression failed"
 docker compose run --rm --entrypoint python web manage.py check_inventory_operations_v50 || fail "V50 inventory regression failed"
 docker compose run --rm --entrypoint python web manage.py check_inventory_operations_v51 || fail "V51 adjustment-delete regression failed"
 docker compose run --rm --entrypoint python web manage.py check_inventory_highlights_v52 || fail "V52 inventory-highlight regression failed"
