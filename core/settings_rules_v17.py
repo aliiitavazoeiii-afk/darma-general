@@ -5,10 +5,10 @@ from django.shortcuts import redirect, render
 from .darma_cost_v55 import (
     LEGACY_FALLBACK_KEY,
     RULE_PREFIX,
+    apply_darma_cost_rule,
     darma_cost_for,
     delete_darma_cost_rule,
     list_darma_cost_rules,
-    set_darma_cost_rule,
 )
 from .dateutils import format_jalali, parse_jalali_date
 from .models import AppSetting, TakvinCostRule
@@ -39,17 +39,22 @@ def settings_rules(request):
             if action == "darma_cost_rule":
                 effective_from = parse_jalali_date(request.POST.get("effective_from") or "")
                 unit_cost = _money(request.POST.get("darma_unit_cost"))
-                set_darma_cost_rule(effective_from, unit_cost)
+                _, updated = apply_darma_cost_rule(effective_from, unit_cost)
                 messages.success(
                     request,
                     f"بهای تمام‌شده هر شورت دارما از تاریخ {format_jalali(effective_from)} روی {unit_cost:,} تومان ذخیره شد. "
-                    "فروش‌های قبلی که Snapshot دارند تغییر نمی‌کنند؛ ارزش موجودی فعلی از زمان مؤثرشدن قانون با نرخ جدید محاسبه می‌شود.",
+                    f"{updated['sale_snapshots']} Snapshot فروش و {updated['dia_rows']} ردیف Dia از همان تاریخ به بعد با قوانین تاریخ‌دار هماهنگ شدند. "
+                    "فروش‌های قبل از تاریخ شروع تغییر نکردند و ارزش موجودی فعلی از زمان مؤثرشدن قانون با نرخ جدید محاسبه می‌شود.",
                 )
             elif action == "darma_delete_rule":
                 effective_from = parse_jalali_date(request.POST.get("effective_from") or "")
-                deleted = delete_darma_cost_rule(effective_from)
+                deleted, updated = delete_darma_cost_rule(effective_from)
                 if deleted:
-                    messages.success(request, f"قانون بهای دارما از تاریخ {format_jalali(effective_from)} حذف شد.")
+                    messages.success(
+                        request,
+                        f"قانون بهای دارما از تاریخ {format_jalali(effective_from)} حذف شد؛ "
+                        f"{updated['sale_snapshots']} Snapshot و {updated['dia_rows']} ردیف Dia با قوانین باقی‌مانده بازتنظیم شدند.",
+                    )
                 else:
                     messages.info(request, "برای این تاریخ قانون بهای دارما پیدا نشد.")
             elif action == "takvin_cost_rule":
