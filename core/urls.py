@@ -19,6 +19,7 @@ urlpatterns = [
     path("sales/<int:day_id>/", sale_brand_v19.sale_brand, name="sale_brand"),
     path("sales/<int:day_id>/dia-gallery/", dia_gallery_v45.dia_gallery_sales, name="dia_gallery_sales"),
     path("sales/<int:day_id>/report/", daily_report_v8.daily_report, name="daily_report"),
+    path("sales/<int:day_id>/report/delete/", daily_report_actions_v21.sale_day_delete, name="daily_sale_day_delete"),
     path("sales/<int:day_id>/import-xlsx/", daily_order_views_v8.import_daily_orders, name="daily_order_import"),
     path("sales/<int:day_id>/<int:brand_id>/<int:size_id>/", daily_views.sale_size, name="sale_size"),
     path("sales/save/", excel_sales.sale_line_save, name="sale_line_save"),
