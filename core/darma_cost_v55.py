@@ -6,6 +6,7 @@ from .models import AppSetting, DiaGallerySale, SaleSnapshot
 
 
 DEFAULT_DARMA_UNIT_COST = 61_000
+BASELINE_EFFECTIVE_FROM = date(2021, 3, 21)  # 1400/01/01
 RULE_PREFIX = "darma_cost_rule_"
 LEGACY_FALLBACK_KEY = "darma_accounting_unit_cost"
 DARMA_BACKED_BRANDS = ("دارما", "انبارش")
@@ -42,6 +43,7 @@ def list_darma_cost_rules():
                 "key": obj.key,
                 "effective_from": effective_from,
                 "unit_cost": unit_cost,
+                "is_baseline": effective_from == BASELINE_EFFECTIVE_FROM,
             })
     rows.sort(key=lambda row: (row["effective_from"], row["id"]), reverse=True)
     return rows
@@ -133,7 +135,9 @@ def apply_darma_cost_rule(effective_from, unit_cost):
 
 @transaction.atomic
 def delete_darma_cost_rule(effective_from):
-    """Delete a rule and recalculate affected later snapshots from remaining rules."""
+    """Delete a non-baseline rule and recalculate later snapshots from remaining rules."""
+    if effective_from == BASELINE_EFFECTIVE_FROM:
+        raise ValueError("نرخ پایه 61,000 تومان دارما قابل حذف نیست؛ برای تغییر هزینه، یک نرخ جدید با تاریخ شروع ثبت کن.")
     deleted = AppSetting.objects.filter(key=_rule_key(effective_from)).delete()[0]
     updated = {"sale_snapshots": 0, "dia_rows": 0}
     if deleted:
@@ -143,9 +147,8 @@ def delete_darma_cost_rule(effective_from):
 
 def ensure_darma_cost_baseline():
     """Seed the user's confirmed 61,000 baseline without rewriting history."""
-    baseline = date(2021, 3, 21)  # 1400/01/01
-    key = _rule_key(baseline)
+    key = _rule_key(BASELINE_EFFECTIVE_FROM)
     obj = AppSetting.objects.filter(key=key).first()
     if obj is None:
-        return set_darma_cost_rule(baseline, DEFAULT_DARMA_UNIT_COST)
+        return set_darma_cost_rule(BASELINE_EFFECTIVE_FROM, DEFAULT_DARMA_UNIT_COST)
     return obj
