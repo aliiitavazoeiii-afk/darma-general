@@ -7,6 +7,7 @@ from django.db.models import Q, Sum
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_http_methods
 
+from .darma_cost_v55 import darma_cost_for
 from .final_services import _record_stock, _stock, _transfer_for_need
 from .models import (
     Account,
@@ -14,7 +15,6 @@ from .models import (
     Brand,
     Color,
     DiaGallerySale,
-    InventoryModelCost,
     InventoryMovement,
     ProductComposition,
     SaleDay,
@@ -61,15 +61,6 @@ def dia_gallery_receivable_total():
     return int(account.opening_balance or 0) + int(entries)
 
 
-def _current_darma_unit_cost(*, brand, size, color):
-    value = InventoryModelCost.objects.filter(
-        brand=brand,
-        size=size,
-        color=color,
-    ).values_list("unit_cost", flat=True).first()
-    return int(value or 0)
-
-
 def _sync_receivable(line):
     account = _dia_account(create=True)
     reference = f"dia-gallery:{line.id}:receivable"
@@ -102,11 +93,10 @@ def sync_dia_gallery_sale(line):
     reference = f"dia-gallery:{line.id}"
 
     if target > 0 and int(line.unit_cost or 0) <= 0:
-        line.unit_cost = _current_darma_unit_cost(
-            brand=darma,
-            size=line.size,
-            color=line.color,
-        )
+        # Freeze the canonical Darma cost effective on this sale date. Existing
+        # nonzero Dia costs remain historical snapshots and are never rewritten by
+        # later rule changes.
+        line.unit_cost = int(darma_cost_for(line.day.date))
 
     if delta > 0:
         balance = _transfer_for_need(
