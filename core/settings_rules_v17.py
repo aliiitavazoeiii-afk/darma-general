@@ -94,6 +94,7 @@ def settings_rules(request):
             "date": row["effective_from"],
             "jalali": format_jalali(row["effective_from"]),
             "unit_cost": int(row["unit_cost"]),
+            "is_baseline": bool(row.get("is_baseline")),
         }
         for row in list_darma_cost_rules()
     ]
