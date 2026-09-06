@@ -44,7 +44,8 @@ def _selected_brand(brand_name):
 def _sizes_for_brand(brand):
     if not brand:
         return []
-    return list(Size.objects.filter(name__in=SIZE_MAP[brand.name]).order_by("sort_order", "id"))
+    by_name = {obj.name: obj for obj in Size.objects.filter(name__in=SIZE_MAP[brand.name])}
+    return [by_name[name] for name in SIZE_MAP[brand.name] if name in by_name]
 
 
 def _colors_for_brand(brand):
@@ -343,6 +344,32 @@ def _apply_code_batch(*, when, brand, size, entries, group=None):
     return {"shorts": shorts_total, "group": group}
 
 
+def _apply_multi_size_return(*, when, mode, brand, size_entries):
+    """Apply one user submit across any number of sizes, atomically by the caller.
+
+    Each populated size intentionally keeps its own V57 return group so existing
+    view/edit/delete semantics stay exact and simple. The surrounding transaction
+    makes the whole submit all-or-nothing: if any size fails, none are kept.
+    """
+    results = []
+    shorts_total = 0
+    for size, entries in size_entries:
+        if not entries:
+            continue
+        if mode == "color":
+            result = _apply_color_batch(when=when, brand=brand, size=size, entries=entries)
+        elif mode == "code":
+            result = _apply_code_batch(when=when, brand=brand, size=size, entries=entries)
+        else:
+            raise ValueError("روش مرجوعی معتبر نیست.")
+        results.append({"size": size, **result})
+        shorts_total += int(result["shorts"])
+
+    if not results or shorts_total <= 0:
+        raise ValueError("حداقل در یکی از سایزها تعداد وارد کن.")
+    return {"shorts": shorts_total, "sizes": len(results), "results": results}
+
+
 @transaction.atomic
 def _reverse_return_group(group):
     batch, rows = _load_return_batch(group, lock=True, require_safe=True)
@@ -400,14 +427,18 @@ def _reverse_return_group(group):
 
 
 def _entries_from_post(request, *, mode, brand, size):
+    """Legacy/single-size parser retained for V57 edit and stale open forms."""
     if mode == "color":
         allowed = {c.id: c for c in _colors_for_brand(brand)}
         entries = []
         for key, value in request.POST.items():
             if not key.startswith("qty_color_") or not _int(value):
                 continue
+            suffix = key.removeprefix("qty_color_")
+            if "_" in suffix:
+                continue
             try:
-                color_id = int(key.removeprefix("qty_color_"))
+                color_id = int(suffix)
             except ValueError:
                 raise ValueError("شناسه رنگ نامعتبر است.")
             color = allowed.get(color_id)
@@ -421,8 +452,11 @@ def _entries_from_post(request, *, mode, brand, size):
     for key, value in request.POST.items():
         if not key.startswith("qty_code_") or not _int(value):
             continue
+        suffix = key.removeprefix("qty_code_")
+        if "_" in suffix:
+            continue
         try:
-            ps_id = int(key.removeprefix("qty_code_"))
+            ps_id = int(suffix)
         except ValueError:
             raise ValueError("شناسه کد نامعتبر است.")
         row = allowed.get(ps_id)
@@ -430,6 +464,69 @@ def _entries_from_post(request, *, mode, brand, size):
             raise ValueError("این کد برای برند/سایز انتخاب‌شده معتبر نیست.")
         entries.append((row["ps"], value))
     return entries
+
+
+def _entries_from_multisize_post(request, *, mode, brand, sizes):
+    sizes_by_id = {size.id: size for size in sizes}
+    grouped = defaultdict(list)
+
+    if mode == "color":
+        allowed_colors = {color.id: color for color in _colors_for_brand(brand)}
+        prefix = "qty_color_"
+        for key, value in request.POST.items():
+            if not key.startswith(prefix) or not _int(value):
+                continue
+            parts = key[len(prefix):].split("_", 1)
+            if len(parts) != 2:
+                continue
+            try:
+                size_id, color_id = int(parts[0]), int(parts[1])
+            except ValueError:
+                raise ValueError("شناسه سایز/رنگ نامعتبر است.")
+            size = sizes_by_id.get(size_id)
+            color = allowed_colors.get(color_id)
+            if not size or not color:
+                raise ValueError("این سایز/رنگ برای مرجوعی انتخاب‌شده معتبر نیست.")
+            grouped[size_id].append((color, value))
+    elif mode == "code":
+        prefix = "qty_code_"
+        allowed_by_size = {
+            size.id: {row["ps"].id: row for row in _products_for(brand, size)}
+            for size in sizes
+        }
+        for key, value in request.POST.items():
+            if not key.startswith(prefix) or not _int(value):
+                continue
+            parts = key[len(prefix):].split("_", 1)
+            if len(parts) != 2:
+                continue
+            try:
+                size_id, ps_id = int(parts[0]), int(parts[1])
+            except ValueError:
+                raise ValueError("شناسه سایز/کد نامعتبر است.")
+            size = sizes_by_id.get(size_id)
+            row = allowed_by_size.get(size_id, {}).get(ps_id)
+            if not size or not row:
+                raise ValueError("این کد برای سایز انتخاب‌شده معتبر نیست.")
+            grouped[size_id].append((row["ps"], value))
+    else:
+        raise ValueError("روش مرجوعی معتبر نیست.")
+
+    return [(size, grouped.get(size.id, [])) for size in sizes if grouped.get(size.id)]
+
+
+def _multi_size_sections(*, mode, brand, sizes):
+    if not brand or mode not in {"color", "code"}:
+        return []
+    shared_colors = _colors_for_brand(brand) if mode == "color" else []
+    sections = []
+    for size in sizes:
+        sections.append({
+            "size": size,
+            "colors": shared_colors if mode == "color" else [],
+            "products": _products_for(brand, size) if mode == "code" else [],
+        })
+    return sections
 
 
 @login_required
@@ -461,17 +558,14 @@ def returns_home(request):
         mode = (request.GET.get("mode") or "").strip().lower()
         if mode not in {"color", "code"}:
             mode = ""
-
         brand_name = (request.GET.get("brand") or "").strip()
         brand = _selected_brand(brand_name)
         sizes = _sizes_for_brand(brand)
         size = None
-        size_name = (request.GET.get("size") or "").strip()
-        if brand and size_name in SIZE_MAP[brand.name]:
-            size = Size.objects.filter(name=size_name).first()
 
-    colors = _colors_for_brand(brand) if mode == "color" and brand and size else []
-    products = _products_for(brand, size) if mode == "code" and brand and size else []
+    colors = _colors_for_brand(brand) if edit_batch and mode == "color" else []
+    products = _products_for(brand, size) if edit_batch and mode == "code" else []
+    size_sections = [] if edit_batch else _multi_size_sections(mode=mode, brand=brand, sizes=sizes)
 
     if edit_batch and mode == "color":
         for color in colors:
@@ -488,6 +582,7 @@ def returns_home(request):
         "size": size,
         "colors": colors,
         "products": products,
+        "size_sections": size_sections,
         "today_j": format_jalali(date.today()),
         "form_date_j": edit_batch["date_j"] if edit_batch else format_jalali(date.today()),
         "edit_batch": edit_batch,
@@ -501,25 +596,26 @@ def returns_home(request):
 def return_apply(request):
     mode = (request.POST.get("mode") or "").strip().lower()
     brand = _selected_brand((request.POST.get("brand") or "").strip())
-    size_name = (request.POST.get("size") or "").strip()
     edit_group = (request.POST.get("edit_group") or "").strip().lower()
 
-    if mode not in {"color", "code"} or not brand or size_name not in SIZE_MAP[brand.name]:
+    if mode not in {"color", "code"} or not brand:
         messages.error(request, "مسیر مرجوعی معتبر نیست.")
-        return redirect("returns")
-
-    size = Size.objects.filter(name=size_name).first()
-    if not size:
-        messages.error(request, "سایز معتبر نیست.")
         return redirect("returns")
 
     try:
         when = parse_jalali_date(request.POST.get("date") or format_jalali(date.today()))
-        entries = _entries_from_post(request, mode=mode, brand=brand, size=size)
 
-        with transaction.atomic():
-            before_value = int(finished_inventory_value_v17())
-            if edit_group:
+        if edit_group:
+            size_name = (request.POST.get("size") or "").strip()
+            if size_name not in SIZE_MAP[brand.name]:
+                raise ValueError("سایز صورت مرجوعی معتبر نیست.")
+            size = Size.objects.filter(name=size_name).first()
+            if not size:
+                raise ValueError("سایز معتبر نیست.")
+            entries = _entries_from_post(request, mode=mode, brand=brand, size=size)
+
+            with transaction.atomic():
+                before_value = int(finished_inventory_value_v17())
                 old_batch, _ = _load_return_batch(edit_group, lock=True)
                 if (
                     old_batch["mode"] != mode
@@ -539,21 +635,9 @@ def return_apply(request):
                     result = _apply_code_batch(
                         when=when, brand=brand, size=size, entries=entries, group=edit_group,
                     )
-            else:
-                if mode == "color":
-                    result = _apply_color_batch(when=when, brand=brand, size=size, entries=entries)
-                else:
-                    result = _apply_code_batch(when=when, brand=brand, size=size, entries=entries)
+                after_value = int(finished_inventory_value_v17())
+                value_delta = after_value - before_value
 
-            after_value = int(finished_inventory_value_v17())
-            value_delta = after_value - before_value
-            if not edit_group and value_delta <= 0:
-                raise ValueError(
-                    "ارزش موجودی با مرجوعی افزایش پیدا نکرد؛ "
-                    "برای جلوگیری از ثبت ناقص عملیات برگشت خورد."
-                )
-
-        if edit_group:
             direction = "افزایش" if value_delta >= 0 else "کاهش"
             messages.success(
                 request,
@@ -563,19 +647,47 @@ def return_apply(request):
             )
             return redirect(f"/returns/?view={result['group']}")
 
+        sizes = _sizes_for_brand(brand)
+        size_entries = _entries_from_multisize_post(request, mode=mode, brand=brand, sizes=sizes)
+
+        # Backward compatibility for a browser tab opened before V58 deployment.
+        if not size_entries:
+            legacy_size_name = (request.POST.get("size") or "").strip()
+            if legacy_size_name in SIZE_MAP[brand.name]:
+                legacy_size = Size.objects.filter(name=legacy_size_name).first()
+                if legacy_size:
+                    legacy_entries = _entries_from_post(
+                        request, mode=mode, brand=brand, size=legacy_size,
+                    )
+                    if legacy_entries:
+                        size_entries = [(legacy_size, legacy_entries)]
+
+        with transaction.atomic():
+            before_value = int(finished_inventory_value_v17())
+            multi = _apply_multi_size_return(
+                when=when, mode=mode, brand=brand, size_entries=size_entries,
+            )
+            after_value = int(finished_inventory_value_v17())
+            value_delta = after_value - before_value
+            if value_delta <= 0:
+                raise ValueError(
+                    "ارزش موجودی با مرجوعی افزایش پیدا نکرد؛ "
+                    "برای جلوگیری از ثبت ناقص، کل ثبت همه سایزها برگشت خورد."
+                )
+
         messages.success(
             request,
-            f"مرجوعی ثبت شد: {result['shorts']:,} شورت فقط به موجودی خانه {brand.name} اضافه شد؛ "
+            f"مرجوعی یکجا ثبت شد: {multi['shorts']:,} شورت در {multi['sizes']} سایز به موجودی HOME {brand.name} اضافه شد؛ "
             f"ارزش موجودی/سرمایه {value_delta:,} تومان افزایش یافت. "
-            "فروش، سود، دیجی، طلب دیجی و حساب‌ها تغییر نکردند.",
+            "همه سایزها در یک تراکنش ثبت شدند؛ فروش، سود، دیجی و حساب‌ها تغییر نکردند.",
         )
-        return redirect(f"/returns/?mode={mode}&brand={brand.name}&size={size.name}&view={result['group']}")
+        return redirect(f"/returns/?mode={mode}&brand={brand.name}#return-history")
 
     except Exception as exc:
         messages.error(request, f"مرجوعی اعمال نشد و کل عملیات برگشت: {exc}")
         if edit_group:
             return redirect(f"/returns/?edit={edit_group}")
-        return redirect(f"/returns/?mode={mode}&brand={brand.name}&size={size.name}")
+        return redirect(f"/returns/?mode={mode}&brand={brand.name}")
 
 
 @login_required
