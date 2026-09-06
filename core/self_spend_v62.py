@@ -1,7 +1,7 @@
 from django.db import transaction
 from django.db.models import Sum
 
-from .models import ExcelManualRow
+from .models import BusinessPayment, ExcelManualRow
 
 
 SELF_PAYEE = "self"
@@ -49,6 +49,40 @@ def self_tracking_row(create=False, for_update=False):
     if for_update:
         row = ExcelManualRow.objects.select_for_update().get(pk=row.pk)
     return row
+
+
+def expected_self_total():
+    return int(
+        BusinessPayment.objects.filter(payee=SELF_PAYEE).aggregate(v=Sum("amount"))["v"]
+        or 0
+    )
+
+
+@transaction.atomic
+def reconcile_self_tracking():
+    """Make the visible حساب‌ها/خودم tracker match all recorded self payments.
+
+    V61 already reduced Mellat/capital for any self payments it recorded, but it did
+    not create the visible tracking account requested in V62. This repair is
+    idempotent and changes only the non-capital tracking row.
+    """
+    expected = expected_self_total()
+    existing = self_tracking_row(create=False, for_update=True)
+    if existing is None and expected <= 0:
+        return {"created": False, "old": 0, "new": 0, "changed": False}
+    row = existing or self_tracking_row(create=True, for_update=True)
+    old = int(row.amount or 0)
+    row.amount = expected
+    row.title = SELF_ACCOUNT_TITLE
+    row.note = SELF_ACCOUNT_NOTE
+    row.active = True
+    row.save(update_fields=["amount", "title", "note", "active", "updated_at"])
+    return {
+        "created": existing is None,
+        "old": old,
+        "new": expected,
+        "changed": old != expected or existing is None,
+    }
 
 
 @transaction.atomic
