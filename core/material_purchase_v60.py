@@ -206,9 +206,17 @@ def _reverse_one_elastic(payment, item, variant):
     remaining_qty = total_qty - qty
     remaining_value = total_value - purchase_value
     if remaining_value < 0:
-        raise ValueError(
-            f"ارزش موجودی کش {variant} رنگ {label} برای Reverse این خرید کافی نیست؛ عملیات متوقف شد."
-        )
+        # material_flow stores weighted elastic price as an integer toman/kg,
+        # so the aggregate pool can lose less than one toman per kg to rounding.
+        # Allow only that mathematically bounded rounding deficit; anything larger
+        # still aborts as a real value/inventory mismatch.
+        rounding_tolerance = total_qty + Decimal("1")
+        if abs(remaining_value) <= rounding_tolerance:
+            remaining_value = Decimal("0")
+        else:
+            raise ValueError(
+                f"ارزش موجودی کش {variant} رنگ {label} برای Reverse این خرید کافی نیست؛ عملیات متوقف شد."
+            )
     for row in rows:
         row.delete()
     if remaining_qty > 0:
