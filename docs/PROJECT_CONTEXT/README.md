@@ -2,7 +2,7 @@
 
 This directory is the authoritative, detailed continuation pack for a new AI/chat.
 
-Read `../00_NEW_CHAT_READ_FIRST.md` first. As of 2026-09-03 that entrypoint contains the complete current-chat handoff through V50, including canonical formulas/rules, the daily-report V48 incident, V49/V50 inventory-operation semantics, deployment-status uncertainty, the UI rollback history, exact do-not-repeat rules, and the one-shot next-chat prompt. Then continue through the numbered context files below; V51 through V59 are newer follow-ups after that handoff.
+Read `../00_NEW_CHAT_READ_FIRST.md` first. As of 2026-09-03 that entrypoint contains the complete current-chat handoff through V50, including canonical formulas/rules, the daily-report V48 incident, V49/V50 inventory-operation semantics, deployment-status uncertainty, the UI rollback history, exact do-not-repeat rules, and the one-shot next-chat prompt. Then continue through the numbered context files below; V51 through V60 are newer follow-ups after that handoff.
 
 Then read all numbered files in order:
 
@@ -43,6 +43,7 @@ Then read all numbered files in order:
 35. `35_RETURNS_REPORT_EDIT_DELETE_V57.md` — exposes existing standalone-return V37 groups as visible return forms under `/returns/`, with grouped view, date/quantity edit, and guarded exact deletion that reverses only the return's own HOME adjustments/movements while preserving later unrelated stock movements and all sales/Digikala/accounting ledgers.
 36. `36_RETURNS_MULTI_SIZE_V58.md` — removes the one-size-at-a-time entry workflow for new returns: all allowed sizes render under one shared date/form and one atomic submit, while each populated size remains a separate V57 report for exact view/edit/delete compatibility.
 37. `37_COST_RULES_TAKVIN_PURCHASE_V59.md` — adds a single date-effective Novani per-short accounting cost parallel to Darma and fixes the active Takvin purchase page so purchases add exact HOME inventory alongside debt; includes an idempotent repair for today's legacy purchase rows that increased debt without adding stock.
+38. `38_SALE_PRICE_ELASTIC_MULTI_V60.md` — makes Darma and Takvin selling prices date-effective by SaleDay while freezing every saved SaleLine price, routes manual/XLSX sales through the dated default, adds a Jalali start date to per-product and bulk Darma pricing, and allows one elastic payment to contain all purchased colors with independent 16/25 quantities and prices.
 
 Important supersession rule for V46: older statements in `01`/`05` that sale logic may auto-transfer KHORSHID -> HOME are obsolete. `24_NO_AUTO_TRANSFER_V46.md` and the explicit V46 section in `00_NEW_CHAT_READ_FIRST.md` are authoritative for sale location behavior.
 
@@ -52,11 +53,15 @@ Important V57/V58 return rule: standalone V37 returns are grouped from their exi
 
 Important V59 Takvin-purchase rule: the active `/takvin/` Excel-style purchase page represents supplier debt in `ExcelManualSetting(key="takvin_debt")` and physical goods in Takvin HOME `StockBalance` plus exact `InventoryMovement.PURCHASE`. Saving a purchase must apply both sides once. Do not use a second Account.TAKVIN purchase ledger in this page's path.
 
+Important V60 selling-price rule: Darma/Takvin selling-price changes are dated defaults, not historical rewrites. `SaleLine.sale_price` is frozen once saved. New manual or Digikala-imported rows use `sale_price_for(product_size, SaleDay.date)`. A future price must never be copied into today's legacy ProductSize default merely because it was scheduled today.
+
+Important V60 elastic-payment rule: one BusinessPayment may contain many elastic colors, each with independent 16/25 quantity and unit price, while retaining one actual-paid amount. The full physical purchase payload lives in the V14 purchase ledger and edit/delete must preserve guarded atomic reverse semantics.
+
 After these, read `UI_SAFETY_V37.md` through `UI_SAFETY_V47.md`, then current `core/urls.py`, exact active source files, and older handoff docs last.
 
 When older docs conflict with this directory or current active code, the later explicit business-rule document + current active code wins.
 
-The last numerically recorded production checkpoint remains V38 until a newer deployment's actual final invariant block is posted by the user. V46 through V59 must not be called fully production-confirmed without their successful server output markers. V49 does have direct behavioral confirmation from the user that the new KHORSHID -> HOME transfer worked and was "عالی", but that is not the same as a preserved full invariant success block. V55 requires both `SUCCESS: DARMA COST RULE V55 DEPLOYED` and `SUCCESS: DARMA COST SHAHRIVAR V55 REPAIR APPLIED`; V56 requires `SUCCESS: DARMA INVENTORY PAGE COST V56 DEPLOYED`; V57 requires `SUCCESS: RETURNS REPORT EDIT DELETE V57 DEPLOYED`; V58 requires `SUCCESS: RETURNS MULTI-SIZE V58 DEPLOYED`; V59 requires `SUCCESS: NOVANI COST RULE + TAKVIN PURCHASE V59 DEPLOYED`, and when missing today's purchase stock exists also `SUCCESS: TODAY TAKVIN PURCHASE STOCK V59 REPAIRED`.
+The last numerically recorded production checkpoint remains V38 until a newer deployment's actual final invariant block is posted by the user. V46 through V60 must not be called fully production-confirmed without their successful server output markers. V49 does have direct behavioral confirmation from the user that the new KHORSHID -> HOME transfer worked and was "عالی", but that is not the same as a preserved full invariant success block. V55 requires both `SUCCESS: DARMA COST RULE V55 DEPLOYED` and `SUCCESS: DARMA COST SHAHRIVAR V55 REPAIR APPLIED`; V56 requires `SUCCESS: DARMA INVENTORY PAGE COST V56 DEPLOYED`; V57 requires `SUCCESS: RETURNS REPORT EDIT DELETE V57 DEPLOYED`; V58 requires `SUCCESS: RETURNS MULTI-SIZE V58 DEPLOYED`; V59 requires `SUCCESS: NOVANI COST RULE + TAKVIN PURCHASE V59 DEPLOYED`, and when missing today's purchase stock exists also `SUCCESS: TODAY TAKVIN PURCHASE STOCK V59 REPAIRED`; V60 requires `SUCCESS: SALE PRICE + ELASTIC MULTI V60 DEPLOYED`.
 
 Latest confirmed numeric production snapshot in the historical handoff:
 
