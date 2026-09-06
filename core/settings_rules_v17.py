@@ -19,6 +19,7 @@ from .novani_cost_v59 import (
     list_novani_cost_rules,
     novani_cost_for,
 )
+from .sale_price_v60 import RULE_PREFIX as SALE_PRICE_RULE_PREFIX
 from .takvin_pricing_v17 import TAKVIN_SIZES, create_rule_set, current_takvin_costs
 
 
@@ -31,12 +32,13 @@ def _money(value):
 
 @login_required
 def settings_rules(request):
-    # Date-effective brand rules have their own controlled UI. Hide those rows and
-    # Darma's old single-value fallback from the generic raw settings table so each
-    # brand has exactly one authoritative accounting-cost control.
+    # Controlled dated rules have their own UIs. Hide their internal AppSetting
+    # rows from the generic raw table so users cannot accidentally bypass those
+    # workflows or create a second visible source of truth.
     settings = list(
         AppSetting.objects.exclude(key__startswith=DARMA_RULE_PREFIX)
         .exclude(key__startswith=NOVANI_RULE_PREFIX)
+        .exclude(key__startswith=SALE_PRICE_RULE_PREFIX)
         .exclude(key=LEGACY_FALLBACK_KEY)
         .order_by("id")
     )
