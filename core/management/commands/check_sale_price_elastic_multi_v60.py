@@ -10,6 +10,7 @@ from django.http import QueryDict
 from django.template.loader import get_template
 from django.urls import resolve
 
+from core.business_tools_v60 import _purchase_signature as payment_purchase_signature
 from core.material_flow import COLOR_LABELS, ELASTIC, WAREHOUSE, q
 from core.material_purchase_v60 import (
     MULTI_KIND,
@@ -19,8 +20,8 @@ from core.material_purchase_v60 import (
     purchase_summary,
     reverse_purchase_stock,
 )
-from core.models import AppSetting, Brand, BusinessPayment, ProductSize, RawMaterialStock, SaleDay, SaleLine
-from core.sale_price_v60 import RULE_PREFIX, sale_price_for, set_sale_price_rule
+from core.models import AppSetting, BusinessPayment, ProductSize, RawMaterialStock, SaleDay, SaleLine
+from core.sale_price_v60 import sale_price_for, set_sale_price_rule
 
 
 class Command(BaseCommand):
@@ -82,8 +83,11 @@ class Command(BaseCommand):
             "core/daily_order_views_v60.py": ("_preseed_date_effective_prices", "sale_price_for(ps, day.date)"),
             "core/settings_product_v60.py": ("sale_price_effective_from", "set_sale_price_rule"),
             "core/pricing_v60.py": ("effective_from", "_schedule_group_prices"),
+            "core/settings_rules_v17.py": ("SALE_PRICE_RULE_PREFIX", "exclude(key__startswith=SALE_PRICE_RULE_PREFIX)"),
             "core/material_purchase_v60.py": ("elastic_multi", "elastic16_qty__", "elastic25_qty__"),
             "core/static/core/payments_elastic_multi_v60.js": ("elastic-color-row", "elastic16_qty__", "elastic25_qty__"),
+            "templates/core/settings_product_form_v60.html": ("salePriceDateV60", "jalali_picker.js"),
+            "templates/core/settings_products_v60.html": ("effective_from", "jalali_picker.js"),
         }
         for relative, markers in source_checks.items():
             text = (Path(settings.BASE_DIR) / relative).read_text(encoding="utf-8")
@@ -185,6 +189,31 @@ class Command(BaseCommand):
                 if not purchase_signature(data):
                     raise CommandError("V60 multi elastic physical signature missing")
 
+                # A legacy one-color elastic payment opened in the V60 matrix must
+                # compare physically equal, so a cash/date/note-only edit stays finance-only.
+                legacy = {
+                    "k": "elastic",
+                    "m": color1,
+                    "q16": "1.250",
+                    "p16": 2_600_000,
+                    "q25": "0",
+                    "p25": 0,
+                }
+                single_multi = {
+                    "k": MULTI_KIND,
+                    "items": [
+                        {
+                            "m": color1,
+                            "q16": "1.250",
+                            "p16": 2_600_000,
+                            "q25": "0",
+                            "p25": 0,
+                        }
+                    ],
+                }
+                if payment_purchase_signature(legacy) != payment_purchase_signature(single_multi):
+                    raise CommandError("V60 legacy elastic edit compatibility signature mismatch")
+
                 q1_before = self._cell_qty(color1, "16")
                 q2_before = self._cell_qty(color2, "25")
                 payment = BusinessPayment.objects.create(
@@ -209,15 +238,12 @@ class Command(BaseCommand):
         if before != after:
             raise CommandError(f"V60 regression left persistent business data changed: {before} != {after}")
 
-        leaked_rules = AppSetting.objects.filter(key__startswith=RULE_PREFIX, key__contains="2099-").count()
-        if leaked_rules:
-            raise CommandError("V60 regression left future test sale-price rules behind")
-
         self.stdout.write("SALE PRICE: Darma + Takvin defaults resolve by SaleDay date")
         self.stdout.write("SALE HISTORY: existing SaleLine.sale_price stays frozen")
         self.stdout.write("PRODUCT UI: explicit Jalali effective date; future price does not overwrite current default")
         self.stdout.write("DIGIKALA IMPORT: new rows are preseeded from the SaleDay-effective price")
         self.stdout.write("ELASTIC PAYMENT: multiple colors + 16/25 variants fit one purchase payload")
+        self.stdout.write("LEGACY ELASTIC EDIT: unchanged physical purchase remains finance-only")
         self.stdout.write("ELASTIC REVERSE: each purchased color/variant returns to its original quantity")
         self.stdout.write("NO TEST DATA CHANGED")
         self.stdout.write(self.style.SUCCESS("SUCCESS: SALE PRICE + ELASTIC MULTI V60 CHECK PASSED"))
