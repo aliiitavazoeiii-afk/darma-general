@@ -95,19 +95,22 @@ class Command(BaseCommand):
                 if marker not in text:
                     raise CommandError(f"V60 source marker missing: {relative}: {marker}")
 
-        # Active routes must really use V60 rather than leaving the new code dormant.
+        # V60 owns sale-price and elastic-purchase behavior. Later payment wrappers
+        # (V61/V62) may own the active /payments routes while delegating those V60
+        # mechanics, so accept those wrappers instead of falsely flagging regression.
         route_expectations = {
-            "/sales/save/": "core.sale_entry_v60",
-            "/payments/": "core.business_tools_v60",
-            "/payments/add/": "core.business_tools_v60",
-            "/settings/products/": "core.pricing_v60",
-            "/settings/products/new/": "core.settings_product_v60",
+            "/sales/save/": {"core.sale_entry_v60"},
+            "/payments/": {"core.business_tools_v60", "core.business_tools_v61", "core.business_tools_v62"},
+            "/payments/add/": {"core.business_tools_v60", "core.business_tools_v61", "core.business_tools_v62"},
+            "/settings/products/": {"core.pricing_v60"},
+            "/settings/products/new/": {"core.settings_product_v60"},
         }
-        for url, module_name in route_expectations.items():
+        for url, allowed_modules in route_expectations.items():
             match = resolve(url)
-            if match.func.__module__ != module_name:
+            actual = match.func.__module__
+            if actual not in allowed_modules:
                 raise CommandError(
-                    f"V60 route mismatch: {url} -> {match.func.__module__}, expected {module_name}"
+                    f"V60 route mismatch: {url} -> {actual}, expected one of {sorted(allowed_modules)}"
                 )
 
         darma_ps = self._active_ps("دارما")
@@ -123,7 +126,6 @@ class Command(BaseCommand):
         before = self._state()
         with transaction.atomic():
             try:
-                # Sale prices: future rule must not leak into the day before it.
                 rule_day = date(2099, 7, 2)
                 prior_day = rule_day - timedelta(days=1)
                 later_day = rule_day + timedelta(days=1)
@@ -152,7 +154,6 @@ class Command(BaseCommand):
                 if int(takvin_ps.default_sale_price or 0) != takvin_default_before:
                     raise CommandError("V60 scheduling overwrote Takvin legacy current default")
 
-                # Existing saved SaleLine price is frozen even after later rules are added.
                 free_day = date(2099, 8, 1)
                 while SaleDay.objects.filter(date=free_day).exists():
                     free_day += timedelta(days=1)
@@ -169,8 +170,6 @@ class Command(BaseCommand):
                 if int(line.sale_price or 0) != frozen_price:
                     raise CommandError("V60 rule rewrote an existing SaleLine.sale_price")
 
-                # Multi-color elastic parser: one payment payload carries independent
-                # color + 16/25 quantity/price cells and one invoice total.
                 post = QueryDict("", mutable=True)
                 post["note"] = "v60 regression"
                 post[f"elastic16_qty__{color1}"] = "1.250"
@@ -189,8 +188,6 @@ class Command(BaseCommand):
                 if not purchase_signature(data):
                     raise CommandError("V60 multi elastic physical signature missing")
 
-                # A legacy one-color elastic payment opened in the V60 matrix must
-                # compare physically equal, so a cash/date/note-only edit stays finance-only.
                 legacy = {
                     "k": "elastic",
                     "m": color1,
