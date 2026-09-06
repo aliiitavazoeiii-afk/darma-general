@@ -34,7 +34,10 @@ def settings_product_form(request, product_id=None):
     existing_sizes = {}
     if product:
         existing_comp = {c.color_id: c.qty for c in product.composition.all()}
-        existing_sizes = {ps.size_id: ps for ps in product.sizes.select_related("size", "product__brand").all()}
+        existing_sizes = {
+            ps.size_id: ps
+            for ps in product.sizes.select_related("size", "product__brand").all()
+        }
 
     form_brand_id = product.brand_id if product else (brands.first().id if brands.exists() else None)
     form_code = product.code if product else ""
@@ -57,13 +60,16 @@ def settings_product_form(request, product_id=None):
         form_note = (request.POST.get("note") or "").strip()
         form_active = bool(request.POST.get("active"))
         brand = get_object_or_404(Brand, id=form_brand_id)
+
+        errors = []
         try:
             form_effective = parse_jalali_date(
-                request.POST.get("sale_price_effective_from") or format_jalali(_default_effective_date())
+                request.POST.get("sale_price_effective_from")
+                or format_jalali(_default_effective_date())
             )
         except ValueError as exc:
             form_effective = _default_effective_date()
-            messages.error(request, str(exc))
+            errors.append(str(exc))
 
         comp = {}
         comp_total = 0
@@ -72,19 +78,28 @@ def settings_product_form(request, product_id=None):
             if qty:
                 comp[color.id] = qty
                 comp_total += qty
+
         enabled_sizes = [size for size in sizes if request.POST.get(f"size_{size.id}")]
         if brand.name == "تکوین":
             enabled_sizes = [size for size in enabled_sizes if size.name not in {"3XL", "4XL"}]
 
-        errors = []
         if not form_code:
             errors.append("کد محصول را وارد کن.")
         if comp_total != form_pack_qty:
-            errors.append(f"جمع تعداد رنگ‌ها باید دقیقاً {form_pack_qty} باشد؛ الان {comp_total} است.")
+            errors.append(
+                f"جمع تعداد رنگ‌ها باید دقیقاً {form_pack_qty} باشد؛ الان {comp_total} است."
+            )
         if not enabled_sizes:
             errors.append("حداقل یک سایز را برای این کد فعال کن.")
         if brand.name in MANAGED_BRANDS and form_effective < date.today():
-            errors.append("تاریخ شروع قیمت فروش نمی‌تواند قبل از امروز باشد؛ فروش تاریخی هرگز با تغییر قیمت پایه بازنویسی نمی‌شود.")
+            errors.append(
+                "تاریخ شروع قیمت فروش نمی‌تواند قبل از امروز باشد؛ "
+                "فروش تاریخی هرگز با تغییر قیمت پایه بازنویسی نمی‌شود."
+            )
+
+        for size in enabled_sizes:
+            if max(0, _to_int(request.POST.get(f"sale_price_{size.id}"))) <= 0:
+                errors.append(f"قیمت فروش سایز {size.name} باید بیشتر از صفر باشد.")
 
         duplicate = ProductCode.objects.filter(brand=brand, code=form_code)
         if product:
@@ -93,7 +108,6 @@ def settings_product_form(request, product_id=None):
             errors.append("این کد برای این برند قبلاً ثبت شده است.")
 
         if not errors:
-            is_new_product = product is None
             if not product:
                 product = ProductCode()
             product.brand = brand
@@ -114,12 +128,10 @@ def settings_product_form(request, product_id=None):
             for size in enabled_sizes:
                 entered_price = max(0, _to_int(request.POST.get(f"sale_price_{size.id}")))
                 entered_cost = max(0, _to_int(request.POST.get(f"unit_cost_{size.id}")))
-                if entered_price <= 0:
-                    raise ValueError(f"قیمت فروش سایز {size.name} باید بیشتر از صفر باشد.")
 
                 ps = ProductSize.objects.filter(product=product, size=size).first()
                 if ps is None:
-                    # A brand-new size has no older selling price to preserve.
+                    # A brand-new size has no previous selling price to preserve.
                     ps = ProductSize.objects.create(
                         product=product,
                         size=size,
@@ -134,9 +146,9 @@ def settings_product_form(request, product_id=None):
                         ps.default_sale_price = entered_price
                         ps.save(update_fields=["default_sale_price", "unit_cost", "active"])
                     else:
-                        # For Darma/Takvin keep the legacy field as the pre-V60 fallback.
-                        # The entered value becomes a dated rule and cannot leak into today
-                        # when the selected effective date is tomorrow.
+                        # For Darma/Takvin the legacy default remains the pre-V60
+                        # fallback. The entered price is stored only as a dated rule,
+                        # so a tomorrow rule can never leak into today's unsaved sale.
                         ps.save(update_fields=["unit_cost", "active"])
 
                 if brand.name in MANAGED_BRANDS:
@@ -144,13 +156,16 @@ def settings_product_form(request, product_id=None):
                     scheduled += 1
 
             if brand.name == "تکوین":
-                ProductSize.objects.filter(product=product, size__name__in=["3XL", "4XL"]).update(active=False)
+                ProductSize.objects.filter(
+                    product=product, size__name__in=["3XL", "4XL"]
+                ).update(active=False)
 
             if brand.name in MANAGED_BRANDS:
                 messages.success(
                     request,
-                    f"کد {product.code} ذخیره شد؛ قیمت فروش {scheduled} سایز از تاریخ {format_jalali(form_effective)} اعمال می‌شود. "
-                    "فروش‌های ثبت‌شده قبلی و قیمت امروز قبل از تاریخ شروع دست‌نخورده می‌مانند.",
+                    f"کد {product.code} ذخیره شد؛ قیمت فروش {scheduled} سایز از تاریخ "
+                    f"{format_jalali(form_effective)} اعمال می‌شود. فروش‌های ثبت‌شده قبلی "
+                    "و قیمت روزهای قبل از تاریخ شروع دست‌نخورده می‌مانند.",
                 )
             else:
                 messages.success(request, f"کد {product.code} ذخیره شد.")
@@ -161,7 +176,11 @@ def settings_product_form(request, product_id=None):
 
     color_rows = []
     for color in colors:
-        qty = max(0, _to_int(request.POST.get(f"color_{color.id}"))) if request.method == "POST" else existing_comp.get(color.id, 0)
+        qty = (
+            max(0, _to_int(request.POST.get(f"color_{color.id}")))
+            if request.method == "POST"
+            else existing_comp.get(color.id, 0)
+        )
         color_rows.append({"obj": color, "qty": qty})
 
     size_rows = []
