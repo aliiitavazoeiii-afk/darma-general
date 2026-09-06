@@ -128,7 +128,14 @@ from core.returns_v37 import _return_history
 rows=_return_history()
 print(f"RETURN_REPORT_GROUPS={len(rows)}")
 for row in rows[:5]:
-    print(f"RETURN_REPORT={row['date_j']}|{row['brand'].name}|{row['size'].name}|{row['mode']}|{row['shorts']}|{row['group']}|safe={row['safe']}")
+    date_j=row["date_j"]
+    brand=row["brand"].name
+    size=row["size"].name
+    mode=row["mode"]
+    shorts=row["shorts"]
+    group=row["group"]
+    safe=row["safe"]
+    print(f"RETURN_REPORT={date_j}|{brand}|{size}|{mode}|{shorts}|{group}|safe={safe}")
 ' || fail "existing return history could not be reconstructed"
 
 step "7) FINAL BUSINESS INVARIANTS"
