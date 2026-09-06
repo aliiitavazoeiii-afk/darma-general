@@ -8,11 +8,11 @@ from django.views.decorators.http import require_POST
 from .brand_colors import colors_for_brand, norm
 from .darma_cost_v55 import darma_cost_for
 from .models import Brand, Color, InventoryModelCost, Size, StockBalance, StockLocation
+from .novani_cost_v59 import novani_cost_for
 from .takvin_pricing_v17 import takvin_cost_for
 
 INVENTORY_BRANDS = ("دارما", "تکوین", "Novani")
 BRAND_ORDER = {"دارما": 0, "تکوین": 1, "Novani": 2}
-NOVANI_DEFAULT_COST = 61000
 SIZE_NAMES = {
     "دارما": ["M", "L", "XL", "XXL", "3XL", "4XL"],
     "تکوین": ["M", "L", "XL", "XXL"],
@@ -71,21 +71,22 @@ def _int(value, default=0):
         return default
 
 
-def _inventory_unit_cost(brand, size, color, cost_map=None, darma_current_cost=None):
-    """Return the accounting value used by the inventory page for one unit.
-
-    V55 single-source rule: every Darma short uses the one current date-effective
-    Darma cost. InventoryModelCost is intentionally ignored for Darma so the stock
-    page, reports and capital cannot disagree again.
-    """
+def _inventory_unit_cost(
+    brand,
+    size,
+    color,
+    cost_map=None,
+    darma_current_cost=None,
+    novani_current_cost=None,
+):
+    """Return the accounting value used by the inventory page for one unit."""
     if brand.name == "دارما":
         return int(darma_current_cost if darma_current_cost is not None else darma_cost_for())
+    if brand.name == "Novani":
+        return int(novani_current_cost if novani_current_cost is not None else novani_cost_for())
     if brand.name == "تکوین":
         return int(takvin_cost_for(size))
-    unit_cost = int((cost_map or {}).get((color.id, size.id), 0) or 0)
-    if brand.name == "Novani" and unit_cost <= 0:
-        unit_cost = NOVANI_DEFAULT_COST
-    return unit_cost
+    return int((cost_map or {}).get((color.id, size.id), 0) or 0)
 
 
 @login_required
@@ -104,14 +105,15 @@ def inventory(request):
     grand_qty = 0
     grand_value = 0
     darma_current_cost = int(darma_cost_for()) if brand and brand.name == "دارما" else None
+    novani_current_cost = int(novani_cost_for()) if brand and brand.name == "Novani" else None
 
     if brand and brand.id in brand_ids:
         colors = colors_for_brand(brand)
         color_ids = list(colors.values_list("id", flat=True))
-        # Darma accounting deliberately does not read InventoryModelCost anymore.
-        # Keep the map only for brands whose inventory value still depends on it.
+        # Darma and Novani each have one central accounting cost. Keep the legacy
+        # color/size map only for brands whose valuation still depends on it.
         cost_map = {}
-        if brand.name != "دارما":
+        if brand.name not in {"دارما", "Novani"}:
             cost_map = {
                 (obj.color_id, obj.size_id): int(obj.unit_cost or 0)
                 for obj in InventoryModelCost.objects.filter(brand=brand, color_id__in=color_ids)
@@ -134,6 +136,7 @@ def inventory(request):
                     color,
                     cost_map=cost_map,
                     darma_current_cost=darma_current_cost,
+                    novani_current_cost=novani_current_cost,
                 )
                 capital = total * unit_cost
                 cells.append({
@@ -169,6 +172,7 @@ def inventory(request):
         "grand_qty": grand_qty,
         "grand_value": grand_value,
         "darma_current_cost": darma_current_cost,
+        "novani_current_cost": novani_current_cost,
         "single_table": bool(brand and brand.name == "Novani"),
     })
 
@@ -180,13 +184,18 @@ def add_color_model(request):
     code = (request.POST.get("code") or "").strip()
     requested_unit_cost = _int(request.POST.get("unit_cost"))
     brand = Brand.objects.filter(id=request.POST.get("brand"), name__in=INVENTORY_BRANDS).first()
-    unit_cost = int(darma_cost_for()) if brand and brand.name == "دارما" else requested_unit_cost
+    if brand and brand.name == "دارما":
+        unit_cost = int(darma_cost_for())
+    elif brand and brand.name == "Novani":
+        unit_cost = int(novani_cost_for())
+    else:
+        unit_cost = requested_unit_cost
 
     if not name:
         messages.error(request, "نام رنگ / مدل را وارد کن.")
     elif not brand:
         messages.error(request, "برند موجودی معتبر نیست.")
-    elif brand.name != "دارما" and unit_cost <= 0:
+    elif brand.name not in {"دارما", "Novani"} and unit_cost <= 0:
         messages.error(request, "قیمت تمام‌شده هر عدد را وارد کن.")
     else:
         color, _ = Color.objects.get_or_create(name=name, defaults={"code": code, "active": True})
@@ -212,19 +221,17 @@ def add_color_model(request):
                     location=khorshid,
                     defaults={"qty": 0},
                 )
-            # Darma's accounting cost has exactly one source: darma_cost_v55.
-            # Do not create another per-color/per-size cost row from this form.
-            if brand.name != "دارما":
+            if brand.name not in {"دارما", "Novani"}:
                 InventoryModelCost.objects.update_or_create(
                     brand=brand,
                     color=color,
                     size=size,
                     defaults={"unit_cost": unit_cost},
                 )
-        if brand.name == "دارما":
+        if brand.name in {"دارما", "Novani"}:
             messages.success(
                 request,
-                f"«{name}» به موجودی دارما اضافه شد؛ بهای تمام‌شده از نرخ مرکزی {unit_cost:,} تومان خوانده می‌شود.",
+                f"«{name}» به موجودی {brand.name} اضافه شد؛ بهای تمام‌شده از نرخ مرکزی {unit_cost:,} تومان خوانده می‌شود.",
             )
         else:
             messages.success(request, f"«{name}» فقط به کاتالوگ موجودی {brand.name} اضافه شد.")
