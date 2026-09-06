@@ -160,12 +160,19 @@ def payments(request):
     receipt_month_total = int(
         DigikalaSettlement.objects.filter(date__gte=month_start, date__lt=month_next).aggregate(v=Sum("amount"))["v"] or 0
     )
+    payment_rows = _payment_rows() if section == "payments" else []
+    elastic_multi_payloads = {
+        str(row.id): row.purchase_data
+        for row in payment_rows
+        if (row.purchase_data or {}).get("k") == MULTI_KIND
+    }
     return render(
         request,
         "core/payments_v60.html",
         {
             "section": section,
-            "payment_rows": _payment_rows() if section == "payments" else [],
+            "payment_rows": payment_rows,
+            "elastic_multi_payloads": elastic_multi_payloads,
             "receipt_rows": v21._receipt_rows() if section == "receipts" else [],
             "today_j": format_jalali(date.today()),
             "mellat_balance": v21.mellat_balance(),
