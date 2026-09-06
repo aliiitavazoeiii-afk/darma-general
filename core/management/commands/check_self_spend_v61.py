@@ -53,15 +53,16 @@ class Command(BaseCommand):
                 if marker not in text:
                     raise CommandError(f"V61 source marker missing: {relative}: {marker}")
 
-        for url, expected in {
-            "/payments/": "core.business_tools_v61",
-            "/payments/add/": "core.business_tools_v61",
-            "/payments/1/edit/": "core.business_tools_v61",
-            "/payments/1/delete/": "core.business_tools_v61",
-        }.items():
-            module = resolve(url).func.__module__
-            if module != expected:
-                raise CommandError(f"V61 route mismatch: {url} -> {module}, expected {expected}")
+        route_expectations = {
+            "/payments/": v61.payments,
+            "/payments/add/": v61.payment_add,
+            "/payments/1/edit/": v61.payment_update,
+            "/payments/1/delete/": v61.payment_delete,
+        }
+        for url, expected in route_expectations.items():
+            active = resolve(url).func
+            if active is not expected:
+                raise CommandError(f"V61 route mismatch: {url} is not the V61 callable")
 
         if v61.PAYEE_LABELS.get(v61.SELF_PAYEE) != "خودم":
             raise CommandError("V61 personal payee label is not registered")
