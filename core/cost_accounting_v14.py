@@ -2,16 +2,12 @@ from .darma_cost_v55 import darma_cost_for
 from .finance import digikala_fee_for_unit
 from .final_services import inventory_unit_cost
 from .models import SaleSnapshot
+from .novani_cost_v59 import novani_cost_for
 from .takvin_pricing_v17 import takvin_cost_for
 
 
 def darma_actual_unit_cost(line, ps=None, stock_brand_id=None):
-    """Compatibility wrapper for the canonical date-effective Darma cost.
-
-    V55 intentionally ignores color/size InventoryModelCost for Darma accounting.
-    Historical SaleSnapshot rows remain frozen; only new/rebuilt snapshots call
-    this function and receive the rule effective on the sale date.
-    """
+    """Compatibility wrapper for the canonical date-effective Darma cost."""
     return int(darma_cost_for(line.day.date))
 
 
@@ -22,11 +18,11 @@ def snapshot_sale_line(line, ps=None, price=None):
     snap.pack_qty = int(ps.product.pack_qty or 0)
     brand_name = ps.product.brand.name
     if brand_name in {"دارما", "انبارش"}:
-        # Darma and Anbaresh (a Darma-backed sales channel) share one canonical
-        # per-short accounting cost, frozen by the sale date.
         snap.unit_cost = int(darma_cost_for(line.day.date))
+    elif brand_name == "Novani":
+        # V59: Novani COGS is frozen from the single rule effective on sale date.
+        snap.unit_cost = int(novani_cost_for(line.day.date))
     elif brand_name == "تکوین":
-        # The rule effective on the SALE DATE is frozen into the snapshot.
         snap.unit_cost = takvin_cost_for(ps.size, line.day.date)
     elif ps.unit_cost:
         snap.unit_cost = int(ps.unit_cost)
