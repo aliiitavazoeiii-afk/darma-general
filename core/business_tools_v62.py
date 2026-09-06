@@ -15,6 +15,15 @@ from .finance_excel_v9 import digikala_receivable_total
 from .material_flow import COLOR_LABELS
 from .material_purchase_v14 import purchase_data_for_payment
 from .models import BusinessPayment, DigikalaSettlement
+from .payment_source_v63 import (
+    SOURCE_CHOICES,
+    SOURCE_LABELS,
+    SOURCE_MELAT,
+    SOURCE_MOFID,
+    adjust_source_account,
+    normalize_source,
+    source_balance,
+)
 from .self_spend_v62 import SELF_PAYEE, adjust_self_tracking
 
 
@@ -29,7 +38,8 @@ PAYEE_LABELS[SELF_PAYEE] = "خودم"
 MATERIAL_PAYEES = v60.MATERIAL_PAYEES
 
 
-def _parse_payment_post(post):
+def _parse_payment_post(post, default_source=SOURCE_MELAT):
+    source = normalize_source(post.get("source_account") or default_source)
     payee = (post.get("payee") or "").strip()
 
     # Old edit forms / legacy callers may still carry pedram. Normalize it to tailor.
@@ -52,15 +62,43 @@ def _parse_payment_post(post):
             "purchase": None,
             "invoice": 0,
             "prepayment_title": None,
+            "source_account": source,
         }
 
     if payee not in {key for key, _label in PAYEE_CHOICES}:
         raise ValueError("دریافت‌کننده پرداخت معتبر نیست.")
-    return v60._parse_payment_post(post)
+    parsed = v60._parse_payment_post(post)
+    parsed["source_account"] = source
+    return parsed
+
+
+def _payment_source(payment):
+    return normalize_source(getattr(payment, "source_account", SOURCE_MELAT))
+
+
+def _reroute_legacy_apply_from_mellat(payment):
+    """V60 applies cash to Mellat; move that exact debit to the selected source."""
+    source = _payment_source(payment)
+    if source == SOURCE_MELAT:
+        return
+    amount = int(payment.amount or 0)
+    adjust_source_account(SOURCE_MELAT, amount)
+    adjust_source_account(source, -amount)
+
+
+def _reroute_legacy_reverse_from_mellat(payment):
+    """V60 reverse restores Mellat; move that exact restoration to the original source."""
+    source = _payment_source(payment)
+    if source == SOURCE_MELAT:
+        return
+    amount = int(payment.amount or 0)
+    adjust_source_account(SOURCE_MELAT, -amount)
+    adjust_source_account(source, amount)
 
 
 def _apply_full(payment, parsed):
     v60._apply_full(payment, parsed)
+    _reroute_legacy_apply_from_mellat(payment)
     if payment.payee == SELF_PAYEE:
         adjust_self_tracking(int(payment.amount or 0))
 
@@ -69,12 +107,30 @@ def _reverse_full(payment):
     if payment.payee == SELF_PAYEE:
         adjust_self_tracking(-int(payment.amount or 0))
     v60._reverse_full(payment)
+    _reroute_legacy_reverse_from_mellat(payment)
+
+
+def _apply_material_purchase_finance_only(payment):
+    v60.v22._apply_material_purchase_finance_only(payment)
+    _reroute_legacy_apply_from_mellat(payment)
+
+
+def _reverse_material_purchase_finance_only(payment):
+    v60.v22._reverse_material_purchase_finance_only(payment)
+    _reroute_legacy_reverse_from_mellat(payment)
+
+
+def _save_payment_fields(payment, parsed):
+    v60._save_payment_fields(payment, parsed)
+    payment.source_account = normalize_source(parsed.get("source_account"))
+    payment.save(update_fields=["source_account"])
 
 
 def _payment_rows():
     rows = v60._payment_rows()
     for row in rows:
         row.payee_label = PAYEE_LABELS.get(row.payee, row.payee)
+        row.source_account_label = SOURCE_LABELS.get(_payment_source(row), "ملت")
     return rows
 
 
@@ -98,6 +154,10 @@ def payments(request):
         for row in payment_rows
         if (row.purchase_data or {}).get("k") == v60.MULTI_KIND
     }
+    payment_source_payloads = {
+        str(row.id): _payment_source(row)
+        for row in payment_rows
+    }
     return render(
         request,
         "core/payments_v62.html",
@@ -105,13 +165,16 @@ def payments(request):
             "section": section,
             "payment_rows": payment_rows,
             "elastic_multi_payloads": elastic_multi_payloads,
+            "payment_source_payloads": payment_source_payloads,
             "receipt_rows": v21._receipt_rows() if section == "receipts" else [],
             "today_j": format_jalali(date.today()),
             "mellat_balance": v21.mellat_balance(),
+            "mofid_balance": source_balance(SOURCE_MOFID),
             "tailor_balance": v21.tailor_balance(),
             "takvin_debt": int(v21._takvin_setting().value or 0),
             "digikala_receivable": digikala_receivable_total(),
             "payees": PAYEE_CHOICES,
+            "payment_source_choices": SOURCE_CHOICES,
             "material_colors": list(COLOR_LABELS.items()),
             "payment_month_total": payment_month_total,
             "receipt_month_total": receipt_month_total,
@@ -129,22 +192,24 @@ def payment_add(request):
             payment = BusinessPayment.objects.create(
                 date=parsed["date"],
                 payee=parsed["payee"],
+                source_account=parsed["source_account"],
                 amount=parsed["paid"],
                 note=v60.encode_purchase_note(parsed["purchase"]) if parsed["purchase"] else parsed["note"],
             )
             _apply_full(payment, parsed)
+        source_label = SOURCE_LABELS[parsed["source_account"]]
         if parsed["payee"] == SELF_PAYEE:
             messages.success(
                 request,
-                f"پرداخت به خودم {parsed['paid']:,} تومان ثبت شد؛ ملت و سرمایه به همین مقدار کم شدند و حساب «خودم» به همین مقدار زیاد شد.",
+                f"پرداخت به خودم {parsed['paid']:,} تومان از حساب {source_label} ثبت شد؛ سرمایه به همین مقدار کم شد و حساب «خودم» به همین مقدار زیاد شد.",
             )
         elif parsed["purchase"]:
             messages.success(
                 request,
-                f"پرداخت ثبت شد؛ ارزش خرید {v60._invoice_value(parsed['purchase']):,} تومان و پرداخت واقعی {parsed['paid']:,} تومان بود. موجودی مواد هم اعمال شد.",
+                f"پرداخت از حساب {source_label} ثبت شد؛ ارزش خرید {v60._invoice_value(parsed['purchase']):,} تومان و پرداخت واقعی {parsed['paid']:,} تومان بود. موجودی مواد هم اعمال شد.",
             )
         else:
-            messages.success(request, "پرداخت ثبت شد.")
+            messages.success(request, f"پرداخت از حساب {source_label} ثبت شد.")
     except Exception as exc:
         messages.error(request, f"پرداخت ثبت نشد و کل عملیات برگشت: {exc}")
     return redirect("/payments/?section=payments")
@@ -154,9 +219,9 @@ def payment_add(request):
 @require_POST
 def payment_update(request, payment_id):
     try:
-        parsed = _parse_payment_post(request.POST)
         with transaction.atomic():
             payment = get_object_or_404(BusinessPayment.objects.select_for_update(), id=payment_id)
+            parsed = _parse_payment_post(request.POST, default_source=_payment_source(payment))
             old_purchase = purchase_data_for_payment(payment) if payment.payee in MATERIAL_PAYEES else None
             same_purchase = bool(
                 old_purchase
@@ -166,15 +231,15 @@ def payment_update(request, payment_id):
             )
 
             if same_purchase:
-                v60.v22._reverse_material_purchase_finance_only(payment)
-                v60._save_payment_fields(payment, parsed)
+                _reverse_material_purchase_finance_only(payment)
+                _save_payment_fields(payment, parsed)
                 v60.create_purchase_ledger(payment, parsed["purchase"])
-                v60.v22._apply_material_purchase_finance_only(payment)
+                _apply_material_purchase_finance_only(payment)
             else:
                 _reverse_full(payment)
-                v60._save_payment_fields(payment, parsed)
+                _save_payment_fields(payment, parsed)
                 _apply_full(payment, parsed)
-        messages.success(request, "پرداخت ویرایش شد؛ اثر مالی و موجودی به‌صورت اتمیک همگام شد.")
+        messages.success(request, "پرداخت ویرایش شد؛ حساب مبدا، اثر مالی و موجودی به‌صورت اتمیک همگام شد.")
     except Exception as exc:
         messages.error(request, f"ویرایش پرداخت انجام نشد و کل عملیات برگشت: {exc}")
     return redirect("/payments/?section=payments")
@@ -188,15 +253,16 @@ def payment_delete(request, payment_id):
             payment = get_object_or_404(BusinessPayment.objects.select_for_update(), id=payment_id)
             was_self = payment.payee == SELF_PAYEE
             amount = int(payment.amount or 0)
+            source_label = SOURCE_LABELS.get(_payment_source(payment), "ملت")
             _reverse_full(payment)
             payment.delete()
         if was_self:
             messages.success(
                 request,
-                f"پرداخت به خودم {amount:,} تومان حذف شد؛ مبلغ به ملت برگشت و از حساب «خودم» کم شد.",
+                f"پرداخت به خودم {amount:,} تومان حذف شد؛ مبلغ به حساب {source_label} برگشت و از حساب «خودم» کم شد.",
             )
         else:
-            messages.success(request, "پرداخت حذف شد و اثر مالی/موجودی خودش دقیقاً برگشت.")
+            messages.success(request, f"پرداخت حذف شد و اثر مالی/موجودی خودش به حساب {source_label} برگشت.")
     except Exception as exc:
         messages.error(request, f"پرداخت حذف نشد: {exc}")
     return redirect("/payments/?section=payments")
