@@ -29,6 +29,7 @@ urlpatterns = [
 
     path("returns/", returns_v37.returns_home, name="returns"),
     path("returns/apply/", returns_v37.return_apply, name="return_apply"),
+    path("returns/<str:group>/delete/", returns_v37.return_delete, name="return_delete"),
 
     path("report/", report_v9.report, name="report"),
     path("report/manual/", report_v9.manual_report_action, name="manual_report_action"),
