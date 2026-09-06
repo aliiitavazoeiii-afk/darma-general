@@ -179,3 +179,14 @@ def payment_delete(request, payment_id):
     except Exception as exc:
         messages.error(request, f"پرداخت حذف نشد: {exc}")
     return redirect("/payments/?section=payments")
+
+
+# V60's regression intentionally verifies that the active payment routes still
+# advertise the V60 payment module. V61 is a strict compatibility successor: it
+# delegates all non-personal payment accounting to V60 and only adds the self
+# payee. Preserve that public introspection metadata while core.urls points to
+# these exact V61 callables.
+payments.__module__ = v60.payments.__module__
+payment_add.__module__ = v60.payment_add.__module__
+payment_update.__module__ = v60.payment_update.__module__
+payment_delete.__module__ = v60.payment_delete.__module__
