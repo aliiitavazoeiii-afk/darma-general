@@ -2,7 +2,7 @@
 
 This directory is the authoritative, detailed continuation pack for a new AI/chat.
 
-Read `../00_NEW_CHAT_READ_FIRST.md` first. As of 2026-09-03 that entrypoint contains the complete current-chat handoff through V50, including canonical formulas/rules, the daily-report V48 incident, V49/V50 inventory-operation semantics, deployment-status uncertainty, the UI rollback history, exact do-not-repeat rules, and the one-shot next-chat prompt. Then continue through the numbered context files below; V51, V52, V53, V54, V55, V56, V57 and V58 are newer follow-ups after that handoff.
+Read `../00_NEW_CHAT_READ_FIRST.md` first. As of 2026-09-03 that entrypoint contains the complete current-chat handoff through V50, including canonical formulas/rules, the daily-report V48 incident, V49/V50 inventory-operation semantics, deployment-status uncertainty, the UI rollback history, exact do-not-repeat rules, and the one-shot next-chat prompt. Then continue through the numbered context files below; V51 through V59 are newer follow-ups after that handoff.
 
 Then read all numbered files in order:
 
@@ -42,20 +42,23 @@ Then read all numbered files in order:
 34. `34_DARMA_INVENTORY_PAGE_COST_V56.md` — fixes the active inventory page that still valued Darma from legacy color×size `InventoryModelCost`; Darma cell/size/grand inventory values now use only the current V55 central rate and the add-color UI no longer exposes a separate Darma cost input.
 35. `35_RETURNS_REPORT_EDIT_DELETE_V57.md` — exposes existing standalone-return V37 groups as visible return forms under `/returns/`, with grouped view, date/quantity edit, and guarded exact deletion that reverses only the return's own HOME adjustments/movements while preserving later unrelated stock movements and all sales/Digikala/accounting ledgers.
 36. `36_RETURNS_MULTI_SIZE_V58.md` — removes the one-size-at-a-time entry workflow for new returns: all allowed sizes render under one shared date/form and one atomic submit, while each populated size remains a separate V57 report for exact view/edit/delete compatibility.
+37. `37_COST_RULES_TAKVIN_PURCHASE_V59.md` — adds a single date-effective Novani per-short accounting cost parallel to Darma and fixes the active Takvin purchase page so purchases add exact HOME inventory alongside debt; includes an idempotent repair for today's legacy purchase rows that increased debt without adding stock.
 
 Important supersession rule for V46: older statements in `01`/`05` that sale logic may auto-transfer KHORSHID -> HOME are obsolete. `24_NO_AUTO_TRANSFER_V46.md` and the explicit V46 section in `00_NEW_CHAT_READ_FIRST.md` are authoritative for sale location behavior.
 
-Important supersession rule for V55/V56: older statements that Darma finished inventory, Darma sale COGS, or the Darma inventory-page value should use per-color/per-size `InventoryModelCost` are obsolete. V55 makes the date-effective single Darma per-short cost the accounting source of truth, and V56 closes the remaining active inventory-page exception. `InventoryModelCost` may remain for non-Darma/internal data but must not drive Darma COGS, current Darma capital valuation, or Darma inventory-page totals.
+Important supersession rule for V55/V56/V59: Darma and Novani accounting costs are single date-effective per-short sources. Darma uses `darma_cost_for(date)` and Novani uses `novani_cost_for(date)`. Legacy per-color/per-size `InventoryModelCost` and ProductSize unit-cost fields must not drive Darma/Novani current capital valuation or sale COGS. Takvin remains size-specific and date-effective through its own rule set.
 
 Important V57/V58 return rule: standalone V37 returns are grouped from their existing `[standalone-return-v37] group=...` `InventoryAdjustment` audit rows. Editing/deleting a return may change only that return's HOME stock contribution and its exact adjustment/movement records. V58 new-entry submits may contain multiple sizes, but each populated size keeps its own group and all groups from one submit are created atomically. Sales, Digikala receivable, fees, account entries, payments, and unrelated stock events must remain untouched.
+
+Important V59 Takvin-purchase rule: the active `/takvin/` Excel-style purchase page represents supplier debt in `ExcelManualSetting(key="takvin_debt")` and physical goods in Takvin HOME `StockBalance` plus exact `InventoryMovement.PURCHASE`. Saving a purchase must apply both sides once. Do not use a second Account.TAKVIN purchase ledger in this page's path.
 
 After these, read `UI_SAFETY_V37.md` through `UI_SAFETY_V47.md`, then current `core/urls.py`, exact active source files, and older handoff docs last.
 
 When older docs conflict with this directory or current active code, the later explicit business-rule document + current active code wins.
 
-The last numerically recorded production checkpoint remains V38 until a newer deployment's actual final invariant block is posted by the user. V46/V47/V48/V49/V50/V51/V52/V53/V54/V55/V56/V57/V58 must not be called fully production-confirmed without their successful server output markers. V49 does have direct behavioral confirmation from the user that the new KHORSHID -> HOME transfer worked and was "عالی", but that is not the same as a preserved full invariant success block. V50 current source exists on GitHub, but the recorded first attempt used the V49 deploy script and stopped safely at the source-scope guard because V50 files were present; the correct V50 final success marker has not yet been posted in the handoff. V51 is GitHub-prepared and requires `SUCCESS: INVENTORY ADJUSTMENT DELETE V51 DEPLOYED` from the VPS before it can be called live. V52 is GitHub-prepared and requires `SUCCESS: INVENTORY THRESHOLD HIGHLIGHTS V52 DEPLOYED` before it can be called live. V53 is GitHub-prepared and requires `SUCCESS: INVENTORY RED STRENGTH V53 DEPLOYED` before it can be called live. V54 is GitHub-prepared and requires `SUCCESS: DAILY SALE DAY DELETE V54 DEPLOYED` before it can be called live. V55 is GitHub-prepared and requires both `SUCCESS: DARMA COST RULE V55 DEPLOYED` and `SUCCESS: DARMA COST SHAHRIVAR V55 REPAIR APPLIED` before it can be called live. V56 is GitHub-prepared and requires `SUCCESS: DARMA INVENTORY PAGE COST V56 DEPLOYED` before it can be called live. V57 is GitHub-prepared and requires `SUCCESS: RETURNS REPORT EDIT DELETE V57 DEPLOYED` before it can be called live. V58 is GitHub-prepared and requires `SUCCESS: RETURNS MULTI-SIZE V58 DEPLOYED` before it can be called live.
+The last numerically recorded production checkpoint remains V38 until a newer deployment's actual final invariant block is posted by the user. V46 through V59 must not be called fully production-confirmed without their successful server output markers. V49 does have direct behavioral confirmation from the user that the new KHORSHID -> HOME transfer worked and was "عالی", but that is not the same as a preserved full invariant success block. V55 requires both `SUCCESS: DARMA COST RULE V55 DEPLOYED` and `SUCCESS: DARMA COST SHAHRIVAR V55 REPAIR APPLIED`; V56 requires `SUCCESS: DARMA INVENTORY PAGE COST V56 DEPLOYED`; V57 requires `SUCCESS: RETURNS REPORT EDIT DELETE V57 DEPLOYED`; V58 requires `SUCCESS: RETURNS MULTI-SIZE V58 DEPLOYED`; V59 requires `SUCCESS: NOVANI COST RULE + TAKVIN PURCHASE V59 DEPLOYED`, and when missing today's purchase stock exists also `SUCCESS: TODAY TAKVIN PURCHASE STOCK V59 REPAIRED`.
 
-Latest confirmed numeric production snapshot:
+Latest confirmed numeric production snapshot in the historical handoff:
 
 ```text
 CAPITAL=5430972371
@@ -68,5 +71,7 @@ NOVANI=3630
 SALES=202
 ACCOUNT_ENTRIES=206
 ```
+
+These are historical checkpoint values, not targets. Current production legitimately differs after subsequent business activity.
 
 Standing rule: after every important change update context; after every confirmed successful deployment update the live checkpoint with actual server output.
