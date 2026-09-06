@@ -2,6 +2,7 @@ from decimal import Decimal, ROUND_HALF_UP
 
 from .darma_cost_v55 import darma_cost_for
 from .models import AppSetting
+from .novani_cost_v59 import novani_cost_for
 
 
 def _setting(key, default):
@@ -52,10 +53,9 @@ def sale_line_metrics(line):
     else:
         brand_name = line.product_size.product.brand.name
         if brand_name in {"دارما", "انبارش"}:
-            # V55 safety fallback: even a legacy/missing Snapshot must resolve Darma
-            # COGS from the one date-effective source of truth, never ProductSize or
-            # color/size InventoryModelCost.
             unit_cost = int(darma_cost_for(line.day.date))
+        elif brand_name == "Novani":
+            unit_cost = int(novani_cost_for(line.day.date))
         else:
             unit_cost = int(line.product_size.unit_cost or 0)
 
