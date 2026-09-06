@@ -2,6 +2,7 @@ from django.db.models import Avg, Sum
 
 from .darma_cost_v55 import darma_cost_for
 from .models import InventoryModelCost, ProductSize, StockBalance
+from .novani_cost_v59 import novani_cost_for
 from .takvin_pricing_v17 import takvin_cost_for
 
 
@@ -25,6 +26,7 @@ def finished_inventory_value_v17():
         for row in InventoryModelCost.objects.all()
     }
     current_darma_cost = int(darma_cost_for())
+    current_novani_cost = int(novani_cost_for())
     total = 0
     rows = StockBalance.objects.values(
         "brand_id", "brand__name", "color_id", "size_id", "size__name"
@@ -37,10 +39,11 @@ def finished_inventory_value_v17():
         qty = int(row["qty"] or 0)
         key = (row["brand_id"], row["color_id"], row["size_id"])
         if row["brand__name"] == "دارما":
-            # V55: every currently owned Darma short has one accounting value,
-            # independent of color/size. A date-effective rule revalues the whole
-            # current Darma inventory when it becomes effective.
             unit_cost = current_darma_cost
+        elif row["brand__name"] == "Novani":
+            # V59: one date-effective accounting cost for every Novani short.
+            # Legacy color/size InventoryModelCost rows are not an accounting source.
+            unit_cost = current_novani_cost
         elif row["brand__name"] == "تکوین":
             unit_cost = takvin_cost_for(row["size__name"])
         else:
