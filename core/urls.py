@@ -3,7 +3,7 @@ from django.urls import path
 from . import (
     business_tools_v14,
     business_tools_v21,
-    business_tools_v60,
+    business_tools_v61,
     calculator_v37,
     calendar_views,
     catalog_v5,
@@ -73,10 +73,10 @@ urlpatterns = [
     path("material-report/<int:block_id>/delete/", material_report_v20.material_block_delete, name="material_block_delete"),
     path("takvin/", takvin_v5.takvin_excel, name="takvin"),
 
-    path("payments/", business_tools_v60.payments, name="payments"),
-    path("payments/add/", business_tools_v60.payment_add, name="payment_add"),
-    path("payments/<int:payment_id>/edit/", business_tools_v60.payment_update, name="payment_update"),
-    path("payments/<int:payment_id>/delete/", business_tools_v60.payment_delete, name="payment_delete"),
+    path("payments/", business_tools_v61.payments, name="payments"),
+    path("payments/add/", business_tools_v61.payment_add, name="payment_add"),
+    path("payments/<int:payment_id>/edit/", business_tools_v61.payment_update, name="payment_update"),
+    path("payments/<int:payment_id>/delete/", business_tools_v61.payment_delete, name="payment_delete"),
     path("payments/mellat/set/", business_tools_v21.mellat_set, name="mellat_set"),
     path("payments/receipts/add/", business_tools_v21.receipt_add, name="receipt_add"),
     path("payments/receipts/<int:receipt_id>/edit/", business_tools_v21.receipt_update, name="receipt_update"),
