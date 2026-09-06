@@ -307,6 +307,12 @@ class BusinessPayment(models.Model):
     TAILOR = "tailor"
     FABRIC = "fabric"
     ELASTIC = "elastic"
+    SOURCE_MELAT = "melat"
+    SOURCE_MOFID = "mofid"
+    SOURCE_CHOICES = [
+        (SOURCE_MELAT, "ملت"),
+        (SOURCE_MOFID, "مفید"),
+    ]
     PAYEE_CHOICES = [
         (PEDRAM, "پدرام"),
         (TAILOR, "خیاط"),
@@ -315,6 +321,7 @@ class BusinessPayment(models.Model):
     ]
     date = models.DateField()
     payee = models.CharField(max_length=20, choices=PAYEE_CHOICES, db_index=True)
+    source_account = models.CharField(max_length=20, choices=SOURCE_CHOICES, default=SOURCE_MELAT, db_index=True)
     amount = models.PositiveBigIntegerField()
     note = models.CharField(max_length=250, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
