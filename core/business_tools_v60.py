@@ -12,7 +12,7 @@ from . import business_tools_v22 as v22
 from .dateutils import format_jalali, parse_jalali_date
 from .excel_views import _int
 from .finance_excel_v9 import digikala_receivable_total
-from .material_flow import COLOR_LABELS
+from .material_flow import COLOR_LABELS, q
 from .material_purchase_v14 import create_purchase_ledger, ledger_for_payment, purchase_data_for_payment
 from .material_purchase_v60 import (
     MULTI_KIND,
@@ -22,7 +22,6 @@ from .material_purchase_v60 import (
     has_multi_elastic_details,
     has_multi_elastic_fields,
     invoice_value as multi_invoice_value,
-    purchase_signature as multi_purchase_signature,
     purchase_summary,
     reverse_purchase_stock,
 )
@@ -40,9 +39,44 @@ def _invoice_value(data):
     return int(v22._invoice_value(data) or 0)
 
 
+def _elastic_signature_rows(data):
+    if not data:
+        return None
+    if data.get("k") == MULTI_KIND:
+        rows = [
+            (
+                str(item.get("m") or ""),
+                q(item.get("q16")),
+                int(item.get("p16") or 0),
+                q(item.get("q25")),
+                int(item.get("p25") or 0),
+            )
+            for item in (data.get("items") or [])
+        ]
+        return tuple(sorted(rows))
+    if data.get("k") == "elastic":
+        return (
+            (
+                str(data.get("m") or ""),
+                q(data.get("q16")),
+                int(data.get("p16") or 0),
+                q(data.get("q25")),
+                int(data.get("p25") or 0),
+            ),
+        )
+    return None
+
+
 def _purchase_signature(data):
-    if data and data.get("k") == MULTI_KIND:
-        return multi_purchase_signature(data)
+    """Physical signature normalized across legacy one-color and V60 multi elastic.
+
+    This preserves V22's finance-only edit behavior: opening an old one-color elastic
+    payment in the new all-color matrix and changing only date/note/actual-paid must
+    not unnecessarily reverse raw stock merely because the payload format upgraded.
+    """
+    elastic_rows = _elastic_signature_rows(data)
+    if elastic_rows is not None:
+        return ("elastic", elastic_rows)
     return v22._purchase_signature(data)
 
 
