@@ -128,7 +128,7 @@ CHANGED=$(git diff --name-only "$BASE"..HEAD)
 echo "$CHANGED"
 for f in $CHANGED; do
   case "$f" in
-    core/sale_price_v60.py|core/sale_entry_v60.py|core/daily_order_views_v60.py|core/pricing_v60.py|core/settings_product_v60.py|core/material_purchase_v60.py|core/business_tools_v60.py|core/static/core/payments_elastic_multi_v60.js|templates/core/settings_product_form_v60.html|templates/core/settings_products_v60.html|templates/core/payments_v60.html|core/management/commands/check_sale_price_elastic_multi_v60.py|core/urls.py|server_sale_price_elastic_multi_v60.sh|docs/PROJECT_CONTEXT/38_SALE_PRICE_ELASTIC_MULTI_V60.md|docs/PROJECT_CONTEXT/README.md) ;;
+    core/sale_price_v60.py|core/sale_entry_v60.py|core/daily_order_views_v60.py|core/pricing_v60.py|core/settings_product_v60.py|core/settings_rules_v17.py|core/material_purchase_v60.py|core/business_tools_v60.py|core/static/core/payments_elastic_multi_v60.js|templates/core/settings_product_form_v60.html|templates/core/settings_products_v60.html|templates/core/payments_v60.html|core/management/commands/check_sale_price_elastic_multi_v60.py|core/urls.py|server_sale_price_elastic_multi_v60.sh|docs/PROJECT_CONTEXT/38_SALE_PRICE_ELASTIC_MULTI_V60.md|docs/PROJECT_CONTEXT/README.md) ;;
     *) fail "unexpected V60 file changed: $f" ;;
   esac
 done
