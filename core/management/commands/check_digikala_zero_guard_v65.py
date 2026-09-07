@@ -5,6 +5,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.db.models import Sum
 
+from core.digikala_client_v40 import DigikalaAPIError
 from core.digikala_zero_guard_v65 import (
     ZERO_STATE_PREFIX,
     _marker_key,
@@ -25,6 +26,11 @@ class Command(BaseCommand):
             "--live-map",
             action="store_true",
             help="GET current Digikala variants and print read-only mapping summary. No write endpoint is called.",
+        )
+        parser.add_argument(
+            "--allow-network-failure",
+            action="store_true",
+            help="For safe deploy only: if Digikala GET times out, report deferred mapping and exit successfully. Writes remain absent.",
         )
 
     def _source_checks(self):
@@ -259,7 +265,19 @@ class Command(BaseCommand):
         self.stdout.write("DIGIKALA WRITE MODE = ABSENT / LOCKED")
 
         if options["live_map"]:
-            self._live_map()
+            try:
+                self._live_map()
+            except DigikalaAPIError as exc:
+                if not options["allow_network_failure"]:
+                    raise
+                self.stdout.write(
+                    self.style.WARNING(
+                        "LIVE DIGIKALA MAP DEFERRED: network/API read failed after safe retries. "
+                        f"{exc}"
+                    )
+                )
+                self.stdout.write("DIGIKALA WRITE CALLS = 0")
+                self.stdout.write("BOT PREVIEW WILL RETRY LATER; NO LISTING WAS CHANGED")
 
         self.stdout.write("NO BUSINESS DATA CHANGED")
         self.stdout.write(self.style.SUCCESS("SUCCESS: DIGIKALA ZERO GUARD V65 CHECK PASSED"))
