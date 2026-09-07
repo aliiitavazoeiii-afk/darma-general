@@ -1,3 +1,5 @@
+@import url("https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800;900&display=swap");
+
 :root{
   --bg:#050b0d;--bg2:#07110f;--panel:#0c1719;--panel2:#101d1f;--line:rgba(167,255,214,.12);
   --text:#f0f7f4;--muted:#8ea5a0;--green:#42ef9b;--green2:#16b86b;--danger:#ff6b6b;
@@ -40,3 +42,144 @@ linear-gradient(105deg,#073225 0%,#0b4630 38%,#061d1b 100%);box-shadow:0 0 0 1px
 @media(max-width:1100px){.kpi-grid{grid-template-columns:1fr 1fr}.dashboard-grid{grid-template-columns:1fr}.people-grid{grid-template-columns:1fr}.category-layout{grid-template-columns:1fr}.inline-action-form{grid-template-columns:1fr 1fr}.inline-action-form button{grid-column:span 2}}
 @media(max-width:760px){body{padding-bottom:72px}.app-shell{display:block}.sidebar{display:none}.topbar{height:60px;padding:0 17px}.top-kicker{display:none}.mobile-brand{display:block;font-size:1.18rem;font-weight:850}.content{padding:16px 13px 28px}.hero-card{min-height:160px;padding:24px 20px;border-radius:22px}.hero-copy{min-width:0}.hero-balance .money{font-size:1.75rem}.hero-note{font-size:.72rem}.wallet-icon{width:55px;height:55px;margin-right:12px}.moon{width:45px;height:45px}.kpi-grid{gap:9px;margin:10px 0;grid-template-columns:1fr 1fr}.kpi-card{min-height:100px;padding:13px;gap:9px}.kpi-card .kpi-icon{width:35px;height:35px}.kpi-card strong{font-size:1rem}.panel{padding:16px;border-radius:18px}.form-grid,.two-col-grid{grid-template-columns:1fr}.transaction{grid-template-columns:38px minmax(0,1fr) auto}.transaction>.icon-btn,.transaction>.row-actions{grid-column:2/4;justify-self:end}.transaction-icon{width:38px;height:38px}.filters{display:grid;grid-template-columns:1fr 1fr}.filters .grow{grid-column:span 2}.filters button{grid-column:span 2}.page-head{align-items:flex-start}.page-head-stats{display:none}.person-head{grid-template-columns:46px minmax(0,1fr)}.person-balance{grid-column:2;text-align:right}.inline-action-form{grid-template-columns:1fr}.inline-action-form button{grid-column:auto}.ledger-row{grid-template-columns:50px minmax(0,1fr) auto}.ledger-row form{grid-column:3}.category-admin-row{grid-template-columns:40px minmax(0,1fr) 34px 34px}.category-admin-row .status{grid-column:2}.daily-bar-row{grid-template-columns:74px 1fr 85px}.mobile-nav{position:fixed;display:grid;grid-template-columns:repeat(5,1fr);left:0;right:0;bottom:0;height:66px;background:rgba(6,15,17,.94);backdrop-filter:blur(18px);border-top:1px solid rgba(255,255,255,.08);z-index:50;padding-bottom:env(safe-area-inset-bottom)}.mobile-nav a{display:grid;place-items:center;align-content:center;gap:1px;color:#718781;font-size:1.15rem}.mobile-nav small{font-size:.58rem}.mobile-nav a.active{color:var(--green)}.mobile-nav .mobile-add span{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#19c875,#48f2a3);color:#03110a;margin-top:-18px;box-shadow:0 8px 24px rgba(44,235,143,.25)}.mobile-nav .mobile-add small{margin-top:-3px;color:#9cb4ae}}
 @media(max-width:440px){.hero-card{padding:20px 15px}.hero-balance{gap:5px}.hero-balance .money{font-size:1.5rem}.wallet-icon{display:none}.kpi-card{display:block}.kpi-card .kpi-icon{margin-bottom:8px}.kpi-grid{grid-template-columns:1fr 1fr}.bar-chart{height:145px}.panel-head{align-items:flex-start}.page-head{display:block}.page-head>.primary-btn{margin-top:10px}.category-admin-row{grid-template-columns:38px minmax(0,1fr) 32px 32px}.daily-bar-row{grid-template-columns:65px 1fr 74px;font-size:.68rem}}
+
+
+/* EXPENSE UI V2 — softer premium dashboard + sticky-date entry */
+body{
+  font-family:"Vazirmatn",Tahoma,Arial,sans-serif;
+  font-weight:400;
+  letter-spacing:0;
+  background:
+    radial-gradient(circle at 76% 0%,rgba(45,224,139,.11),transparent 30%),
+    radial-gradient(circle at 12% 56%,rgba(65,117,255,.055),transparent 34%),
+    linear-gradient(145deg,#04090b 0%,#071010 52%,#050b0d 100%);
+}
+body:before{
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:-1;
+  background-image:linear-gradient(rgba(255,255,255,.012) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.012) 1px,transparent 1px);
+  background-size:34px 34px;
+  mask-image:linear-gradient(to bottom,rgba(0,0,0,.45),transparent 72%);
+}
+.sidebar{
+  background:linear-gradient(180deg,rgba(5,18,18,.98),rgba(4,11,13,.99));
+  box-shadow:18px 0 70px rgba(0,0,0,.16);
+}
+.brand-mark{
+  width:42px;height:42px;display:grid;place-items:center;border-radius:14px;
+  background:linear-gradient(145deg,rgba(66,239,155,.16),rgba(66,239,155,.03));
+  border:1px solid rgba(66,239,155,.2);font-size:20px;
+}
+.brand strong{font-weight:800;letter-spacing:-.02em}.brand small{font-size:.68rem}
+.nav-list a{font-weight:600}.nav-list a.active{box-shadow:inset 0 0 30px rgba(66,239,155,.045),0 8px 30px rgba(0,0,0,.08)}
+.topbar{background:rgba(3,10,11,.58);border-bottom-color:rgba(255,255,255,.045)}
+.content{padding-top:22px}
+.welcome-row{
+  display:flex;justify-content:space-between;align-items:center;gap:22px;margin:4px 0 20px;padding:4px 3px;
+}
+.welcome-row h1{margin:3px 0 4px;font-size:1.5rem;letter-spacing:-.035em;font-weight:800}
+.welcome-row p{margin:0;color:var(--muted);font-size:.82rem}
+.welcome-badge{
+  min-width:150px;padding:13px 15px;border-radius:18px;border:1px solid rgba(66,239,155,.14);
+  background:linear-gradient(135deg,rgba(66,239,155,.08),rgba(255,255,255,.018));
+  display:grid;grid-template-columns:32px 1fr;align-items:center;box-shadow:0 15px 45px rgba(0,0,0,.14)
+}
+.welcome-badge>span{grid-row:1/3;font-size:22px;color:var(--green)}.welcome-badge strong{font-size:.8rem}.welcome-badge small{color:var(--muted);font-size:.63rem}
+.hero-card{
+  min-height:205px;border-radius:30px;border-color:rgba(72,243,158,.3);
+  background:
+    radial-gradient(circle at 68% 12%,rgba(127,255,187,.14),transparent 28%),
+    linear-gradient(115deg,#0a573a 0%,#083527 42%,#081b1b 100%);
+  box-shadow:0 26px 80px rgba(0,55,36,.22),inset 0 1px 0 rgba(255,255,255,.08);
+}
+.hero-card:after{content:"";position:absolute;inset:0;background:linear-gradient(120deg,rgba(255,255,255,.055),transparent 26%);pointer-events:none}
+.hero-copy .eyebrow{color:#a0ffd0;font-size:.82rem}.hero-balance .money{font-weight:800}.hero-note{max-width:460px}
+.kpi-card{
+  border-radius:22px;background:linear-gradient(145deg,rgba(17,31,32,.9),rgba(8,17,19,.92));
+  box-shadow:0 16px 50px rgba(0,0,0,.15),inset 0 1px 0 rgba(255,255,255,.025);
+  transition:transform .18s ease,border-color .18s ease;
+}
+.kpi-card:hover{transform:translateY(-2px);border-color:rgba(255,255,255,.14)}
+.kpi-card strong{font-weight:800;letter-spacing:-.025em}
+.panel{
+  background:
+    radial-gradient(circle at 0 0,rgba(66,239,155,.035),transparent 32%),
+    linear-gradient(145deg,rgba(13,26,28,.94),rgba(6,14,16,.96));
+  border-color:rgba(255,255,255,.075);
+  box-shadow:0 20px 65px rgba(0,0,0,.2),inset 0 1px 0 rgba(255,255,255,.025);
+}
+.expense-panel{
+  position:relative;overflow:hidden;border-color:rgba(66,239,155,.16);
+  background:
+    radial-gradient(circle at 85% 8%,rgba(66,239,155,.09),transparent 28%),
+    linear-gradient(145deg,rgba(12,31,27,.97),rgba(7,16,18,.97));
+}
+.expense-panel:before{
+  content:"";position:absolute;width:180px;height:180px;left:-90px;bottom:-100px;border-radius:50%;
+  background:rgba(65,239,156,.065);filter:blur(8px);pointer-events:none
+}
+.expense-panel>.panel-head,.expense-panel>.expense-form{position:relative;z-index:2}
+.expense-form{gap:16px}
+.expense-form label>span,.stack-form label>span{font-weight:650;color:#c4d2cf}
+.amount-input{
+  border-radius:18px;padding:7px 14px;background:linear-gradient(90deg,rgba(49,218,136,.08),rgba(6,17,17,.45));
+  border-color:rgba(72,243,158,.22);box-shadow:inset 0 1px 0 rgba(255,255,255,.025)
+}
+.amount-input input{font-size:2rem;font-weight:800}
+.category-choice span{font-weight:650;padding:9px 14px}
+.expense-form input,.expense-form select,.stack-form input,.stack-form select,.filters input,.filters select,.inline-action-form input{
+  background:rgba(3,12,13,.62);border-color:rgba(255,255,255,.085);border-radius:14px;
+}
+.date-input-shell{
+  position:relative;display:grid;grid-template-columns:34px minmax(0,1fr) auto;align-items:center;gap:8px;
+  min-height:52px;padding:0 10px;border-radius:15px;background:rgba(3,12,13,.64);
+  border:1px solid rgba(66,239,155,.16);transition:.18s
+}
+.date-input-shell:hover{border-color:rgba(66,239,155,.38);background:rgba(7,22,19,.75)}
+.date-input-shell .calendar-glyph{color:var(--green);font-size:1.25rem}
+.date-input-shell input{
+  border:0!important;background:transparent!important;box-shadow:none!important;padding:11px 4px!important;
+  font-weight:750;cursor:pointer!important;color:#f4fbf8!important
+}
+.date-input-shell small{white-space:nowrap;color:#76a694;font-size:.65rem}
+.date-control .jp-input{background-image:none!important;padding-left:4px!important}
+.save-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.save-expense-btn{min-width:170px;border-radius:15px;padding:13px 22px}
+.save-expense-btn:disabled{opacity:.65;cursor:wait}
+.save-status{
+  min-height:40px;display:flex;align-items:center;gap:8px;color:#78928b;font-size:.72rem;
+  padding:7px 11px;border-radius:12px;border:1px solid transparent;transition:.2s
+}
+.save-dot{width:7px;height:7px;border-radius:50%;background:#6a817a}
+.save-status.saving{color:#acd4c5;background:rgba(255,255,255,.025)}.save-status.saving .save-dot{background:#f4bd54;box-shadow:0 0 12px rgba(244,189,84,.55)}
+.save-status.success{color:#9ef5c5;background:rgba(66,239,155,.055);border-color:rgba(66,239,155,.11)}.save-status.success .save-dot{background:var(--green);box-shadow:0 0 12px rgba(66,239,155,.55)}
+.save-status.error{color:#ffaaa4;background:rgba(255,107,107,.05);border-color:rgba(255,107,107,.1)}.save-status.error .save-dot{background:#ff6b6b}
+.new-transaction{animation:expenseAdded .85s ease}
+@keyframes expenseAdded{0%{background:rgba(66,239,155,.16);transform:translateY(-4px)}100%{background:transparent;transform:none}}
+.transaction{border-bottom-color:rgba(255,255,255,.045)}.transaction-main strong{font-weight:700}.transaction-money strong{font-weight:750}
+.panel-head h2{font-weight:750;letter-spacing:-.02em}.eyebrow{font-weight:700}
+.primary-btn{font-weight:750;box-shadow:0 10px 32px rgba(25,211,122,.16)}
+.secondary-btn{font-weight:650}
+.profile-pill{background:rgba(255,255,255,.025);padding:7px 10px;border:1px solid rgba(255,255,255,.055);border-radius:999px}
+
+/* Theme the shared Jalali picker for this expense mini-app. */
+.jp-overlay{background:rgba(0,7,8,.78)!important;backdrop-filter:blur(12px)!important}
+.jp-modal{
+  background:linear-gradient(145deg,rgba(13,29,28,.98),rgba(5,14,15,.98))!important;
+  border:1px solid rgba(66,239,155,.16)!important;border-radius:24px!important;
+  box-shadow:0 35px 100px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.04)!important;
+  font-family:"Vazirmatn",Tahoma,Arial,sans-serif!important;padding:18px!important
+}
+.jp-title{font-weight:800!important}.jp-nav{border-color:rgba(66,239,155,.14)!important;background:rgba(66,239,155,.045)!important;color:#dff8eb!important}
+.jp-nav:hover{border-color:rgba(66,239,155,.55)!important;background:rgba(66,239,155,.1)!important}
+.jp-week span{color:#8fa9a1!important;font-weight:600!important}
+.jp-day{background:rgba(255,255,255,.025)!important;border-color:rgba(255,255,255,.06)!important;border-radius:12px!important;color:#eaf7f2!important}
+.jp-day:hover{border-color:rgba(66,239,155,.55)!important;background:rgba(66,239,155,.11)!important;transform:translateY(-2px)!important}
+.jp-day.today{box-shadow:inset 0 0 0 2px var(--green)!important;color:#a5ffd0!important}
+.jp-day.holiday{color:#ff948d!important;background:rgba(255,107,107,.035)!important;border-color:rgba(255,107,107,.1)!important}
+.jp-close{background:rgba(255,255,255,.035)!important;color:#aebfba!important;border-radius:12px!important}
+
+@media(max-width:760px){
+  .welcome-row{align-items:flex-start}.welcome-row h1{font-size:1.12rem;line-height:1.6}.welcome-row p{font-size:.73rem}.welcome-badge{display:none}
+  .hero-card{min-height:170px}.save-row{display:grid;grid-template-columns:1fr}.save-expense-btn{width:100%}.save-status{justify-content:center}
+  .date-input-shell{grid-template-columns:30px minmax(0,1fr)}.date-input-shell small{display:none}
+}
