@@ -396,10 +396,11 @@ def affected_variants_for_cell(size_id, color_id, *, rows=None, force=False):
     local_expected_codes = []
     for ps in local_products:
         if is_variable_color_product_code(ps.product.code):
-            allowed = TITLE_COLORS if ps.product.code == VARIANT_PRODUCT_CODE else []
-            if ps.product.code != VARIANT_PRODUCT_CODE:
-                from .special_darma_products_v66 import variable_color_names
-                allowed = variable_color_names(ps.product.code)
+            allowed = (
+                TITLE_COLORS
+                if ps.product.code == VARIANT_PRODUCT_CODE
+                else variable_color_names(ps.product.code)
+            )
             if norm(color.name) in {norm(name) for name in allowed}:
                 local_expected_codes.append(ps.product.code)
             continue
