@@ -66,6 +66,7 @@
   <a class="{% if request.resolver_match.url_name == 'receivables' %}active{% endif %}" href="{% url 'expense_tracker:receivables' %}"><span>◎</span><small>طلب‌ها</small></a>
   <a class="{% if request.resolver_match.url_name == 'reports' %}active{% endif %}" href="{% url 'expense_tracker:reports' %}"><span>▥</span><small>گزارش</small></a>
 </nav>
+<script src="{% static 'core/jalali_picker.js' %}"></script>
 <script src="{% static 'expense_tracker/app.js' %}"></script>
 {% block scripts %}{% endblock %}
 </body>
