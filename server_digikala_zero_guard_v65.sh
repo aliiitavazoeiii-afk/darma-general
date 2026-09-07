@@ -142,8 +142,16 @@ done
 
 git diff --quiet "$BASE"..HEAD --   core/digikala_client_v40.py core/digikala_shared_v44.py core/digikala_views_v40.py   core/models.py core/models_final.py core/migrations core/urls.py   core/report_v10.py core/final_services.py core/inventory_v20.py   core/business_tools_v62.py core/business_receipts_v64.py   core/daily_order_views_v60.py core/sale_entry_v60.py core/sale_price_v60.py   core/finance.py core/finance_excel_v9.py core/inventory_valuation_v17.py   core/material_report_v22.py core/returns_v37.py   || fail "protected business/integration source changed"
 
-if grep -E '/activation|/seller-stock|["'''](POST|PUT|PATCH)["''']' core/digikala_zero_guard_v65.py >/dev/null 2>&1; then
-  fail "V65 safe module contains a Digikala write marker"
+if grep -E '/activation|/seller-stock' core/digikala_zero_guard_v65.py >/dev/null 2>&1; then
+  fail "V65 safe module contains a Digikala write endpoint marker"
+fi
+if grep -F '"POST"' core/digikala_zero_guard_v65.py >/dev/null 2>&1 \
+  || grep -F '"PUT"' core/digikala_zero_guard_v65.py >/dev/null 2>&1 \
+  || grep -F '"PATCH"' core/digikala_zero_guard_v65.py >/dev/null 2>&1 \
+  || grep -F "'POST'" core/digikala_zero_guard_v65.py >/dev/null 2>&1 \
+  || grep -F "'PUT'" core/digikala_zero_guard_v65.py >/dev/null 2>&1 \
+  || grep -F "'PATCH'" core/digikala_zero_guard_v65.py >/dev/null 2>&1; then
+  fail "V65 safe module contains a Digikala write method marker"
 fi
 
 step "3) BUILD WEB + BOT, MIGRATE CARRIED V64 IF NEEDED"
