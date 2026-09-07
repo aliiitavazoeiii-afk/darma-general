@@ -18,6 +18,7 @@ ZERO_STATE_PREFIX = "digikala_zero_guard_v65:"
 VARIANT_ROWS_CACHE_KEY = "digikala-zero-guard-v65-variants"
 VARIANT_ROWS_CACHE_SECONDS = 300
 VARIANT_READ_TIMEOUTS = (15, 30, 45)
+VARIANT_PAGE_SIZE = 50
 CHECK_SECONDS_DEFAULT = 60
 HEALTH_PATH = "/open-api/v1/"
 DARMA_SIZE_NAMES = ("M", "L", "XL", "XXL", "3XL", "4XL")
@@ -221,7 +222,7 @@ def _variant_page(path, *, timeout):
     return items, total_pages, endpoint_rate
 
 
-def _variant_page_path(page, size=100):
+def _variant_page_path(page, size=VARIANT_PAGE_SIZE):
     return f"/open-api/v1/variants?page={int(page)}&size={int(size)}"
 
 
@@ -241,8 +242,9 @@ def get_variant_rows(*, force=False):
     total_pages = None
     endpoint_rate = None
 
-    # First request is always a single page. Its own meta_data.rate_limit is the
-    # authoritative limiter for /variants; the public health bucket is informational only.
+    # First request is always a single page at the production-confirmed safe size.
+    # Some Digikala accounts omit meta_data.rate_limit on successful /variants reads;
+    # when it is absent we page serially and stop safely on the first 429.
     for attempt, timeout in enumerate(VARIANT_READ_TIMEOUTS, start=1):
         try:
             first_items, total_pages, endpoint_rate = _variant_page(
