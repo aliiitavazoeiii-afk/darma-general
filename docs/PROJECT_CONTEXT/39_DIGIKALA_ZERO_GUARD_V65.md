@@ -166,3 +166,28 @@ SUCCESS: DIGIKALA ZERO GUARD V65 SAFE MODE DEPLOYED
 ```
 
 This marker confirms only the safe Telegram/read-only phase. It does NOT mean Digikala write/deactivation is enabled.
+
+
+## V65 network-resilience patch
+
+A production safe-mode run showed that `GET /open-api/v1/variants` can exceed the original 8-second read timeout.
+
+The safe mapper now retries the same GET-only operation with increasing per-request timeouts:
+
+```text
+15s -> 30s -> 45s
+```
+
+with a short backoff between attempts.
+
+If all read attempts still fail during deployment:
+
+- deployment reports `LIVE DIGIKALA MAP DEFERRED`;
+- deployment may continue because V65 contains no Digikala write path;
+- the Telegram bot remains capable of zero-stock notifications;
+- clicking the preview button later retries the GET path;
+- any preview network failure returns a Telegram error message and performs zero Digikala changes.
+
+This behavior is intentionally different from a future write-enabled phase: once real deactivation is ever introduced, successful live mapping and explicit user confirmation must become mandatory again before any write.
+
+The deploy script also sets `COMPOSE_IGNORE_ORPHANS=1` only to suppress the harmless warning caused when the already-running Telegram bot exists outside a base-compose command. It does not remove or recreate an orphan by itself, and `--remove-orphans` is not used.
