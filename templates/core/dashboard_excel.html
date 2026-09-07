@@ -1,77 +1,119 @@
 {% extends 'base.html' %}{% load jalali %}{% block title %}داشبورد | DARMA{% endblock %}{% block content %}{% include 'core/_mobile_shell.html' %}
-<div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4 mobile-page-head"><div><div class="page-kicker">نسخه وب اکسل کسب‌وکار</div><h1 class="page-title mb-1">داشبورد</h1><div class="page-muted">{{ today_j }} · ثبت فروش روزانه و گزارش‌های اصلی</div></div><div class="mobile-page-actions"><a class="btn btn-primary px-4" href="{% url 'sale_start' %}">+ ثبت صورت فروش</a></div></div>
-
-<div class="row g-2 g-md-3 mb-4">
-  <div class="col-6 col-xl-3"><div class="card glass-card h-100"><div class="card-body"><div class="subheader">فروش امروز</div><div class="kpi money mt-2">{{ today_metrics.gross|groupnum }}</div><div class="text-secondary">تومان</div></div></div></div>
-  <div class="col-6 col-xl-3"><div class="card glass-card h-100"><div class="card-body"><div class="subheader">سود امروز</div><div class="kpi money mt-2 {% if today_metrics.profit >= 0 %}text-success{% else %}text-danger{% endif %}">{{ today_metrics.profit|groupnum }}</div><div class="text-secondary">تومان</div></div></div></div>
-  <div class="col-6 col-xl-3"><div class="card glass-card h-100"><div class="card-body"><div class="subheader">فروش ماه جاری</div><div class="kpi money mt-2">{{ month_metrics.gross|groupnum }}</div><div class="text-secondary">{{ month_metrics.packs|groupnum }} کالا · {{ month_metrics.shorts|groupnum }} شورت</div></div></div></div>
-  <div class="col-6 col-xl-3"><div class="card glass-card h-100"><div class="card-body"><div class="subheader">سود ماه جاری</div><div class="kpi money mt-2 {% if month_metrics.profit >= 0 %}text-success{% else %}text-danger{% endif %}">{{ month_metrics.profit|groupnum }}</div><div class="text-secondary">{{ month_metrics.margin|pct1 }}٪ حاشیه سود</div></div></div></div>
-</div>
-
-<div id="digikalaLiveCard" class="card glass-card mb-4" data-summary-url="{% url 'digikala_summary' %}">
-  <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
-    <div><h3 class="card-title mb-1">دیجی‌کالا API</h3><div class="text-secondary small">تعهدات واقعی تحویل؛ اطلاعات زنده و فقط خواندنی</div></div>
-    <div class="d-flex align-items-center gap-2"><span id="dkConnection" class="badge badge-soft-orange">در حال اتصال…</span><a class="btn btn-sm btn-outline-light" href="{% url 'digikala' %}">ریز تحویل‌ها</a></div>
-  </div>
-  <div class="card-body">
-    <div class="row g-2">
-      <div class="col-6 col-xl-3"><div class="summary-cell"><span>باید تحویل بدهم</span><strong id="dkDeliveries" class="num">—</strong></div></div>
-      <div class="col-6 col-xl-3"><div class="summary-cell"><span>کل تعهدات</span><strong id="dkCommitments" class="num">—</strong></div></div>
-      <div class="col-6 col-xl-3"><div class="summary-cell"><span>تنوع‌های موجودی</span><strong id="dkInventory" class="num">—</strong></div></div>
-      <div class="col-6 col-xl-3"><div class="summary-cell"><span>صورتحساب‌ها</span><strong id="dkInvoices" class="num">—</strong></div></div>
+<div class="d66-dashboard">
+  <div class="d66-welcome">
+    <div class="d66-welcome-main">
+      <div class="d66-avatar">ع</div>
+      <div><h1>خوش اومدی {% if request.user.first_name %}{{ request.user.first_name }}{% else %}علی{% endif %} 👋</h1><p>همه‌چیز برای مدیریت امروز آماده‌ست · {{ today_j }}</p></div>
     </div>
-    <div id="dkStatusLine" class="text-secondary small mt-3">در حال خواندن Open API دیجی‌کالا…</div>
+    <div class="d66-welcome-actions">
+      <a class="d66-icon-btn" href="{% url 'report' %}" title="گزارش جامع">▦</a>
+      <a class="d66-icon-btn" href="{% url 'sale_start' %}" title="ثبت فروش"><span class="dot"></span>＋</a>
+    </div>
   </div>
-</div>
 
-<div class="row g-3 mb-4">
-  <div class="col-xl-8"><div class="card glass-card h-100"><div class="card-header d-flex justify-content-between align-items-center"><div><h3 class="card-title mb-1">روند فروش ۱۴ روز اخیر</h3><div class="text-secondary small">فروش و سود روزانه بر اساس صورت‌های ثبت‌شده</div></div><span class="badge badge-soft-orange">۱۴ روز</span></div><div class="card-body"><div class="chart-wrap" dir="ltr"><canvas id="salesTrendChart" height="112" dir="ltr" style="direction:ltr"></canvas></div></div></div></div>
-  <div class="col-xl-4"><div class="card glass-card h-100"><div class="card-header d-flex justify-content-between align-items-center"><div><h3 class="card-title mb-1">هشدارها</h3><div class="text-secondary small">مواردی که بهتر است بررسی کنی</div></div><span class="alert-count">{{ alerts|length }}</span></div><div class="card-body p-0"><div class="alert-list">{% for alert in alerts %}<a href="{{ alert.url }}" class="alert-item text-decoration-none"><span class="alert-dot alert-dot-{{ alert.level }}"></span><span class="flex-fill"><strong>{{ alert.title }}</strong><small>{{ alert.detail }}</small></span><span class="alert-arrow">‹</span></a>{% empty %}<div class="empty-state py-5"><strong class="text-success">همه‌چیز آرام است</strong><div class="mt-1">هشدار فعالی وجود ندارد.</div></div>{% endfor %}</div></div></div></div>
-</div>
+  <div class="d66-grid d66-kpis">
+    <article class="d66-card d66-kpi">
+      <div class="d66-kpi-top"><div><div class="d66-kpi-title">فروش کل ماه</div></div><div class="d66-kpi-icon red">▢</div></div>
+      <div><div class="d66-kpi-value">{{ month_metrics.gross|groupnum }}</div><div class="d66-kpi-unit">تومان</div></div>
+      <div class="d66-spark"><svg viewBox="0 0 220 34" preserveAspectRatio="none"><defs><linearGradient id="d66grad" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#ca3546"/><stop offset="1" stop-color="#ca3546" stop-opacity="0"/></linearGradient></defs><path class="fill" d="M0,28 C18,27 21,20 37,22 S60,30 76,18 S101,11 117,19 S145,25 160,13 S188,8 220,16 L220,34 L0,34 Z"/><path d="M0,28 C18,27 21,20 37,22 S60,30 76,18 S101,11 117,19 S145,25 160,13 S188,8 220,16"/></svg></div>
+    </article>
+    <article class="d66-card d66-kpi">
+      <div class="d66-kpi-top"><div><div class="d66-kpi-title">سود کل ماه</div></div><div class="d66-kpi-icon green">↗</div></div>
+      <div><div class="d66-kpi-value {% if month_metrics.profit >= 0 %}text-success{% else %}text-danger{% endif %}">{{ month_metrics.profit|groupnum }}</div><div class="d66-kpi-unit">تومان</div></div>
+      <div class="d66-spark"><svg viewBox="0 0 220 34" preserveAspectRatio="none"><path style="stroke:#3dbf72" d="M0,29 C20,27 25,29 40,24 S65,11 82,19 S110,23 126,12 S151,9 170,19 S196,17 220,11"/></svg></div>
+    </article>
+    <article class="d66-card d66-kpi">
+      <div class="d66-kpi-top"><div><div class="d66-kpi-title">تعداد شورت ماه</div></div><div class="d66-kpi-icon purple">▤</div></div>
+      <div><div class="d66-kpi-value">{{ month_metrics.shorts|groupnum }}</div><div class="d66-kpi-unit">عدد · {{ month_metrics.packs|groupnum }} کالا</div></div>
+      <div class="d66-spark"><svg viewBox="0 0 220 34" preserveAspectRatio="none"><path style="stroke:#8b5bc3" d="M0,28 C20,27 32,25 50,27 S73,29 89,17 S112,11 128,22 S155,26 174,16 S198,19 220,12"/></svg></div>
+    </article>
+    <article class="d66-card d66-kpi">
+      <div class="d66-kpi-top"><div><div class="d66-kpi-title">هزینه دیجی‌کالا</div></div><div class="d66-kpi-icon red">$</div></div>
+      <div><div class="d66-kpi-value">{{ month_metrics.digikala_fee|groupnum }}</div><div class="d66-kpi-unit">تومان</div></div>
+      <div class="d66-spark"><svg viewBox="0 0 220 34" preserveAspectRatio="none"><path d="M0,28 C19,23 35,31 52,26 S73,29 91,17 S118,23 136,12 S162,10 181,18 S202,9 220,14"/></svg></div>
+    </article>
+  </div>
 
-<div class="row g-2 g-md-3">
-  <div class="col-12 col-sm-6 col-xl-3"><a class="card quick-card glass-card h-100 text-decoration-none" href="{% url 'sale_start' %}"><div class="card-body"><span class="quick-icon">01</span><h3 class="mt-3 mb-1">فروش روزانه</h3><div class="text-secondary">تقویم شمسی، ثبت صورت و گزارش نهایی همان روز</div></div></a></div>
-  <div class="col-12 col-sm-6 col-xl-3"><a class="card quick-card glass-card h-100 text-decoration-none" href="{% url 'report' %}"><div class="card-body"><span class="quick-icon">02</span><h3 class="mt-3 mb-1">گزارش جامع</h3><div class="text-secondary">فروش اکسل‌مانند + سرمایه، حساب‌ها و موجودی دستی</div></div></a></div>
-  <div class="col-12 col-sm-6 col-xl-3"><a class="card quick-card glass-card h-100 text-decoration-none" href="{% url 'material_report' %}"><div class="card-body"><span class="quick-icon">03</span><h3 class="mt-3 mb-1">گزارش مواد اولیه</h3><div class="text-secondary">{{ material_blocks }} صورت ثبت‌شده · ورود دستی مشابه اکسل</div></div></a></div>
-  <div class="col-12 col-sm-6 col-xl-3"><a class="card quick-card glass-card h-100 text-decoration-none" href="{% url 'takvin' %}"><div class="card-body"><span class="quick-icon">04</span><h3 class="mt-3 mb-1">خرید تکوین</h3><div class="text-secondary">خرید خالص ماه: <span class="money fw-bold">{{ purchase_month_total|groupnum }}</span> تومان</div></div></a></div>
+  <div class="d66-grid d66-main-row">
+    <section class="d66-card d66-panel">
+      <div class="d66-panel-head"><div class="d66-panel-title">فروش ۱۴ روز اخیر</div><div class="d66-chip">۱۴ روز اخیر⌄</div></div>
+      <div class="d66-chart-wrap" dir="ltr"><canvas id="salesTrendChart" dir="ltr"></canvas></div>
+    </section>
+    <section class="d66-card d66-panel" id="monthComposition" data-cogs="{{ month_metrics.cogs|default:0 }}" data-fee="{{ month_metrics.digikala_fee|default:0 }}" data-profit="{{ month_metrics.profit|default:0 }}">
+      <div class="d66-panel-head"><div class="d66-panel-title">ترکیب مالی فروش ماه</div><div class="d66-chip">واقعی</div></div>
+      <div class="d66-donut-wrap">
+        <div class="d66-donut"><canvas id="monthCompositionChart"></canvas><div class="d66-donut-center"><span>فروش ماه</span><strong>{{ month_metrics.gross|groupnum }}</strong><span>تومان</span></div></div>
+        <div class="d66-legend">
+          <div class="d66-legend-row"><i class="d66-legend-dot"></i><span>بهای تمام‌شده</span><strong>{{ month_metrics.cogs|groupnum }}</strong></div>
+          <div class="d66-legend-row"><i class="d66-legend-dot"></i><span>هزینه دیجی‌کالا</span><strong>{{ month_metrics.digikala_fee|groupnum }}</strong></div>
+          <div class="d66-legend-row"><i class="d66-legend-dot"></i><span>سود</span><strong>{{ month_metrics.profit|groupnum }}</strong></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="d66-grid d66-secondary-row">
+    <section id="digikalaLiveCard" class="d66-card" data-summary-url="{% url 'digikala_summary' %}">
+      <div class="d66-panel-head"><div><div class="d66-panel-title">وضعیت دیجی‌کالا</div><div id="dkStatusLine" class="small text-secondary mt-1">در حال خواندن Open API…</div></div><span id="dkConnection" class="d66-status muted">در حال اتصال</span></div>
+      <div class="d66-list">
+        <div class="d66-list-row"><div class="d66-list-icon">dk</div><div class="d66-list-main"><strong>باید تحویل بدهم</strong><span>تعهد تحویل فعلی</span></div><div id="dkDeliveries" class="d66-status red">—</div></div>
+        <div class="d66-list-row"><div class="d66-list-icon">dk</div><div class="d66-list-main"><strong>کل تعهدات</strong><span>تعهدات ثبت‌شده دیجی‌کالا</span></div><div id="dkCommitments" class="d66-status">—</div></div>
+        <div class="d66-list-row"><div class="d66-list-icon">dk</div><div class="d66-list-main"><strong>تنوع‌های موجودی</strong><span>تنوع‌های قابل مشاهده در API</span></div><div id="dkInventory" class="d66-status muted">—</div></div>
+        <div class="d66-list-row"><div class="d66-list-icon">dk</div><div class="d66-list-main"><strong>صورتحساب‌ها</strong><span>آخرین وضعیت صورتحساب‌ها</span></div><div id="dkInvoices" class="d66-status">—</div></div>
+      </div>
+    </section>
+
+    <section class="d66-card">
+      <div class="d66-panel-head"><div><div class="d66-panel-title">یادداشت‌ها و هشدارهای سریع</div><div class="small text-secondary mt-1">مواردی که بهتره امروز بررسی بشن</div></div><a class="d66-icon-btn" style="width:34px;height:34px" href="{% url 'inventory' %}">＋</a></div>
+      <div class="d66-list">
+        {% for alert in alerts %}
+        <a href="{{ alert.url }}" class="d66-list-row text-decoration-none"><div class="d66-list-icon">✓</div><div class="d66-list-main"><strong>{{ alert.title }}</strong><span>{{ alert.detail }}</span></div><span class="d66-status red">امروز</span></a>
+        {% empty %}
+        <div class="d66-list-row"><div class="d66-list-icon" style="color:#4fd989;background:rgba(70,215,130,.08)">✓</div><div class="d66-list-main"><strong>همه‌چیز آرامه</strong><span>هشدار فعالی برای موجودی ثبت نشده</span></div><span class="d66-status">اوکی</span></div>
+        {% endfor %}
+      </div>
+    </section>
+  </div>
+
+  <div class="d66-grid d66-bottom">
+    <article class="d66-card d66-mini"><div class="d66-mini-title">فروش امروز</div><div class="d66-mini-value">{{ today_metrics.gross|groupnum }}</div><div class="d66-mini-meta">تومان</div></article>
+    <article class="d66-card d66-mini"><div class="d66-mini-title">سود امروز</div><div class="d66-mini-value {% if today_metrics.profit >= 0 %}text-success{% else %}text-danger{% endif %}">{{ today_metrics.profit|groupnum }}</div><div class="d66-mini-meta">{{ today_metrics.margin|pct1 }}٪ حاشیه سود</div></article>
+    <article class="d66-card d66-mini"><div class="d66-mini-title">تعداد فروش امروز</div><div class="d66-mini-value">{{ today_metrics.shorts|groupnum }}</div><div class="d66-mini-meta">شورت · {{ today_metrics.packs|groupnum }} کالا</div></article>
+    <article class="d66-card d66-mini"><div class="d66-mini-title">خرید تکوین ماه</div><div class="d66-mini-value">{{ purchase_month_total|groupnum }}</div><div class="d66-mini-meta">تومان · {{ material_blocks }} صورت مواد</div></article>
+  </div>
 </div>
 
 {{ chart_labels|json_script:"dashboard-chart-labels" }}
 {{ chart_sales|json_script:"dashboard-chart-sales" }}
 {{ chart_profit|json_script:"dashboard-chart-profit" }}
 {% endblock %}
-{% block scripts %}<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script><script>
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script>
 (function(){
- const canvas=document.getElementById('salesTrendChart'); if(!canvas||typeof Chart==='undefined') return;
- canvas.dir='ltr'; canvas.style.direction='ltr';
- const ctx=canvas.getContext('2d'); if(ctx) ctx.direction='ltr';
- Chart.defaults.color='#c7d3df'; Chart.defaults.borderColor='rgba(255,255,255,.10)'; Chart.defaults.font.family='Vazirmatn';
- const rawLabels=JSON.parse(document.getElementById('dashboard-chart-labels').textContent);
- const labels=rawLabels.map(v=>'\u200E'+String(v));
- const sales=JSON.parse(document.getElementById('dashboard-chart-sales').textContent);
- const profit=JSON.parse(document.getElementById('dashboard-chart-profit').textContent);
- const nf=new Intl.NumberFormat('en-US',{maximumFractionDigits:0});
- const fmt=v=>'\u200E'+nf.format(Math.round(Number(v)||0));
- const small=window.innerWidth<576;
- new Chart(canvas,{type:'line',data:{labels,datasets:[{label:'فروش',data:sales,borderColor:'#fb6514',backgroundColor:'rgba(251,101,20,.13)',fill:true,tension:.38,borderWidth:2.4,pointRadius:small?1.5:2.5,pointHoverRadius:5},{label:'سود',data:profit,borderColor:'#39d98a',backgroundColor:'rgba(57,217,138,.05)',fill:false,tension:.38,borderWidth:2.2,pointRadius:small?1.3:2.3,pointHoverRadius:5}]},options:{locale:'en-US',responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:!small,position:'top',align:'end',rtl:false,textDirection:'ltr',labels:{color:'#dce7f1',usePointStyle:true,boxWidth:8}},tooltip:{rtl:false,textDirection:'ltr',backgroundColor:'rgba(5,19,34,.94)',titleColor:'#fff',bodyColor:'#dce7f1',borderColor:'rgba(255,255,255,.14)',borderWidth:1,callbacks:{title:items=>items.length?String(items[0].label).replace(/^\u200E/,''):'',label:c=>c.dataset.label+' : '+fmt(c.parsed.y)+' تومان'}}},scales:{x:{grid:{display:false},ticks:{color:'#aebdcd',maxRotation:0,autoSkip:true,maxTicksLimit:small?7:14,callback:function(value){return '\u200E'+this.getLabelForValue(value).replace(/^\u200E/,'');}}},y:{beginAtZero:true,grid:{color:'rgba(255,255,255,.075)'},ticks:{color:'#aebdcd',maxTicksLimit:small?5:8,callback:v=>fmt(v)}}}}});
+  const canvas=document.getElementById('salesTrendChart'); if(!canvas||typeof Chart==='undefined') return;
+  const rawLabels=JSON.parse(document.getElementById('dashboard-chart-labels').textContent||'[]');
+  const labels=rawLabels.map(v=>'\u200E'+String(v));
+  const sales=JSON.parse(document.getElementById('dashboard-chart-sales').textContent||'[]');
+  const profit=JSON.parse(document.getElementById('dashboard-chart-profit').textContent||'[]');
+  const nf=new Intl.NumberFormat('en-US',{maximumFractionDigits:0}); const fmt=v=>'\u200E'+nf.format(Math.round(Number(v)||0));
+  Chart.defaults.font.family='Vazirmatn'; Chart.defaults.color='#777680'; Chart.defaults.borderColor='rgba(255,255,255,.05)';
+  new Chart(canvas,{type:'bar',data:{labels,datasets:[{label:'فروش',data:sales,backgroundColor:'rgba(181,45,62,.82)',borderColor:'#c7384a',borderWidth:1,borderRadius:4,maxBarThickness:38},{label:'سود',data:profit,type:'line',borderColor:'#de6674',backgroundColor:'rgba(202,53,70,.08)',tension:.4,borderWidth:1.7,pointRadius:0,pointHoverRadius:4}]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:{rtl:false,textDirection:'ltr',backgroundColor:'#171a25',titleColor:'#ddd9dd',bodyColor:'#aaa7af',borderColor:'rgba(255,255,255,.08)',borderWidth:1,padding:11,callbacks:{label:c=>c.dataset.label+' : '+fmt(c.parsed.y)+' تومان'}}},scales:{x:{grid:{display:false},ticks:{color:'#6f6e77',maxRotation:0,maxTicksLimit:7}},y:{beginAtZero:true,grid:{color:'rgba(255,255,255,.035)'},ticks:{color:'#6f6e77',maxTicksLimit:6,callback:v=>{const n=Number(v)||0;return n>=1000000?(Math.round(n/1000000)+'M'):fmt(n)}}}}}});
 })();
-
 (function(){
- const card=document.getElementById('digikalaLiveCard'); if(!card) return;
- const status=document.getElementById('dkConnection');
- const line=document.getElementById('dkStatusLine');
- const set=(id,value)=>{const el=document.getElementById(id); if(el) el.textContent=(window.DarmaNumber&&window.DarmaNumber.grouped)?window.DarmaNumber.grouped(value):String(value??0);};
- fetch(card.dataset.summaryUrl,{headers:{'Accept':'application/json'},credentials:'same-origin'})
-   .then(async response=>{const body=await response.json(); if(!response.ok||!body.ok) throw new Error(body.error||('HTTP '+response.status)); return body.data||{};})
-   .then(data=>{
-      set('dkDeliveries',data.delivery_effective_total||0); set('dkCommitments',data.delivery_total_commitments||0); set('dkInventory',data.inventory_total||0); set('dkInvoices',data.invoices_total||0);
-      status.textContent=data.connected?'متصل':'اتصال ناقص'; status.className='badge '+(data.connected?'badge-soft-success':'badge-soft-red');
-      const errorCount=Object.keys(data.errors||{}).length;
-      const delayed=Number(data.delivery_delayed_total||0);
-      if(delayed>0) line.textContent='اتصال برقرار است؛ '+delayed+' تعهد عقب‌افتاده گزارش شده است.';
-      else if(data.delivery_counts_match===false) line.textContent='اتصال برقرار است؛ جمع ردیف‌های تحویل با متادیتای تعهدات هنوز همگام نیست.';
-      else line.textContent=errorCount?('اتصال برقرار است؛ '+errorCount+' بخش API پاسخ کامل نداده است.'):'آخرین بروزرسانی موفق از تعهدات Open API دیجی‌کالا';
-   })
-   .catch(err=>{status.textContent='قطع'; status.className='badge badge-soft-red'; line.textContent='خواندن API ناموفق بود: '+err.message;});
+  const host=document.getElementById('monthComposition'), canvas=document.getElementById('monthCompositionChart'); if(!host||!canvas||typeof Chart==='undefined') return;
+  const cogs=Math.max(0,Number(host.dataset.cogs)||0), fee=Math.max(0,Number(host.dataset.fee)||0), profit=Math.max(0,Number(host.dataset.profit)||0);
+  new Chart(canvas,{type:'doughnut',data:{labels:['بهای تمام‌شده','دیجی‌کالا','سود'],datasets:[{data:[cogs,fee,profit],backgroundColor:['#8f2638','#63273a','#3d2431'],borderColor:'#11141f',borderWidth:3,hoverOffset:2}]},options:{responsive:true,maintainAspectRatio:false,cutout:'68%',plugins:{legend:{display:false},tooltip:{rtl:true,backgroundColor:'#171a25',titleColor:'#eee',bodyColor:'#aaa',borderColor:'rgba(255,255,255,.08)',borderWidth:1}}}});
 })();
-</script>{% endblock %}
+(function(){
+ const card=document.getElementById('digikalaLiveCard'); if(!card) return; const status=document.getElementById('dkConnection'), line=document.getElementById('dkStatusLine');
+ const set=(id,value)=>{const el=document.getElementById(id);if(el)el.textContent=new Intl.NumberFormat('fa-IR').format(Number(value)||0);};
+ fetch(card.dataset.summaryUrl,{headers:{'Accept':'application/json'},credentials:'same-origin'}).then(async response=>{const body=await response.json();if(!response.ok||!body.ok)throw new Error(body.error||('HTTP '+response.status));return body.data||{};}).then(data=>{
+   set('dkDeliveries',data.delivery_effective_total||0);set('dkCommitments',data.delivery_total_commitments||0);set('dkInventory',data.inventory_total||0);set('dkInvoices',data.invoices_total||0);
+   status.textContent=data.connected?'متصل':'اتصال ناقص';status.className='d66-status '+(data.connected?'':'red');
+   const delayed=Number(data.delivery_delayed_total||0);const errors=Object.keys(data.errors||{}).length;
+   line.textContent=delayed>0?(delayed+' تعهد عقب‌افتاده ثبت شده'):errors?('اتصال برقرار است؛ '+errors+' بخش پاسخ کامل نداده'):'آخرین بروزرسانی با موفقیت انجام شده';
+ }).catch(err=>{status.textContent='قطع';status.className='d66-status red';line.textContent='خواندن API ناموفق بود: '+err.message;});
+})();
+</script>
+{% endblock %}
