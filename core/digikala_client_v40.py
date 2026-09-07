@@ -159,6 +159,48 @@ def get_json(path, *, timeout=5):
     return response
 
 
+def put_json(path, payload, *, timeout=10):
+    """Authenticated JSON PUT with the same single-refresh behavior as get_json.
+
+    This helper is intentionally narrow. Callers must supply the exact endpoint and payload;
+    no retry is performed for non-auth failures so a remote mutation is never repeated blindly.
+    """
+    token = _read_secret(ACCESS_TOKEN_FILE)
+    status, response = _request_once(
+        "PUT",
+        path,
+        token=token,
+        payload=payload,
+        timeout=timeout,
+    )
+    if status == 401:
+        token = _refresh_access_token(failed_token=token)
+        status, response = _request_once(
+            "PUT",
+            path,
+            token=token,
+            payload=payload,
+            timeout=timeout,
+        )
+
+    if status != 200:
+        message = response.get("message") if isinstance(response, dict) else None
+        errors = response.get("errors") if isinstance(response, dict) else None
+        detail = message or errors or f"HTTP {status}"
+        raise DigikalaAPIError(
+            f"درخواست تغییردهنده دیجی‌کالا ناموفق بود: {detail}",
+            status_code=status,
+            payload=response,
+        )
+    if isinstance(response, dict) and response.get("status") == "error":
+        raise DigikalaAPIError(
+            f"API دیجی‌کالا خطا برگرداند: {response.get('message') or response.get('errors')}",
+            status_code=status,
+            payload=response,
+        )
+    return response
+
+
 def _data(response):
     if not isinstance(response, dict):
         return {}
