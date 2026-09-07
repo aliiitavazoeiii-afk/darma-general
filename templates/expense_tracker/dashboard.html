@@ -1,0 +1,108 @@
+{% extends 'expense_tracker/base.html' %}{% load jalali %}
+{% block title %}خانه | خرج من{% endblock %}
+{% block content %}
+<div class="hero-card">
+  <div class="hero-art" aria-hidden="true">
+    <span class="moon"></span><span class="ridge ridge-one"></span><span class="ridge ridge-two"></span>
+  </div>
+  <div class="hero-copy">
+    <div class="eyebrow">موجودی ملت</div>
+    <div class="hero-balance"><span class="money">{{ mellat_balance|groupnum }}</span><small>تومان</small></div>
+    <div class="hero-note">هر هزینه‌ای که اینجا ثبت می‌کنی، مستقیم از مانده ملت کم می‌شود.</div>
+  </div>
+  <div class="wallet-icon">▣</div>
+</div>
+
+<div class="kpi-grid">
+  <article class="kpi-card coral"><div class="kpi-icon">▥</div><div><span>خرج امروز</span><strong class="money">{{ today_total|groupnum }}</strong><small>تومان</small></div></article>
+  <article class="kpi-card amber"><div class="kpi-icon">◷</div><div><span>خرج این هفته</span><strong class="money">{{ week_total|groupnum }}</strong><small>تومان</small></div></article>
+  <article class="kpi-card blue"><div class="kpi-icon">▣</div><div><span>خرج ماه {{ month_label }}</span><strong class="money">{{ month_total|groupnum }}</strong><small>تومان</small></div></article>
+  <article class="kpi-card violet"><div class="kpi-icon">◎</div><div><span>کل طلب‌های باز</span><strong class="money">{{ receivable_total|groupnum }}</strong><small>تومان</small></div></article>
+</div>
+
+<div class="dashboard-grid">
+  <section class="panel expense-panel" id="new-expense">
+    <div class="panel-head">
+      <div><div class="eyebrow">ثبت سریع</div><h2>خرج جدید</h2></div>
+      <span class="pill">{{ today_j }}</span>
+    </div>
+    <form method="post" action="{% url 'expense_tracker:expense_add' %}" class="expense-form">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{% url 'expense_tracker:dashboard' %}">
+      <div class="amount-wrap">
+        <label for="expense-amount">مبلغ</label>
+        <div class="amount-input"><input id="expense-amount" class="money-input" name="amount" inputmode="numeric" autocomplete="off" placeholder="۰"><span>تومان</span></div>
+      </div>
+      <div class="category-pills">
+        {% for category in categories %}
+        <label class="category-choice accent-{{ category.accent }}">
+          <input type="radio" name="category" value="{{ category.id }}" {% if forloop.first %}checked{% endif %}>
+          <span>{{ category.name }}</span>
+        </label>
+        {% empty %}
+        <a href="{% url 'expense_tracker:categories' %}">اول یک دسته بساز</a>
+        {% endfor %}
+      </div>
+      <div class="form-grid">
+        <label><span>عنوان</span><input name="title" placeholder="مثلاً ناهار، بنزین، اشتراک..."></label>
+        <label><span>تاریخ</span><input class="ltr-input" name="date" value="{{ today_j }}"></label>
+      </div>
+      <label><span>توضیح</span><input name="note" placeholder="اختیاری"></label>
+      <button class="primary-btn" type="submit">＋ ثبت خرج</button>
+    </form>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <div><div class="eyebrow">۷ روز اخیر</div><h2>ریتم هزینه‌ها</h2></div>
+      <a class="text-link" href="{% url 'expense_tracker:reports' %}">گزارش کامل ←</a>
+    </div>
+    <div class="bar-chart">
+      {% for day in seven_days %}
+      <div class="bar-col" title="{{ day.jalali }} — {{ day.amount|groupnum }} تومان">
+        <div class="bar-track"><span style="height:{{ day.pct }}%"></span></div>
+        <small>{{ day.jalali|slice:"8:" }}</small>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="category-breakdown">
+      {% for row in category_rows %}
+      <div class="breakdown-row">
+        <div class="breakdown-label"><span class="dot accent-bg-{{ row.category__accent }}"></span><strong>{{ row.category__name }}</strong><small>{{ row.pct }}٪</small></div>
+        <div class="breakdown-value money">{{ row.total|groupnum }}</div>
+      </div>
+      {% empty %}<div class="empty">برای این ماه هنوز هزینه‌ای ثبت نشده.</div>{% endfor %}
+    </div>
+  </section>
+</div>
+
+<div class="dashboard-grid lower">
+  <section class="panel">
+    <div class="panel-head"><div><div class="eyebrow">امروز و قبل‌تر</div><h2>آخرین هزینه‌ها</h2></div><a class="text-link" href="{% url 'expense_tracker:expense_list' %}">همه تراکنش‌ها ←</a></div>
+    <div class="transaction-list">
+      {% for expense in recent_expenses %}
+      <div class="transaction">
+        <div class="transaction-icon accent-{{ expense.category.accent }}">{{ expense.category.name|slice:":1" }}</div>
+        <div class="transaction-main"><strong>{{ expense.title|default:expense.category.name }}</strong><small>{{ expense.category.name }} · {{ expense.date|jalali }}</small></div>
+        <div class="transaction-money"><strong class="money">−{{ expense.amount|groupnum }}</strong><small>تومان</small></div>
+        <a class="icon-btn" href="{% url 'expense_tracker:expense_edit' expense.id %}" aria-label="ویرایش">⋯</a>
+      </div>
+      {% empty %}<div class="empty">هنوز خرجی ثبت نشده.</div>{% endfor %}
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head"><div><div class="eyebrow">دنگ و بدهکارها</div><h2>طلب‌های باز</h2></div><a class="text-link" href="{% url 'expense_tracker:receivables' %}">مدیریت طلب‌ها ←</a></div>
+    <div class="claim-list">
+      {% for person in receivable_people %}
+      <div class="claim-row">
+        <span class="avatar">{{ person.name|slice:":1" }}</span>
+        <div><strong>{{ person.name }}</strong><small>طلب باقی‌مانده</small></div>
+        <strong class="money {% if person.outstanding > 0 %}positive{% endif %}">{{ person.outstanding|groupnum }}</strong>
+      </div>
+      {% empty %}<div class="empty">طلب بازی نداری.</div>{% endfor %}
+    </div>
+    <a class="secondary-btn" href="{% url 'expense_tracker:receivables' %}">＋ ثبت طلب جدید</a>
+  </section>
+</div>
+{% endblock %}
