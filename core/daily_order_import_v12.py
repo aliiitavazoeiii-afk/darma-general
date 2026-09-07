@@ -102,12 +102,6 @@ def resolve_rows_v12(parsed_rows):
                     "کد فروشنده برای رنگ استفاده نمی‌شود."
                 )
                 continue
-            if int(ps.default_sale_price or 0) <= 0:
-                errors.append(
-                    f"ردیف {row.source_row}: قیمت فروش {product.code} سایز {size_name} تعیین نشده؛ "
-                    "قیمت تاریخ‌دار/پایه محصول را در تنظیمات ثبت کن."
-                )
-                continue
 
         resolved.append(
             ResolvedOrderRowV12(
