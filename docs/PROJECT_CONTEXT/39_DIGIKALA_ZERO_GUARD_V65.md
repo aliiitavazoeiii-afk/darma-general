@@ -449,3 +449,49 @@ The canonical product catalog and the live ProductComposition row are updated th
 Zero-guard dependency follows live ProductComposition, so p12 must no longer be considered affected by red/yellow zero cells and must instead be considered affected by cream/gray zero cells.
 
 The Digikala API field `warehouse_stock` (shown in diagnostics as DK_WH) is informational marketplace warehouse stock metadata, not a Darma product code.
+
+
+## V68 confirmed Digikala deactivation gate
+
+V68 adds the first Digikala mutation path, but it remains strictly user-confirmed and fail-closed.
+
+Endpoint contract (scope: `variant`):
+
+```text
+PUT /open-api/v1/variants/{seller_variant_id}/activation
+{"activation": false}
+```
+
+Safety gates:
+
+1. Zero transition itself never writes; it only sends the existing Telegram alert.
+2. Preview is GET-only.
+3. The user must press a separate prepare button.
+4. Prepare performs a fresh full Darma mapping and creates a SHA-256 plan fingerprint.
+5. The final confirmation token is one-time, bound to the authorized Telegram user/chat, and expires after 90 seconds.
+6. At final confirmation, V68 fetches the complete Darma mapping again. Any plan/fingerprint change aborts before the first PUT.
+7. Every eligible variant is then fetched individually and must still resolve from title to the same Darma product, same size, and the same zero color dependency.
+8. A variant with `warehouse_stock > 0` or `on_the_way_stock > 0` is blocked and never written by V68.
+9. Unresolved Darma-like titles are outside write scope and are never guessed.
+10. The internal combined stock is checked again immediately before writes; if it is positive, the operation aborts.
+11. PUT mutations are never retried after arbitrary network/API failure. The only authenticated retry is after an explicit HTTP 401 token refresh.
+12. After every acknowledged PUT, V68 GETs that variant again and expects `active=false`.
+13. If a multi-variant operation partially succeeds and a later request fails, V68 stops immediately, reports the acknowledged successful variant IDs, and requires a new preview for continuation.
+
+Production kill switch:
+
+```text
+DIGIKALA_ZERO_GUARD_WRITE_ENABLED=0
+```
+
+Keep it at `0` during deployment and regression. Enable it only after the mocked regression, GET-only token scope check, and GET-only live audit pass.
+
+Regression / preflight:
+
+```bash
+python manage.py check_digikala_zero_guard_v68
+python manage.py check_digikala_zero_guard_v68 --api-scope
+python manage.py check_digikala_zero_guard_v68 --live-audit
+```
+
+The latter two modes are GET-only and never call the activation endpoint.
