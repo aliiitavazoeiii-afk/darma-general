@@ -257,7 +257,36 @@ class Command(BaseCommand):
             if sleeper.call_count != 0:
                 raise CommandError("V65 slept/retried after direct 429")
 
+        with patch.object(
+            guard,
+            "_request_once",
+            return_value=(
+                200,
+                {
+                    "status": "ok",
+                    "data": {
+                        "mode": "production",
+                        "time": "test",
+                        "routes": ["/variants"],
+                        "rate_limit": {
+                            "max": 100,
+                            "current": 3,
+                            "resetTime": {
+                                "date": "2099-01-01 00:01:00.000000",
+                                "timezone": "Asia/Tehran",
+                            },
+                        },
+                    },
+                },
+            ),
+        ) as request_once:
+            health = guard.get_api_health()
+            request_once.assert_called_once_with("GET", "/open-api/v1/", timeout=10)
+            if health["max"] != 100 or health["current"] != 3 or health["remaining"] != 97:
+                raise CommandError(f"V65 health parsing mismatch: {health}")
+
         self.stdout.write("RATE LIMIT GUARD = exhausted health skips /variants; direct 429 retries = 0")
+        self.stdout.write("HEALTH ENDPOINT = /open-api/v1/ (trailing slash required)")
 
     def _print_api_health(self):
         health = get_api_health()
