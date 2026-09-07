@@ -43,3 +43,12 @@ Network-failure rule:
 - deferred mapping must print that Digikala writes are zero/absent;
 - Telegram preview may retry later;
 - network failure must never be converted into guessed mapping or a write.
+
+
+Rate-limit rule:
+
+- public API health may be read before variant mapping;
+- when health reports current >= max, do not call /variants;
+- a direct HTTP 429 from /variants must stop the scan immediately with no retry;
+- 429 must never be treated as permission to guess from stale/unresolved rows;
+- write mode remains absent/locked.
