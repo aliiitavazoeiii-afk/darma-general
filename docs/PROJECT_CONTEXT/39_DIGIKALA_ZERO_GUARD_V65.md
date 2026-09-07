@@ -429,3 +429,23 @@ Explicitly ignored/inactive title models remain fail-closed:
 The special-product sync creates/updates only the confirmed active products above. It does not create ignored or BNR rows. Existing sale prices are preserved; new ProductSize rows start with zero default sale price, and V60 date-effective sale-price rules must be configured before a sale import can create a new priced line.
 
 No Digikala write/deactivation endpoint is added by V66.
+
+
+## V67 p12 composition correction
+
+User-confirmed p12 composition is now:
+
+- black ×2
+- white ×2
+- navy ×2
+- pink ×2
+- cream ×2
+- gray ×2
+
+Red and yellow are no longer part of p12.
+
+The canonical product catalog and the live ProductComposition row are updated through a targeted command. Existing p12 prices are preserved and no historical SaleLine/SaleSnapshot/SaleAllocation row is rewritten by this sync.
+
+Zero-guard dependency follows live ProductComposition, so p12 must no longer be considered affected by red/yellow zero cells and must instead be considered affected by cream/gray zero cells.
+
+The Digikala API field `warehouse_stock` (shown in diagnostics as DK_WH) is informational marketplace warehouse stock metadata, not a Darma product code.
