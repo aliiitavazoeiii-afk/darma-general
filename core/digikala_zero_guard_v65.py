@@ -11,7 +11,7 @@ from .daily_order_import_v8 import _resolve_size
 from .digikala_shared_v44 import paginated_get
 from .models import AppSetting, Brand, Color, ProductSize, Size, StockBalance, StockLocation
 from .title_product_resolver_v27 import resolve_product_from_title
-from .variant_sale_v12 import VARIANT_PRODUCT_CODE, resolve_variant_color
+from .variant_sale_v12 import TITLE_COLORS, VARIANT_PRODUCT_CODE, resolve_variant_color
 
 
 ZERO_STATE_PREFIX = "digikala_zero_guard_v65:"
@@ -199,7 +199,8 @@ def affected_variants_for_cell(size_id, color_id, *, rows=None, force=False):
     local_expected_codes = []
     for ps in local_products:
         if ps.product.code == VARIANT_PRODUCT_CODE:
-            local_expected_codes.append(ps.product.code)
+            if norm(color.name) in {norm(name) for name in TITLE_COLORS}:
+                local_expected_codes.append(ps.product.code)
             continue
         if any(comp.color_id == color.id and int(comp.qty or 0) > 0 for comp in ps.product.composition.all()):
             local_expected_codes.append(ps.product.code)
