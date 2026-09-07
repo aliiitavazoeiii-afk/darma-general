@@ -35,3 +35,11 @@ Deployment must prove:
 - live mapping check prints `DIGIKALA WRITE CALLS = 0`.
 
 Only a later explicitly authorized version may add real Digikala write behavior.
+
+
+Network-failure rule:
+
+- transient timeout/connection failure on GET mapping may defer mapping without failing SAFE MODE deployment;
+- deferred mapping must print that Digikala writes are zero/absent;
+- Telegram preview may retry later;
+- network failure must never be converted into guessed mapping or a write.
