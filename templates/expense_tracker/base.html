@@ -1,0 +1,72 @@
+{% load static jalali %}
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#07110f">
+  <title>{% block title %}خرج من{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'expense_tracker/app.css' %}">
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar">
+    <a class="brand" href="{% url 'expense_tracker:dashboard' %}">
+      <span class="brand-mark">◆</span>
+      <span><strong>خرج من</strong><small>مدیریت هزینه‌های روزانه</small></span>
+    </a>
+    <nav class="nav-list">
+      <a class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'expense_tracker:dashboard' %}"><span>⌂</span>خانه</a>
+      <a class="{% if request.resolver_match.url_name == 'expense_list' or request.resolver_match.url_name == 'expense_edit' %}active{% endif %}" href="{% url 'expense_tracker:expense_list' %}"><span>☷</span>تراکنش‌ها</a>
+      <a class="{% if request.resolver_match.url_name == 'receivables' %}active{% endif %}" href="{% url 'expense_tracker:receivables' %}"><span>◎</span>طلب‌ها</a>
+      <a class="{% if request.resolver_match.url_name == 'reports' %}active{% endif %}" href="{% url 'expense_tracker:reports' %}"><span>▥</span>گزارش</a>
+      <a class="{% if request.resolver_match.url_name == 'categories' %}active{% endif %}" href="{% url 'expense_tracker:categories' %}"><span>◇</span>دسته‌ها</a>
+    </nav>
+    <div class="sidebar-spacer"></div>
+    <div class="side-quote">
+      <span class="leaf">◒</span>
+      <strong>مدیریت امروز</strong>
+      <span>آرامش فردا</span>
+    </div>
+    <form method="post" action="{% url 'expense_logout' %}" class="logout-form">
+      {% csrf_token %}
+      <button type="submit">خروج</button>
+    </form>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div>
+        <div class="top-kicker">زندگی بهتر با مدیریت بهتر هزینه‌ها</div>
+        <div class="mobile-brand">خرج من</div>
+      </div>
+      <div class="profile-pill">
+        <span class="status-dot"></span>
+        <span>{{ request.user.get_short_name|default:request.user.username }}</span>
+      </div>
+    </header>
+
+    <section class="content">
+      {% if messages %}
+      <div class="message-stack">
+        {% for message in messages %}
+          <div class="message {{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+      </div>
+      {% endif %}
+      {% block content %}{% endblock %}
+    </section>
+  </main>
+</div>
+
+<nav class="mobile-nav">
+  <a class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'expense_tracker:dashboard' %}"><span>⌂</span><small>خانه</small></a>
+  <a class="{% if request.resolver_match.url_name == 'expense_list' %}active{% endif %}" href="{% url 'expense_tracker:expense_list' %}"><span>☷</span><small>خرج‌ها</small></a>
+  <a class="mobile-add" href="{% url 'expense_tracker:dashboard' %}#new-expense"><span>＋</span><small>ثبت خرج</small></a>
+  <a class="{% if request.resolver_match.url_name == 'receivables' %}active{% endif %}" href="{% url 'expense_tracker:receivables' %}"><span>◎</span><small>طلب‌ها</small></a>
+  <a class="{% if request.resolver_match.url_name == 'reports' %}active{% endif %}" href="{% url 'expense_tracker:reports' %}"><span>▥</span><small>گزارش</small></a>
+</nav>
+<script src="{% static 'expense_tracker/app.js' %}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>
