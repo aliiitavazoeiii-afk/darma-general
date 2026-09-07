@@ -56,6 +56,18 @@ class BankTransfer(models.Model):
 
 
 class DigikalaSettlement(models.Model):
+    SOURCE_DIGIKALA = "digikala"
+    SOURCE_DIA_GALLERY = "dia_gallery"
+    SOURCE_CHOICES = [
+        (SOURCE_DIGIKALA, "دیجی‌کالا"),
+        (SOURCE_DIA_GALLERY, "Dia Gallery"),
+    ]
+    source = models.CharField(
+        max_length=30,
+        choices=SOURCE_CHOICES,
+        default=SOURCE_DIGIKALA,
+        db_index=True,
+    )
     date = models.DateField()
     amount = models.PositiveBigIntegerField(validators=[MinValueValidator(1)])
     note = models.TextField(blank=True)
