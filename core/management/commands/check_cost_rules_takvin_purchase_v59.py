@@ -67,11 +67,13 @@ class Command(BaseCommand):
                 # Novani: one future-dated rule changes that date forward only.
                 future = date(2099, 1, 2)
                 before_future = date(2099, 1, 1)
-                set_novani_cost_rule(future, 65000)
-                if int(novani_cost_for(future)) != 65000:
-                    raise CommandError("V59 Novani future rule did not resolve to 65,000")
-                if int(novani_cost_for(before_future)) == 65000:
-                    raise CommandError("V59 Novani future rule leaked into the prior date")
+                prior_cost = int(novani_cost_for(before_future))
+                sentinel_cost = prior_cost + 12345
+                set_novani_cost_rule(future, sentinel_cost)
+                if int(novani_cost_for(future)) != sentinel_cost:
+                    raise CommandError("V59 Novani future rule did not resolve to its exact sentinel cost")
+                if int(novani_cost_for(before_future)) != prior_cost:
+                    raise CommandError("V59 Novani future rule changed the prior-date cost")
 
                 # Takvin: purchase stock apply is physical-only; debt is managed by takvin_v5.
                 obj = TakvinPurchase.objects.create(
