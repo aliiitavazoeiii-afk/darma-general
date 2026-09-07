@@ -209,7 +209,7 @@ def get_variant_rows(*, force=False):
                 size=100,
                 max_pages=30,
                 timeout=timeout,
-                workers=2,
+                workers=1,
             )
             cache.set(VARIANT_ROWS_CACHE_KEY, rows, VARIANT_ROWS_CACHE_SECONDS)
             return rows
