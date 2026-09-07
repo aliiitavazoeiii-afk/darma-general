@@ -1,8 +1,16 @@
 import os
+import time
 from collections import defaultdict
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
+from .digikala_zero_guard_v65 import (
+    affected_variants_for_cell,
+    format_preview,
+    scan_zero_transitions,
+    stock_cell_total,
+    zero_guard_check_seconds,
+)
 from .models import AppSetting
 from .telegram_inventory_bot_v20 import (
     InventoryBot,
@@ -83,7 +91,12 @@ def _detail_back_markup(extra=None):
 
 
 class BatchedInventoryBot(InventoryBot):
-    """Inventory bot with compact drill-down alerts; automatic alerts fire only at 09:00."""
+    """Inventory bot with compact stock alerts plus V65 zero-stock Digikala safe preview."""
+
+    def __init__(self, api):
+        super().__init__(api)
+        self.zero_guard_last_scan = 0.0
+        self.zero_guard_initialized = False
 
     def send_alert_summary(self, user_id, trigger_label="وضعیت موجودی"):
         groups = _groups()
@@ -164,7 +177,8 @@ class BatchedInventoryBot(InventoryBot):
 
     def handle_callback(self, query):
         data = query.get("data") or ""
-        if data not in {"a:transfer", "a:production"}:
+        zero_preview = data.startswith("dkz:preview:")
+        if data not in {"a:transfer", "a:production"} and not zero_preview:
             return super().handle_callback(query)
 
         callback_id = query.get("id")
@@ -183,10 +197,84 @@ class BatchedInventoryBot(InventoryBot):
             self.unauthorized(chat_id, user_id)
             return
 
+        if zero_preview:
+            try:
+                _, _, size_id, color_id = data.split(":")
+                cell = stock_cell_total(int(size_id), int(color_id))
+                if int(cell["total"]) > 0:
+                    self.api.send(
+                        chat_id,
+                        f"✅ موجودی {cell['color'].name} / {cell['size'].name} دیگر صفر نیست.\n"
+                        f"خانه: {_fmt(cell['home'])} | خورشید: {_fmt(cell['khorshid'])} | کل: {_fmt(cell['total'])}\n"
+                        "هیچ تغییری در Digikala انجام نشد.",
+                        _keyboard([[_button("🏠 منوی اصلی", "m:home")]]),
+                    )
+                    return
+                preview = affected_variants_for_cell(
+                    cell["size"].id,
+                    cell["color"].id,
+                    force=True,
+                )
+                self.api.send(
+                    chat_id,
+                    format_preview(preview),
+                    _keyboard(
+                        [
+                            [_button("🔒 غیرفعال‌سازی فعلاً قفل است", "m:home")],
+                            [_button("🏠 منوی اصلی", "m:home")],
+                        ]
+                    ),
+                )
+            except Exception as exc:
+                self.api.send(
+                    chat_id,
+                    f"پیش‌نمایش Digikala انجام نشد: {exc}\nهیچ تغییری در Digikala انجام نشد.",
+                    _keyboard([[_button("🏠 منوی اصلی", "m:home")]]),
+                )
+            return
+
         if data == "a:transfer":
             self.send_transfer_details(chat_id)
         else:
             self.send_production_details(chat_id)
+
+    def send_zero_guard_alert(self, chat_id, cell):
+        self.api.send(
+            chat_id,
+            f"⛔ موجودی کل دارما صفر شد\n"
+            f"{cell['color'].name} / {cell['size'].name}\n"
+            f"خانه: {_fmt(cell['home'])}\n"
+            f"خورشید: {_fmt(cell['khorshid'])}\n"
+            f"کل: {_fmt(cell['total'])}\n\n"
+            "برای ایمنی فعلاً فقط کدهای Digikala که در همین سایز به این رنگ وابسته‌اند بررسی می‌شوند. "
+            "هیچ کالا خودکار غیرفعال نمی‌شود.",
+            _keyboard(
+                [
+                    [_button("🔎 بررسی کدهای متاثر", f"dkz:preview:{cell['size'].id}:{cell['color'].id}")],
+                    [_button("❌ فعلاً کاری نکن", "m:home")],
+                ]
+            ),
+        )
+
+    def maybe_send_zero_guard_alerts(self, force=False):
+        ids = self.allowed
+        if not ids:
+            return
+        now = time.monotonic()
+        if not force and now - self.zero_guard_last_scan < zero_guard_check_seconds():
+            return
+        self.zero_guard_last_scan = now
+
+        bootstrap = not self.zero_guard_initialized
+        transitions = scan_zero_transitions(bootstrap=bootstrap)
+        self.zero_guard_initialized = True
+        if bootstrap:
+            print("V65 zero guard state initialized safely; existing zero cells were not notified.", flush=True)
+            return
+
+        for cell in transitions:
+            for user_id in ids:
+                self.send_zero_guard_alert(user_id, cell)
 
     def send_grouped_alerts(self, trigger_label="بررسی موجودی"):
         ids = self.allowed
@@ -198,8 +286,9 @@ class BatchedInventoryBot(InventoryBot):
         return sent
 
     def maybe_send_alerts(self, force=False):
-        # The bot keeps polling for commands, but automatic stock notifications
-        # are allowed only once during the 09:00 hour each day.
+        # V65 zero transitions are checked independently every ~60 seconds.
+        # The pre-existing grouped production/transfer alert remains once at 09:00.
+        self.maybe_send_zero_guard_alerts(force=force)
         now = _now_local()
         if now.hour != 9:
             return
