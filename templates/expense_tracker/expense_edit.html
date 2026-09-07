@@ -1,0 +1,17 @@
+{% extends 'expense_tracker/base.html' %}{% load jalali %}
+{% block title %}ویرایش خرج | خرج من{% endblock %}
+{% block content %}
+<div class="page-head"><div><div class="eyebrow">اصلاح تراکنش</div><h1>ویرایش خرج</h1><p>فقط اختلاف مبلغ جدید و قبلی روی ملت اعمال می‌شود.</p></div><a class="secondary-btn compact" href="{% url 'expense_tracker:expense_list' %}">بازگشت</a></div>
+<section class="panel narrow-panel">
+  <form method="post" class="expense-form">{% csrf_token %}
+    <div class="amount-wrap"><label>مبلغ</label><div class="amount-input"><input class="money-input" name="amount" value="{{ expense.amount }}" inputmode="numeric"><span>تومان</span></div></div>
+    <div class="form-grid">
+      <label><span>دسته</span><select name="category">{% for c in categories %}<option value="{{ c.id }}" {% if c.id == expense.category_id %}selected{% endif %}>{{ c.name }}</option>{% endfor %}</select></label>
+      <label><span>تاریخ</span><input class="ltr-input" name="date" value="{{ expense_j }}"></label>
+    </div>
+    <label><span>عنوان</span><input name="title" value="{{ expense.title }}"></label>
+    <label><span>توضیح</span><input name="note" value="{{ expense.note }}"></label>
+    <div class="button-row"><button class="primary-btn">ذخیره تغییرات</button></div>
+  </form>
+</section>
+{% endblock %}
