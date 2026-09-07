@@ -113,6 +113,15 @@ class Command(BaseCommand):
                 if int(source_balance(SOURCE_MELAT) or 0) != before["mellat"]:
                     raise CommandError("AJAX expense cleanup did not restore Mellat")
 
+                expense = create_expense(
+                    expense_date=today,
+                    amount=10_000,
+                    category=category,
+                    title="test for edit",
+                )
+                if int(source_balance(SOURCE_MELAT) or 0) != before["mellat"] - 10_000:
+                    raise CommandError("expense recreate before edit did not debit Mellat")
+
                 expense = update_expense(
                     expense,
                     expense_date=today,
