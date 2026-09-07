@@ -1,8 +1,11 @@
 services:
   expense-web:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.expense
     restart: unless-stopped
-    env_file: .env
+    env_file:
+      - /opt/darma-general/.env
     environment:
       DJANGO_SETTINGS_MODULE: expense_site.settings
       DB_HOST: db
