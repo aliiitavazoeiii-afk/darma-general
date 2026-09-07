@@ -1,0 +1,18 @@
+services:
+  expense-web:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DJANGO_SETTINGS_MODULE: expense_site.settings
+      DB_HOST: db
+    entrypoint: ["/bin/sh", "/app/expense_entrypoint.sh"]
+    ports:
+      - "${EXPENSE_BIND:-0.0.0.0}:${EXPENSE_PORT:-8011}:8000"
+    networks:
+      - darma_main
+
+networks:
+  darma_main:
+    external: true
+    name: "${DARMA_NETWORK}"
