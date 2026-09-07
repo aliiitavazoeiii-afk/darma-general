@@ -8,6 +8,8 @@ from django.shortcuts import get_object_or_404, redirect, render
 from .dateutils import format_jalali, parse_jalali_date
 from .models import Brand, Color, ProductCode, ProductComposition, ProductSize, Size
 from .sale_price_v60 import MANAGED_BRANDS, next_sale_price_rule, sale_price_for, set_sale_price_rule
+from .special_darma_products_v66 import variable_color_pack_qty
+from .variant_sale_v12 import is_variable_color_product_code
 
 
 def _to_int(value, default=0):
@@ -85,7 +87,18 @@ def settings_product_form(request, product_id=None):
 
         if not form_code:
             errors.append("کد محصول را وارد کن.")
-        if comp_total != form_pack_qty:
+        variable_color = brand.name == "دارما" and is_variable_color_product_code(form_code)
+        if variable_color:
+            expected_pack = int(variable_color_pack_qty(form_code) or 1)
+            if form_pack_qty != expected_pack:
+                errors.append(
+                    f"تعداد پک {form_code} باید دقیقاً {expected_pack} باشد."
+                )
+            if comp_total != 0:
+                errors.append(
+                    f"{form_code} محصول رنگ‌متغیر است؛ ترکیب ثابت رنگ نباید ثبت شود."
+                )
+        elif comp_total != form_pack_qty:
             errors.append(
                 f"جمع تعداد رنگ‌ها باید دقیقاً {form_pack_qty} باشد؛ الان {comp_total} است."
             )
