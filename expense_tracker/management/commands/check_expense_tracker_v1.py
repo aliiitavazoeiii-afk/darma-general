@@ -6,8 +6,9 @@ from django.test import RequestFactory
 from django.template.loader import get_template
 from django.urls import resolve
 
+from core.dateutils import format_jalali
 from core.models import AccountEntry, BusinessPayment, InventoryMovement, SaleLine, StockBalance
-from core.payment_source_v63 import SOURCE_MELAT, source_balance, source_row
+from core.payment_source_v63 import SOURCE_MELAT, source_balance
 
 from expense_tracker.models import DailyExpense, ExpenseCategory, ReceivableEntry, ReceivablePerson
 from expense_tracker import views as expense_views
@@ -90,7 +91,7 @@ class Command(BaseCommand):
                 ajax_request = RequestFactory().post(
                     "/expenses/add/",
                     {
-                        "date": f"{today.year}/01/01",
+                        "date": format_jalali(today),
                         "amount": "12000",
                         "category": str(category.id),
                         "title": "ajax test",
@@ -107,10 +108,10 @@ class Command(BaseCommand):
                     raise CommandError("AJAX expense endpoint did not return success JSON")
                 if int(source_balance(SOURCE_MELAT) or 0) != before["mellat"] - 12_000:
                     raise CommandError("AJAX expense did not debit Mellat exactly")
-                DailyExpense.objects.filter(title="ajax test", category=category).delete()
-                mellat_row = source_row(SOURCE_MELAT, create=True, for_update=True)
-                mellat_row.amount = before["mellat"]
-                mellat_row.save(update_fields=["amount", "updated_at"])
+                ajax_expense = DailyExpense.objects.get(title="ajax test", category=category)
+                delete_expense(ajax_expense)
+                if int(source_balance(SOURCE_MELAT) or 0) != before["mellat"]:
+                    raise CommandError("AJAX expense cleanup did not restore Mellat")
 
                 expense = update_expense(
                     expense,
