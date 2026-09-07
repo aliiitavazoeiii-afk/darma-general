@@ -327,3 +327,38 @@ V65 now:
 Public `GET /open-api/v1/` health is informational only and no longer gates `/variants`.
 
 This correction does not change Telegram zero detection, internal stock, sales, accounting, or any Digikala listing state.
+
+
+## Production page-size finding
+
+A direct production probe on the same authenticated `/variants` endpoint showed:
+
+```text
+size=1  -> HTTP 200
+size=50 -> HTTP 200
+size=100 -> HTTP 429 Too Many Requests
+```
+
+For the current seller account, `size=50` returned:
+
+```text
+item_per_page=50
+total_pages=28
+total_rows=1375
+```
+
+The successful response did **not** include `data.meta_data.rate_limit`.
+
+V65 therefore now uses:
+
+```text
+GET /open-api/v1/variants?page=N&size=50
+```
+
+and reads pages strictly serially.
+
+If `meta_data.rate_limit` is present, V65 may use it to stop before the next page when the remaining quota is known to be insufficient.
+
+If rate metadata is absent, V65 does not invent quota values. It continues serially and treats the first real HTTP 429 as a hard stop with zero immediate retry. Any partial mapping is discarded and never cached or accepted as complete.
+
+No Digikala write endpoint is introduced by this change.
