@@ -1,0 +1,74 @@
+{% extends 'expense_tracker/base.html' %}{% load jalali %}
+{% block title %}طلب‌ها | خرج من{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><div class="eyebrow">دنگ و بدهکارها</div><h1>طلب‌ها</h1><p>طلب هر نفر جدا می‌ماند. ثبت طلب پولی را جابه‌جا نمی‌کند؛ تسویه واقعی به ملت اضافه می‌شود.</p></div>
+  <div class="page-head-stats"><span>کل طلب باز</span><strong class="money">{{ total_outstanding|groupnum }} تومان</strong></div>
+</div>
+
+<div class="two-col-grid">
+  <section class="panel">
+    <div class="panel-head"><div><div class="eyebrow">شخص جدید</div><h2>افزودن بدهکار</h2></div></div>
+    <form method="post" action="{% url 'expense_tracker:receivable_person_add' %}" class="stack-form">{% csrf_token %}
+      <label><span>نام</span><input name="name" placeholder="مثلاً امیر" required></label>
+      <label><span>یادداشت</span><input name="note" placeholder="اختیاری"></label>
+      <button class="secondary-btn">＋ افزودن شخص</button>
+    </form>
+  </section>
+  <section class="panel">
+    <div class="panel-head"><div><div class="eyebrow">مانده حساب</div><h2>ملت</h2></div></div>
+    <div class="big-stat money">{{ mellat_balance|groupnum }} <small>تومان</small></div>
+    <p class="muted">فقط تسویه‌هایی که واقعاً دریافت می‌کنی به این عدد اضافه می‌شوند.</p>
+  </section>
+</div>
+
+<div class="people-grid">
+{% for person in people %}
+  <article class="person-card {% if person.outstanding > 0 %}has-debt{% endif %}">
+    <div class="person-head">
+      <span class="avatar large">{{ person.name|slice:":1" }}</span>
+      <div><h3>{{ person.name }}</h3><small>{{ person.note|default:"دنگ / طلب شخصی" }}</small></div>
+      <div class="person-balance"><span>باقی‌مانده</span><strong class="money">{{ person.outstanding|groupnum }}</strong></div>
+    </div>
+    <div class="mini-stats">
+      <div><span>کل طلب</span><strong class="money">{{ person.claim_total|groupnum }}</strong></div>
+      <div><span>تسویه‌شده</span><strong class="money">{{ person.payment_total|groupnum }}</strong></div>
+    </div>
+    <details>
+      <summary>＋ ثبت طلب جدید</summary>
+      <form method="post" action="{% url 'expense_tracker:receivable_claim_add' person.id %}" class="inline-action-form">{% csrf_token %}
+        <input class="money-input" name="amount" inputmode="numeric" placeholder="مبلغ" required>
+        <input class="ltr-input" name="date" value="{{ today_j }}">
+        <input name="note" placeholder="مثلاً سهم شام">
+        <button class="secondary-btn compact">ثبت طلب</button>
+      </form>
+    </details>
+    <details {% if person.outstanding <= 0 %}class="disabled-detail"{% endif %}>
+      <summary>✓ ثبت تسویه دریافتی</summary>
+      <form method="post" action="{% url 'expense_tracker:receivable_repay' person.id %}" class="inline-action-form">{% csrf_token %}
+        <input class="money-input" name="amount" inputmode="numeric" placeholder="مبلغ دریافتی" required>
+        <input class="ltr-input" name="date" value="{{ today_j }}">
+        <input name="note" placeholder="مثلاً کارت‌به‌کارت">
+        <button class="primary-btn compact">ثبت تسویه</button>
+      </form>
+    </details>
+  </article>
+{% empty %}
+  <div class="panel empty">هنوز کسی در بخش طلب‌ها ثبت نشده.</div>
+{% endfor %}
+</div>
+
+<section class="panel mt">
+  <div class="panel-head"><div><div class="eyebrow">سابقه</div><h2>گردش طلب‌ها</h2></div></div>
+  <div class="ledger-list">
+  {% for entry in entries %}
+    <div class="ledger-row">
+      <span class="ledger-kind {% if entry.kind == 'payment' %}paid{% else %}claim{% endif %}">{% if entry.kind == 'payment' %}تسویه{% else %}طلب{% endif %}</span>
+      <div><strong>{{ entry.person.name }}</strong><small>{{ entry.date|jalali }}{% if entry.note %} · {{ entry.note }}{% endif %}</small></div>
+      <strong class="money {% if entry.kind == 'payment' %}positive{% endif %}">{% if entry.kind == 'payment' %}−{% else %}+{% endif %}{{ entry.amount|groupnum }}</strong>
+      <form method="post" action="{% url 'expense_tracker:receivable_entry_delete' entry.id %}">{% csrf_token %}<button class="icon-btn danger" data-confirm="این گردش حذف شود؟ اثر تسویه روی ملت هم برمی‌گردد.">×</button></form>
+    </div>
+  {% empty %}<div class="empty">هنوز گردش طلبی ثبت نشده.</div>{% endfor %}
+  </div>
+</section>
+{% endblock %}
