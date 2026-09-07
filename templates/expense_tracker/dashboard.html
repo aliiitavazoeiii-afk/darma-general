@@ -33,7 +33,7 @@
   <section class="panel expense-panel" id="new-expense">
     <div class="panel-head">
       <div><div class="eyebrow">ثبت سریع</div><h2>خرج جدید</h2></div>
-      <span class="pill">{{ today_j }}</span>
+      <span class="pill" id="entry-date-badge">{{ today_j }}</span>
     </div>
     <form method="post" action="{% url 'expense_tracker:expense_add' %}" class="expense-form js-expense-form" data-ajax-expense="1">
       {% csrf_token %}
