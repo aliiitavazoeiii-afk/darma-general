@@ -42,6 +42,8 @@ class Command(BaseCommand):
                 "_resolve_size",
                 "write_enabled",
                 "affected_variants_for_cell",
+                "VARIANT_READ_TIMEOUTS",
+                "time.sleep",
             ),
             "core/telegram_inventory_alerts_v20.py": (
                 "dkz:preview:",
