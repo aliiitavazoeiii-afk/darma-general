@@ -1,5 +1,74 @@
 # 08 — LIVE STATE AND CHECKPOINTS
 
+## 0. Latest confirmed live deployment: V65 SAFE MODE
+
+The user posted the final successful production output for the Digikala zero-stock Telegram guard on 2026-09-07.
+
+Explicit success marker:
+
+```text
+SUCCESS: DIGIKALA ZERO GUARD V65 SAFE MODE DEPLOYED
+```
+
+Confirmed bot/runtime state:
+
+```text
+Telegram bot connected: @darmageneralbot
+Authorized Telegram users: [107305979]
+V65 zero guard state initialized safely; existing zero cells were not notified.
+```
+
+Confirmed V65 regression/runtime markers:
+
+```text
+SYNTHETIC TITLE-ONLY MAPPING OK = 06 / M / مشکی
+ZERO TRANSITION ROLLBACK CHECK OK
+TELEGRAM APPROVAL FLOW = PREVIEW ONLY
+DIGIKALA WRITE MODE = ABSENT / LOCKED
+NO BUSINESS DATA CHANGED
+SUCCESS: DIGIKALA ZERO GUARD V65 CHECK PASSED
+```
+
+Final production invariant snapshot:
+
+```text
+CAPITAL=5916084564
+MELLAT=0
+MOFID=24731000
+FINISHED=1186669000
+RAW=2807366700
+DIGI=940899364
+DIA=497000
+TAKVIN_DEBT=65880000
+DARMA_QTY=11432
+TAKVIN_QTY=1429
+NOVANI_QTY=3630
+SALES=484
+PAYMENTS=9
+RECEIPTS=6
+RAW_ROWS=53
+MOVEMENTS=5225
+TAKVIN_PURCHASES=10
+```
+
+Backup created by the successful deployment:
+
+```text
+backups/before-digikala-zero-guard-v65-20260907-205127.sql
+```
+
+V65 production semantics confirmed by this marker:
+
+- Telegram checks Darma combined HOME + KHORSHID zero transitions about every 60 seconds.
+- Existing zero cells were seeded silently at startup.
+- Digikala mapping is read-only.
+- Digikala activation/write remains locked/absent.
+- V65 does not authorize any Digikala listing mutation.
+
+These values are the latest confirmed deployment-boundary snapshot. They are continuity data, not reset targets.
+
+---
+
 This file records confirmed production/historical checkpoints. These numbers are for continuity and forensic reconciliation. They are **not permanent targets** and must never be force-restored after legitimate later activity unless the user explicitly requests a rollback to that checkpoint.
 
 Last synchronized: 2026-08-29 after confirmed V38 UI modernization deployment.
