@@ -30,7 +30,7 @@
 
     const box = document.createElement("div");
     box.className = "col-md-2 payment-source-v63";
-    box.innerHTML = '<label class="form-label">از</label>' +
+    box.innerHTML = '<label class="form-label">پرداخت از</label>' +
       '<select class="form-select" name="source_account" aria-label="حساب مبدا پرداخت">' +
       '<option value="melat">ملت</option>' +
       '<option value="mofid">مفید</option>' +
