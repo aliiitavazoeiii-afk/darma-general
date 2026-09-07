@@ -10,20 +10,25 @@ fail(){ echo ""; echo "======================================"; echo "FAILED: $1
 step(){ echo ""; echo "======================================"; echo "$1"; echo "======================================"; }
 
 [ -d "$MAIN_DIR" ] || fail "main project directory not found: $MAIN_DIR"
-cd "$EXPENSE_DIR"
 [ -f "$MAIN_DIR/.env" ] || fail "main .env not found"
-[ -f .env ] || cp "$MAIN_DIR/.env" .env
+[ -d "$EXPENSE_DIR" ] || fail "expense worktree not found: $EXPENSE_DIR"
 
 set -a
-. ./.env || fail "could not load expense .env"
+. "$MAIN_DIR/.env" || fail "could not load main .env"
 set +a
 
-DB_CONTAINER=$(cd "$MAIN_DIR" && docker compose ps -q db)
+cd "$MAIN_DIR"
+docker compose config -q || fail "main compose invalid"
+docker compose up -d db web || fail "main db/web start failed"
+
+DB_CONTAINER=$(docker compose ps -q db)
 [ -n "$DB_CONTAINER" ] || fail "main PostgreSQL container was not found"
 DARMA_NETWORK=$(docker inspect -f '{{range $k, $v := .NetworkSettings.Networks}}{{$k}}{{"\n"}}{{end}}' "$DB_CONTAINER" | sed '/^$/d' | head -n1)
 [ -n "$DARMA_NETWORK" ] || fail "could not discover main Docker network"
 export DARMA_NETWORK
 export EXPENSE_PORT
+
+cd "$EXPENSE_DIR"
 
 expense_dc() {
   docker compose -p darma-expense -f compose.expense.yml "$@"
@@ -82,8 +87,6 @@ print("TAKVIN_PURCHASES=%d" % TakvinPurchase.objects.count())
 
 step "1) MAIN DATABASE BACKUP + PROTECTED PRE STATE"
 cd "$MAIN_DIR"
-docker compose config -q || fail "main compose invalid"
-docker compose up -d db web || fail "main db/web start failed"
 i=1
 while [ "$i" -le 30 ]; do
   docker compose exec -T db pg_isready -U "$DB_USER" -d "$DB_NAME" >/dev/null 2>&1 && break
@@ -91,12 +94,12 @@ while [ "$i" -le 30 ]; do
   sleep 1
   i=$((i+1))
 done
-cd "$EXPENSE_DIR"
 mkdir -p backups
 STAMP=$(date +%Y%m%d-%H%M%S)
-BACKUP="backups/before-expense-tracker-v1-${STAMP}.sql"
-(cd "$MAIN_DIR" && docker compose exec -T db pg_dump -U "$DB_USER" "$DB_NAME") > "$BACKUP" || fail "database backup failed"
+BACKUP="$MAIN_DIR/backups/before-expense-tracker-v1-${STAMP}.sql"
+docker compose exec -T db pg_dump -U "$DB_USER" "$DB_NAME" > "$BACKUP" || fail "database backup failed"
 [ -s "$BACKUP" ] || fail "database backup is empty"
+cd "$EXPENSE_DIR"
 PRE=$(snapshot_main) || fail "could not capture protected pre state"
 echo "$PRE"
 echo "BACKUP=$BACKUP"
@@ -108,12 +111,15 @@ CHANGED=$(git diff --name-only "$BASE"..HEAD)
 echo "$CHANGED"
 for f in $CHANGED; do
   case "$f" in
-    expense_site/*|expense_tracker/*|templates/expense_tracker/*|static/expense_tracker/*|compose.expense.yml|expense_entrypoint.sh|server_expense_tracker_v1.sh|docs/EXPENSE_TRACKER_V1.md) ;;
+    expense_site/*|expense_tracker/*|templates/expense_tracker/*|static/expense_tracker/*|Dockerfile.expense|compose.expense.yml|expense_entrypoint.sh|server_expense_tracker_v1.sh|docs/EXPENSE_TRACKER_V1.md) ;;
     *) fail "unexpected file changed on isolated expense branch: $f" ;;
   esac
 done
 
 git diff --quiet "$BASE"..HEAD -- core config compose.yml compose.telegram.yml Caddyfile entrypoint.sh templates/core static/core   || fail "existing ERP source changed on expense branch"
+
+[ ! -f .env ] || fail "expense worktree must not contain .env"
+[ ! -d backups ] || fail "expense worktree must not contain database backups"
 
 step "3) BUILD ISOLATED EXPENSE SERVICE"
 expense_dc config -q || fail "expense compose invalid"
@@ -161,4 +167,5 @@ echo "Expense port: $EXPENSE_PORT"
 echo "ERP web container: NOT RECREATED"
 echo "ERP Caddy configuration: NOT CHANGED"
 echo "Only shared business bridge: canonical Mellat balance"
+echo "Secrets copied into expense image: NO"
 echo "Backup: $BACKUP"
