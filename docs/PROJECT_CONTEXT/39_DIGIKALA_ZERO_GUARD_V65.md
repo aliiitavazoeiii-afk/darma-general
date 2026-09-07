@@ -1,6 +1,6 @@
 # 39 — DIGIKALA ZERO-STOCK TELEGRAM GUARD V65
 
-Status at creation: GitHub-prepared SAFE MODE. Production is not confirmed until the user posts the final V65 success marker.
+Status: PRODUCTION-CONFIRMED SAFE MODE as of 2026-09-07. The user posted the final marker `SUCCESS: DIGIKALA ZERO GUARD V65 SAFE MODE DEPLOYED`.
 
 ## User requirement
 
@@ -191,3 +191,50 @@ If all read attempts still fail during deployment:
 This behavior is intentionally different from a future write-enabled phase: once real deactivation is ever introduced, successful live mapping and explicit user confirmation must become mandatory again before any write.
 
 The deploy script also sets `COMPOSE_IGNORE_ORPHANS=1` only to suppress the harmless warning caused when the already-running Telegram bot exists outside a base-compose command. It does not remove or recreate an orphan by itself, and `--remove-orphans` is not used.
+
+
+## Confirmed production checkpoint — 2026-09-07
+
+The user posted the successful production boundary with:
+
+```text
+SUCCESS: DIGIKALA ZERO GUARD V65 SAFE MODE DEPLOYED
+```
+
+The running bot reported:
+
+```text
+Telegram bot connected: @darmageneralbot
+Authorized Telegram users: [107305979]
+V65 zero guard state initialized safely; existing zero cells were not notified.
+```
+
+Final invariant snapshot:
+
+```text
+CAPITAL=5916084564
+MELLAT=0
+MOFID=24731000
+FINISHED=1186669000
+RAW=2807366700
+DIGI=940899364
+DIA=497000
+TAKVIN_DEBT=65880000
+DARMA_QTY=11432
+TAKVIN_QTY=1429
+NOVANI_QTY=3630
+SALES=484
+PAYMENTS=9
+RECEIPTS=6
+RAW_ROWS=53
+MOVEMENTS=5225
+TAKVIN_PURCHASES=10
+```
+
+Backup:
+
+```text
+backups/before-digikala-zero-guard-v65-20260907-205127.sql
+```
+
+This confirms only the V65 read-only Telegram guard. Digikala activation/write is still absent and locked.
