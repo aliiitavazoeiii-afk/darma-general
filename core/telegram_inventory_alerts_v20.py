@@ -190,7 +190,8 @@ class BatchedInventoryBot(InventoryBot):
         zero_preview = data.startswith("dkz:preview:")
         zero_arm = data.startswith("dkz:arm:")
         zero_do = data.startswith("dkz:do:")
-        zero_action = zero_preview or zero_arm or zero_do
+        zero_cancel = data.startswith("dkz:cancel:")
+        zero_action = zero_preview or zero_arm or zero_do or zero_cancel
         if data not in {"a:transfer", "a:production"} and not zero_action:
             return super().handle_callback(query)
 
@@ -287,9 +288,14 @@ class BatchedInventoryBot(InventoryBot):
                     )
                     return
 
+                now_mono = time.monotonic()
+                for old_token, old_confirmation in list(self.zero_write_confirmations.items()):
+                    if now_mono - float(old_confirmation.get("created") or 0) > CONFIRM_TTL_SECONDS:
+                        self.zero_write_confirmations.pop(old_token, None)
+
                 token = secrets.token_urlsafe(6)
                 self.zero_write_confirmations[token] = {
-                    "created": time.monotonic(),
+                    "created": now_mono,
                     "user_id": int(user_id),
                     "chat_id": int(chat_id),
                     "size_id": int(size_id),
@@ -307,7 +313,7 @@ class BatchedInventoryBot(InventoryBot):
                                     f"dkz:do:{token}",
                                 )
                             ],
-                            [_button("❌ لغو", "m:home")],
+                            [_button("❌ لغو", f"dkz:cancel:{token}")],
                         ]
                     ),
                 )
@@ -319,9 +325,21 @@ class BatchedInventoryBot(InventoryBot):
                 )
             return
 
+        if zero_cancel:
+            token = data.split(":", 2)[2]
+            confirmation = self.zero_write_confirmations.get(token)
+            if confirmation and int(confirmation.get("user_id") or 0) == int(user_id):
+                self.zero_write_confirmations.pop(token, None)
+            self.api.send(
+                chat_id,
+                "❌ تأیید غیرفعال‌سازی لغو شد. هیچ تغییری در Digikala انجام نشد.",
+                _keyboard([[_button("🏠 منوی اصلی", "m:home")]]),
+            )
+            return
+
         if zero_do:
             token = data.split(":", 2)[2]
-            confirmation = self.zero_write_confirmations.pop(token, None)
+            confirmation = self.zero_write_confirmations.get(token)
             if not confirmation:
                 self.api.send(
                     chat_id,
@@ -340,12 +358,17 @@ class BatchedInventoryBot(InventoryBot):
                 )
                 return
             if time.monotonic() - float(confirmation["created"]) > CONFIRM_TTL_SECONDS:
+                self.zero_write_confirmations.pop(token, None)
                 self.api.send(
                     chat_id,
                     "⏳ زمان تأیید تمام شده است. هیچ تغییری انجام نشد؛ دوباره preview بگیر.",
                     _keyboard([[_button("🏠 منوی اصلی", "m:home")]]),
                 )
                 return
+
+            # Consume only after user/chat/TTL validation so the token is one-time without
+            # letting a different authorized chat invalidate somebody else's confirmation.
+            self.zero_write_confirmations.pop(token, None)
 
             try:
                 result = execute_confirmed_deactivation(
