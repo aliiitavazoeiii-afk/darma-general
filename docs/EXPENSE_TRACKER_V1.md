@@ -76,3 +76,22 @@ The deployment regression is rollback-only and explicitly proves:
 Expected production marker:
 
 `SUCCESS: EXPENSE TRACKER V1 DEPLOYED`
+
+
+## UI V2 — repeated backdated expense entry
+
+Added after the first live V1 deployment:
+
+- upgraded dark/glass visual system and properly loaded Persian web typography;
+- Jalali calendar picker on expense date;
+- expense date can be changed to any earlier day, including the start of the current month;
+- quick expense save uses AJAX and does not navigate or scroll the page;
+- after a successful save, amount/title/note are cleared;
+- selected date and selected category are intentionally preserved for the next expense;
+- the selected date changes back to today's date only when the page is manually reloaded;
+- Mellat and current dashboard expense KPIs update immediately after AJAX save;
+- recent-expense list receives the newly saved row without page refresh.
+
+Expected deployment marker for this revision:
+
+`SUCCESS: EXPENSE TRACKER UI V2 DEPLOYED`
