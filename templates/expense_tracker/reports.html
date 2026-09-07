@@ -1,0 +1,31 @@
+{% extends 'expense_tracker/base.html' %}{% load jalali %}
+{% block title %}گزارش | خرج من{% endblock %}
+{% block content %}
+<div class="page-head"><div><div class="eyebrow">تحلیل ماه</div><h1>گزارش {{ month_label }}</h1><p>تصویر ساده از اینکه پول این ماه کجا خرج شده.</p></div><div class="page-head-stats"><span>جمع ماه</span><strong class="money">{{ month_total|groupnum }} تومان</strong><small>{{ expense_count }} تراکنش</small></div></div>
+<div class="dashboard-grid">
+  <section class="panel">
+    <div class="panel-head"><div><div class="eyebrow">دسته‌ها</div><h2>توزیع هزینه</h2></div></div>
+    <div class="report-categories">
+    {% for row in category_rows %}
+      <div class="report-category">
+        <div><span class="dot accent-bg-{{ row.category__accent }}"></span><strong>{{ row.category__name }}</strong><small>{{ row.pct }}٪</small></div>
+        <strong class="money">{{ row.total|groupnum }}</strong>
+        <div class="progress"><span class="accent-bg-{{ row.category__accent }}" style="width:{{ row.pct }}%"></span></div>
+      </div>
+    {% empty %}<div class="empty">برای این ماه داده‌ای نیست.</div>{% endfor %}
+    </div>
+  </section>
+  <section class="panel">
+    <div class="panel-head"><div><div class="eyebrow">روز به روز</div><h2>خرج روزانه</h2></div></div>
+    <div class="daily-bars">
+    {% for row in daily_rows %}
+      <div class="daily-bar-row">
+        <span>{{ row.jalali }}</span>
+        <div class="hbar"><i style="width:{{ row.pct }}%"></i></div>
+        <strong class="money">{{ row.total|groupnum }}</strong>
+      </div>
+    {% empty %}<div class="empty">هنوز خرجی ثبت نشده.</div>{% endfor %}
+    </div>
+  </section>
+</div>
+{% endblock %}
