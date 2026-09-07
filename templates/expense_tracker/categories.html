@@ -1,0 +1,29 @@
+{% extends 'expense_tracker/base.html' %}{% load jalali %}
+{% block title %}دسته‌ها | خرج من{% endblock %}
+{% block content %}
+<div class="page-head"><div><div class="eyebrow">شخصی‌سازی</div><h1>دسته‌بندی هزینه‌ها</h1><p>دسته‌های اولیه آماده‌اند؛ هر وقت خواستی دسته جدید اضافه کن.</p></div></div>
+<div class="two-col-grid category-layout">
+  <section class="panel">
+    <div class="panel-head"><div><div class="eyebrow">دسته جدید</div><h2>افزودن دسته</h2></div></div>
+    <form method="post" action="{% url 'expense_tracker:category_add' %}" class="stack-form">{% csrf_token %}
+      <label><span>نام دسته</span><input name="name" placeholder="مثلاً خانه، سفر، هدیه..." required></label>
+      <label><span>رنگ</span><select name="accent">{% for accent in accents %}<option value="{{ accent }}">{{ accent }}</option>{% endfor %}</select></label>
+      <button class="primary-btn">＋ ساخت دسته</button>
+    </form>
+  </section>
+  <section class="panel">
+    <div class="panel-head"><div><div class="eyebrow">دسته‌های من</div><h2>{{ categories|length }} دسته</h2></div></div>
+    <div class="category-admin-list">
+    {% for category in categories %}
+      <div class="category-admin-row">
+        <span class="transaction-icon accent-{{ category.accent }}">{{ category.name|slice:":1" }}</span>
+        <div><strong>{{ category.name }}</strong><small>{{ category.expense_count }} تراکنش · {{ category.expense_total|groupnum }} تومان</small></div>
+        <span class="status {% if category.active %}on{% else %}off{% endif %}">{% if category.active %}فعال{% else %}غیرفعال{% endif %}</span>
+        <form method="post" action="{% url 'expense_tracker:category_toggle' category.id %}">{% csrf_token %}<button class="icon-btn">{% if category.active %}◐{% else %}●{% endif %}</button></form>
+        <form method="post" action="{% url 'expense_tracker:category_delete' category.id %}">{% csrf_token %}<button class="icon-btn danger" data-confirm="این دسته فقط اگر هیچ هزینه‌ای ندارد حذف می‌شود. ادامه؟">×</button></form>
+      </div>
+    {% endfor %}
+    </div>
+  </section>
+</div>
+{% endblock %}
