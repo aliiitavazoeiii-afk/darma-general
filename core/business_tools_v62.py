@@ -7,10 +7,12 @@ from django.db.models import Sum
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
+from . import business_receipts_v64 as receipts_v64
 from . import business_tools_v21 as v21
 from . import business_tools_v60 as v60
 from .dateutils import format_jalali, parse_jalali_date
 from .excel_views import _int
+from .dia_gallery_v45 import dia_gallery_receivable_total
 from .finance_excel_v9 import digikala_receivable_total
 from .material_flow import COLOR_LABELS
 from .material_purchase_v14 import purchase_data_for_payment
@@ -166,13 +168,15 @@ def payments(request):
             "payment_rows": payment_rows,
             "elastic_multi_payloads": elastic_multi_payloads,
             "payment_source_payloads": payment_source_payloads,
-            "receipt_rows": v21._receipt_rows() if section == "receipts" else [],
+            "receipt_rows": receipts_v64.receipt_rows() if section == "receipts" else [],
             "today_j": format_jalali(date.today()),
             "mellat_balance": v21.mellat_balance(),
             "mofid_balance": source_balance(SOURCE_MOFID),
             "tailor_balance": v21.tailor_balance(),
             "takvin_debt": int(v21._takvin_setting().value or 0),
             "digikala_receivable": digikala_receivable_total(),
+            "dia_gallery_receivable": dia_gallery_receivable_total(),
+            "receipt_source_choices": receipts_v64.SOURCE_CHOICES,
             "payees": PAYEE_CHOICES,
             "payment_source_choices": SOURCE_CHOICES,
             "material_colors": list(COLOR_LABELS.items()),
