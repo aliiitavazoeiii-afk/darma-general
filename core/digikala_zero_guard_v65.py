@@ -1,6 +1,7 @@
 import os
 import time
 from collections import defaultdict
+from urllib.parse import urlencode
 
 from django.core.cache import cache
 from django.db import transaction
@@ -19,6 +20,7 @@ VARIANT_ROWS_CACHE_KEY = "digikala-zero-guard-v65-variants"
 VARIANT_ROWS_CACHE_SECONDS = 300
 VARIANT_READ_TIMEOUTS = (15, 30, 45)
 VARIANT_PAGE_SIZE = 50
+VARIANT_SEARCH_TERM = "دارما"
 CHECK_SECONDS_DEFAULT = 60
 HEALTH_PATH = "/open-api/v1/"
 DARMA_SIZE_NAMES = ("M", "L", "XL", "XXL", "3XL", "4XL")
@@ -223,7 +225,14 @@ def _variant_page(path, *, timeout):
 
 
 def _variant_page_path(page, size=VARIANT_PAGE_SIZE):
-    return f"/open-api/v1/variants?page={int(page)}&size={int(size)}"
+    query = urlencode(
+        {
+            "page": int(page),
+            "size": int(size),
+            "search[search_term]": VARIANT_SEARCH_TERM,
+        }
+    )
+    return f"/open-api/v1/variants?{query}"
 
 
 def _insufficient_variant_quota(rate, pages_left):
@@ -242,8 +251,9 @@ def get_variant_rows(*, force=False):
     total_pages = None
     endpoint_rate = None
 
-    # First request is always a single page at the production-confirmed safe size.
-    # Some Digikala accounts omit meta_data.rate_limit on successful /variants reads;
+    # First request is always a single Darma-filtered page at the production-confirmed safe size.
+    # The API-side search term only narrows the candidate set; title-only resolution below remains
+    # authoritative and fail-closed. Some accounts omit meta_data.rate_limit on successful reads;
     # when it is absent we page serially and stop safely on the first 429.
     for attempt, timeout in enumerate(VARIANT_READ_TIMEOUTS, start=1):
         try:
