@@ -19,7 +19,8 @@ from .title_product_resolver_v27 import model_candidate_from_title, resolve_prod
 from .variant_sale_v12 import (
     VARIANT_PRODUCT_CODE,
     assert_stock_invariant,
-    resolve_variant_color,
+    is_variable_color_product_code,
+    resolve_variable_product_color,
     sold_units_by_brand,
     sync_variant_inventory,
 )
@@ -93,18 +94,18 @@ def resolve_rows_v12(parsed_rows):
             continue
 
         color_name = ""
-        if product.brand.name == "دارما" and product.code == VARIANT_PRODUCT_CODE:
-            color_name = resolve_variant_color(row.title, "") or ""
+        if product.brand.name == "دارما" and is_variable_color_product_code(product.code):
+            color_name = resolve_variable_product_color(product.code, row.title) or ""
             if not color_name:
                 errors.append(
-                    f"ردیف {row.source_row}: رنگ محصول s3 از عنوان تشخیص داده نشد؛ "
-                    "کد فروشنده برای رنگ هم استفاده نمی‌شود."
+                    f"ردیف {row.source_row}: رنگ محصول {product.code} از عنوان تشخیص داده نشد؛ "
+                    "کد فروشنده برای رنگ استفاده نمی‌شود."
                 )
                 continue
             if int(ps.default_sale_price or 0) <= 0:
                 errors.append(
-                    f"ردیف {row.source_row}: قیمت فروش s3 سایز {size_name} تعیین نشده؛ "
-                    "از تنظیمات → محصولات و کدها → پک ۱ تایی قیمت را ثبت کن."
+                    f"ردیف {row.source_row}: قیمت فروش {product.code} سایز {size_name} تعیین نشده؛ "
+                    "قیمت تاریخ‌دار/پایه محصول را در تنظیمات ثبت کن."
                 )
                 continue
 
