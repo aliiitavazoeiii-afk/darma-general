@@ -51,6 +51,9 @@ class Command(BaseCommand):
                 "affected_variants_for_cell",
                 "VARIANT_READ_TIMEOUTS",
                 "get_api_health",
+                "_variant_page",
+                "meta_data",
+                "_insufficient_variant_quota",
                 "status_code == 429",
                 "time.sleep",
             ),
@@ -206,35 +209,34 @@ class Command(BaseCommand):
     def _rate_limit_regression(self):
         from core import digikala_zero_guard_v65 as guard
 
-        healthy = {
-            "status": "ok",
-            "mode": "production",
-            "time": "test",
-            "max": 100,
-            "current": 1,
-            "remaining": 99,
-            "reset_at": "",
-            "reset_timezone": "Asia/Tehran",
-            "routes": ["/variants"],
-        }
-        limited = dict(healthy, current=100, remaining=0)
+        def page_response(*, page, total_pages, current, maximum=10, item_id=None):
+            return {
+                "status": "ok",
+                "data": {
+                    "pager": {
+                        "page": page,
+                        "item_per_page": 100,
+                        "total_pages": total_pages,
+                        "total_rows": total_pages,
+                    },
+                    "items": [] if item_id is None else [{"id": item_id}],
+                    "meta_data": {
+                        "rate_limit": {
+                            "max": maximum,
+                            "current": current,
+                            "resetTime": {
+                                "date": "2099-01-01 00:01:00.000000",
+                                "timezone": "Asia/Tehran",
+                            },
+                        }
+                    },
+                },
+            }
 
-        with patch.object(guard, "get_api_health", return_value=limited), patch.object(
-            guard, "paginated_get"
-        ) as paginated:
-            try:
-                guard.get_variant_rows(force=True)
-            except DigikalaAPIError as exc:
-                if exc.status_code != 429:
-                    raise CommandError("V65 rate-limit preflight did not raise status 429")
-            else:
-                raise CommandError("V65 rate-limit preflight did not stop exhausted window")
-            if paginated.call_count != 0:
-                raise CommandError("V65 called /variants despite exhausted health rate-limit")
-
+        # A direct 429 from page 1 is a hard stop: one call, zero sleep/retry.
         calls = {"count": 0}
 
-        def rate_limited(*args, **kwargs):
+        def direct_429(*args, **kwargs):
             calls["count"] += 1
             raise DigikalaAPIError(
                 "Too Many Requests",
@@ -242,21 +244,53 @@ class Command(BaseCommand):
                 payload={"message": "Too Many Requests"},
             )
 
-        with patch.object(guard, "get_api_health", return_value=healthy), patch.object(
-            guard, "paginated_get", side_effect=rate_limited
-        ), patch.object(guard.time, "sleep") as sleeper:
+        with patch.object(guard, "get_json", side_effect=direct_429), patch.object(
+            guard.time, "sleep"
+        ) as sleeper:
             try:
                 guard.get_variant_rows(force=True)
             except DigikalaAPIError as exc:
                 if exc.status_code != 429:
-                    raise CommandError("V65 direct 429 did not preserve status 429")
+                    raise CommandError("V65 direct /variants 429 did not preserve status 429")
             else:
-                raise CommandError("V65 direct 429 did not stop variant read")
+                raise CommandError("V65 direct /variants 429 did not stop mapping")
             if calls["count"] != 1:
-                raise CommandError(f"V65 retried 429 unexpectedly: calls={calls['count']}")
+                raise CommandError(f"V65 retried direct 429 unexpectedly: calls={calls['count']}")
             if sleeper.call_count != 0:
-                raise CommandError("V65 slept/retried after direct 429")
+                raise CommandError("V65 slept/retried after direct /variants 429")
 
+        # A successful first page with insufficient endpoint quota must stop before page 2.
+        insufficient = page_response(page=1, total_pages=5, current=8, maximum=10, item_id=1)
+        with patch.object(guard, "get_json", return_value=insufficient) as get_json_mock:
+            try:
+                guard.get_variant_rows(force=True)
+            except DigikalaAPIError as exc:
+                if exc.status_code != 429:
+                    raise CommandError("V65 insufficient endpoint quota did not stop with 429")
+                payload = exc.payload if isinstance(exc.payload, dict) else {}
+                rate = payload.get("variant_rate_limit") if isinstance(payload, dict) else {}
+                if not isinstance(rate, dict) or rate.get("remaining") != 2:
+                    raise CommandError(f"V65 endpoint quota payload mismatch: {payload}")
+            else:
+                raise CommandError("V65 continued despite insufficient /variants endpoint quota")
+            if get_json_mock.call_count != 1:
+                raise CommandError("V65 requested another /variants page despite insufficient quota")
+
+        # Enough endpoint quota: read pages serially and preserve exact page paths.
+        page1 = page_response(page=1, total_pages=2, current=1, maximum=10, item_id=101)
+        page2 = page_response(page=2, total_pages=2, current=2, maximum=10, item_id=202)
+        with patch.object(guard, "get_json", side_effect=[page1, page2]) as get_json_mock:
+            rows = guard.get_variant_rows(force=True)
+            if [row.get("id") for row in rows] != [101, 202]:
+                raise CommandError(f"V65 serial variant paging mismatch: {rows}")
+            calls_made = [call.args[0] for call in get_json_mock.call_args_list]
+            if calls_made != [
+                "/open-api/v1/variants?page=1&size=100",
+                "/open-api/v1/variants?page=2&size=100",
+            ]:
+                raise CommandError(f"V65 variant page paths mismatch: {calls_made}")
+
+        # Public health stays informational and must use the exact trailing-slash API root.
         with patch.object(
             guard,
             "_request_once",
@@ -285,8 +319,12 @@ class Command(BaseCommand):
             if health["max"] != 100 or health["current"] != 3 or health["remaining"] != 97:
                 raise CommandError(f"V65 health parsing mismatch: {health}")
 
-        self.stdout.write("RATE LIMIT GUARD = exhausted health skips /variants; direct 429 retries = 0")
-        self.stdout.write("HEALTH ENDPOINT = /open-api/v1/ (trailing slash required)")
+        self.stdout.write(
+            "RATE LIMIT GUARD = /variants own meta_data quota controls paging; direct 429 retries = 0"
+        )
+        self.stdout.write("VARIANT PAGING = first page only, then serial pages if endpoint quota is sufficient")
+        self.stdout.write("HEALTH ENDPOINT = informational only: /open-api/v1/")
+
 
     def _print_api_health(self):
         health = get_api_health()
