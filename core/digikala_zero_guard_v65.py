@@ -11,6 +11,7 @@ from .brand_colors import colors_for_brand, norm
 from .daily_order_import_v8 import _resolve_size
 from .digikala_client_v40 import DigikalaAPIError, _request_once, get_json
 from .models import AppSetting, Brand, Color, ProductSize, Size, StockBalance, StockLocation
+from .special_darma_products_v66 import variable_color_names
 from .title_product_resolver_v27 import resolve_product_from_title
 from .variant_sale_v12 import (
     TITLE_COLORS,
