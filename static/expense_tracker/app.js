@@ -94,6 +94,11 @@
     var title=form.querySelector('[name="title"]');
     var note=form.querySelector('[name="note"]');
     var dateInput=form.querySelector('[name="date"]');
+    var dateBadge=document.getElementById("entry-date-badge");
+
+    if(dateInput && dateBadge){
+      dateInput.addEventListener("change",function(){dateBadge.textContent=dateInput.value;});
+    }
 
     form.addEventListener("submit",async function(e){
       e.preventDefault();
