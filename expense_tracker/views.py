@@ -6,7 +6,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.db.models import Sum
-from django.http import HttpResponseNotAllowed
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.text import slugify
 from django.views.decorators.http import require_POST
@@ -75,6 +75,22 @@ def _category_rows(qs):
         row["total"] = int(row["total"] or 0)
         row["pct"] = round((row["total"] * 100 / grand), 1) if grand else 0
     return rows
+
+
+def _dashboard_totals(today=None):
+    today = today or date.today()
+    week_start = _week_start(today)
+    month_start, month_next, _month_label = _current_month_range(today)
+    return {
+        "mellat_balance": mellat_balance(),
+        "today_total": _sum_expenses(DailyExpense.objects.filter(date=today)),
+        "week_total": _sum_expenses(
+            DailyExpense.objects.filter(date__gte=week_start, date__lte=today)
+        ),
+        "month_total": _sum_expenses(
+            DailyExpense.objects.filter(date__gte=month_start, date__lt=month_next)
+        ),
+    }
 
 
 def _receivable_people():
@@ -175,21 +191,44 @@ def expense_list(request):
 @login_required
 @require_POST
 def expense_add(request):
+    wants_json = request.headers.get("X-Requested-With") == "XMLHttpRequest"
     try:
         category = get_object_or_404(
             ExpenseCategory,
             id=int(request.POST.get("category") or 0),
             active=True,
         )
-        create_expense(
+        expense = create_expense(
             expense_date=_jalali_date(request.POST.get("date")),
             amount=_money(request.POST.get("amount")),
             category=category,
             title=request.POST.get("title"),
             note=request.POST.get("note"),
         )
+        if wants_json:
+            payload = _dashboard_totals()
+            payload.update(
+                {
+                    "ok": True,
+                    "message": "خرج ثبت شد؛ تاریخ برای ثبت بعدی ثابت ماند.",
+                    "expense": {
+                        "id": expense.id,
+                        "title": expense.title or category.name,
+                        "amount": int(expense.amount or 0),
+                        "date": format_jalali(expense.date),
+                        "category": category.name,
+                        "accent": category.accent,
+                    },
+                }
+            )
+            return JsonResponse(payload)
         messages.success(request, "هزینه ثبت شد و به همان مبلغ از موجودی ملت کم شد.")
     except Exception as exc:
+        if wants_json:
+            return JsonResponse(
+                {"ok": False, "message": f"هزینه ثبت نشد: {exc}"},
+                status=400,
+            )
         messages.error(request, f"هزینه ثبت نشد: {exc}")
     return redirect(request.POST.get("next") or "expense_tracker:dashboard")
 
