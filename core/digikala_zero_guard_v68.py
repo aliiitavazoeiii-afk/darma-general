@@ -16,10 +16,18 @@ CONFIRM_TTL_SECONDS = 90
 
 
 class DigikalaZeroWriteError(RuntimeError):
-    def __init__(self, message, *, completed=None, failed_variant_id=None):
+    def __init__(
+        self,
+        message,
+        *,
+        completed=None,
+        failed_variant_id=None,
+        write_attempted=False,
+    ):
         super().__init__(message)
         self.completed = list(completed or [])
         self.failed_variant_id = failed_variant_id
+        self.write_attempted = bool(write_attempted)
 
 
 def _truthy(value):
@@ -305,6 +313,7 @@ def execute_confirmed_deactivation(size_id, color_id, expected_fingerprint):
                 f"غیرفعال‌سازی روی variant {variant_id} متوقف شد: {exc}",
                 completed=completed,
                 failed_variant_id=variant_id,
+                write_attempted=True,
             ) from exc
 
     return {
