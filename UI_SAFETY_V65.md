@@ -68,3 +68,13 @@ Variant quota rule:
 - if the first /variants call is 429, stop immediately with zero retry;
 - if endpoint remaining quota is less than pages still required, stop before requesting the next page;
 - partial variant mappings must never be presented as complete or used for a future write decision.
+
+
+Production variants paging rule:
+
+- use page size 50 for `GET /open-api/v1/variants`; production probes returned 200 for size 50 and 429 for size 100;
+- page serially only;
+- `data.meta_data.rate_limit` is optional and may be absent on successful responses;
+- never invent a quota when rate metadata is absent;
+- stop immediately on the first real 429 and reject/cache no partial mapping;
+- read-only mapping remains incapable of changing listing state.
