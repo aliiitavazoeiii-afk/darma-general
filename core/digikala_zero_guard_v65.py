@@ -136,7 +136,6 @@ def get_variant_rows(*, force=False):
             return cached
     rows = paginated_get(
         "/open-api/v1/variants",
-        params={"sort": "id", "order": "asc"},
         size=100,
         max_pages=30,
         timeout=8,
