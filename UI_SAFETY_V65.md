@@ -87,3 +87,14 @@ Darma API-filter rule:
 - title-only resolver + size resolver remain authoritative and fail closed;
 - current production probe reduced the candidate set from 1375 rows / 28 pages to 347 rows / 7 pages;
 - no unfiltered full-catalog scan is allowed in the V65 zero-guard path.
+
+
+V66 special-product safety boundary:
+
+- ProductCode/catalog support for user-confirmed active Darma models is separate from Digikala listing writes.
+- mass-06 is variable-color pack10: title color determines the stock color and every sold pack consumes exactly 10 HOME units.
+- fixed D-W*/D-PN/D-KM packs use explicit two-color ProductComposition only.
+- mass-03 is fixed 10 × cream even if Digikala display text uses another cosmetic color label.
+- KID-220, BLK-01, 1111, s1 and mass-12 remain ignored; BNR remains unmapped until the user supplies its composition.
+- new special ProductSize rows may have zero price and must fail sale import until V60 date-effective pricing is configured.
+- no automatic Digikala activation/deactivation is authorized by these catalog/import changes.
