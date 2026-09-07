@@ -172,4 +172,4 @@ class Command(BaseCommand):
         self.stdout.write("RECEIVABLE V1: claim -> Mellat unchanged")
         self.stdout.write("RECEIVABLE V1: repayment 15000 -> Mellat +15000; delete -> restored")
         self.stdout.write("NO BUSINESS DATA CHANGED")
-        self.stdout.write(self.style.SUCCESS("SUCCESS: EXPENSE TRACKER V1 REGRESSION PASSED"))
+        self.stdout.write(self.style.SUCCESS("SUCCESS: EXPENSE TRACKER UI V2 REGRESSION PASSED"))
