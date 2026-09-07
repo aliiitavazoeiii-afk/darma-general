@@ -44,7 +44,7 @@ class Command(BaseCommand):
         base = Path(settings.BASE_DIR)
         required = {
             "core/digikala_zero_guard_v65.py": (
-                '"/open-api/v1/variants"',
+                '"/open-api/v1/variants?page={int(page)}&size={int(size)}"',
                 "resolve_product_from_title",
                 "_resolve_size",
                 "write_enabled",
