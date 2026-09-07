@@ -59,3 +59,20 @@ Default host port: `8011`
 It joins the existing database Docker network discovered at deploy time. It does not replace/recreate the ERP web container and does not edit the main Caddy configuration.
 
 GitHub main is not production evidence. Production is confirmed only after the expense deployment script prints its SUCCESS marker and the user posts the output.
+
+
+## Final branch audit
+
+The branch diff from the base commit contains only expense-specific new paths plus the isolated runtime/deploy files. Existing ERP `core/`, `config/`, `compose.yml`, `Caddyfile`, `templates/core/` and `static/core/` remain byte-unchanged on this branch.
+
+The deployment regression is rollback-only and explicitly proves:
+
+- expense create/edit/delete debits/reconciles/restores Mellat exactly;
+- claim creation does not change Mellat;
+- real claim repayment credits Mellat exactly;
+- deleting repayment reverses exactly;
+- BusinessPayment, SaleLine, AccountEntry and inventory ledgers remain unchanged.
+
+Expected production marker:
+
+`SUCCESS: EXPENSE TRACKER V1 DEPLOYED`
