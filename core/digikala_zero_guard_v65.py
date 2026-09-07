@@ -20,7 +20,7 @@ VARIANT_ROWS_CACHE_KEY = "digikala-zero-guard-v65-variants"
 VARIANT_ROWS_CACHE_SECONDS = 300
 VARIANT_READ_TIMEOUTS = (15, 30, 45)
 CHECK_SECONDS_DEFAULT = 60
-HEALTH_PATH = "/open-api/v1"
+HEALTH_PATH = "/open-api/v1/"
 DARMA_SIZE_NAMES = ("M", "L", "XL", "XXL", "3XL", "4XL")
 
 
