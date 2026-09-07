@@ -59,3 +59,12 @@ Health endpoint rule:
 - the read-only health check must call exactly `GET /open-api/v1/` with the trailing slash;
 - HTML seller-panel responses are not valid Open API health responses and must not be interpreted as rate-limit data;
 - this health-path correction does not authorize any Digikala write.
+
+
+Variant quota rule:
+
+- public health rate_limit is informational only and must not be assumed to be the /variants quota;
+- the first successful /variants page may expose data.meta_data.rate_limit, which is authoritative for continuing that mapping scan;
+- if the first /variants call is 429, stop immediately with zero retry;
+- if endpoint remaining quota is less than pages still required, stop before requesting the next page;
+- partial variant mappings must never be presented as complete or used for a future write decision.
