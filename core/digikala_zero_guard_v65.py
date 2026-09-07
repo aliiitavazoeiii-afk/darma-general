@@ -8,8 +8,7 @@ from django.db.models import Sum
 
 from .brand_colors import colors_for_brand, norm
 from .daily_order_import_v8 import _resolve_size
-from .digikala_client_v40 import DigikalaAPIError, _request_once
-from .digikala_shared_v44 import paginated_get
+from .digikala_client_v40 import DigikalaAPIError, _request_once, get_json
 from .models import AppSetting, Brand, Color, ProductSize, Size, StockBalance, StockLocation
 from .title_product_resolver_v27 import resolve_product_from_title
 from .variant_sale_v12 import TITLE_COLORS, VARIANT_PRODUCT_CODE, resolve_variant_color
@@ -184,54 +183,147 @@ def _rate_limit_exhausted(health):
     return maximum > 0 and current >= maximum
 
 
+def _variant_page(path, *, timeout):
+    response = get_json(path, timeout=timeout)
+    data = response.get("data") if isinstance(response, dict) else None
+    data = data if isinstance(data, dict) else {}
+    pager = data.get("pager")
+    pager = pager if isinstance(pager, dict) else {}
+    items = data.get("items")
+    items = [item for item in items if isinstance(item, dict)] if isinstance(items, list) else []
+    meta = data.get("meta_data")
+    meta = meta if isinstance(meta, dict) else {}
+    rate = meta.get("rate_limit")
+    rate = rate if isinstance(rate, dict) else {}
+    reset = rate.get("resetTime")
+    reset = reset if isinstance(reset, dict) else {}
+
+    try:
+        total_pages = max(int(pager.get("total_pages") or 1), 1)
+    except (TypeError, ValueError):
+        total_pages = 1
+    try:
+        maximum = int(rate.get("max") or 0)
+    except (TypeError, ValueError):
+        maximum = 0
+    try:
+        current = int(rate.get("current") or 0)
+    except (TypeError, ValueError):
+        current = 0
+
+    endpoint_rate = {
+        "max": maximum,
+        "current": current,
+        "remaining": max(maximum - current, 0) if maximum > 0 else None,
+        "reset_at": str(reset.get("date") or ""),
+        "reset_timezone": str(reset.get("timezone") or ""),
+    }
+    return items, total_pages, endpoint_rate
+
+
+def _variant_page_path(page, size=100):
+    return f"/open-api/v1/variants?page={int(page)}&size={int(size)}"
+
+
+def _insufficient_variant_quota(rate, pages_left):
+    remaining = rate.get("remaining")
+    return remaining is not None and int(remaining) < int(pages_left)
+
+
 def get_variant_rows(*, force=False):
     if not force:
         cached = cache.get(VARIANT_ROWS_CACHE_KEY)
         if cached is not None:
             return cached
 
-    health = get_api_health()
-    if _rate_limit_exhausted(health):
-        reset_text = health.get("reset_at") or "زمان اعلام‌شده توسط API"
-        raise DigikalaAPIError(
-            "سقف درخواست‌های فعلی Digikala Open API پر شده است؛ "
-            f"current={health.get('current')} / max={health.get('max')} / reset={reset_text}. "
-            "برای ایمنی هیچ درخواست /variants ارسال نشد و هیچ تغییری در Digikala انجام نشد.",
-            status_code=429,
-            payload={"health": health},
-        )
-
     last_error = None
+    first_items = None
+    total_pages = None
+    endpoint_rate = None
+
+    # First request is always a single page. Its own meta_data.rate_limit is the
+    # authoritative limiter for /variants; the public health bucket is informational only.
     for attempt, timeout in enumerate(VARIANT_READ_TIMEOUTS, start=1):
         try:
-            rows = paginated_get(
-                "/open-api/v1/variants",
-                size=100,
-                max_pages=30,
+            first_items, total_pages, endpoint_rate = _variant_page(
+                _variant_page_path(1),
                 timeout=timeout,
-                workers=1,
             )
-            cache.set(VARIANT_ROWS_CACHE_KEY, rows, VARIANT_ROWS_CACHE_SECONDS)
-            return rows
+            break
         except DigikalaAPIError as exc:
             last_error = exc
-            # 429 is a hard stop for this scan. Retrying immediately consumes more
-            # of the same exhausted window and can make the integration less safe.
             if exc.status_code == 429:
                 raise DigikalaAPIError(
-                    "Digikala پاسخ 429 Too Many Requests داد؛ retry فوری متوقف شد. "
-                    "هیچ تغییری در Digikala انجام نشد.",
+                    "Digikala /variants پاسخ 429 Too Many Requests داد؛ "
+                    "هیچ retry فوری انجام نشد و هیچ تغییری در Digikala انجام نشد.",
                     status_code=429,
                     payload=exc.payload,
                 ) from exc
             if attempt >= len(VARIANT_READ_TIMEOUTS):
-                break
+                raise DigikalaAPIError(
+                    "خواندن صفحه اول تنوع‌های دیجی‌کالا بعد از چند تلاش GET-only ناموفق بود؛ "
+                    f"هیچ تغییری در Digikala انجام نشد. آخرین خطا: {last_error}"
+                ) from last_error
             time.sleep(attempt * 2)
 
-    raise DigikalaAPIError(
-        "خواندن تنوع‌های دیجی‌کالا بعد از چند تلاش GET-only ناموفق بود؛ "
-        f"هیچ تغییری در دیجی‌کالا انجام نشد. آخرین خطا: {last_error}"
-    ) from last_error
+    rows = list(first_items or [])
+    total_pages = int(total_pages or 1)
+    endpoint_rate = endpoint_rate or {}
+    pages_left = max(total_pages - 1, 0)
+
+    if total_pages > 30:
+        raise DigikalaAPIError(
+            f"تعداد صفحات /variants برابر {total_pages} است و از سقف امن 30 بیشتر است؛ "
+            "خواندن متوقف شد و هیچ تغییری در Digikala انجام نشد."
+        )
+
+    if _insufficient_variant_quota(endpoint_rate, pages_left):
+        raise DigikalaAPIError(
+            "سهمیه واقعی endpoint /variants برای خواندن کامل کافی نیست؛ "
+            f"current={endpoint_rate.get('current')} / max={endpoint_rate.get('max')} / "
+            f"remaining={endpoint_rate.get('remaining')} / pages_left={pages_left} / "
+            f"reset={endpoint_rate.get('reset_at') or '—'}. "
+            "فقط صفحه اول خوانده شد و هیچ تغییری در Digikala انجام نشد.",
+            status_code=429,
+            payload={"variant_rate_limit": endpoint_rate, "total_pages": total_pages},
+        )
+
+    for page in range(2, total_pages + 1):
+        try:
+            items, observed_total_pages, endpoint_rate = _variant_page(
+                _variant_page_path(page),
+                timeout=30,
+            )
+        except DigikalaAPIError as exc:
+            if exc.status_code == 429:
+                raise DigikalaAPIError(
+                    f"Digikala هنگام خواندن صفحه {page} از /variants پاسخ 429 داد؛ "
+                    "خواندن همان‌جا متوقف شد، retry فوری انجام نشد و هیچ تغییری در Digikala انجام نشد.",
+                    status_code=429,
+                    payload=exc.payload,
+                ) from exc
+            raise
+
+        if int(observed_total_pages or total_pages) != total_pages:
+            raise DigikalaAPIError(
+                "تعداد صفحات /variants حین خواندن تغییر کرد؛ برای جلوگیری از mapping ناقص عملیات متوقف شد."
+            )
+        rows.extend(items)
+
+        remaining_pages = total_pages - page
+        if _insufficient_variant_quota(endpoint_rate, remaining_pages):
+            raise DigikalaAPIError(
+                "سهمیه /variants حین خواندن برای صفحات باقی‌مانده کافی نیست؛ "
+                f"page={page} current={endpoint_rate.get('current')} / max={endpoint_rate.get('max')} / "
+                f"remaining={endpoint_rate.get('remaining')} / pages_left={remaining_pages} / "
+                f"reset={endpoint_rate.get('reset_at') or '—'}. "
+                "mapping ناقص پذیرفته نشد و هیچ تغییری در Digikala انجام نشد.",
+                status_code=429,
+                payload={"variant_rate_limit": endpoint_rate, "page": page, "total_pages": total_pages},
+            )
+
+    cache.set(VARIANT_ROWS_CACHE_KEY, rows, VARIANT_ROWS_CACHE_SECONDS)
+    return rows
 
 
 def _row_titles(row):
