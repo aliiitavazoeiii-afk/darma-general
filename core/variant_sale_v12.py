@@ -5,12 +5,14 @@ from django.db.models import Sum
 
 from .brand_colors import norm
 from .darma_pricing import SIZE_NAMES, get_group_prices
+from .special_darma_products_v66 import variable_color_codes, variable_color_names, variable_color_pack_qty
 from .models import (
     AppSetting, Brand, Color, InventoryMovement, ProductCode, ProductSize,
     SaleAllocation, SaleLine, SaleShortage, Size, StockBalance, StockLocation,
 )
 
 VARIANT_PRODUCT_CODE = "s3"
+VARIABLE_COLOR_PRODUCT_CODES = frozenset({VARIANT_PRODUCT_CODE}) | variable_color_codes()
 
 # Exact Digikala seller-code semantics from the user's daily-order workflow.
 # These are intentionally case-sensitive: s3=black, S3=pink.
@@ -24,6 +26,7 @@ SELLER_COLOR_CODES = {
 # Title is authoritative for variable-color s3. White has no confirmed seller-code
 # alias yet, but it is fully supported whenever the Digikala title says سفید.
 TITLE_COLORS = ["مشکی", "کرم", "صورتی", "سرمه ای", "سفید"]
+MASS06_TITLE_COLOR_ALIASES = {"کالباسی": "صورتی"}
 
 
 def _color_for_name(name):
@@ -34,18 +37,42 @@ def _color_for_name(name):
     raise ValueError(f"رنگ دارما «{name}» در موجودی تعریف نشده است.")
 
 
-def resolve_variant_color(title, seller_code=""):
-    text = str(title or "")
-    # Title is authoritative because model s3 is a customer-selectable color item.
-    # Match pipe-delimited color tokens to avoid accidental words elsewhere in title.
-    parts = [part.strip() for part in text.split("|")]
+def _title_color_token(title, allowed_colors, aliases=None):
+    aliases = aliases or {}
+    parts = [part.strip() for part in str(title or "").split("|")]
     for part in parts:
-        for color_name in TITLE_COLORS:
-            if norm(part) == norm(color_name):
+        normalized = norm(part)
+        for alias, canonical in aliases.items():
+            if normalized == norm(alias):
+                return canonical
+        for color_name in allowed_colors:
+            if normalized == norm(color_name):
                 return color_name
-    # Fallback to seller code only when the title export omitted color.
+    return None
+
+
+def resolve_variant_color(title, seller_code=""):
+    # Backward-compatible s3 resolver. Title stays authoritative.
+    title_color = _title_color_token(title, TITLE_COLORS)
+    if title_color:
+        return title_color
     raw_code = str(seller_code or "").strip()
     return SELLER_COLOR_CODES.get(raw_code)
+
+
+def is_variable_color_product_code(code):
+    return str(code or "") in VARIABLE_COLOR_PRODUCT_CODES
+
+
+def resolve_variable_product_color(product_code, title):
+    code = str(product_code or "")
+    if code == VARIANT_PRODUCT_CODE:
+        return resolve_variant_color(title, "")
+    allowed = variable_color_names(code)
+    if not allowed:
+        return None
+    aliases = MASS06_TITLE_COLOR_ALIASES if code == "mass-06" else {}
+    return _title_color_token(title, allowed, aliases=aliases)
 
 
 @transaction.atomic
@@ -118,8 +145,8 @@ def sync_variant_inventory(line, color_quantities):
         .get(pk=line.pk)
     )
     product = line.product_size.product
-    if product.brand.name != "دارما" or product.code != VARIANT_PRODUCT_CODE:
-        raise ValueError("این تابع فقط برای محصول رنگ‌انتخابی s3 است.")
+    if product.brand.name != "دارما" or not is_variable_color_product_code(product.code):
+        raise ValueError("این تابع فقط برای محصولات دارما با رنگ متغیر از عنوان است.")
 
     brand = product.brand
     size = line.product_size.size
@@ -145,8 +172,9 @@ def sync_variant_inventory(line, color_quantities):
     desired_total = sum(int(qty or 0) for qty in color_quantities.values())
     if desired_total != int(line.quantity or 0):
         raise ValueError(
-            f"جمع رنگ‌های s3 ({desired_total}) با تعداد فروش ({int(line.quantity or 0)}) برابر نیست."
+            f"جمع پک‌های رنگی {product.code} ({desired_total}) با تعداد فروش ({int(line.quantity or 0)}) برابر نیست."
         )
+    pack_qty = int(product.pack_qty or variable_color_pack_qty(product.code) or 1)
     if line.quantity <= 0:
         line.inventory_applied_quantity = 0
         line.save(update_fields=["inventory_applied_quantity"])
@@ -155,7 +183,7 @@ def sync_variant_inventory(line, color_quantities):
     transferred = 0
     shortages = []
     for color_name, qty in color_quantities.items():
-        needed = int(qty or 0)
+        needed = int(qty or 0) * pack_qty
         if needed <= 0:
             continue
         color = _color_for_name(color_name)
