@@ -268,3 +268,28 @@ python manage.py check_digikala_zero_guard_v65 --api-health
 This performs only the public health GET and prints the current/max/remaining/reset window.
 
 The regression command now simulates both an already-exhausted health window and a direct 429 response, and asserts that `/variants` is skipped or called only once respectively.
+
+
+## Health endpoint trailing-slash fix
+
+Production health testing returned the seller-panel HTML when V65 requested:
+
+```text
+/open-api/v1
+```
+
+The Digikala Open API health root requires the API-base form with the trailing slash:
+
+```text
+/open-api/v1/
+```
+
+The reference client uses base URL `https://seller.digikala.com/open-api/v1` plus an empty health endpoint; its HTTP client normalizes that request to the trailing-slash API root.
+
+V65 now uses the explicit trailing-slash path and its regression asserts the exact request:
+
+```text
+GET /open-api/v1/
+```
+
+No authenticated variant endpoint, listing state, stock, accounting, or inventory behavior is changed by this patch.
