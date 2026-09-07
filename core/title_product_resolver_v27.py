@@ -4,6 +4,7 @@ import re
 
 from .daily_order_import_v8 import _compact_code, _norm_text
 from .models import ProductCode
+from .special_darma_products_v66 import IGNORED_DARMA_TITLE_MODELS, UNMAPPED_DARMA_TITLE_MODELS
 
 
 IMPORT_BRANDS = ("دارما", "تکوین")
@@ -104,6 +105,13 @@ def resolve_product_from_title(title: str):
 
     key = _compact_code(candidate)
     explicit_brand = brand_from_title(title)
+
+    blocked_darma_keys = {
+        _compact_code(value)
+        for value in (IGNORED_DARMA_TITLE_MODELS | UNMAPPED_DARMA_TITLE_MODELS)
+    }
+    if key in blocked_darma_keys and explicit_brand in {"", "دارما"}:
+        return None
 
     if explicit_brand:
         aliased = _alias_target(explicit_brand, key)
