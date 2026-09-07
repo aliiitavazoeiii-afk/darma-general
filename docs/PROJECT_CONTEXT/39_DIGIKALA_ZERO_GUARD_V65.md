@@ -403,3 +403,29 @@ The live-map diagnostic now classifies unresolved Darma-like rows as:
 - both product and size unresolved;
 
 and prints a bounded sample of unresolved titles/model candidates. This remains GET-only and does not change Digikala or business data.
+
+
+## V66 special Darma product mapping (user-confirmed)
+
+The user confirmed that several currently-selling Digikala title models are real Darma products that were not yet registered as ProductCode rows in the site.
+
+V66 definitions:
+
+- `mass-03`: pack 10, fixed composition = 10 × cream.
+- `mass-06`: pack 10, variable single-color product. The title color is authoritative and one sold pack consumes 10 units of that color. Allowed colors: white, black, pink, navy, red, yellow. Title color `کالباسی` maps to the canonical pink stock color.
+- `D-WP`: pack 2 = white + pink.
+- `D-WN`: pack 2 = white + navy.
+- `D-WK`: pack 2 = white + cream.
+- `D-WB`: pack 2 = white + black.
+- `D-PN`: pack 2 = pink + navy.
+- `D-KM`: pack 2 = black + cream.
+
+Explicitly ignored/inactive title models remain fail-closed:
+
+`KID-220`, `BLK-01`, `1111`, `s1`, `mass-12`.
+
+`BNR` is currently selling but its pack/color composition has not been supplied, so it remains intentionally unresolved/fail-closed.
+
+The special-product sync creates/updates only the confirmed active products above. It does not create ignored or BNR rows. Existing sale prices are preserved; new ProductSize rows start with zero default sale price, and V60 date-effective sale-price rules must be configured before a sale import can create a new priced line.
+
+No Digikala write/deactivation endpoint is added by V66.
