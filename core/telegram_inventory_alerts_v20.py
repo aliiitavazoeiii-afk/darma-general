@@ -394,15 +394,23 @@ class BatchedInventoryBot(InventoryBot):
                 )
             except DigikalaZeroWriteError as exc:
                 completed = list(getattr(exc, "completed", []) or [])
+                attempted = bool(getattr(exc, "write_attempted", False))
                 if completed:
                     text = (
-                        f"⚠️ عملیات بعد از {len(completed)} write موفق متوقف شد.\n"
-                        f"variantهای موفق: {', '.join(str(value) for value in completed)}\n"
+                        f"⚠️ عملیات بعد از {len(completed)} write تأییدشده متوقف شد.\n"
+                        f"variantهای تأییدشده: {', '.join(str(value) for value in completed)}\n"
                         f"خطا: {exc}\n"
                         "برای ادامه دوباره preview بگیر؛ variantهای غیرفعال‌شده دوباره target نمی‌شوند."
                     )
+                elif attempted:
+                    text = (
+                        f"⚠️ PUT برای variant {getattr(exc, 'failed_variant_id', '—')} ارسال شد "
+                        "اما نتیجه قطعی دریافت نشد.\n"
+                        f"خطا: {exc}\n"
+                        "هیچ retry خودکاری انجام نمی‌شود؛ حتماً preview تازه بگیر تا وضعیت واقعی مشخص شود."
+                    )
                 else:
-                    text = f"⛔ عملیات متوقف شد: {exc}\nهیچ write موفقی انجام نشد."
+                    text = f"⛔ عملیات قبل از اولین write متوقف شد: {exc}\nهیچ PUTی ارسال نشد."
                 self.api.send(
                     chat_id,
                     text,
