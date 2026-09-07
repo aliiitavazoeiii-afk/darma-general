@@ -1,3 +1,4 @@
+{% load static %}<link rel="stylesheet" href="{% static 'core/ui-pages-v66.css' %}">
 <style>
 /* Mobile-first polish for the Excel-Web UI. Included by active pages. */
 .mobile-bottom-nav{display:none}
@@ -82,12 +83,10 @@
   .mobile-bottom-nav .mn-label{font-size:.60rem;white-space:nowrap}
   .mobile-bottom-nav .mn-main .mn-icon{width:31px;height:31px;border-radius:10px;background:linear-gradient(135deg,#fb6514,#f79009);color:#fff;display:grid;place-items:center;box-shadow:0 5px 16px rgba(251,101,20,.28)}
 
-  /* Common page headers: controls below title instead of squeezing horizontally. */
   .mobile-page-head{align-items:stretch!important}
   .mobile-page-actions{width:100%;display:grid!important;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:8px!important}
   .mobile-page-actions .btn{width:100%}
 
-  /* Date picker/popover compatibility with the global Jalali picker. */
   .jalali-picker,.jalali-datepicker,.date-picker-popover,.persian-datepicker{max-width:calc(100vw - 20px)!important;left:10px!important;right:10px!important;width:auto!important}
 }
 
