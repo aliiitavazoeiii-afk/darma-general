@@ -444,6 +444,7 @@ def affected_variants_for_cell(size_id, color_id, *, rows=None, force=False):
                 "active": bool(row.get("active")),
                 "seller_stock": int(row.get("marketplace_seller_stock") or 0),
                 "warehouse_stock": int(row.get("warehouse_stock") or 0),
+                "on_the_way_stock": int(row.get("on_the_way_stock") or 0),
             }
         )
 
@@ -483,7 +484,8 @@ def format_preview(preview, *, max_rows=30):
         lines.append(
             f"• {row['product_code']} | {row['size']} | DKPC {row['dkpc'] or '—'} | "
             f"variant {row['seller_variant_id'] or '—'} | {state} | "
-            f"seller={row['seller_stock']} | DKwh={row['warehouse_stock']}"
+            f"seller={row['seller_stock']} | DKwh={row['warehouse_stock']} | "
+            f"DKway={row['on_the_way_stock']}"
         )
     if len(affected) > max_rows:
         lines.append(f"… و {len(affected) - max_rows} مورد دیگر")
@@ -491,8 +493,8 @@ def format_preview(preview, *, max_rows=30):
     lines.extend(
         [
             "",
-            "🔒 V65 SAFE MODE: هیچ کالا/تنوعی در Digikala تغییر نمی‌کند.",
-            "در این فاز فقط mapping واقعی را می‌بینیم و تأیید می‌کنیم.",
+            "🔎 این صفحه فقط پیش‌نمایش است و با باز کردن آن هیچ تغییری در Digikala انجام نمی‌شود.",
+            "هر write احتمالی فقط در gate جداگانه V68 و بعد از تأیید نهایی کاربر انجام می‌شود.",
         ]
     )
     return "\n".join(lines)
