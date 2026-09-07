@@ -6,6 +6,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.db.models import Sum
 
+from core.daily_order_import_v8 import _resolve_size
 from core.digikala_client_v40 import DigikalaAPIError
 from core.digikala_zero_guard_v65 import (
     ZERO_STATE_PREFIX,
@@ -18,6 +19,7 @@ from core.digikala_zero_guard_v65 import (
     stock_cell_total,
 )
 from core.models import AppSetting, Brand, ProductSize, StockBalance
+from core.title_product_resolver_v27 import model_candidate_from_title, resolve_product_from_title
 
 
 class Command(BaseCommand):
@@ -368,6 +370,10 @@ class Command(BaseCommand):
         resolved = 0
         darma = 0
         unresolved_darma_like = 0
+        unresolved_product = 0
+        unresolved_size = 0
+        unresolved_both = 0
+        unresolved_samples = []
         by_code = {}
 
         for row in rows:
@@ -382,11 +388,39 @@ class Command(BaseCommand):
                 str(row.get(key) or "") for key in ("title", "product_title")
             ):
                 unresolved_darma_like += 1
+                raw_title = str(row.get("title") or row.get("product_title") or "")
+                p = resolve_product_from_title(raw_title)
+                s = _resolve_size(raw_title)
+                if p is None and not s:
+                    unresolved_both += 1
+                    reason = "product+size"
+                elif p is None:
+                    unresolved_product += 1
+                    reason = "product"
+                else:
+                    unresolved_size += 1
+                    reason = "size"
+                if len(unresolved_samples) < 30:
+                    unresolved_samples.append(
+                        {
+                            "reason": reason,
+                            "model": model_candidate_from_title(raw_title) or "—",
+                            "title": raw_title,
+                        }
+                    )
 
         self.stdout.write(f"LIVE DIGIKALA VARIANTS READ = {len(rows)}")
         self.stdout.write(f"TITLE/SIZE RESOLVED = {resolved}")
         self.stdout.write(f"DARMA VARIANTS RESOLVED = {darma}")
         self.stdout.write(f"UNRESOLVED DARMA-LIKE TITLES = {unresolved_darma_like}")
+        self.stdout.write(
+            "UNRESOLVED BREAKDOWN = "
+            f"product={unresolved_product} size={unresolved_size} both={unresolved_both}"
+        )
+        for sample in unresolved_samples:
+            self.stdout.write(
+                f"UNRESOLVED SAMPLE [{sample['reason']}] model={sample['model']} | {sample['title']}"
+            )
 
         for (code, size_name), count in sorted(by_code.items())[:80]:
             self.stdout.write(f"MAP {code} / {size_name} = {count} variant row(s)")
