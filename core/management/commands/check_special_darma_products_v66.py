@@ -6,7 +6,7 @@ from django.db import transaction
 from core.daily_order_import_v8 import ParsedOrderRow
 from core.daily_order_import_v12 import resolve_rows_v12
 from core.final_services import sync_sale_inventory
-from core.models import ProductCode, ProductSize, SaleDay, SaleLine, StockBalance
+from core.models import ProductCode, ProductSize, SaleDay, SaleLine, StockBalance, StockLocation
 from core.special_darma_products_v66 import (
     IGNORED_DARMA_TITLE_MODELS,
     SPECIAL_DARMA_PRODUCTS,
@@ -92,11 +92,7 @@ class Command(BaseCommand):
         ]
         resolved, row_errors = resolve_rows_v12(parsed)
         if row_errors:
-            # Price may intentionally be zero until user configures it. Resolver/color
-            # behavior is checked independently above; do not treat price setup as code failure.
-            non_price = [e for e in row_errors if "قیمت فروش" not in e]
-            if non_price:
-                errors.extend(non_price)
+            errors.extend(row_errors)
         elif len(resolved) != 1 or resolved[0].color_name != "زرد" or resolved[0].quantity != 2:
             errors.append(f"mass-06 import row mismatch: {resolved}")
 
@@ -110,6 +106,7 @@ class Command(BaseCommand):
                         brand=mass06.brand,
                         size=ps.size,
                         color__name="زرد",
+                        location__key=StockLocation.HOME,
                     ).values_list("qty", flat=True).first()
                     or 0
                 )
@@ -130,6 +127,7 @@ class Command(BaseCommand):
                             brand=mass06.brand,
                             size=ps.size,
                             color__name="زرد",
+                            location__key=StockLocation.HOME,
                         ).values_list("qty", flat=True).first()
                         or 0
                     )
@@ -149,6 +147,7 @@ class Command(BaseCommand):
                             brand=dwp.brand,
                             size=ps.size,
                             color__name=color,
+                            location__key=StockLocation.HOME,
                         ).values_list("qty", flat=True).first()
                         or 0
                     )
@@ -172,6 +171,7 @@ class Command(BaseCommand):
                                 brand=dwp.brand,
                                 size=ps.size,
                                 color__name=color,
+                                location__key=StockLocation.HOME,
                             ).values_list("qty", flat=True).first()
                             or 0
                         )
