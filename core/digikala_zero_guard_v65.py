@@ -1,5 +1,5 @@
 import os
-import re
+import time
 from collections import defaultdict
 
 from django.core.cache import cache
@@ -8,6 +8,7 @@ from django.db.models import Sum
 
 from .brand_colors import colors_for_brand, norm
 from .daily_order_import_v8 import _resolve_size
+from .digikala_client_v40 import DigikalaAPIError
 from .digikala_shared_v44 import paginated_get
 from .models import AppSetting, Brand, Color, ProductSize, Size, StockBalance, StockLocation
 from .title_product_resolver_v27 import resolve_product_from_title
@@ -17,6 +18,7 @@ from .variant_sale_v12 import TITLE_COLORS, VARIANT_PRODUCT_CODE, resolve_varian
 ZERO_STATE_PREFIX = "digikala_zero_guard_v65:"
 VARIANT_ROWS_CACHE_KEY = "digikala-zero-guard-v65-variants"
 VARIANT_ROWS_CACHE_SECONDS = 300
+VARIANT_READ_TIMEOUTS = (15, 30, 45)
 CHECK_SECONDS_DEFAULT = 60
 DARMA_SIZE_NAMES = ("M", "L", "XL", "XXL", "3XL", "4XL")
 
@@ -134,15 +136,29 @@ def get_variant_rows(*, force=False):
         cached = cache.get(VARIANT_ROWS_CACHE_KEY)
         if cached is not None:
             return cached
-    rows = paginated_get(
-        "/open-api/v1/variants",
-        size=100,
-        max_pages=30,
-        timeout=8,
-        workers=3,
-    )
-    cache.set(VARIANT_ROWS_CACHE_KEY, rows, VARIANT_ROWS_CACHE_SECONDS)
-    return rows
+
+    last_error = None
+    for attempt, timeout in enumerate(VARIANT_READ_TIMEOUTS, start=1):
+        try:
+            rows = paginated_get(
+                "/open-api/v1/variants",
+                size=100,
+                max_pages=30,
+                timeout=timeout,
+                workers=2,
+            )
+            cache.set(VARIANT_ROWS_CACHE_KEY, rows, VARIANT_ROWS_CACHE_SECONDS)
+            return rows
+        except DigikalaAPIError as exc:
+            last_error = exc
+            if attempt >= len(VARIANT_READ_TIMEOUTS):
+                break
+            time.sleep(attempt * 2)
+
+    raise DigikalaAPIError(
+        "خواندن تنوع‌های دیجی‌کالا بعد از چند تلاش GET-only ناموفق بود؛ "
+        f"هیچ تغییری در دیجی‌کالا انجام نشد. آخرین خطا: {last_error}"
+    ) from last_error
 
 
 def _row_titles(row):
