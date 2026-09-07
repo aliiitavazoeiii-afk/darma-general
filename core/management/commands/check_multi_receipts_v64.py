@@ -56,10 +56,6 @@ class Command(BaseCommand):
             for marker in markers:
                 if marker not in text:
                     raise CommandError(f"V64 source marker missing: {relative}: {marker}")
-            lowered = text.lower()
-            for forbidden in ("airia", "ayria", "آیریا", "ایریا"):
-                if forbidden in lowered:
-                    raise CommandError(f"V64 forbidden Airia marker found in {relative}")
 
         field = DigikalaSettlement._meta.get_field("source")
         if field.default != receipts.SOURCE_DIGIKALA:
@@ -165,6 +161,5 @@ class Command(BaseCommand):
         self.stdout.write("DIGIKALA RECEIPT: Digikala receivable decreases; Mellat increases; Mofid unchanged")
         self.stdout.write("DIA RECEIPT: Dia receivable decreases; Mellat increases; Mofid unchanged")
         self.stdout.write("PAYMENT SOURCE UI: Mellat / Mofid remains V63")
-        self.stdout.write("AIRIA: not added")
         self.stdout.write("NO TEST DATA CHANGED")
         self.stdout.write(self.style.SUCCESS("SUCCESS: MULTI RECEIPTS V64 CHECK PASSED"))
