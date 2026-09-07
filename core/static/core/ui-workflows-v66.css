@@ -1,0 +1,100 @@
+/* DARMA UI V66 — active workflow styling only. */
+
+/* Sales calendar */
+.calendar-grid{gap:7px!important}
+.calendar-head{margin-bottom:8px!important;padding:0 5px!important}
+.calendar-head>div{color:#77747d!important;font-size:.72rem!important;font-weight:520!important}
+.calendar-day{
+  min-height:98px!important;
+  background:linear-gradient(145deg,#141722,#10131c)!important;
+  border:1px solid rgba(255,255,255,.065)!important;
+  border-radius:12px!important;
+  color:#d9d4d8!important;
+  box-shadow:inset 0 1px rgba(255,255,255,.015)!important;
+}
+.calendar-day:not(.empty):hover{background:linear-gradient(145deg,#181b26,#12151e)!important;border-color:rgba(201,54,73,.34)!important;box-shadow:0 8px 20px rgba(0,0,0,.18),0 0 16px rgba(201,54,73,.06)!important;transform:translateY(-2px)!important}
+.calendar-day.today{border-color:rgba(201,54,73,.68)!important;box-shadow:inset 0 0 0 1px rgba(201,54,73,.48),0 0 18px rgba(201,54,73,.08)!important}
+.calendar-day.has-sales{background:linear-gradient(145deg,rgba(72,216,135,.07),#11151d)!important;border-color:rgba(72,216,135,.17)!important}
+.calendar-day.holiday{background:linear-gradient(145deg,rgba(201,54,73,.045),#11131c)!important;border-color:rgba(201,54,73,.11)!important}
+.calendar-day.holiday .day-number,.holiday-head{color:#d76371!important}
+.holiday-name{color:#a8505d!important}
+.day-number{color:#ece8eb!important;font-weight:620!important;font-size:1.18rem!important}
+.sale-dot{background:#48d887!important;box-shadow:0 0 0 4px rgba(72,216,135,.075)!important}
+.calendar-day.empty{background:transparent!important;border-color:transparent!important;box-shadow:none!important}
+
+/* Sales brand / day cards */
+.metric-icon{
+  width:45px!important;height:45px!important;border-radius:13px!important;
+  display:grid!important;place-items:center!important;
+  background:linear-gradient(145deg,rgba(201,54,73,.13),rgba(201,54,73,.045))!important;
+  border:1px solid rgba(201,54,73,.17)!important;
+  color:#e66c7b!important;font-weight:700!important;
+  box-shadow:0 0 18px rgba(201,54,73,.07)!important;
+}
+.row-cards>.col-12>.card,.row-cards>.col-md-6>.card{transition:.18s ease!important}
+.row-cards>.col-12>.card:hover,.row-cards>.col-md-6>.card:hover{transform:translateY(-2px)!important;border-color:rgba(201,54,73,.16)!important}
+
+/* Product bulk pricing */
+.bulk-price-card{background:linear-gradient(145deg,#141722,#10131c)!important}
+.bulk-price-head{gap:12px!important}
+.bulk-price-title{font-size:.94rem!important;font-weight:620!important;color:#eee9ed!important}
+.bulk-price-note{color:#77747d!important;line-height:1.7!important}
+.bulk-chip{background:rgba(201,54,73,.07)!important;border:1px solid rgba(201,54,73,.15)!important;color:#cf6976!important;border-radius:999px!important}
+.bulk-price-row{border-top:1px solid rgba(255,255,255,.05)!important;padding:16px 3px!important}
+.bulk-price-row:first-child{border-top:0!important}
+.bulk-pack{padding:8px 10px!important;border-radius:10px!important;background:#11141d!important;border:1px solid rgba(255,255,255,.052)!important}
+.bulk-pack strong{font-weight:620!important;color:#e7e2e6!important}
+.bulk-pack span,.bulk-price-cell label,.bulk-date-cell label{color:#77747d!important;font-size:.68rem!important}
+.bulk-price-cell input,.bulk-date-cell input{background:#11141d!important;border-color:rgba(255,255,255,.07)!important}
+.bulk-price-action .btn{box-shadow:0 6px 18px rgba(201,54,73,.14)!important}
+
+/* Inventory operations */
+.inventory-op-card{background:linear-gradient(145deg,#141722,#10131c)!important}
+.inventory-op-card .card-header{background:linear-gradient(90deg,rgba(201,54,73,.045),transparent)!important}
+.color-entry-grid{gap:8px!important}
+.color-entry-cell{
+  background:#11141d!important;
+  border:1px solid rgba(255,255,255,.055)!important;
+  border-radius:10px!important;
+  padding:9px!important;
+  transition:.16s ease!important;
+}
+.color-entry-cell:hover{border-color:rgba(201,54,73,.17)!important;background:#141721!important}
+.color-entry-cell .form-label{color:#96929a!important;font-weight:520!important}
+.color-entry-cell .form-control{min-height:40px!important;background:#0f121a!important;text-align:center!important}
+.compact-help{color:#73717a!important}
+.inventory-moves .code-cell{color:#8c8993!important}
+
+/* Cost/rules screens */
+.current-chip{
+  background:rgba(72,216,135,.065)!important;
+  border:1px solid rgba(72,216,135,.13)!important;
+  color:#72dba0!important;
+  border-radius:999px!important;
+  font-weight:520!important;
+}
+.rule-help{color:#77747d!important;line-height:1.8!important}
+.brand-cost-grid,.takvin-grid{gap:11px!important}
+.brand-cost-wrap,.takvin-wrap{padding:2px!important}
+.history-table .money,.brand-history-table .money{color:#e8e3e7!important;font-weight:600!important}
+.rules-table .code-cell{color:#77747d!important}
+.sticky-actions{background:rgba(13,15,24,.91)!important;border-top:1px solid rgba(255,255,255,.055)!important;box-shadow:0 -12px 34px rgba(0,0,0,.20)!important}
+
+/* Daily upload and operational utility cards */
+.upload-zone,.drop-zone,.daily-upload-box,[class*="upload-card"]{
+  border-color:rgba(201,54,73,.13)!important;
+  background:linear-gradient(145deg,rgba(201,54,73,.035),rgba(255,255,255,.006))!important;
+}
+
+/* Tabs / pills used through UI */
+.nav-tabs{border-bottom-color:rgba(255,255,255,.055)!important}
+.nav-tabs .nav-link{color:#85828b!important;border-color:transparent!important;border-radius:9px 9px 0 0!important}
+.nav-tabs .nav-link.active{background:rgba(201,54,73,.07)!important;border-color:rgba(201,54,73,.13)!important;color:#eee9ed!important}
+
+@media(max-width:767.98px){
+  .calendar-grid{gap:3px!important}
+  .calendar-day{min-height:61px!important;border-radius:9px!important;padding:4px!important}
+  .day-number{font-size:.95rem!important}
+  .bulk-price-row{padding:12px 2px!important}
+  .color-entry-cell{padding:7px!important}
+}
