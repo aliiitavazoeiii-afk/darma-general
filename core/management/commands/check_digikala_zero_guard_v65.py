@@ -50,6 +50,7 @@ class Command(BaseCommand):
                 "write_enabled",
                 "affected_variants_for_cell",
                 "VARIANT_READ_TIMEOUTS",
+                "VARIANT_PAGE_SIZE = 50",
                 "get_api_health",
                 "_variant_page",
                 "meta_data",
@@ -209,27 +210,36 @@ class Command(BaseCommand):
     def _rate_limit_regression(self):
         from core import digikala_zero_guard_v65 as guard
 
-        def page_response(*, page, total_pages, current, maximum=10, item_id=None):
+        def page_response(
+            *,
+            page,
+            total_pages,
+            current=0,
+            maximum=0,
+            item_id=None,
+            include_rate=True,
+        ):
+            meta_data = {}
+            if include_rate:
+                meta_data["rate_limit"] = {
+                    "max": maximum,
+                    "current": current,
+                    "resetTime": {
+                        "date": "2099-01-01 00:01:00.000000",
+                        "timezone": "Asia/Tehran",
+                    },
+                }
             return {
                 "status": "ok",
                 "data": {
                     "pager": {
                         "page": page,
-                        "item_per_page": 100,
+                        "item_per_page": 50,
                         "total_pages": total_pages,
                         "total_rows": total_pages,
                     },
                     "items": [] if item_id is None else [{"id": item_id}],
-                    "meta_data": {
-                        "rate_limit": {
-                            "max": maximum,
-                            "current": current,
-                            "resetTime": {
-                                "date": "2099-01-01 00:01:00.000000",
-                                "timezone": "Asia/Tehran",
-                            },
-                        }
-                    },
+                    "meta_data": meta_data,
                 },
             }
 
@@ -276,19 +286,20 @@ class Command(BaseCommand):
             if get_json_mock.call_count != 1:
                 raise CommandError("V65 requested another /variants page despite insufficient quota")
 
-        # Enough endpoint quota: read pages serially and preserve exact page paths.
-        page1 = page_response(page=1, total_pages=2, current=1, maximum=10, item_id=101)
-        page2 = page_response(page=2, total_pages=2, current=2, maximum=10, item_id=202)
+        # Production response may omit meta_data.rate_limit entirely.
+        # In that case serial paging is still allowed; a later real 429 remains a hard stop.
+        page1 = page_response(page=1, total_pages=2, item_id=101, include_rate=False)
+        page2 = page_response(page=2, total_pages=2, item_id=202, include_rate=False)
         with patch.object(guard, "get_json", side_effect=[page1, page2]) as get_json_mock:
             rows = guard.get_variant_rows(force=True)
             if [row.get("id") for row in rows] != [101, 202]:
-                raise CommandError(f"V65 serial variant paging mismatch: {rows}")
+                raise CommandError(f"V65 no-rate-metadata serial paging mismatch: {rows}")
             calls_made = [call.args[0] for call in get_json_mock.call_args_list]
             if calls_made != [
-                "/open-api/v1/variants?page=1&size=100",
-                "/open-api/v1/variants?page=2&size=100",
+                "/open-api/v1/variants?page=1&size=50",
+                "/open-api/v1/variants?page=2&size=50",
             ]:
-                raise CommandError(f"V65 variant page paths mismatch: {calls_made}")
+                raise CommandError(f"V65 variant page-size/path mismatch: {calls_made}")
 
         # Public health stays informational and must use the exact trailing-slash API root.
         with patch.object(
@@ -320,9 +331,12 @@ class Command(BaseCommand):
                 raise CommandError(f"V65 health parsing mismatch: {health}")
 
         self.stdout.write(
-            "RATE LIMIT GUARD = /variants own meta_data quota controls paging; direct 429 retries = 0"
+            "RATE LIMIT GUARD = /variants rate metadata used when present; direct 429 retries = 0"
         )
-        self.stdout.write("VARIANT PAGING = first page only, then serial pages if endpoint quota is sufficient")
+        self.stdout.write("VARIANT PAGE SIZE = 50")
+        self.stdout.write(
+            "VARIANT PAGING = serial; missing meta_data.rate_limit is allowed; partial maps are rejected"
+        )
         self.stdout.write("HEALTH ENDPOINT = informational only: /open-api/v1/")
 
 
