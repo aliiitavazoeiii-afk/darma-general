@@ -1,6 +1,7 @@
 from django.urls import path
 
 from . import (
+    business_receipts_v64,
     business_tools_v14,
     business_tools_v21,
     business_tools_v62,
@@ -78,9 +79,9 @@ urlpatterns = [
     path("payments/<int:payment_id>/edit/", business_tools_v62.payment_update, name="payment_update"),
     path("payments/<int:payment_id>/delete/", business_tools_v62.payment_delete, name="payment_delete"),
     path("payments/mellat/set/", business_tools_v21.mellat_set, name="mellat_set"),
-    path("payments/receipts/add/", business_tools_v21.receipt_add, name="receipt_add"),
-    path("payments/receipts/<int:receipt_id>/edit/", business_tools_v21.receipt_update, name="receipt_update"),
-    path("payments/receipts/<int:receipt_id>/delete/", business_tools_v21.receipt_delete, name="receipt_delete"),
+    path("payments/receipts/add/", business_receipts_v64.receipt_add, name="receipt_add"),
+    path("payments/receipts/<int:receipt_id>/edit/", business_receipts_v64.receipt_update, name="receipt_update"),
+    path("payments/receipts/<int:receipt_id>/delete/", business_receipts_v64.receipt_delete, name="receipt_delete"),
     path("calculator/", calculator_v37.calculator, name="calculator"),
     path("calculator/quote/", calculator_v37.calculator_quote, name="calculator_quote"),
     path("calculator/target-quote/", calculator_v37.calculator_target_quote, name="calculator_target_quote"),
