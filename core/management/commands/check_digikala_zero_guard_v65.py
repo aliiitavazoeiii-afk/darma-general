@@ -1,4 +1,5 @@
 from pathlib import Path
+from unittest.mock import patch
 
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
@@ -11,6 +12,7 @@ from core.digikala_zero_guard_v65 import (
     _marker_key,
     _resolved_identity,
     affected_variants_for_cell,
+    get_api_health,
     get_variant_rows,
     scan_zero_transitions,
     stock_cell_total,
@@ -30,7 +32,12 @@ class Command(BaseCommand):
         parser.add_argument(
             "--allow-network-failure",
             action="store_true",
-            help="For safe deploy only: if Digikala GET times out, report deferred mapping and exit successfully. Writes remain absent.",
+            help="For safe deploy only: if Digikala GET/rate-limit blocks mapping, report deferred mapping and exit successfully. Writes remain absent.",
+        )
+        parser.add_argument(
+            "--api-health",
+            action="store_true",
+            help="Read only the public Digikala Open API health/rate-limit window; no variants are fetched and no write is possible.",
         )
 
     def _source_checks(self):
@@ -43,6 +50,8 @@ class Command(BaseCommand):
                 "write_enabled",
                 "affected_variants_for_cell",
                 "VARIANT_READ_TIMEOUTS",
+                "get_api_health",
+                "status_code == 429",
                 "time.sleep",
             ),
             "core/telegram_inventory_alerts_v20.py": (
@@ -194,6 +203,82 @@ class Command(BaseCommand):
         if AppSetting.objects.filter(key__startswith=ZERO_STATE_PREFIX).count() != marker_count_before:
             raise CommandError("V65 rollback test left zero-guard state markers behind")
 
+    def _rate_limit_regression(self):
+        from core import digikala_zero_guard_v65 as guard
+
+        healthy = {
+            "status": "ok",
+            "mode": "production",
+            "time": "test",
+            "max": 100,
+            "current": 1,
+            "remaining": 99,
+            "reset_at": "",
+            "reset_timezone": "Asia/Tehran",
+            "routes": ["/variants"],
+        }
+        limited = dict(healthy, current=100, remaining=0)
+
+        with patch.object(guard, "get_api_health", return_value=limited), patch.object(
+            guard, "paginated_get"
+        ) as paginated:
+            try:
+                guard.get_variant_rows(force=True)
+            except DigikalaAPIError as exc:
+                if exc.status_code != 429:
+                    raise CommandError("V65 rate-limit preflight did not raise status 429")
+            else:
+                raise CommandError("V65 rate-limit preflight did not stop exhausted window")
+            if paginated.call_count != 0:
+                raise CommandError("V65 called /variants despite exhausted health rate-limit")
+
+        calls = {"count": 0}
+
+        def rate_limited(*args, **kwargs):
+            calls["count"] += 1
+            raise DigikalaAPIError(
+                "Too Many Requests",
+                status_code=429,
+                payload={"message": "Too Many Requests"},
+            )
+
+        with patch.object(guard, "get_api_health", return_value=healthy), patch.object(
+            guard, "paginated_get", side_effect=rate_limited
+        ), patch.object(guard.time, "sleep") as sleeper:
+            try:
+                guard.get_variant_rows(force=True)
+            except DigikalaAPIError as exc:
+                if exc.status_code != 429:
+                    raise CommandError("V65 direct 429 did not preserve status 429")
+            else:
+                raise CommandError("V65 direct 429 did not stop variant read")
+            if calls["count"] != 1:
+                raise CommandError(f"V65 retried 429 unexpectedly: calls={calls['count']}")
+            if sleeper.call_count != 0:
+                raise CommandError("V65 slept/retried after direct 429")
+
+        self.stdout.write("RATE LIMIT GUARD = exhausted health skips /variants; direct 429 retries = 0")
+
+    def _print_api_health(self):
+        health = get_api_health()
+        remaining = health.get("remaining")
+        remaining_text = "unknown" if remaining is None else str(remaining)
+        self.stdout.write(
+            "DIGIKALA API HEALTH = "
+            f"status={health.get('status') or '—'} "
+            f"mode={health.get('mode') or '—'} "
+            f"current={health.get('current')} "
+            f"max={health.get('max')} "
+            f"remaining={remaining_text}"
+        )
+        self.stdout.write(
+            "DIGIKALA RATE RESET = "
+            f"{health.get('reset_at') or '—'} "
+            f"{health.get('reset_timezone') or ''}".rstrip()
+        )
+        self.stdout.write("DIGIKALA HEALTH CHECK WRITE CALLS = 0")
+        return health
+
     def _live_map(self):
         rows = get_variant_rows(force=True)
         resolved = 0
@@ -258,6 +343,7 @@ class Command(BaseCommand):
         self._source_checks()
         ps, color = self._synthetic_mapping_check()
         self._zero_transition_rollback_check()
+        self._rate_limit_regression()
 
         self.stdout.write(
             f"SYNTHETIC TITLE-ONLY MAPPING OK = {ps.product.code} / {ps.size.name} / {color.name}"
@@ -266,15 +352,27 @@ class Command(BaseCommand):
         self.stdout.write("TELEGRAM APPROVAL FLOW = PREVIEW ONLY")
         self.stdout.write("DIGIKALA WRITE MODE = ABSENT / LOCKED")
 
+        if options["api_health"]:
+            try:
+                self._print_api_health()
+            except DigikalaAPIError as exc:
+                raise CommandError(f"Digikala API health read failed safely: {exc}") from exc
+
         if options["live_map"]:
             try:
                 self._live_map()
             except DigikalaAPIError as exc:
                 if not options["allow_network_failure"]:
-                    raise
+                    if exc.status_code == 429:
+                        raise CommandError(
+                            "Digikala rate limit is currently exhausted (429). "
+                            "The integration is reachable, but live variant mapping is deferred. "
+                            "No listing was changed."
+                        ) from exc
+                    raise CommandError(f"Digikala live mapping failed safely: {exc}") from exc
                 self.stdout.write(
                     self.style.WARNING(
-                        "LIVE DIGIKALA MAP DEFERRED: network/API read failed after safe retries. "
+                        "LIVE DIGIKALA MAP DEFERRED: network/API/rate-limit prevented a safe GET map. "
                         f"{exc}"
                     )
                 )
