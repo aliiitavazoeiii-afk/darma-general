@@ -52,3 +52,10 @@ Rate-limit rule:
 - a direct HTTP 429 from /variants must stop the scan immediately with no retry;
 - 429 must never be treated as permission to guess from stale/unresolved rows;
 - write mode remains absent/locked.
+
+
+Health endpoint rule:
+
+- the read-only health check must call exactly `GET /open-api/v1/` with the trailing slash;
+- HTML seller-panel responses are not valid Open API health responses and must not be interpreted as rate-limit data;
+- this health-path correction does not authorize any Digikala write.
