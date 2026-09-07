@@ -356,7 +356,15 @@ class Command(BaseCommand):
             try:
                 self._print_api_health()
             except DigikalaAPIError as exc:
-                raise CommandError(f"Digikala API health read failed safely: {exc}") from exc
+                if not options["allow_network_failure"]:
+                    raise CommandError(f"Digikala API health read failed safely: {exc}") from exc
+                self.stdout.write(
+                    self.style.WARNING(
+                        "DIGIKALA API HEALTH DEFERRED: external health GET failed safely. "
+                        f"{exc}"
+                    )
+                )
+                self.stdout.write("DIGIKALA HEALTH CHECK WRITE CALLS = 0")
 
         if options["live_map"]:
             try:
