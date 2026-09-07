@@ -63,7 +63,8 @@ class Command(BaseCommand):
             ),
             "core/telegram_inventory_alerts_v20.py": (
                 "dkz:preview:",
-                "غیرفعال‌سازی فعلاً قفل است",
+                "dkz:arm:",
+                "dkz:do:",
                 "maybe_send_zero_guard_alerts",
                 "scan_zero_transitions",
             ),
@@ -467,8 +468,8 @@ class Command(BaseCommand):
             f"SYNTHETIC TITLE-ONLY MAPPING OK = {ps.product.code} / {ps.size.name} / {color.name}"
         )
         self.stdout.write("ZERO TRANSITION ROLLBACK CHECK OK")
-        self.stdout.write("TELEGRAM APPROVAL FLOW = PREVIEW ONLY")
-        self.stdout.write("DIGIKALA WRITE MODE = ABSENT / LOCKED")
+        self.stdout.write("TELEGRAM APPROVAL FLOW = V65 PREVIEW + SEPARATE V68 CONFIRM GATE")
+        self.stdout.write("DIGIKALA V65 CORE WRITE MODE = ABSENT")
 
         if options["api_health"]:
             try:
