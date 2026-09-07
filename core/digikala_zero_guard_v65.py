@@ -8,7 +8,7 @@ from django.db.models import Sum
 
 from .brand_colors import colors_for_brand, norm
 from .daily_order_import_v8 import _resolve_size
-from .digikala_client_v40 import DigikalaAPIError
+from .digikala_client_v40 import DigikalaAPIError, _request_once
 from .digikala_shared_v44 import paginated_get
 from .models import AppSetting, Brand, Color, ProductSize, Size, StockBalance, StockLocation
 from .title_product_resolver_v27 import resolve_product_from_title
@@ -20,6 +20,7 @@ VARIANT_ROWS_CACHE_KEY = "digikala-zero-guard-v65-variants"
 VARIANT_ROWS_CACHE_SECONDS = 300
 VARIANT_READ_TIMEOUTS = (15, 30, 45)
 CHECK_SECONDS_DEFAULT = 60
+HEALTH_PATH = "/open-api/v1"
 DARMA_SIZE_NAMES = ("M", "L", "XL", "XXL", "3XL", "4XL")
 
 
@@ -131,11 +132,74 @@ def scan_zero_transitions(*, bootstrap=False):
     return transitions
 
 
+def get_api_health(*, timeout=10):
+    """Read Digikala Open API health/rate-limit state without an auth token.
+
+    This endpoint is read-only and is used to avoid hammering /variants while the
+    seller API rate-limit window is already exhausted.
+    """
+    status, response = _request_once("GET", HEALTH_PATH, timeout=timeout)
+    if status != 200:
+        message = response.get("message") if isinstance(response, dict) else None
+        errors = response.get("errors") if isinstance(response, dict) else None
+        detail = message or errors or f"HTTP {status}"
+        raise DigikalaAPIError(
+            f"خواندن health دیجی‌کالا ناموفق بود: {detail}",
+            status_code=status,
+            payload=response,
+        )
+
+    data = response.get("data") if isinstance(response, dict) else None
+    data = data if isinstance(data, dict) else {}
+    rate = data.get("rate_limit")
+    rate = rate if isinstance(rate, dict) else {}
+    reset = rate.get("resetTime")
+    reset = reset if isinstance(reset, dict) else {}
+
+    try:
+        limit_max = int(rate.get("max") or 0)
+    except (TypeError, ValueError):
+        limit_max = 0
+    try:
+        current = int(rate.get("current") or 0)
+    except (TypeError, ValueError):
+        current = 0
+
+    return {
+        "status": str(response.get("status") or ""),
+        "mode": str(data.get("mode") or ""),
+        "time": str(data.get("time") or ""),
+        "max": limit_max,
+        "current": current,
+        "remaining": max(limit_max - current, 0) if limit_max > 0 else None,
+        "reset_at": str(reset.get("date") or ""),
+        "reset_timezone": str(reset.get("timezone") or ""),
+        "routes": list(data.get("routes") or []) if isinstance(data.get("routes"), list) else [],
+    }
+
+
+def _rate_limit_exhausted(health):
+    maximum = int(health.get("max") or 0)
+    current = int(health.get("current") or 0)
+    return maximum > 0 and current >= maximum
+
+
 def get_variant_rows(*, force=False):
     if not force:
         cached = cache.get(VARIANT_ROWS_CACHE_KEY)
         if cached is not None:
             return cached
+
+    health = get_api_health()
+    if _rate_limit_exhausted(health):
+        reset_text = health.get("reset_at") or "زمان اعلام‌شده توسط API"
+        raise DigikalaAPIError(
+            "سقف درخواست‌های فعلی Digikala Open API پر شده است؛ "
+            f"current={health.get('current')} / max={health.get('max')} / reset={reset_text}. "
+            "برای ایمنی هیچ درخواست /variants ارسال نشد و هیچ تغییری در Digikala انجام نشد.",
+            status_code=429,
+            payload={"health": health},
+        )
 
     last_error = None
     for attempt, timeout in enumerate(VARIANT_READ_TIMEOUTS, start=1):
@@ -151,6 +215,15 @@ def get_variant_rows(*, force=False):
             return rows
         except DigikalaAPIError as exc:
             last_error = exc
+            # 429 is a hard stop for this scan. Retrying immediately consumes more
+            # of the same exhausted window and can make the integration less safe.
+            if exc.status_code == 429:
+                raise DigikalaAPIError(
+                    "Digikala پاسخ 429 Too Many Requests داد؛ retry فوری متوقف شد. "
+                    "هیچ تغییری در Digikala انجام نشد.",
+                    status_code=429,
+                    payload=exc.payload,
+                ) from exc
             if attempt >= len(VARIANT_READ_TIMEOUTS):
                 break
             time.sleep(attempt * 2)
