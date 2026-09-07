@@ -390,3 +390,16 @@ GET /open-api/v1/variants?page=N&size=50&search[search_term]=دارما
 The API filter is only a bandwidth/quota reduction mechanism. It does **not** identify a product. Every returned row must still pass the existing title-only product resolver and size resolver; unknown or ambiguous rows fail closed.
 
 This reduces the current production candidate set from 28 pages to 7 pages while preserving the V65 read-only boundary and zero Digikala writes.
+
+
+## Unresolved Darma diagnostics
+
+After the first successful production Darma-filtered live map, 347 Darma candidate rows were read, 204 resolved to a local Darma product+size, and 143 remained fail-closed.
+
+The live-map diagnostic now classifies unresolved Darma-like rows as:
+
+- product resolver failure;
+- size resolver failure;
+- both product and size unresolved;
+
+and prints a bounded sample of unresolved titles/model candidates. This remains GET-only and does not change Digikala or business data.
