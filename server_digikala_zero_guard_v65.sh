@@ -136,7 +136,7 @@ CHANGED=$(git diff --name-only "$BASE"..HEAD)
 echo "$CHANGED"
 for f in $CHANGED; do
   case "$f" in
-    core/digikala_zero_guard_v65.py|core/telegram_inventory_alerts_v20.py|compose.telegram.yml|core/management/commands/check_digikala_zero_guard_v65.py|core/management/commands/check_cost_rules_takvin_purchase_v59.py|docs/PROJECT_CONTEXT/39_DIGIKALA_ZERO_GUARD_V65.md|docs/PROJECT_CONTEXT/README.md|UI_SAFETY_V65.md|server_digikala_zero_guard_v65.sh) ;;
+    core/digikala_zero_guard_v65.py|core/telegram_inventory_alerts_v20.py|compose.telegram.yml|core/management/commands/check_digikala_zero_guard_v65.py|core/management/commands/check_cost_rules_takvin_purchase_v59.py|docs/PROJECT_CONTEXT/08_LIVE_STATE_AND_CHECKPOINTS.md|docs/PROJECT_CONTEXT/39_DIGIKALA_ZERO_GUARD_V65.md|docs/PROJECT_CONTEXT/README.md|UI_SAFETY_V65.md|server_digikala_zero_guard_v65.sh) ;;
     *) fail "unexpected V65 file changed: $f" ;;
   esac
 done
@@ -190,6 +190,7 @@ docker compose -f compose.yml -f compose.telegram.yml run --rm --entrypoint sh b
 ' || fail "bot Digikala runtime token isolation failed"
 
 MAP_PRE=$(snapshot_run) || fail "could not capture pre-map state"
+docker compose -f compose.yml -f compose.telegram.yml run --rm --entrypoint python bot manage.py check_digikala_zero_guard_v65 --api-health --allow-network-failure || fail "V65 Digikala health command failed"
 docker compose -f compose.yml -f compose.telegram.yml run --rm --entrypoint python bot manage.py check_digikala_zero_guard_v65 --live-map --allow-network-failure || fail "V65 live read-only mapping command failed"
 MAP_POST=$(snapshot_run) || fail "could not capture post-map state"
 [ "$MAP_PRE" = "$MAP_POST" ] || {
