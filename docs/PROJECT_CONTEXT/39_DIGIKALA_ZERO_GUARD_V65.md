@@ -238,3 +238,33 @@ backups/before-digikala-zero-guard-v65-20260907-205127.sql
 ```
 
 This confirms only the V65 read-only Telegram guard. Digikala activation/write is still absent and locked.
+
+
+## Rate-limit guard patch after production verification
+
+A manual production `--live-map` check returned a real Digikala response:
+
+```text
+429 Too Many Requests
+```
+
+This proves the API endpoint was reachable and authenticated enough to return a rate-limit response, but the current request window was exhausted.
+
+V65 now treats 429 differently from transport timeout:
+
+- it first reads the public Open API health endpoint `GET /open-api/v1`;
+- the health payload exposes `rate_limit.max`, `rate_limit.current`, and `resetTime`;
+- if `current >= max`, V65 sends **zero** `/variants` requests;
+- if `/variants` itself returns 429, V65 stops immediately with **zero immediate retries**;
+- timeout/network errors may still use the bounded 15/30/45-second retry path;
+- no 429 path can trigger a Digikala write.
+
+New safe diagnostic:
+
+```bash
+python manage.py check_digikala_zero_guard_v65 --api-health
+```
+
+This performs only the public health GET and prints the current/max/remaining/reset window.
+
+The regression command now simulates both an already-exhausted health window and a direct 429 response, and asserts that `/variants` is skipped or called only once respectively.
