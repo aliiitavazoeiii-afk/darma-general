@@ -62,22 +62,30 @@ After these, read `UI_SAFETY_V37.md` through `UI_SAFETY_V47.md`, then current `c
 
 When older docs conflict with this directory or current active code, the later explicit business-rule document + current active code wins.
 
-The last numerically recorded production checkpoint remains V38 until a newer deployment's actual final invariant block is posted by the user. V46 through V60 must not be called fully production-confirmed without their successful server output markers. V49 does have direct behavioral confirmation from the user that the new KHORSHID -> HOME transfer worked and was "عالی", but that is not the same as a preserved full invariant success block. V55 requires both `SUCCESS: DARMA COST RULE V55 DEPLOYED` and `SUCCESS: DARMA COST SHAHRIVAR V55 REPAIR APPLIED`; V56 requires `SUCCESS: DARMA INVENTORY PAGE COST V56 DEPLOYED`; V57 requires `SUCCESS: RETURNS REPORT EDIT DELETE V57 DEPLOYED`; V58 requires `SUCCESS: RETURNS MULTI-SIZE V58 DEPLOYED`; V59 requires `SUCCESS: NOVANI COST RULE + TAKVIN PURCHASE V59 DEPLOYED`, and when missing today's purchase stock exists also `SUCCESS: TODAY TAKVIN PURCHASE STOCK V59 REPAIRED`; V60 requires `SUCCESS: SALE PRICE + ELASTIC MULTI V60 DEPLOYED`. V65 safe mode requires `SUCCESS: DIGIKALA ZERO GUARD V65 SAFE MODE DEPLOYED`; that marker confirms notification/read-only mapping only and does not authorize Digikala writes.
+The latest numerically recorded production checkpoint is now V65 SAFE MODE, confirmed by the user's posted final invariant block on 2026-09-07. V46 through V60 must not be called fully production-confirmed without their successful server output markers. V49 does have direct behavioral confirmation from the user that the new KHORSHID -> HOME transfer worked and was "عالی", but that is not the same as a preserved full invariant success block. V55 requires both `SUCCESS: DARMA COST RULE V55 DEPLOYED` and `SUCCESS: DARMA COST SHAHRIVAR V55 REPAIR APPLIED`; V56 requires `SUCCESS: DARMA INVENTORY PAGE COST V56 DEPLOYED`; V57 requires `SUCCESS: RETURNS REPORT EDIT DELETE V57 DEPLOYED`; V58 requires `SUCCESS: RETURNS MULTI-SIZE V58 DEPLOYED`; V59 requires `SUCCESS: NOVANI COST RULE + TAKVIN PURCHASE V59 DEPLOYED`, and when missing today's purchase stock exists also `SUCCESS: TODAY TAKVIN PURCHASE STOCK V59 REPAIRED`; V60 requires `SUCCESS: SALE PRICE + ELASTIC MULTI V60 DEPLOYED`. V65 safe mode requires `SUCCESS: DIGIKALA ZERO GUARD V65 SAFE MODE DEPLOYED`; that marker confirms notification/read-only mapping only and does not authorize Digikala writes.
 
-Latest confirmed numeric production snapshot in the historical handoff:
+Latest confirmed numeric production snapshot:
 
 ```text
-CAPITAL=5430972371
-FINISHED=1115731500
-RAW=1994448050
-DIGI=812517154
-DARMA=12072
-TAKVIN=1195
-NOVANI=3630
-SALES=202
-ACCOUNT_ENTRIES=206
+CAPITAL=5916084564
+MELLAT=0
+MOFID=24731000
+FINISHED=1186669000
+RAW=2807366700
+DIGI=940899364
+DIA=497000
+TAKVIN_DEBT=65880000
+DARMA_QTY=11432
+TAKVIN_QTY=1429
+NOVANI_QTY=3630
+SALES=484
+PAYMENTS=9
+RECEIPTS=6
+RAW_ROWS=53
+MOVEMENTS=5225
+TAKVIN_PURCHASES=10
 ```
 
-These are historical checkpoint values, not targets. Current production legitimately differs after subsequent business activity.
+This V65 deployment-boundary snapshot is continuity data, not a reset target.
 
 Standing rule: after every important change update context; after every confirmed successful deployment update the live checkpoint with actual server output.
