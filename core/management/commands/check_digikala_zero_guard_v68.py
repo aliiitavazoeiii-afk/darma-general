@@ -185,10 +185,13 @@ class Command(BaseCommand):
             patch.object(guard, "stock_cell_total", return_value=cell),
             patch.object(guard, "deactivate_variant", return_value={"data": {"active": False}}) as deactivate,
             patch.object(guard, "_live_variant_data", return_value={"id": 101, "active": False}),
+            patch("builtins.print") as mocked_print,
         ):
             result = guard.execute_confirmed_deactivation(1, 2, "fresh-plan")
             if result.get("completed") != [101] or deactivate.call_count != 1:
                 raise CommandError(f"V68 confirmed mocked write path failed: {result}")
+            if mocked_print.call_count != 1:
+                raise CommandError("V68 mocked success log regression did not emit exactly one internal log")
 
         with (
             patch.dict(os.environ, {guard.WRITE_ENV: "1"}),
