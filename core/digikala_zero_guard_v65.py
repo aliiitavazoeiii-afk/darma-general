@@ -1,6 +1,7 @@
 import os
 import time
 from collections import defaultdict
+from urllib.parse import urlencode
 
 from django.core.cache import cache
 from django.db import transaction
@@ -18,6 +19,8 @@ ZERO_STATE_PREFIX = "digikala_zero_guard_v65:"
 VARIANT_ROWS_CACHE_KEY = "digikala-zero-guard-v65-variants"
 VARIANT_ROWS_CACHE_SECONDS = 300
 VARIANT_READ_TIMEOUTS = (15, 30, 45)
+VARIANT_PAGE_SIZE = 50
+VARIANT_SEARCH_TERM = "دارما"
 CHECK_SECONDS_DEFAULT = 60
 HEALTH_PATH = "/open-api/v1/"
 DARMA_SIZE_NAMES = ("M", "L", "XL", "XXL", "3XL", "4XL")
@@ -221,8 +224,15 @@ def _variant_page(path, *, timeout):
     return items, total_pages, endpoint_rate
 
 
-def _variant_page_path(page, size=100):
-    return f"/open-api/v1/variants?page={int(page)}&size={int(size)}"
+def _variant_page_path(page, size=VARIANT_PAGE_SIZE):
+    query = urlencode(
+        {
+            "page": int(page),
+            "size": int(size),
+            "search[search_term]": VARIANT_SEARCH_TERM,
+        }
+    )
+    return f"/open-api/v1/variants?{query}"
 
 
 def _insufficient_variant_quota(rate, pages_left):
