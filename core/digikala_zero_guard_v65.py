@@ -12,7 +12,12 @@ from .daily_order_import_v8 import _resolve_size
 from .digikala_client_v40 import DigikalaAPIError, _request_once, get_json
 from .models import AppSetting, Brand, Color, ProductSize, Size, StockBalance, StockLocation
 from .title_product_resolver_v27 import resolve_product_from_title
-from .variant_sale_v12 import TITLE_COLORS, VARIANT_PRODUCT_CODE, resolve_variant_color
+from .variant_sale_v12 import (
+    TITLE_COLORS,
+    VARIANT_PRODUCT_CODE,
+    is_variable_color_product_code,
+    resolve_variable_product_color,
+)
 
 
 ZERO_STATE_PREFIX = "digikala_zero_guard_v65:"
@@ -366,8 +371,8 @@ def _resolved_identity(row):
 
 
 def _product_uses_color(product, title, color):
-    if product.code == VARIANT_PRODUCT_CODE:
-        resolved = resolve_variant_color(title, "")
+    if is_variable_color_product_code(product.code):
+        resolved = resolve_variable_product_color(product.code, title)
         return bool(resolved and norm(resolved) == norm(color.name))
     return product.composition.filter(color=color, qty__gt=0).exists()
 
@@ -390,8 +395,12 @@ def affected_variants_for_cell(size_id, color_id, *, rows=None, force=False):
     )
     local_expected_codes = []
     for ps in local_products:
-        if ps.product.code == VARIANT_PRODUCT_CODE:
-            if norm(color.name) in {norm(name) for name in TITLE_COLORS}:
+        if is_variable_color_product_code(ps.product.code):
+            allowed = TITLE_COLORS if ps.product.code == VARIANT_PRODUCT_CODE else []
+            if ps.product.code != VARIANT_PRODUCT_CODE:
+                from .special_darma_products_v66 import variable_color_names
+                allowed = variable_color_names(ps.product.code)
+            if norm(color.name) in {norm(name) for name in allowed}:
                 local_expected_codes.append(ps.product.code)
             continue
         if any(comp.color_id == color.id and int(comp.qty or 0) > 0 for comp in ps.product.composition.all()):
