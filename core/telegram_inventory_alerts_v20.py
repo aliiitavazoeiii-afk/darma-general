@@ -1,4 +1,5 @@
 import os
+import secrets
 import time
 from collections import defaultdict
 from datetime import datetime
@@ -10,6 +11,14 @@ from .digikala_zero_guard_v65 import (
     scan_zero_transitions,
     stock_cell_total,
     zero_guard_check_seconds,
+)
+from .digikala_zero_guard_v68 import (
+    CONFIRM_TTL_SECONDS,
+    DigikalaZeroWriteError,
+    build_deactivation_plan,
+    execute_confirmed_deactivation,
+    format_deactivation_plan,
+    write_enabled,
 )
 from .models import AppSetting
 from .telegram_inventory_bot_v20 import (
@@ -97,6 +106,7 @@ class BatchedInventoryBot(InventoryBot):
         super().__init__(api)
         self.zero_guard_last_scan = 0.0
         self.zero_guard_initialized = False
+        self.zero_write_confirmations = {}
 
     def send_alert_summary(self, user_id, trigger_label="وضعیت موجودی"):
         groups = _groups()
@@ -178,7 +188,10 @@ class BatchedInventoryBot(InventoryBot):
     def handle_callback(self, query):
         data = query.get("data") or ""
         zero_preview = data.startswith("dkz:preview:")
-        if data not in {"a:transfer", "a:production"} and not zero_preview:
+        zero_arm = data.startswith("dkz:arm:")
+        zero_do = data.startswith("dkz:do:")
+        zero_action = zero_preview or zero_arm or zero_do
+        if data not in {"a:transfer", "a:production"} and not zero_action:
             return super().handle_callback(query)
 
         callback_id = query.get("id")
@@ -210,25 +223,173 @@ class BatchedInventoryBot(InventoryBot):
                         _keyboard([[_button("🏠 منوی اصلی", "m:home")]]),
                     )
                     return
+
                 preview = affected_variants_for_cell(
                     cell["size"].id,
                     cell["color"].id,
                     force=True,
                 )
+                rows = []
+                if write_enabled():
+                    plan = build_deactivation_plan(
+                        cell["size"].id,
+                        cell["color"].id,
+                        force=False,
+                        preview=preview,
+                    )
+                    if plan["eligible"]:
+                        rows.append(
+                            [
+                                _button(
+                                    f"⚠️ آماده‌سازی غیرفعال‌سازی ({len(plan['eligible'])})",
+                                    f"dkz:arm:{cell['size'].id}:{cell['color'].id}",
+                                )
+                            ]
+                        )
+                    elif plan["blocked"]:
+                        rows.append([_button("🔒 candidate فقط blocked است", "m:home")])
+                    else:
+                        rows.append([_button("✅ variant فعال واجدشرایطی نیست", "m:home")])
+                else:
+                    rows.append([_button("🔒 write روی سرور خاموش است", "m:home")])
+                rows.append([_button("🏠 منوی اصلی", "m:home")])
+
                 self.api.send(
                     chat_id,
                     format_preview(preview),
+                    _keyboard(rows),
+                )
+            except Exception as exc:
+                self.api.send(
+                    chat_id,
+                    f"پیش‌نمایش Digikala انجام نشد: {exc}\nهیچ تغییری در Digikala انجام نشد.",
+                    _keyboard([[_button("🏠 منوی اصلی", "m:home")]]),
+                )
+            return
+
+        if zero_arm:
+            try:
+                if not write_enabled():
+                    self.api.send(
+                        chat_id,
+                        "🔒 write دیجی‌کالا روی سرور فعال نیست. هیچ تغییری انجام نشد.",
+                        _keyboard([[_button("🏠 منوی اصلی", "m:home")]]),
+                    )
+                    return
+
+                _, _, size_id, color_id = data.split(":")
+                plan = build_deactivation_plan(int(size_id), int(color_id), force=True)
+                if not plan["eligible"]:
+                    self.api.send(
+                        chat_id,
+                        format_deactivation_plan(plan) + "\n\n✅ چیزی برای غیرفعال‌سازی وجود ندارد.",
+                        _keyboard([[_button("🏠 منوی اصلی", "m:home")]]),
+                    )
+                    return
+
+                token = secrets.token_urlsafe(6)
+                self.zero_write_confirmations[token] = {
+                    "created": time.monotonic(),
+                    "user_id": int(user_id),
+                    "chat_id": int(chat_id),
+                    "size_id": int(size_id),
+                    "color_id": int(color_id),
+                    "fingerprint": str(plan["fingerprint"]),
+                }
+                self.api.send(
+                    chat_id,
+                    format_deactivation_plan(plan),
                     _keyboard(
                         [
-                            [_button("🔒 غیرفعال‌سازی فعلاً قفل است", "m:home")],
-                            [_button("🏠 منوی اصلی", "m:home")],
+                            [
+                                _button(
+                                    f"✅ تأیید نهایی غیرفعال‌سازی {len(plan['eligible'])} مورد",
+                                    f"dkz:do:{token}",
+                                )
+                            ],
+                            [_button("❌ لغو", "m:home")],
                         ]
                     ),
                 )
             except Exception as exc:
                 self.api.send(
                     chat_id,
-                    f"پیش‌نمایش Digikala انجام نشد: {exc}\nهیچ تغییری در Digikala انجام نشد.",
+                    f"آماده‌سازی غیرفعال‌سازی انجام نشد: {exc}\nهیچ تغییری در Digikala انجام نشد.",
+                    _keyboard([[_button("🏠 منوی اصلی", "m:home")]]),
+                )
+            return
+
+        if zero_do:
+            token = data.split(":", 2)[2]
+            confirmation = self.zero_write_confirmations.pop(token, None)
+            if not confirmation:
+                self.api.send(
+                    chat_id,
+                    "⏳ این تأیید منقضی یا قبلاً مصرف شده است. دوباره preview بگیر.",
+                    _keyboard([[_button("🏠 منوی اصلی", "m:home")]]),
+                )
+                return
+            if (
+                int(confirmation["user_id"]) != int(user_id)
+                or int(confirmation["chat_id"]) != int(chat_id)
+            ):
+                self.api.send(
+                    chat_id,
+                    "⛔ این تأیید متعلق به این کاربر/چت نیست. هیچ تغییری انجام نشد.",
+                    _keyboard([[_button("🏠 منوی اصلی", "m:home")]]),
+                )
+                return
+            if time.monotonic() - float(confirmation["created"]) > CONFIRM_TTL_SECONDS:
+                self.api.send(
+                    chat_id,
+                    "⏳ زمان تأیید تمام شده است. هیچ تغییری انجام نشد؛ دوباره preview بگیر.",
+                    _keyboard([[_button("🏠 منوی اصلی", "m:home")]]),
+                )
+                return
+
+            try:
+                result = execute_confirmed_deactivation(
+                    confirmation["size_id"],
+                    confirmation["color_id"],
+                    confirmation["fingerprint"],
+                )
+                completed = result.get("completed") or []
+                blocked = result.get("blocked") or []
+                lines = [
+                    "✅ عملیات تأییدشده Digikala تمام شد.",
+                    f"غیرفعال‌شده: {len(completed)}",
+                ]
+                if completed:
+                    lines.append("variant IDs: " + ", ".join(str(value) for value in completed))
+                if blocked:
+                    lines.append(f"blocked و دست‌نخورده: {len(blocked)}")
+                lines.append(str(result.get("message") or ""))
+                self.api.send(
+                    chat_id,
+                    "\n".join(line for line in lines if line),
+                    _keyboard([[_button("🏠 منوی اصلی", "m:home")]]),
+                )
+            except DigikalaZeroWriteError as exc:
+                completed = list(getattr(exc, "completed", []) or [])
+                if completed:
+                    text = (
+                        f"⚠️ عملیات بعد از {len(completed)} write موفق متوقف شد.\n"
+                        f"variantهای موفق: {', '.join(str(value) for value in completed)}\n"
+                        f"خطا: {exc}\n"
+                        "برای ادامه دوباره preview بگیر؛ variantهای غیرفعال‌شده دوباره target نمی‌شوند."
+                    )
+                else:
+                    text = f"⛔ عملیات متوقف شد: {exc}\nهیچ write موفقی انجام نشد."
+                self.api.send(
+                    chat_id,
+                    text,
+                    _keyboard([[_button("🏠 منوی اصلی", "m:home")]]),
+                )
+            except Exception as exc:
+                self.api.send(
+                    chat_id,
+                    f"⛔ عملیات قبل/حین write با خطای غیرمنتظره متوقف شد: {exc}\n"
+                    "برای وضعیت فعلی دوباره preview بگیر.",
                     _keyboard([[_button("🏠 منوی اصلی", "m:home")]]),
                 )
             return
@@ -246,8 +407,8 @@ class BatchedInventoryBot(InventoryBot):
             f"خانه: {_fmt(cell['home'])}\n"
             f"خورشید: {_fmt(cell['khorshid'])}\n"
             f"کل: {_fmt(cell['total'])}\n\n"
-            "برای ایمنی فعلاً فقط کدهای Digikala که در همین سایز به این رنگ وابسته‌اند بررسی می‌شوند. "
-            "هیچ کالا خودکار غیرفعال نمی‌شود.",
+            "کدهای Digikala که در همین سایز به این رنگ وابسته‌اند ابتدا فقط preview می‌شوند. "
+            "هیچ کالا خودکار غیرفعال نمی‌شود؛ write فقط بعد از تأیید نهایی دستی تو انجام می‌شود.",
             _keyboard(
                 [
                     [_button("🔎 بررسی کدهای متاثر", f"dkz:preview:{cell['size'].id}:{cell['color'].id}")],
