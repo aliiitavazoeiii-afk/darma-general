@@ -78,3 +78,12 @@ Production variants paging rule:
 - never invent a quota when rate metadata is absent;
 - stop immediately on the first real 429 and reject/cache no partial mapping;
 - read-only mapping remains incapable of changing listing state.
+
+
+Darma API-filter rule:
+
+- every V65 `/variants` page request must include `search[search_term]=دارما` and `size=50`;
+- the search filter only narrows API candidates and must never become product identity;
+- title-only resolver + size resolver remain authoritative and fail closed;
+- current production probe reduced the candidate set from 1375 rows / 28 pages to 347 rows / 7 pages;
+- no unfiltered full-catalog scan is allowed in the V65 zero-guard path.
