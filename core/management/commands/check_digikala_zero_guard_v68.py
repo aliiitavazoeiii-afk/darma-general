@@ -51,6 +51,7 @@ class Command(BaseCommand):
                 "dkz:preview:",
                 "dkz:arm:",
                 "dkz:do:",
+                "dkz:cancel:",
                 "zero_write_confirmations",
                 "CONFIRM_TTL_SECONDS",
                 "execute_confirmed_deactivation",
@@ -189,6 +190,23 @@ class Command(BaseCommand):
             if result.get("completed") != [101] or deactivate.call_count != 1:
                 raise CommandError(f"V68 confirmed mocked write path failed: {result}")
 
+        with (
+            patch.dict(os.environ, {guard.WRITE_ENV: "1"}),
+            patch.object(guard, "build_deactivation_plan", return_value=fresh),
+            patch.object(guard, "_verify_live_variant", return_value={"active": True}),
+            patch.object(guard, "stock_cell_total", return_value=cell),
+            patch.object(guard, "deactivate_variant", side_effect=TimeoutError("mock timeout")),
+        ):
+            try:
+                guard.execute_confirmed_deactivation(1, 2, "fresh-plan")
+            except guard.DigikalaZeroWriteError as exc:
+                if not exc.write_attempted or exc.failed_variant_id != 101 or exc.completed:
+                    raise CommandError(
+                        "V68 ambiguous attempted-write state was not preserved safely"
+                    )
+            else:
+                raise CommandError("V68 mocked ambiguous PUT did not stop")
+
     def _api_scope(self):
         scope = guard.get_variant_scope()
         if not scope:
@@ -267,6 +285,7 @@ class Command(BaseCommand):
 
         self.stdout.write("PUT CONTRACT = exact activation endpoint + activation=false")
         self.stdout.write("WRITE RETRY = none except safe 401 token refresh")
+        self.stdout.write("AMBIGUOUS PUT = no retry; force fresh preview")
         self.stdout.write("ZERO ALERT = notification/preview only; never auto-write")
         self.stdout.write("CONFIRMATION = authorized Telegram user + one-time 90s token")
         self.stdout.write("RECHECK = fresh full map + exact fingerprint + per-variant GET")
