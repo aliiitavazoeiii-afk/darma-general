@@ -1,0 +1,27 @@
+{% load static %}
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#07110f">
+  <title>ورود | خرج من</title>
+  <link rel="stylesheet" href="{% static 'expense_tracker/app.css' %}">
+</head>
+<body class="login-body">
+  <div class="login-glow"></div>
+  <main class="login-card">
+    <div class="login-logo">◆</div>
+    <div class="eyebrow">دفتر شخصی من</div>
+    <h1>خرج من</h1>
+    <p>هزینه‌ها، طلب‌ها و مانده ملت؛ ساده و یک‌جا.</p>
+    {% if form.errors %}<div class="message error">نام کاربری یا رمز عبور درست نیست.</div>{% endif %}
+    <form method="post" class="stack-form">{% csrf_token %}
+      <label><span>نام کاربری</span><input type="text" name="username" autofocus autocomplete="username" required></label>
+      <label><span>رمز عبور</span><input type="password" name="password" autocomplete="current-password" required></label>
+      {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+      <button class="primary-btn">ورود</button>
+    </form>
+  </main>
+</body>
+</html>
