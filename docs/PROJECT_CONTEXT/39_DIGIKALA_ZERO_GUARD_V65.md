@@ -362,3 +362,31 @@ If `meta_data.rate_limit` is present, V65 may use it to stop before the next pag
 If rate metadata is absent, V65 does not invent quota values. It continues serially and treats the first real HTTP 429 as a hard stop with zero immediate retry. Any partial mapping is discarded and never cached or accepted as complete.
 
 No Digikala write endpoint is introduced by this change.
+
+
+## Darma-filtered variants read
+
+A production read-only probe confirmed Digikala's supported variant search filter:
+
+```text
+search[search_term]=دارما
+```
+
+With `size=50`, the same seller account returned:
+
+```text
+unfiltered: total_rows=1375, total_pages=28
+Darma filter: total_rows=347, total_pages=7
+```
+
+Sample returned titles were Darma products such as PACK-5, D-220 and rah-220.
+
+V65 now makes the API-side Darma search term mandatory in every variant page request:
+
+```text
+GET /open-api/v1/variants?page=N&size=50&search[search_term]=دارما
+```
+
+The API filter is only a bandwidth/quota reduction mechanism. It does **not** identify a product. Every returned row must still pass the existing title-only product resolver and size resolver; unknown or ambiguous rows fail closed.
+
+This reduces the current production candidate set from 28 pages to 7 pages while preserving the V65 read-only boundary and zero Digikala writes.
