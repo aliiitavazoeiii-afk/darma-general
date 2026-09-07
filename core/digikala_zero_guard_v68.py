@@ -288,12 +288,12 @@ def execute_confirmed_deactivation(size_id, color_id, expected_fingerprint):
         variant_id = int(row["seller_variant_id"])
         try:
             deactivate_variant(variant_id)
+            completed.append(variant_id)
             after = _live_variant_data(variant_id)
             if bool(after.get("active")):
                 raise DigikalaZeroWriteError(
                     f"variant {variant_id} بعد از PUT هنوز active گزارش شد."
                 )
-            completed.append(variant_id)
             print(
                 f"DIGIKALA V68 DEACTIVATED variant={variant_id} "
                 f"product={row['product_code']} size={row['size']} "
