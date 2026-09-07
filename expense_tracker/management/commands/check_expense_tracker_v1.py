@@ -2,12 +2,15 @@ from datetime import date
 
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
+from django.test import RequestFactory
 from django.template.loader import get_template
+from django.urls import resolve
 
 from core.models import AccountEntry, BusinessPayment, InventoryMovement, SaleLine, StockBalance
-from core.payment_source_v63 import SOURCE_MELAT, source_balance
+from core.payment_source_v63 import SOURCE_MELAT, source_balance, source_row
 
 from expense_tracker.models import DailyExpense, ExpenseCategory, ReceivableEntry, ReceivablePerson
+from expense_tracker import views as expense_views
 from expense_tracker.services import (
     create_claim,
     create_expense,
@@ -51,6 +54,17 @@ class Command(BaseCommand):
         before = self._snapshot()
         today = date.today()
 
+        dashboard_source = get_template("expense_tracker/dashboard.html").template.source
+        if 'data-ajax-expense="1"' not in dashboard_source or 'jalali-picker' not in dashboard_source:
+            raise CommandError("dashboard is missing AJAX expense entry or Jalali picker marker")
+
+        calendar_match = resolve("/calendar/picker/")
+        calendar_request = RequestFactory().get("/calendar/picker/")
+        calendar_request.user = type("AuthUser", (), {"is_authenticated": True})()
+        calendar_response = calendar_match.func(calendar_request)
+        if calendar_response.status_code != 200:
+            raise CommandError("expense Jalali calendar route did not return HTTP 200")
+
         try:
             with transaction.atomic():
                 category = ExpenseCategory.objects.create(
@@ -68,6 +82,35 @@ class Command(BaseCommand):
                 )
                 if int(source_balance(SOURCE_MELAT) or 0) != before["mellat"] - 10_000:
                     raise CommandError("expense create did not debit Mellat exactly")
+
+                delete_expense(expense)
+                if int(source_balance(SOURCE_MELAT) or 0) != before["mellat"]:
+                    raise CommandError("pre-AJAX cleanup did not restore Mellat")
+
+                ajax_request = RequestFactory().post(
+                    "/expenses/add/",
+                    {
+                        "date": f"{today.year}/01/01",
+                        "amount": "12000",
+                        "category": str(category.id),
+                        "title": "ajax test",
+                        "note": "",
+                    },
+                    HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+                    HTTP_ACCEPT="application/json",
+                )
+                ajax_request.user = type("AuthUser", (), {"is_authenticated": True})()
+                ajax_response = expense_views.expense_add(ajax_request)
+                if ajax_response.status_code != 200:
+                    raise CommandError("AJAX expense endpoint did not return HTTP 200")
+                if b'"ok": true' not in ajax_response.content.lower():
+                    raise CommandError("AJAX expense endpoint did not return success JSON")
+                if int(source_balance(SOURCE_MELAT) or 0) != before["mellat"] - 12_000:
+                    raise CommandError("AJAX expense did not debit Mellat exactly")
+                DailyExpense.objects.filter(title="ajax test", category=category).delete()
+                mellat_row = source_row(SOURCE_MELAT, create=True, for_update=True)
+                mellat_row.amount = before["mellat"]
+                mellat_row.save(update_fields=["amount", "updated_at"])
 
                 expense = update_expense(
                     expense,
@@ -111,6 +154,8 @@ class Command(BaseCommand):
         if before != after:
             raise CommandError(f"rollback regression leaked persistent data: before={before} after={after}")
 
+        self.stdout.write("EXPENSE UI V2: Jalali calendar route rendered HTTP 200")
+        self.stdout.write("EXPENSE UI V2: AJAX save returned JSON and debited Mellat exactly")
         self.stdout.write("EXPENSE V1: create 10000 -> Mellat -10000")
         self.stdout.write("EXPENSE V1: edit to 25000 -> Mellat total delta -25000")
         self.stdout.write("EXPENSE V1: delete -> Mellat fully restored")
