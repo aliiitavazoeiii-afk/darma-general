@@ -293,3 +293,37 @@ GET /open-api/v1/
 ```
 
 No authenticated variant endpoint, listing state, stock, accounting, or inventory behavior is changed by this patch.
+
+
+## Variant-endpoint quota correction
+
+A production sequence showed:
+
+```text
+public health: current=1 max=33 remaining=32
+immediate GET /variants: 429 Too Many Requests
+```
+
+Therefore the public health rate-limit bucket is **not authoritative for the authenticated `/variants` endpoint**. It remains useful only as a general API health diagnostic.
+
+The authoritative quota for variant paging is the successful `GET /variants` response itself:
+
+```text
+data.meta_data.rate_limit
+```
+
+V65 now:
+
+1. sends exactly one first-page request:
+   `GET /open-api/v1/variants?page=1&size=100`;
+2. if that first request is 429, stops immediately with zero retry;
+3. if page 1 succeeds, reads its `pager.total_pages` and `meta_data.rate_limit`;
+4. calculates whether the endpoint-specific remaining quota is enough for every remaining page;
+5. if quota is insufficient, stops before page 2 and rejects partial mapping;
+6. if quota is sufficient, reads pages serially, one at a time;
+7. re-checks endpoint quota after every successful page;
+8. never accepts an incomplete mapping and never converts rate-limit failure into a Digikala write.
+
+Public `GET /open-api/v1/` health is informational only and no longer gates `/variants`.
+
+This correction does not change Telegram zero detection, internal stock, sales, accounting, or any Digikala listing state.
