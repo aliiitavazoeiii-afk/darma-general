@@ -44,7 +44,8 @@ class Command(BaseCommand):
         base = Path(settings.BASE_DIR)
         required = {
             "core/digikala_zero_guard_v65.py": (
-                '"/open-api/v1/variants?page={int(page)}&size={int(size)}"',
+                '"search[search_term]": VARIANT_SEARCH_TERM',
+                'VARIANT_SEARCH_TERM = "دارما"',
                 "resolve_product_from_title",
                 "_resolve_size",
                 "write_enabled",
@@ -295,11 +296,12 @@ class Command(BaseCommand):
             if [row.get("id") for row in rows] != [101, 202]:
                 raise CommandError(f"V65 no-rate-metadata serial paging mismatch: {rows}")
             calls_made = [call.args[0] for call in get_json_mock.call_args_list]
-            if calls_made != [
-                "/open-api/v1/variants?page=1&size=50",
-                "/open-api/v1/variants?page=2&size=50",
-            ]:
-                raise CommandError(f"V65 variant page-size/path mismatch: {calls_made}")
+            expected = [guard._variant_page_path(1), guard._variant_page_path(2)]
+            if calls_made != expected:
+                raise CommandError(f"V65 Darma-filtered variant paths mismatch: {calls_made}")
+            for path_value in calls_made:
+                if "size=50" not in path_value or "search%5Bsearch_term%5D=" not in path_value:
+                    raise CommandError(f"V65 variant path lost safe size/filter: {path_value}")
 
         # Public health stays informational and must use the exact trailing-slash API root.
         with patch.object(
@@ -334,8 +336,9 @@ class Command(BaseCommand):
             "RATE LIMIT GUARD = /variants rate metadata used when present; direct 429 retries = 0"
         )
         self.stdout.write("VARIANT PAGE SIZE = 50")
+        self.stdout.write("VARIANT API FILTER = search[search_term]=دارما")
         self.stdout.write(
-            "VARIANT PAGING = serial; missing meta_data.rate_limit is allowed; partial maps are rejected"
+            "VARIANT PAGING = serial Darma-only candidate set; missing rate metadata allowed; partial maps rejected"
         )
         self.stdout.write("HEALTH ENDPOINT = informational only: /open-api/v1/")
 
