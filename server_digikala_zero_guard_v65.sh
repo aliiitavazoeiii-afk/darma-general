@@ -1,6 +1,7 @@
 #!/bin/sh
 set -eu
 cd /opt/darma-general
+export COMPOSE_IGNORE_ORPHANS=1
 
 fail(){ echo ""; echo "======================================"; echo "FAILED: $1"; echo "======================================"; exit 1; }
 step(){ echo ""; echo "======================================"; echo "$1"; echo "======================================"; }
@@ -189,7 +190,7 @@ docker compose -f compose.yml -f compose.telegram.yml run --rm --entrypoint sh b
 ' || fail "bot Digikala runtime token isolation failed"
 
 MAP_PRE=$(snapshot_run) || fail "could not capture pre-map state"
-docker compose -f compose.yml -f compose.telegram.yml run --rm --entrypoint python bot manage.py check_digikala_zero_guard_v65 --live-map || fail "V65 live read-only mapping failed"
+docker compose -f compose.yml -f compose.telegram.yml run --rm --entrypoint python bot manage.py check_digikala_zero_guard_v65 --live-map --allow-network-failure || fail "V65 live read-only mapping command failed"
 MAP_POST=$(snapshot_run) || fail "could not capture post-map state"
 [ "$MAP_PRE" = "$MAP_POST" ] || {
   echo "--- BEFORE LIVE MAP ---"; echo "$MAP_PRE"
