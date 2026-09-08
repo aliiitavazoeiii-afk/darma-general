@@ -95,3 +95,22 @@ Added after the first live V1 deployment:
 Expected deployment marker for this revision:
 
 `SUCCESS: EXPENSE TRACKER UI V2 DEPLOYED`
+
+
+## PWA V3 — Android install + grouped transactions
+
+- added branded 192x192 and 512x512 PNG app icons;
+- added a web app manifest with standalone display, theme/background colors and app shortcuts;
+- added a root-scoped service worker that caches only expense static assets and deliberately does not cache authenticated financial HTML/API responses;
+- added Android install UI using `beforeinstallprompt`;
+- branded sidebar/mobile header/favicon with the same app icon;
+- transaction history is grouped by day;
+- today and yesterday use explicit Persian labels;
+- older days show Persian weekday + Jalali date;
+- each day shows its own transaction count and daily total.
+
+Full browser PWA installation requires a secure origin (HTTPS, except localhost).
+
+Expected deployment marker for this revision:
+
+`SUCCESS: EXPENSE TRACKER PWA V3 DEPLOYED`
