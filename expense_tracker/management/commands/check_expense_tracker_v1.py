@@ -7,7 +7,7 @@ from django.template.loader import get_template
 from django.urls import resolve
 
 from core.dateutils import format_jalali
-from core.models import AccountEntry, BusinessPayment, InventoryMovement, SaleLine, StockBalance
+from core.models import AccountEntry, BusinessPayment, DiaGallerySale, InventoryMovement, SaleLine, StockBalance
 from core.payment_source_v63 import SOURCE_MELAT, source_balance
 
 from expense_tracker.models import DailyExpense, ExpenseCategory, ReceivableEntry, ReceivablePerson
@@ -58,6 +58,8 @@ class Command(BaseCommand):
         dashboard_source = get_template("expense_tracker/dashboard.html").template.source
         if 'data-ajax-expense="1"' not in dashboard_source or 'jalali-picker' not in dashboard_source:
             raise CommandError("dashboard is missing AJAX expense entry or Jalali picker marker")
+        if "درآمد امروز" not in dashboard_source or "کل طلب‌های باز" in dashboard_source:
+            raise CommandError("dashboard daily revenue KPI replacement is missing")
 
         manifest_match = resolve("/manifest.webmanifest")
         manifest_request = RequestFactory().get("/manifest.webmanifest")
@@ -70,6 +72,25 @@ class Command(BaseCommand):
         worker_response = worker_match.func(worker_request)
         if worker_response.status_code != 200 or worker_response.get("Service-Worker-Allowed") != "/":
             raise CommandError("expense service worker route/scope is invalid")
+
+        expected_revenue = sum(
+            int(quantity or 0) * int(sale_price or 0)
+            for quantity, sale_price in SaleLine.objects.filter(
+                day__date=today,
+                quantity__gt=0,
+            ).values_list("quantity", "sale_price")
+        ) + sum(
+            int(quantity or 0) * int(unit_price or 0)
+            for quantity, unit_price in DiaGallerySale.objects.filter(
+                day__date=today,
+                quantity__gt=0,
+            ).values_list("quantity", "unit_price")
+        )
+        actual_revenue = expense_views._daily_revenue_total(today)
+        if int(actual_revenue) != int(expected_revenue):
+            raise CommandError(
+                f"daily revenue mismatch: expense={actual_revenue} ERP gross={expected_revenue}"
+            )
 
         sample_groups = expense_views._group_expenses_by_day(
             [
@@ -191,6 +212,7 @@ class Command(BaseCommand):
         if before != after:
             raise CommandError(f"rollback regression leaked persistent data: before={before} after={after}")
 
+        self.stdout.write("EXPENSE DAILY REVENUE V4: dashboard KPI matches ERP gross sales")
         self.stdout.write("EXPENSE PWA V3: manifest + service worker routes passed")
         self.stdout.write("EXPENSE PWA V3: daily transaction grouping passed")
         self.stdout.write("EXPENSE UI V2: Jalali calendar route rendered HTTP 200")
@@ -201,4 +223,4 @@ class Command(BaseCommand):
         self.stdout.write("RECEIVABLE V1: claim -> Mellat unchanged")
         self.stdout.write("RECEIVABLE V1: repayment 15000 -> Mellat +15000; delete -> restored")
         self.stdout.write("NO BUSINESS DATA CHANGED")
-        self.stdout.write(self.style.SUCCESS("SUCCESS: EXPENSE TRACKER PWA V3 REGRESSION PASSED"))
+        self.stdout.write(self.style.SUCCESS("SUCCESS: EXPENSE TRACKER DAILY REVENUE V4 REGRESSION PASSED"))
