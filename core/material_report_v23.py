@@ -1,5 +1,6 @@
 from collections import OrderedDict
 from copy import deepcopy
+import json
 from decimal import Decimal
 
 from django.contrib import messages
@@ -436,6 +437,7 @@ def _view_block(block):
         "elastic16_choices": choices16,
         "elastic25_choices": choices25,
         "cost_catalog": cost_catalog,
+        "cost_catalog_json": json.dumps(cost_catalog, ensure_ascii=False),
     }
 
 
