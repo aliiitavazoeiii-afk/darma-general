@@ -67,7 +67,7 @@ def manifest(request):
 
 def service_worker(request):
     script = r'''
-const CACHE_NAME = "kharj-man-shell-v3";
+const CACHE_NAME = "kharj-man-shell-v4";
 const STATIC_ASSETS = [
   "/static/expense_tracker/app.css",
   "/static/expense_tracker/app.js",
