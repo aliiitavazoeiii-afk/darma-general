@@ -72,13 +72,22 @@ USER_VALUE_FIELDS = {
 }
 
 
+@lru_cache(maxsize=512)
 def _material_label(key):
     if key in BASE_LABELS:
         return BASE_LABELS[key]
     if key in LEGACY_OUTPUT_LABELS:
         return LEGACY_OUTPUT_LABELS[key]
     label = title_for_material_key(key)
-    return label if label and label != key else (key or "نامشخص")
+    if label and label != key:
+        return label
+    stock_title = (
+        RawMaterialStock.objects.filter(active=True, material_key=key)
+        .exclude(title="")
+        .values_list("title", flat=True)
+        .first()
+    )
+    return stock_title or key or "نامشخص"
 
 
 def _output_sizes_for_brand(brand):
@@ -211,6 +220,7 @@ def _elastic_choices(variant, selected_keys=()):
 
 def _reset_request_caches():
     reset_price_cache()
+    _material_label.cache_clear()
     _material_candidate_base.cache_clear()
     _elastic_choice_base.cache_clear()
 
@@ -390,12 +400,19 @@ def _view_block(block):
             for size_key, _label in sizes
         ]
         row_total = sum(max(0, v20._int(values.get(size_key))) for size_key, _label in sizes)
-        cut_total = max(0, v20._int((live_input.get(key) or {}).get("cut")))
+        cut_source = key
+        legacy_source = v22.CUT_SOURCE.get(key, key)
+        if legacy_source != key:
+            own_cut = max(0, v20._int((live_input.get(key) or {}).get("cut")))
+            legacy_cut = max(0, v20._int((live_input.get(legacy_source) or {}).get("cut")))
+            if own_cut <= 0 and legacy_cut > 0:
+                cut_source = legacy_source
+        cut_total = max(0, v20._int((live_input.get(cut_source) or {}).get("cut")))
         applied = stats["rows"][key]["applied"]
         sync_delta = row_total - applied
         output_rows.append({
             "model_key": key,
-            "cut_source": key,
+            "cut_source": cut_source,
             "label": _material_label(key),
             "cells": cells,
             "total": row_total,
