@@ -24,9 +24,9 @@
 
 <div class="kpi-grid">
   <article class="kpi-card coral"><div class="kpi-icon">▥</div><div><span>خرج امروز</span><strong class="money" id="today-total">{{ today_total|groupnum }}</strong><small>تومان</small></div></article>
+  <article class="kpi-card green"><div class="kpi-icon">↗</div><div><span>درآمد امروز</span><strong class="money positive" id="today-revenue">{{ today_revenue|groupnum }}</strong><small>تومان</small></div></article>
   <article class="kpi-card amber"><div class="kpi-icon">◷</div><div><span>خرج این هفته</span><strong class="money" id="week-total">{{ week_total|groupnum }}</strong><small>تومان</small></div></article>
   <article class="kpi-card blue"><div class="kpi-icon">▣</div><div><span>خرج ماه {{ month_label }}</span><strong class="money" id="month-total">{{ month_total|groupnum }}</strong><small>تومان</small></div></article>
-  <article class="kpi-card violet"><div class="kpi-icon">◎</div><div><span>کل طلب‌های باز</span><strong class="money">{{ receivable_total|groupnum }}</strong><small>تومان</small></div></article>
 </div>
 
 <div class="dashboard-grid">
