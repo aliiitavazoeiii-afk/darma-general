@@ -220,6 +220,7 @@ body:before{
 .transactions-empty strong{color:#dcebe6}.transactions-empty span{color:var(--muted);font-size:.76rem}
 
 @media(max-width:760px){
+  .mobile-brand{display:flex}
   .topbar-actions{gap:6px}.profile-pill{padding:6px 8px}.profile-pill>span:last-child{display:none}
   .install-mini{padding:6px 9px}
   .day-group-head{padding:13px 12px}.day-label-row strong{font-size:.92rem}.day-total{display:grid;grid-template-columns:auto auto;gap:1px 4px}
