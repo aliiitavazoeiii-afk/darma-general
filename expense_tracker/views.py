@@ -210,7 +210,6 @@ def dashboard(request):
         )
 
     people = _receivable_people()
-    total_receivable = sum(max(0, int(p.outstanding or 0)) for p in people)
 
     return render(
         request,
@@ -228,7 +227,6 @@ def dashboard(request):
             "category_rows": _category_rows(month_qs),
             "seven_days": day_rows,
             "receivable_people": sorted(people, key=lambda p: p.outstanding, reverse=True)[:5],
-            "receivable_total": total_receivable,
         },
     )
 
