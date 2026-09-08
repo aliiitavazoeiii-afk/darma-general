@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
@@ -58,6 +58,33 @@ class Command(BaseCommand):
         dashboard_source = get_template("expense_tracker/dashboard.html").template.source
         if 'data-ajax-expense="1"' not in dashboard_source or 'jalali-picker' not in dashboard_source:
             raise CommandError("dashboard is missing AJAX expense entry or Jalali picker marker")
+
+        manifest_match = resolve("/manifest.webmanifest")
+        manifest_request = RequestFactory().get("/manifest.webmanifest")
+        manifest_response = manifest_match.func(manifest_request)
+        if manifest_response.status_code != 200 or b'"display": "standalone"' not in manifest_response.content:
+            raise CommandError("expense PWA manifest is not valid/standalone")
+
+        worker_match = resolve("/sw.js")
+        worker_request = RequestFactory().get("/sw.js")
+        worker_response = worker_match.func(worker_request)
+        if worker_response.status_code != 200 or worker_response.get("Service-Worker-Allowed") != "/":
+            raise CommandError("expense service worker route/scope is invalid")
+
+        sample_groups = expense_views._group_expenses_by_day(
+            [
+                type("ExpenseStub", (), {"date": today, "amount": 1000})(),
+                type("ExpenseStub", (), {"date": today, "amount": 2000})(),
+                type("ExpenseStub", (), {"date": today - timedelta(days=1), "amount": 4000})(),
+            ],
+            today=today,
+        )
+        if len(sample_groups) != 2:
+            raise CommandError("expense daily grouping did not produce two day groups")
+        if sample_groups[0]["label"] != "امروز" or sample_groups[0]["total"] != 3000:
+            raise CommandError("today transaction grouping/total is wrong")
+        if sample_groups[1]["label"] != "دیروز" or sample_groups[1]["total"] != 4000:
+            raise CommandError("yesterday transaction grouping/total is wrong")
 
         calendar_match = resolve("/calendar/picker/")
         calendar_request = RequestFactory().get("/calendar/picker/")
@@ -164,6 +191,8 @@ class Command(BaseCommand):
         if before != after:
             raise CommandError(f"rollback regression leaked persistent data: before={before} after={after}")
 
+        self.stdout.write("EXPENSE PWA V3: manifest + service worker routes passed")
+        self.stdout.write("EXPENSE PWA V3: daily transaction grouping passed")
         self.stdout.write("EXPENSE UI V2: Jalali calendar route rendered HTTP 200")
         self.stdout.write("EXPENSE UI V2: AJAX save returned JSON and debited Mellat exactly")
         self.stdout.write("EXPENSE V1: create 10000 -> Mellat -10000")
@@ -172,4 +201,4 @@ class Command(BaseCommand):
         self.stdout.write("RECEIVABLE V1: claim -> Mellat unchanged")
         self.stdout.write("RECEIVABLE V1: repayment 15000 -> Mellat +15000; delete -> restored")
         self.stdout.write("NO BUSINESS DATA CHANGED")
-        self.stdout.write(self.style.SUCCESS("SUCCESS: EXPENSE TRACKER UI V2 REGRESSION PASSED"))
+        self.stdout.write(self.style.SUCCESS("SUCCESS: EXPENSE TRACKER PWA V3 REGRESSION PASSED"))
