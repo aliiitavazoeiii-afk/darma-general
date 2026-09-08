@@ -114,3 +114,20 @@ Full browser PWA installation requires a secure origin (HTTPS, except localhost)
 Expected deployment marker for this revision:
 
 `SUCCESS: EXPENSE TRACKER PWA V3 DEPLOYED`
+
+
+## Daily Revenue V4 — compare today's expense with ERP sales
+
+- removed the `کل طلب‌های باز` KPI from the top dashboard cards;
+- top dashboard KPIs are now: today's expense, today's revenue, this week's expense, current Jalali month's expense;
+- today's revenue is read-only from the shared ERP database;
+- the value intentionally matches the ERP daily report's `فروش کل` / gross sales:
+  - positive `SaleLine`: `quantity * sale_price`;
+  - positive `DiaGallerySale`: `quantity * unit_price`;
+- no Digikala fee, COGS, profit, receivable or Mellat mutation is used to calculate this KPI;
+- the existing detailed receivables panel remains available lower on the home page and the dedicated receivables page is unchanged;
+- regression checks the revenue KPI source and verifies it equals the ERP gross-sales calculation without mutating business data.
+
+Expected deployment marker for this revision:
+
+`SUCCESS: EXPENSE TRACKER DAILY REVENUE V4 DEPLOYED`
