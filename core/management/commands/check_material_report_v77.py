@@ -1,4 +1,5 @@
 from django.core.management.base import BaseCommand
+from django.template.loader import get_template
 from django.urls import resolve
 
 from core import material_report_v23 as v23
@@ -21,6 +22,9 @@ class Command(BaseCommand):
                 raise RuntimeError(f"DARMA sizes mismatch: {size_keys}")
         else:
             size_keys = ["m", "l", "xl", "xxl", "3xl", "4xl"]
+
+        # Compile the active template before deployment; this is read-only.
+        get_template("core/material_report_v36.html")
 
         route_checks = {
             "/material-report/": "material_report",
@@ -52,5 +56,6 @@ class Command(BaseCommand):
         self.stdout.write(f"OLD DARMA BLOCKS MISSING STORED 4XL KEY = {old_missing}")
         self.stdout.write("OLD DARMA 4XL DISPLAY = ON (blank until entered)")
         self.stdout.write("DETAILS DEFAULT = CLOSED")
+        self.stdout.write("TEMPLATE COMPILE = OK")
         self.stdout.write("CHECK MODE = READ ONLY")
         self.stdout.write(self.style.SUCCESS("MATERIAL REPORT V77 CHECK OK"))
