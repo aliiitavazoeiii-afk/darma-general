@@ -173,8 +173,60 @@
     });
   }
 
+  function bindPwaInstall(){
+    var installButtons=[
+      document.getElementById("install-app-btn"),
+      document.getElementById("install-app-btn-mobile")
+    ].filter(Boolean);
+    var deferredPrompt=null;
+
+    function isStandalone(){
+      return window.matchMedia("(display-mode: standalone)").matches ||
+        window.navigator.standalone === true;
+    }
+
+    function hideInstall(){
+      installButtons.forEach(function(btn){btn.hidden=true;});
+    }
+
+    function showInstall(){
+      if(isStandalone()) return hideInstall();
+      installButtons.forEach(function(btn){btn.hidden=false;});
+    }
+
+    if("serviceWorker" in navigator && window.isSecureContext){
+      window.addEventListener("load",function(){
+        navigator.serviceWorker.register("/sw.js",{scope:"/"}).catch(function(){});
+      });
+    }
+
+    window.addEventListener("beforeinstallprompt",function(event){
+      event.preventDefault();
+      deferredPrompt=event;
+      showInstall();
+    });
+
+    installButtons.forEach(function(btn){
+      btn.addEventListener("click",async function(){
+        if(!deferredPrompt) return;
+        deferredPrompt.prompt();
+        try{await deferredPrompt.userChoice;}catch(e){}
+        deferredPrompt=null;
+        hideInstall();
+      });
+    });
+
+    window.addEventListener("appinstalled",function(){
+      deferredPrompt=null;
+      hideInstall();
+    });
+
+    if(isStandalone()) hideInstall();
+  }
+
   bindMoneyInputs(document);
   bindNormalMoneyForms();
   bindExpenseAjax();
   bindConfirmations();
+  bindPwaInstall();
 })();
