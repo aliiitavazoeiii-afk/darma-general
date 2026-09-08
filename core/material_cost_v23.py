@@ -1,4 +1,5 @@
 from decimal import Decimal, ROUND_HALF_UP
+from functools import lru_cache
 
 from django.db.models import Q
 
@@ -34,6 +35,7 @@ def weighted_unit_price(rows):
     return 0
 
 
+@lru_cache(maxsize=512)
 def fabric_price(material_key, fabric_code=""):
     qs = RawMaterialStock.objects.filter(
         active=True,
@@ -49,6 +51,7 @@ def fabric_price(material_key, fabric_code=""):
     return weighted_unit_price(list(qs))
 
 
+@lru_cache(maxsize=512)
 def elastic_price(material_key, variant):
     rows = list(
         RawMaterialStock.objects.filter(
@@ -108,6 +111,11 @@ def calculate_model_cost(material_key, values, wage):
         "elastic16_key": elastic16_key,
         "elastic25_key": elastic25_key,
     }
+
+
+def reset_price_cache():
+    fabric_price.cache_clear()
+    elastic_price.cache_clear()
 
 
 def live_cost_catalog(material_keys, elastic_keys):
