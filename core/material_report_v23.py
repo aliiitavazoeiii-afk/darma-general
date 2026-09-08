@@ -2,6 +2,7 @@ from collections import OrderedDict
 from copy import deepcopy
 import json
 from decimal import Decimal
+from functools import lru_cache
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -155,9 +156,9 @@ def _blank_output_data_for_brand(brand):
     }
 
 
-def _material_candidates(existing_keys=()):
+@lru_cache(maxsize=1)
+def _material_candidate_base():
     choices = OrderedDict()
-
     for key, label in darma_material_choices():
         choices[str(key)] = label
 
@@ -166,15 +167,22 @@ def _material_candidates(existing_keys=()):
         key = (row.material_key or "").strip()
         if not key:
             continue
-        choices.setdefault(key, _material_label(key) or row.title)
+        label = _material_label(key)
+        if not label or label == key:
+            label = row.title or key
+        choices.setdefault(key, label)
+    return tuple(choices.items())
 
+
+def _material_candidates(existing_keys=()):
+    choices = OrderedDict(_material_candidate_base())
     for key in existing_keys:
         choices.setdefault(key, _material_label(key))
+    return list(choices.items())
 
-    return [(key, label) for key, label in choices.items()]
 
-
-def _elastic_choices(variant, selected_keys=()):
+@lru_cache(maxsize=2)
+def _elastic_choice_base(variant):
     choices = OrderedDict()
     rows = RawMaterialStock.objects.filter(
         active=True,
@@ -186,13 +194,25 @@ def _elastic_choices(variant, selected_keys=()):
         key = (row.material_key or "").strip()
         if not key:
             continue
-        choices.setdefault(key, _material_label(key) or row.title)
+        label = _material_label(key)
+        if not label or label == key:
+            label = row.title or key
+        choices.setdefault(key, label)
+    return tuple(choices.items())
 
+
+def _elastic_choices(variant, selected_keys=()):
+    choices = OrderedDict(_elastic_choice_base(str(variant)))
     for key in selected_keys:
         if key:
             choices.setdefault(key, _material_label(key))
+    return list(choices.items())
 
-    return [(key, label) for key, label in choices.items()]
+
+def _reset_request_caches():
+    _reset_request_caches()
+    _material_candidate_base.cache_clear()
+    _elastic_choice_base.cache_clear()
 
 
 def _parse_active_keys(request, block=None, extra_key=None):
@@ -691,7 +711,7 @@ def _sync_output(block):
 
 @login_required
 def material_report(request):
-    reset_price_cache()
+    _reset_request_caches()
     brands = v20._material_brands()
     if request.method == "POST":
         try:
@@ -730,7 +750,7 @@ def material_report(request):
 @login_required
 @require_POST
 def material_block_add_model(request, block_id):
-    reset_price_cache()
+    _reset_request_caches()
     try:
         with transaction.atomic():
             block = MaterialReportBlock.objects.select_for_update().select_related("brand").get(id=block_id)
@@ -751,7 +771,7 @@ def material_block_add_model(request, block_id):
 @login_required
 @require_POST
 def material_block_save(request, block_id):
-    reset_price_cache()
+    _reset_request_caches()
     try:
         with transaction.atomic():
             block = MaterialReportBlock.objects.select_for_update().select_related("brand").get(id=block_id)
@@ -768,7 +788,7 @@ def material_block_save(request, block_id):
 @login_required
 @require_POST
 def material_block_apply_materials(request, block_id):
-    reset_price_cache()
+    _reset_request_caches()
     try:
         with transaction.atomic():
             block = MaterialReportBlock.objects.select_for_update().select_related("brand").get(id=block_id)
@@ -792,7 +812,7 @@ def material_block_apply_materials(request, block_id):
 @login_required
 @require_POST
 def material_block_apply_output(request, block_id):
-    reset_price_cache()
+    _reset_request_caches()
     try:
         with transaction.atomic():
             block = MaterialReportBlock.objects.select_for_update().select_related("brand").get(id=block_id)
