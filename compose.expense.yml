@@ -9,6 +9,9 @@ services:
     environment:
       DJANGO_SETTINGS_MODULE: expense_site.settings
       DB_HOST: db
+      EXPENSE_ALLOWED_HOSTS: kharj.filmjadiid.ir
+      EXPENSE_CSRF_TRUSTED_ORIGINS: https://kharj.filmjadiid.ir
+      EXPENSE_USE_HTTPS: "1"
     entrypoint: ["/bin/sh", "/app/expense_entrypoint.sh"]
     ports:
       - "${EXPENSE_BIND:-0.0.0.0}:${EXPENSE_PORT:-8011}:8000"
