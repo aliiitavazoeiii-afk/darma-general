@@ -183,3 +183,46 @@ body:before{
   .hero-card{min-height:170px}.save-row{display:grid;grid-template-columns:1fr}.save-expense-btn{width:100%}.save-status{justify-content:center}
   .date-input-shell{grid-template-columns:30px minmax(0,1fr)}.date-input-shell small{display:none}
 }
+
+
+/* PWA identity + grouped transactions */
+.brand-logo{
+  width:44px;height:44px;border-radius:14px;object-fit:cover;flex:0 0 auto;
+  box-shadow:0 10px 28px rgba(0,0,0,.25),0 0 0 1px rgba(66,239,155,.13)
+}
+.mobile-brand{align-items:center;gap:8px;font-weight:800}.mobile-brand img{width:30px;height:30px;border-radius:9px}
+.topbar-actions{display:flex;align-items:center;gap:9px}
+.install-card{
+  width:100%;border:1px solid rgba(66,239,155,.15);background:linear-gradient(135deg,rgba(66,239,155,.09),rgba(255,255,255,.018));
+  color:var(--text);padding:10px;border-radius:16px;display:grid;grid-template-columns:38px 1fr 22px;align-items:center;gap:9px;text-align:right;
+  margin:0 0 10px;box-shadow:0 12px 35px rgba(0,0,0,.12)
+}
+.install-card[hidden],.install-mini[hidden]{display:none!important}
+.install-card img{width:38px;height:38px;border-radius:11px}.install-card span{display:grid}.install-card strong{font-size:.76rem}.install-card small{font-size:.61rem;color:var(--muted)}
+.install-card b{font-size:18px;color:var(--green);font-weight:500}
+.install-mini{
+  border:1px solid rgba(66,239,155,.22);background:rgba(66,239,155,.075);color:#b9ffda;border-radius:999px;padding:7px 11px;font-size:.68rem;font-weight:700
+}
+.day-groups{display:grid;gap:18px;margin-top:18px}
+.day-group{border:1px solid rgba(255,255,255,.065);border-radius:20px;overflow:hidden;background:rgba(4,13,14,.28)}
+.day-group-head{
+  display:flex;align-items:center;justify-content:space-between;gap:16px;padding:15px 17px;
+  border-bottom:1px solid rgba(255,255,255,.055);
+  background:linear-gradient(90deg,rgba(66,239,155,.055),rgba(255,255,255,.012))
+}
+.day-title{display:grid;gap:2px}.day-label-row{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.day-label-row strong{font-size:1rem;font-weight:800;color:#f0faf6}.day-jalali{font-size:.74rem;color:#83aa9b;direction:ltr}
+.day-separator{color:rgba(255,255,255,.22)}.day-title small{color:var(--muted);font-size:.66rem}
+.day-total{display:flex;align-items:baseline;gap:5px;white-space:nowrap}.day-total small{color:var(--muted);font-size:.62rem;margin-left:3px}
+.day-total strong{font-size:1rem;color:#b4ffd3}.day-total span{font-size:.63rem;color:#799288}
+.grouped-list{padding:0 14px}.grouped-list .transaction:last-child{border-bottom:0}
+.transactions-panel{padding:20px}.transactions-empty{padding:48px 20px;display:grid;gap:6px;text-align:center}
+.transactions-empty strong{color:#dcebe6}.transactions-empty span{color:var(--muted);font-size:.76rem}
+
+@media(max-width:760px){
+  .topbar-actions{gap:6px}.profile-pill{padding:6px 8px}.profile-pill>span:last-child{display:none}
+  .install-mini{padding:6px 9px}
+  .day-group-head{padding:13px 12px}.day-label-row strong{font-size:.92rem}.day-total{display:grid;grid-template-columns:auto auto;gap:1px 4px}
+  .day-total small{grid-column:1/-1;text-align:left}.day-total strong{font-size:.9rem}.grouped-list{padding:0 9px}
+  .transactions-panel{padding:14px 10px}.day-group{border-radius:16px}
+}
