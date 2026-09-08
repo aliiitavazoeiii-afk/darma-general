@@ -12,6 +12,7 @@ from django.utils.text import slugify
 from django.views.decorators.http import require_POST
 
 from core.dateutils import format_jalali, parse_jalali_date
+from core.models import DiaGallerySale, SaleLine
 
 from .models import DailyExpense, ExpenseCategory, ReceivableEntry, ReceivablePerson
 from .services import (
@@ -62,6 +63,30 @@ def _week_start(today=None):
 
 def _sum_expenses(qs):
     return int(qs.aggregate(v=Sum("amount"))["v"] or 0)
+
+
+def _daily_revenue_total(target_date):
+    """Return the ERP daily-report gross sales total for one Gregorian date.
+
+    This mirrors the canonical "فروش کل" shown by core.daily_report_v8:
+    every positive SaleLine contributes quantity * sale_price, and Dia Gallery
+    contributes quantity * unit_price. It is read-only against the shared ERP DB.
+    """
+    sale_gross = sum(
+        int(quantity or 0) * int(sale_price or 0)
+        for quantity, sale_price in SaleLine.objects.filter(
+            day__date=target_date,
+            quantity__gt=0,
+        ).values_list("quantity", "sale_price")
+    )
+    dia_gross = sum(
+        int(quantity or 0) * int(unit_price or 0)
+        for quantity, unit_price in DiaGallerySale.objects.filter(
+            day__date=target_date,
+            quantity__gt=0,
+        ).values_list("quantity", "unit_price")
+    )
+    return int(sale_gross + dia_gross)
 
 
 def _category_rows(qs):
@@ -193,6 +218,7 @@ def dashboard(request):
         {
             "mellat_balance": mellat_balance(),
             "today_total": _sum_expenses(today_qs),
+            "today_revenue": _daily_revenue_total(today),
             "week_total": _sum_expenses(week_qs),
             "month_total": _sum_expenses(month_qs),
             "month_label": month_label,
