@@ -93,6 +93,50 @@ def _dashboard_totals(today=None):
     }
 
 
+PERSIAN_WEEKDAYS_BY_PYTHON = {
+    0: "دوشنبه",
+    1: "سه‌شنبه",
+    2: "چهارشنبه",
+    3: "پنجشنبه",
+    4: "جمعه",
+    5: "شنبه",
+    6: "یکشنبه",
+}
+
+
+def _group_expenses_by_day(expenses, today=None):
+    today = today or date.today()
+    yesterday = today - timedelta(days=1)
+    groups = []
+
+    for expense in expenses:
+        if not groups or groups[-1]["date"] != expense.date:
+            if expense.date == today:
+                label = "امروز"
+            elif expense.date == yesterday:
+                label = "دیروز"
+            else:
+                label = PERSIAN_WEEKDAYS_BY_PYTHON.get(expense.date.weekday(), "")
+
+            groups.append(
+                {
+                    "date": expense.date,
+                    "label": label,
+                    "jalali": format_jalali(expense.date),
+                    "total": 0,
+                    "count": 0,
+                    "expenses": [],
+                }
+            )
+
+        group = groups[-1]
+        group["expenses"].append(expense)
+        group["total"] += int(expense.amount or 0)
+        group["count"] += 1
+
+    return groups
+
+
 def _receivable_people():
     people = list(ReceivablePerson.objects.filter(active=True).order_by("name", "id"))
     for person in people:
@@ -174,15 +218,20 @@ def expense_list(request):
     if query:
         qs = qs.filter(title__icontains=query) | qs.filter(note__icontains=query)
 
+    total = _sum_expenses(qs)
+    expense_rows = list(qs[:250])
+    grouped_expenses = _group_expenses_by_day(expense_rows)
+
     return render(
         request,
         "expense_tracker/expenses.html",
         {
-            "expenses": qs[:250],
+            "expenses": expense_rows,
+            "grouped_expenses": grouped_expenses,
             "categories": ExpenseCategory.objects.all(),
             "selected_category": category_id,
             "query": query,
-            "total": _sum_expenses(qs),
+            "total": total,
             "today_j": format_jalali(date.today()),
         },
     )
