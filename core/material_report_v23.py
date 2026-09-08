@@ -10,6 +10,7 @@ from django.db.models import Sum
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_POST
 
+from . import material_report_v14 as v14
 from . import material_report_v20 as v20
 from . import material_report_v22 as v22
 from .brand_colors import darma_material_choices, title_for_material_key
@@ -40,6 +41,7 @@ BASE_MODELS = [
 ]
 BASE_KEYS = [key for key, _label in BASE_MODELS]
 BASE_LABELS = dict(BASE_MODELS)
+LEGACY_OUTPUT_LABELS = dict(v20.OUTPUT_MODELS)
 
 DARMA_OUTPUT_SIZES = [
     ("m", "M"),
@@ -72,6 +74,8 @@ USER_VALUE_FIELDS = {
 def _material_label(key):
     if key in BASE_LABELS:
         return BASE_LABELS[key]
+    if key in LEGACY_OUTPUT_LABELS:
+        return LEGACY_OUTPUT_LABELS[key]
     label = title_for_material_key(key)
     return label if label and label != key else (key or "نامشخص")
 
@@ -471,7 +475,8 @@ def _total_stock_qty(brand, color, size):
 
 
 def _model_unit_cost(block, model_key, current_cost):
-    values = (block.input_data or {}).get(model_key, {}) or {}
+    source_key = v14.COST_SOURCE.get(model_key, model_key)
+    values = (block.input_data or {}).get(source_key, {}) or {}
     value = v20._int(values.get("cost"))
     return value if value > 0 else int(current_cost or 61000)
 
