@@ -1,7 +1,6 @@
 import json
 
 from django.http import HttpResponse, JsonResponse
-from django.templatetags.static import static
 
 
 def manifest(request):
@@ -21,13 +20,13 @@ def manifest(request):
         "orientation": "portrait-primary",
         "icons": [
             {
-                "src": static("expense_tracker/icons/icon-192.png"),
+                "src": "/static/expense_tracker/icons/icon-192.png",
                 "sizes": "192x192",
                 "type": "image/png",
                 "purpose": "any",
             },
             {
-                "src": static("expense_tracker/icons/icon-512.png"),
+                "src": "/static/expense_tracker/icons/icon-512.png",
                 "sizes": "512x512",
                 "type": "image/png",
                 "purpose": "any maskable",
@@ -40,7 +39,7 @@ def manifest(request):
                 "url": "/#new-expense",
                 "icons": [
                     {
-                        "src": static("expense_tracker/icons/icon-192.png"),
+                        "src": "/static/expense_tracker/icons/icon-192.png",
                         "sizes": "192x192",
                         "type": "image/png",
                     }
@@ -52,7 +51,7 @@ def manifest(request):
                 "url": "/expenses/",
                 "icons": [
                     {
-                        "src": static("expense_tracker/icons/icon-192.png"),
+                        "src": "/static/expense_tracker/icons/icon-192.png",
                         "sizes": "192x192",
                         "type": "image/png",
                     }
