@@ -210,7 +210,7 @@ def _elastic_choices(variant, selected_keys=()):
 
 
 def _reset_request_caches():
-    _reset_request_caches()
+    reset_price_cache()
     _material_candidate_base.cache_clear()
     _elastic_choice_base.cache_clear()
 
