@@ -1,15 +1,15 @@
 from collections import defaultdict
-from datetime import date, timedelta
+from datetime import date
 
 import jdatetime
 from django.contrib.auth.decorators import login_required
-from django.db.models import Sum
+from django.db.models import Q, Sum
 from django.shortcuts import render
 
 from .dateutils import format_jalali
 from .dia_gallery_v45 import dia_gallery_period_metrics
 from .finance import sale_line_metrics
-from .models import MaterialReportBlock, SaleDay, SaleLine, StockBalance, StockLocation, TakvinPurchase
+from .models import InventoryMovement, MaterialReportBlock, SaleDay, SaleLine, StockBalance, StockLocation, TakvinPurchase
 
 EXCEL_TAKVIN_PREFIX = "[excel-web]"
 
@@ -60,35 +60,55 @@ def dashboard(request):
     _add_metrics(month_metrics, dia_gallery_period_metrics(month_start, today)["total"])
     _finish_metrics(month_metrics)
 
-    # 14-day chart, including days with zero sales.
-    chart_start = today - timedelta(days=13)
+    # Dashboard trend: last 14 days that actually have a recorded sale.
+    # Empty/holiday days are intentionally omitted instead of rendered as zero-value points.
+    chart_days = list(
+        SaleDay.objects.filter(date__lte=today)
+        .filter(Q(lines__quantity__gt=0) | Q(dia_gallery_sales__quantity__gt=0))
+        .distinct()
+        .order_by("-date")[:14]
+    )
+    chart_days.sort(key=lambda day: day.date)
+
     daily = defaultdict(lambda: {"gross": 0, "profit": 0})
-    chart_lines = SaleLine.objects.filter(
-        day__date__gte=chart_start, day__date__lte=today, quantity__gt=0
-    ).select_related("day", "product_size__product", "product_size__size")
-    for line in chart_lines:
-        metrics = sale_line_metrics(line)
-        daily[line.day.date]["gross"] += metrics["gross"]
-        daily[line.day.date]["profit"] += metrics["profit"]
-    for row in dia_gallery_period_metrics(chart_start, today)["rows"]:
-        daily[row["date"]]["gross"] += int(row["gross"] or 0)
-        daily[row["date"]]["profit"] += int(row["profit"] or 0)
+    if chart_days:
+        chart_start = chart_days[0].date
+        chart_end = chart_days[-1].date
+        chart_lines = SaleLine.objects.filter(
+            day__date__gte=chart_start,
+            day__date__lte=chart_end,
+            quantity__gt=0,
+        ).select_related("day", "product_size__product", "product_size__size")
+        for line in chart_lines:
+            metrics = sale_line_metrics(line)
+            daily[line.day.date]["gross"] += metrics["gross"]
+            daily[line.day.date]["profit"] += metrics["profit"]
+        for row in dia_gallery_period_metrics(chart_start, chart_end)["rows"]:
+            daily[row["date"]]["gross"] += int(row["gross"] or 0)
+            daily[row["date"]]["profit"] += int(row["profit"] or 0)
 
     chart_labels, chart_sales, chart_profit = [], [], []
-    for offset in range(14):
-        current = chart_start + timedelta(days=offset)
-        jlabel = format_jalali(current)
+    for day in chart_days:
+        jlabel = format_jalali(day.date)
         chart_labels.append(jlabel[5:] if len(jlabel) >= 10 else jlabel)
-        chart_sales.append(daily[current]["gross"])
-        chart_profit.append(daily[current]["profit"])
+        chart_sales.append(daily[day.date]["gross"])
+        chart_profit.append(daily[day.date]["profit"])
 
-    # V36 UI-only alert rule: ONLY Darma HOME cells below 10.
-    # Red/yellow product colors are intentionally excluded. No threshold/accounting logic is changed.
+    # Dashboard alerts are only for Darma HOME cells that have genuinely been stocked.
+    # StockBalance rows are created at zero for every color/size, so zero rows with no positive
+    # inventory history are catalog placeholders and must not create false warnings.
     alerts = []
+    defined_cells = set(
+        InventoryMovement.objects.filter(
+            brand__name="دارما",
+            delta__gt=0,
+        ).values_list("size_id", "color_id")
+    )
     low_home = (
         StockBalance.objects.filter(
             brand__name="دارما",
             location__key=StockLocation.HOME,
+            color__active=True,
             qty__lt=10,
         )
         .exclude(color__name__in=["قرمز", "زرد"])
@@ -96,10 +116,16 @@ def dashboard(request):
         .order_by("qty", "color__name", "size__sort_order", "size__id")
     )
     for balance in low_home:
+        current_qty = int(balance.qty or 0)
+        # A currently positive cell is obviously real. A zero/negative cell is real only when
+        # it has previously received positive inventory. If the user stocks it later, the next
+        # low-stock state will automatically become eligible for an alert.
+        if current_qty <= 0 and (balance.size_id, balance.color_id) not in defined_cells:
+            continue
         alerts.append({
             "level": "red",
             "title": f"{balance.color.name} / {balance.size.name}",
-            "detail": f"موجودی خانه: {int(balance.qty or 0)} عدد",
+            "detail": f"موجودی خانه: {current_qty} عدد",
             "url": "/inventory/",
         })
 
