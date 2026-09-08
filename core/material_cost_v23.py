@@ -12,6 +12,7 @@ def round_money(value):
 
 
 def weighted_unit_price(rows):
+    rows = list(rows)
     total_qty = Decimal("0")
     total_value = Decimal("0")
     for row in rows:
@@ -20,9 +21,17 @@ def weighted_unit_price(rows):
             continue
         total_qty += qty
         total_value += qty * Decimal(int(row.unit_price or 0))
-    if total_qty <= 0:
-        return 0
-    return round_money(total_value / total_qty)
+    if total_qty > 0:
+        return round_money(total_value / total_qty)
+
+    # The report's costing is intentionally LIVE. If a material has just been fully
+    # consumed, keep using the current unit price stored on its active tailor row
+    # instead of collapsing the finished-goods cost to zero.
+    for row in reversed(rows):
+        price = int(row.unit_price or 0)
+        if price > 0:
+            return price
+    return 0
 
 
 def fabric_price(material_key, fabric_code=""):
