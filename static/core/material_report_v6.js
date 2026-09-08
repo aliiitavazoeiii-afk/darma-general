@@ -158,7 +158,6 @@
         if (event.target.matches('.material-source-select')) recalcForm(form);
       });
 
-      recalcForm(form);
     });
   }
 
