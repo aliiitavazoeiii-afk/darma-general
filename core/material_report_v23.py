@@ -15,7 +15,7 @@ from . import material_report_v20 as v20
 from . import material_report_v22 as v22
 from .brand_colors import darma_material_choices, title_for_material_key
 from .dateutils import format_jalali, parse_jalali_date
-from .material_cost_v23 import calculate_model_cost, live_cost_catalog, round_money
+from .material_cost_v23 import calculate_model_cost, live_cost_catalog, reset_price_cache, round_money
 from .material_flow import ELASTIC, FABRIC, TAILOR, _consume_rows, q
 from .models import (
     AppSetting,
@@ -691,6 +691,7 @@ def _sync_output(block):
 
 @login_required
 def material_report(request):
+    reset_price_cache()
     brands = v20._material_brands()
     if request.method == "POST":
         try:
@@ -729,6 +730,7 @@ def material_report(request):
 @login_required
 @require_POST
 def material_block_add_model(request, block_id):
+    reset_price_cache()
     try:
         with transaction.atomic():
             block = MaterialReportBlock.objects.select_for_update().select_related("brand").get(id=block_id)
@@ -749,6 +751,7 @@ def material_block_add_model(request, block_id):
 @login_required
 @require_POST
 def material_block_save(request, block_id):
+    reset_price_cache()
     try:
         with transaction.atomic():
             block = MaterialReportBlock.objects.select_for_update().select_related("brand").get(id=block_id)
@@ -765,6 +768,7 @@ def material_block_save(request, block_id):
 @login_required
 @require_POST
 def material_block_apply_materials(request, block_id):
+    reset_price_cache()
     try:
         with transaction.atomic():
             block = MaterialReportBlock.objects.select_for_update().select_related("brand").get(id=block_id)
@@ -788,6 +792,7 @@ def material_block_apply_materials(request, block_id):
 @login_required
 @require_POST
 def material_block_apply_output(request, block_id):
+    reset_price_cache()
     try:
         with transaction.atomic():
             block = MaterialReportBlock.objects.select_for_update().select_related("brand").get(id=block_id)
