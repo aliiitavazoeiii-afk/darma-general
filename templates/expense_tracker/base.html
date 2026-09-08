@@ -5,14 +5,22 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#07110f">
+  <meta name="application-name" content="خرج من">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="خرج من">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>{% block title %}خرج من{% endblock %}</title>
+  <link rel="manifest" href="{% url 'expense_manifest' %}">
+  <link rel="icon" type="image/png" sizes="192x192" href="{% static 'expense_tracker/icons/icon-192.png' %}">
+  <link rel="apple-touch-icon" href="{% static 'expense_tracker/icons/icon-192.png' %}">
   <link rel="stylesheet" href="{% static 'expense_tracker/app.css' %}">
 </head>
 <body>
 <div class="app-shell">
   <aside class="sidebar">
     <a class="brand" href="{% url 'expense_tracker:dashboard' %}">
-      <span class="brand-mark">◆</span>
+      <img class="brand-logo" src="{% static 'expense_tracker/icons/icon-192.png' %}" alt="">
       <span><strong>خرج من</strong><small>مدیریت هزینه‌های روزانه</small></span>
     </a>
     <nav class="nav-list">
@@ -23,6 +31,11 @@
       <a class="{% if request.resolver_match.url_name == 'categories' %}active{% endif %}" href="{% url 'expense_tracker:categories' %}"><span>◇</span>دسته‌ها</a>
     </nav>
     <div class="sidebar-spacer"></div>
+    <button type="button" class="install-card" id="install-app-btn" hidden>
+      <img src="{% static 'expense_tracker/icons/icon-192.png' %}" alt="">
+      <span><strong>نصب خرج من</strong><small>مثل اپ روی گوشی بازش کن</small></span>
+      <b>＋</b>
+    </button>
     <div class="side-quote">
       <span class="leaf">◒</span>
       <strong>مدیریت امروز</strong>
@@ -38,11 +51,17 @@
     <header class="topbar">
       <div>
         <div class="top-kicker">زندگی بهتر با مدیریت بهتر هزینه‌ها</div>
-        <div class="mobile-brand">خرج من</div>
+        <div class="mobile-brand">
+          <img src="{% static 'expense_tracker/icons/icon-192.png' %}" alt="">
+          <span>خرج من</span>
+        </div>
       </div>
-      <div class="profile-pill">
-        <span class="status-dot"></span>
-        <span>{{ request.user.get_short_name|default:request.user.username }}</span>
+      <div class="topbar-actions">
+        <button type="button" class="install-mini" id="install-app-btn-mobile" hidden>نصب اپ</button>
+        <div class="profile-pill">
+          <span class="status-dot"></span>
+          <span>{{ request.user.get_short_name|default:request.user.username }}</span>
+        </div>
       </div>
     </header>
 
