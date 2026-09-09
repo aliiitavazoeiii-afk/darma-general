@@ -42,6 +42,34 @@ def _adjustment_id_from_reference(reference):
     return adjustment_id if raw == f"adjust:{adjustment_id}" else None
 
 
+def _stock_snapshot_for_operations(brands):
+    """Read-only stock snapshot for the operations UI.
+
+    The snapshot mirrors the inventory page definition of total stock:
+    HOME + KHORSHID. It is presentation data only and never writes balances.
+    """
+    brand_ids = list(brands.values_list("id", flat=True))
+    snapshot = {}
+    balances = (
+        StockBalance.objects.filter(brand_id__in=brand_ids)
+        .select_related("location")
+        .only("brand_id", "size_id", "color_id", "qty", "location__key")
+    )
+    for balance in balances:
+        if balance.location.key not in {StockLocation.HOME, StockLocation.KHORSHID}:
+            continue
+        key = f"{balance.brand_id}:{balance.size_id}:{balance.color_id}"
+        row = snapshot.setdefault(key, {"home": 0, "khorshid": 0, "total": 0})
+        if balance.location.key == StockLocation.HOME:
+            row["home"] += int(balance.qty or 0)
+        elif balance.location.key == StockLocation.KHORSHID:
+            row["khorshid"] += int(balance.qty or 0)
+
+    for row in snapshot.values():
+        row["total"] = int(row["home"]) + int(row["khorshid"])
+    return snapshot
+
+
 @transaction.atomic
 def _set_inventory_target(*, adjustment_date, brand, size, color, location, target_qty, note=""):
     """Set one stock cell to an absolute counted quantity using the existing adjustment ledger.
@@ -404,6 +432,8 @@ def inventory_operations(request):
         ):
             movement.adjustment_delete_id = adjustment.id
 
+    stock_snapshot = _stock_snapshot_for_operations(brands)
+
     return render(
         request,
         "core/inventory_operations.html",
@@ -416,5 +446,6 @@ def inventory_operations(request):
             "locations": locations,
             "recent": recent,
             "today_j": format_jalali(date.today()),
+            "stock_snapshot": stock_snapshot,
         },
     )
