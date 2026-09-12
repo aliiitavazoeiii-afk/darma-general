@@ -20,6 +20,10 @@
 .compact-help{font-size:.72rem;line-height:1.55}
 .movement-delete-form{display:inline}
 .movement-delete-form .btn{white-space:nowrap}
+.transfer-history{min-width:720px}
+.transfer-edit-form{display:flex;align-items:center;gap:6px;min-width:190px}
+.transfer-edit-form .form-control{width:90px;min-height:32px;padding:.3rem .45rem}
+.transfer-edit-form .btn{white-space:nowrap}
 @media(max-width:1199.98px){.color-entry-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:767.98px){
   .inventory-op-form .row>div{flex:0 0 100%;max-width:100%}
@@ -155,11 +159,45 @@
   </div>
 </div>
 
+<div class="card mb-4">
+  <div class="card-header">
+    <div>
+      <h3 class="card-title mb-1">آخرین انتقال‌های خورشید به خانه</h3>
+      <div class="text-secondary compact-help">اگر تعداد یک رنگ را اشتباه ثبت کردی، همین‌جا مقدار درست را وارد و ذخیره کن. عدد ۰ یعنی حذف کامل همان انتقال و برگرداندن اثرش از خانه به خورشید.</div>
+    </div>
+  </div>
+  <div class="mobile-scroll-note">برای دیدن همه ستون‌ها جدول را بکش</div>
+  <div class="table-responsive">
+    <table class="table card-table table-vcenter transfer-history mb-0">
+      <thead><tr><th>تاریخ</th><th>رنگ</th><th>سایز</th><th>تعداد ثبت‌شده</th><th>ویرایش</th></tr></thead>
+      <tbody>
+        {% for t in recent_transfers %}
+        <tr>
+          <td class="ltr">{{ t.date|jalali }}</td>
+          <td>{{ t.color.name }}</td>
+          <td>{{ t.size.name }}</td>
+          <td class="num fw-bold">{{ t.qty|groupnum }}</td>
+          <td>
+            <form method="post" action="{% url 'inventory_transfer_update' t.id %}" class="transfer-edit-form" onsubmit="return confirm('مقدار این انتقال اصلاح شود؟ اگر ۰ وارد کرده‌ای، انتقال کامل حذف و اثر آن بر موجودی برگردانده می‌شود.');">
+              {% csrf_token %}
+              <input type="number" min="0" class="form-control" name="qty" value="{{ t.qty }}" inputmode="numeric" aria-label="تعداد صحیح انتقال {{ t.color.name }} {{ t.size.name }}">
+              <button type="submit" class="btn btn-outline-warning btn-sm">ذخیره اصلاح</button>
+            </form>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" class="empty-state">انتقال ثبت‌شده‌ای پیدا نشد.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
 <div class="card">
   <div class="card-header">
     <div>
       <h3 class="card-title mb-1">آخرین گردش‌های موجودی</h3>
-      <div class="text-secondary compact-help">حذف فقط برای «اصلاح موجودی» دستی فعال است. اگر بعد از آن روی همان موجودی گردش جدیدی ثبت شده باشد، سیستم برای حفظ تاریخچه حذف را متوقف می‌کند.</div>
+      <div class="text-secondary compact-help">حذف فقط برای «اصلاح موجودی» دستی فعال است. انتقال‌های خورشید به خانه را از جدول بالاتر ویرایش کن.</div>
     </div>
   </div>
   <div class="mobile-scroll-note">برای دیدن همه ستون‌ها جدول را بکش</div>
