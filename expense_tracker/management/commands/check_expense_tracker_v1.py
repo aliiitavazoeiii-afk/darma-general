@@ -7,7 +7,7 @@ from django.template.loader import get_template
 from django.urls import resolve
 
 from core.dateutils import format_jalali
-from core.models import AccountEntry, BusinessPayment, DiaGallerySale, InventoryMovement, SaleLine, StockBalance
+from core.models import AccountEntry, BusinessPayment, InventoryMovement, SaleLine, StockBalance
 from core.payment_source_v63 import SOURCE_MELAT, source_balance
 
 from expense_tracker.models import DailyExpense, ExpenseCategory, ReceivableEntry, ReceivablePerson
@@ -58,8 +58,8 @@ class Command(BaseCommand):
         dashboard_source = get_template("expense_tracker/dashboard.html").template.source
         if 'data-ajax-expense="1"' not in dashboard_source or 'jalali-picker' not in dashboard_source:
             raise CommandError("dashboard is missing AJAX expense entry or Jalali picker marker")
-        if "درآمد امروز" not in dashboard_source or "کل طلب‌های باز" in dashboard_source:
-            raise CommandError("dashboard daily revenue KPI replacement is missing")
+        if "میانگین خرج روزانه" not in dashboard_source or "کل طلب‌های باز" in dashboard_source:
+            raise CommandError("dashboard daily-average KPI replacement is missing")
 
         manifest_match = resolve("/manifest.webmanifest")
         manifest_request = RequestFactory().get("/manifest.webmanifest")
@@ -72,25 +72,6 @@ class Command(BaseCommand):
         worker_response = worker_match.func(worker_request)
         if worker_response.status_code != 200 or worker_response.get("Service-Worker-Allowed") != "/":
             raise CommandError("expense service worker route/scope is invalid")
-
-        expected_revenue = sum(
-            int(quantity or 0) * int(sale_price or 0)
-            for quantity, sale_price in SaleLine.objects.filter(
-                day__date=today,
-                quantity__gt=0,
-            ).values_list("quantity", "sale_price")
-        ) + sum(
-            int(quantity or 0) * int(unit_price or 0)
-            for quantity, unit_price in DiaGallerySale.objects.filter(
-                day__date=today,
-                quantity__gt=0,
-            ).values_list("quantity", "unit_price")
-        )
-        actual_revenue = expense_views._daily_revenue_total(today)
-        if int(actual_revenue) != int(expected_revenue):
-            raise CommandError(
-                f"daily revenue mismatch: expense={actual_revenue} ERP gross={expected_revenue}"
-            )
 
         sample_groups = expense_views._group_expenses_by_day(
             [
@@ -185,9 +166,24 @@ class Command(BaseCommand):
                     raise CommandError("expense delete did not restore Mellat exactly")
 
                 person = ReceivablePerson.objects.create(name="__EXPENSE_V1_PERSON__")
-                create_claim(person=person, entry_date=today, amount=40_000, note="test claim")
+
+                legacy_claim = ReceivableEntry.objects.create(
+                    person=person,
+                    date=today,
+                    kind=ReceivableEntry.CLAIM,
+                    amount=5_000,
+                    note="legacy claim",
+                    mellat_applied=False,
+                )
+                delete_receivable_entry(legacy_claim)
                 if int(source_balance(SOURCE_MELAT) or 0) != before["mellat"]:
-                    raise CommandError("claim creation unexpectedly changed Mellat")
+                    raise CommandError("legacy claim delete unexpectedly changed Mellat")
+
+                claim = create_claim(person=person, entry_date=today, amount=40_000, note="test claim")
+                if not claim.mellat_applied:
+                    raise CommandError("new claim was not marked as Mellat-applied")
+                if int(source_balance(SOURCE_MELAT) or 0) != before["mellat"] - 40_000:
+                    raise CommandError("new claim did not debit Mellat exactly")
 
                 repayment = record_repayment(
                     person=person,
@@ -195,12 +191,16 @@ class Command(BaseCommand):
                     amount=15_000,
                     note="test repayment",
                 )
-                if int(source_balance(SOURCE_MELAT) or 0) != before["mellat"] + 15_000:
+                if int(source_balance(SOURCE_MELAT) or 0) != before["mellat"] - 25_000:
                     raise CommandError("claim repayment did not credit Mellat exactly")
 
                 delete_receivable_entry(repayment)
-                if int(source_balance(SOURCE_MELAT) or 0) != before["mellat"]:
+                if int(source_balance(SOURCE_MELAT) or 0) != before["mellat"] - 40_000:
                     raise CommandError("repayment delete did not reverse Mellat exactly")
+
+                delete_receivable_entry(claim)
+                if int(source_balance(SOURCE_MELAT) or 0) != before["mellat"]:
+                    raise CommandError("claim delete did not restore Mellat exactly")
 
                 transaction.set_rollback(True)
         except CommandError:
@@ -212,7 +212,7 @@ class Command(BaseCommand):
         if before != after:
             raise CommandError(f"rollback regression leaked persistent data: before={before} after={after}")
 
-        self.stdout.write("EXPENSE DAILY REVENUE V4: dashboard KPI matches ERP gross sales")
+        self.stdout.write("EXPENSE DASHBOARD V5: elapsed-month daily-average KPI present")
         self.stdout.write("EXPENSE PWA V3: manifest + service worker routes passed")
         self.stdout.write("EXPENSE PWA V3: daily transaction grouping passed")
         self.stdout.write("EXPENSE UI V2: Jalali calendar route rendered HTTP 200")
@@ -220,7 +220,9 @@ class Command(BaseCommand):
         self.stdout.write("EXPENSE V1: create 10000 -> Mellat -10000")
         self.stdout.write("EXPENSE V1: edit to 25000 -> Mellat total delta -25000")
         self.stdout.write("EXPENSE V1: delete -> Mellat fully restored")
-        self.stdout.write("RECEIVABLE V1: claim -> Mellat unchanged")
-        self.stdout.write("RECEIVABLE V1: repayment 15000 -> Mellat +15000; delete -> restored")
+        self.stdout.write("RECEIVABLE V5: legacy claim delete -> Mellat unchanged")
+        self.stdout.write("RECEIVABLE V5: new claim 40000 -> Mellat -40000")
+        self.stdout.write("RECEIVABLE V5: repayment 15000 -> Mellat +15000; delete -> reversed")
+        self.stdout.write("RECEIVABLE V5: claim delete -> Mellat fully restored")
         self.stdout.write("NO BUSINESS DATA CHANGED")
-        self.stdout.write(self.style.SUCCESS("SUCCESS: EXPENSE TRACKER DAILY REVENUE V4 REGRESSION PASSED"))
+        self.stdout.write(self.style.SUCCESS("SUCCESS: EXPENSE TRACKER CASHFLOW V5 REGRESSION PASSED"))
