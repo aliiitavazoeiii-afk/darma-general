@@ -81,6 +81,7 @@ class ReceivableEntry(models.Model):
     kind = models.CharField(max_length=12, choices=KIND_CHOICES)
     amount = models.BigIntegerField()
     note = models.CharField(max_length=250, blank=True)
+    mellat_applied = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
 
     class Meta:
