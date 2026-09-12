@@ -89,13 +89,18 @@ def outstanding_for_person(person):
 def create_claim(*, person, entry_date, amount, note=""):
     person = ReceivablePerson.objects.select_for_update().get(pk=person.pk)
     amount = _positive_amount(amount, "مبلغ طلب")
-    return ReceivableEntry.objects.create(
+    mellat = _lock_mellat()
+    entry = ReceivableEntry.objects.create(
         person=person,
         date=entry_date,
         kind=ReceivableEntry.CLAIM,
         amount=amount,
         note=(note or "").strip()[:250],
+        mellat_applied=True,
     )
+    mellat.amount = int(mellat.amount or 0) - amount
+    mellat.save(update_fields=["amount", "updated_at"])
+    return entry
 
 
 @transaction.atomic
@@ -113,6 +118,7 @@ def record_repayment(*, person, entry_date, amount, note=""):
         kind=ReceivableEntry.PAYMENT,
         amount=amount,
         note=(note or "").strip()[:250],
+        mellat_applied=True,
     )
     mellat.amount = int(mellat.amount or 0) + amount
     mellat.save(update_fields=["amount", "updated_at"])
@@ -130,10 +136,13 @@ def delete_receivable_entry(entry):
     amount = int(entry.amount or 0)
 
     if entry.kind == ReceivableEntry.PAYMENT:
-        mellat = _lock_mellat()
-        entry.delete()
-        mellat.amount = int(mellat.amount or 0) - amount
-        mellat.save(update_fields=["amount", "updated_at"])
+        if entry.mellat_applied:
+            mellat = _lock_mellat()
+            entry.delete()
+            mellat.amount = int(mellat.amount or 0) - amount
+            mellat.save(update_fields=["amount", "updated_at"])
+        else:
+            entry.delete()
         return
 
     claim, payment, _outstanding = _totals_for_person(person)
@@ -141,4 +150,11 @@ def delete_receivable_entry(entry):
         raise ValueError(
             "این طلب را نمی‌توان حذف کرد چون بخشی از آن قبلاً تسویه شده است."
         )
-    entry.delete()
+
+    if entry.mellat_applied:
+        mellat = _lock_mellat()
+        entry.delete()
+        mellat.amount = int(mellat.amount or 0) + amount
+        mellat.save(update_fields=["amount", "updated_at"])
+    else:
+        entry.delete()
