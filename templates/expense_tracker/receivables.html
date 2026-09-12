@@ -2,7 +2,7 @@
 {% block title %}طلب‌ها | خرج من{% endblock %}
 {% block content %}
 <div class="page-head">
-  <div><div class="eyebrow">دنگ و بدهکارها</div><h1>طلب‌ها</h1><p>طلب هر نفر جدا می‌ماند. ثبت طلب پولی را جابه‌جا نمی‌کند؛ تسویه واقعی به ملت اضافه می‌شود.</p></div>
+  <div><div class="eyebrow">دنگ و بدهکارها</div><h1>طلب‌ها</h1><p>ثبت طلب جدید یعنی پولی که واقعاً از دستت خارج شده؛ همان لحظه از ملت کم می‌شود و هر تسویه دریافتی دوباره به ملت برمی‌گردد.</p></div>
   <div class="page-head-stats"><span>کل طلب باز</span><strong class="money">{{ total_outstanding|groupnum }} تومان</strong></div>
 </div>
 
@@ -18,7 +18,7 @@
   <section class="panel">
     <div class="panel-head"><div><div class="eyebrow">مانده حساب</div><h2>ملت</h2></div></div>
     <div class="big-stat money">{{ mellat_balance|groupnum }} <small>تومان</small></div>
-    <p class="muted">فقط تسویه‌هایی که واقعاً دریافت می‌کنی به این عدد اضافه می‌شوند.</p>
+    <p class="muted">طلب جدید از ملت کم می‌شود؛ تسویه واقعی همان مبلغ را به ملت اضافه می‌کند.</p>
   </section>
 </div>
 
@@ -66,7 +66,7 @@
       <span class="ledger-kind {% if entry.kind == 'payment' %}paid{% else %}claim{% endif %}">{% if entry.kind == 'payment' %}تسویه{% else %}طلب{% endif %}</span>
       <div><strong>{{ entry.person.name }}</strong><small>{{ entry.date|jalali }}{% if entry.note %} · {{ entry.note }}{% endif %}</small></div>
       <strong class="money {% if entry.kind == 'payment' %}positive{% endif %}">{% if entry.kind == 'payment' %}−{% else %}+{% endif %}{{ entry.amount|groupnum }}</strong>
-      <form method="post" action="{% url 'expense_tracker:receivable_entry_delete' entry.id %}">{% csrf_token %}<button class="icon-btn danger" data-confirm="این گردش حذف شود؟ اثر تسویه روی ملت هم برمی‌گردد.">×</button></form>
+      <form method="post" action="{% url 'expense_tracker:receivable_entry_delete' entry.id %}">{% csrf_token %}<button class="icon-btn danger" data-confirm="این گردش حذف شود؟ اثر واقعی آن روی ملت هم برگردانده می‌شود.">×</button></form>
     </div>
   {% empty %}<div class="empty">هنوز گردش طلبی ثبت نشده.</div>{% endfor %}
   </div>
