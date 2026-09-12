@@ -161,7 +161,7 @@ echo "$FINAL"
 }
 
 step "8) SUCCESS"
-echo "SUCCESS: EXPENSE TRACKER DAILY REVENUE V4 DEPLOYED"
+echo "SUCCESS: EXPENSE TRACKER CASHFLOW V5 DEPLOYED"
 echo "Expense service: darma-expense / expense-web"
 echo "Expense port: $EXPENSE_PORT"
 echo "ERP web container: NOT RECREATED"
