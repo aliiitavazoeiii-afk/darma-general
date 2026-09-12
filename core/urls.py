@@ -19,6 +19,7 @@ from . import (
     final_views,
     inventory_operations_v15,
     inventory_operations_v16,
+    inventory_operations_v17,
     inventory_v20,
     material_report_v20,
     material_report_v21,
@@ -94,7 +95,7 @@ urlpatterns = [
     path("inventory/operations/", inventory_operations_v16.inventory_operations, name="inventory_operations"),
     path(
         "inventory/operations/transfers/<int:transfer_id>/update/",
-        inventory_operations_v16.inventory_transfer_update,
+        inventory_operations_v17.inventory_transfer_update,
         name="inventory_transfer_update",
     ),
     path(
