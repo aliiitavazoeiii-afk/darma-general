@@ -31,11 +31,21 @@ Delete expense: `Mellat += deleted_amount`
 
 All three operations are atomic and lock the canonical Mellat row.
 
-## Receivable semantics
+## Receivable semantics — V5 authoritative
 
-A claim means somebody owes the user money. Creating an unpaid claim does not move Mellat.
+A claim means money has actually left the user's Mellat balance and somebody now owes that money back.
 
-A real repayment decreases the outstanding claim and increases Mellat by the same amount. Deleting that repayment reverses only its Mellat effect.
+New claim:
+
+`Mellat -= claim.amount`
+
+Real repayment:
+
+`Mellat += repayment.amount`
+
+Deleting a new claim restores its Mellat debit, and deleting a repayment reverses its Mellat credit.
+
+Historical safety: claims created before V5 did not debit Mellat. `ReceivableEntry.mellat_applied` records whether a row actually affected Mellat. Migration `0003_receivable_mellat_applied` marks historical repayments as applied and leaves historical claims unapplied, so deleting an old claim cannot incorrectly add money to Mellat.
 
 ## Initial categories
 
@@ -58,8 +68,7 @@ Default host port: `8011`
 
 It joins the existing database Docker network discovered at deploy time. It does not replace/recreate the ERP web container and does not edit the main Caddy configuration.
 
-GitHub main is not production evidence. Production is confirmed only after the expense deployment script prints its SUCCESS marker and the user posts the output.
-
+GitHub main is not production evidence. Production is confirmed only after the expense deployment script completes successfully and the user posts the output.
 
 ## Final branch audit
 
@@ -68,15 +77,11 @@ The branch diff from the base commit contains only expense-specific new paths pl
 The deployment regression is rollback-only and explicitly proves:
 
 - expense create/edit/delete debits/reconciles/restores Mellat exactly;
-- claim creation does not change Mellat;
+- historical unapplied claims can be deleted without changing Mellat;
+- new claims debit Mellat exactly;
 - real claim repayment credits Mellat exactly;
-- deleting repayment reverses exactly;
+- deleting repayment and deleting the new claim reverse their exact cash effects;
 - BusinessPayment, SaleLine, AccountEntry and inventory ledgers remain unchanged.
-
-Expected production marker:
-
-`SUCCESS: EXPENSE TRACKER V1 DEPLOYED`
-
 
 ## UI V2 — repeated backdated expense entry
 
@@ -92,11 +97,6 @@ Added after the first live V1 deployment:
 - Mellat and current dashboard expense KPIs update immediately after AJAX save;
 - recent-expense list receives the newly saved row without page refresh.
 
-Expected deployment marker for this revision:
-
-`SUCCESS: EXPENSE TRACKER UI V2 DEPLOYED`
-
-
 ## PWA V3 — Android install + grouped transactions
 
 - added branded 192x192 and 512x512 PNG app icons;
@@ -111,23 +111,21 @@ Expected deployment marker for this revision:
 
 Full browser PWA installation requires a secure origin (HTTPS, except localhost).
 
-Expected deployment marker for this revision:
+## Daily Revenue V4 — historical note
 
-`SUCCESS: EXPENSE TRACKER PWA V3 DEPLOYED`
+V4 temporarily replaced the open-receivable KPI with today's ERP gross sales. This dashboard choice was superseded by V5 below. The read-only revenue helper remains harmless but is no longer displayed on the home dashboard.
 
+## Cashflow + Daily Average V5 — current
 
-## Daily Revenue V4 — compare today's expense with ERP sales
+- top dashboard KPIs are: today's expense, elapsed-month daily average, this week's expense, current Jalali month's expense;
+- the daily average is `current Jalali month expense total / elapsed calendar days in the month through today`;
+- zero-spend days are therefore included in the average;
+- after AJAX expense entry, the average updates from the updated month total without a full page reload;
+- new receivable claims debit canonical Mellat immediately;
+- repayments credit Mellat;
+- delete paths reverse only cash effects that were actually applied;
+- historical claims are preserved safely and are not retroactively debited.
 
-- removed the `کل طلب‌های باز` KPI from the top dashboard cards;
-- top dashboard KPIs are now: today's expense, today's revenue, this week's expense, current Jalali month's expense;
-- today's revenue is read-only from the shared ERP database;
-- the value intentionally matches the ERP daily report's `فروش کل` / gross sales:
-  - positive `SaleLine`: `quantity * sale_price`;
-  - positive `DiaGallerySale`: `quantity * unit_price`;
-- no Digikala fee, COGS, profit, receivable or Mellat mutation is used to calculate this KPI;
-- the existing detailed receivables panel remains available lower on the home page and the dedicated receivables page is unchanged;
-- regression checks the revenue KPI source and verifies it equals the ERP gross-sales calculation without mutating business data.
+Regression success marker for this revision:
 
-Expected deployment marker for this revision:
-
-`SUCCESS: EXPENSE TRACKER DAILY REVENUE V4 DEPLOYED`
+`SUCCESS: EXPENSE TRACKER CASHFLOW V5 REGRESSION PASSED`
