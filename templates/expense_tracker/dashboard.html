@@ -1,4 +1,4 @@
-{% extends 'expense_tracker/base.html' %}{% load jalali %}
+{% extends 'expense_tracker/base.html' %}{% load jalali expense_tags %}
 {% block title %}خانه | خرج من{% endblock %}
 {% block content %}
 <div class="welcome-row">
@@ -17,14 +17,14 @@
   <div class="hero-copy">
     <div class="eyebrow">موجودی ملت</div>
     <div class="hero-balance"><span class="money" id="mellat-balance">{{ mellat_balance|groupnum }}</span><small>تومان</small></div>
-    <div class="hero-note">هر هزینه‌ای که اینجا ثبت می‌کنی، مستقیم از مانده ملت کم می‌شود.</div>
+    <div class="hero-note">خرج‌ها و طلب‌های جدیدی که واقعاً پرداخت می‌کنی، از مانده ملت کم می‌شوند.</div>
   </div>
   <div class="wallet-icon">▣</div>
 </div>
 
 <div class="kpi-grid">
   <article class="kpi-card coral"><div class="kpi-icon">▥</div><div><span>خرج امروز</span><strong class="money" id="today-total">{{ today_total|groupnum }}</strong><small>تومان</small></div></article>
-  <article class="kpi-card green"><div class="kpi-icon">↗</div><div><span>درآمد امروز</span><strong class="money positive" id="today-revenue">{{ today_revenue|groupnum }}</strong><small>تومان</small></div></article>
+  <article class="kpi-card green"><div class="kpi-icon">≈</div><div><span>میانگین خرج روزانه</span><strong class="money positive" id="daily-average" data-jalali="{{ today_j }}">{{ month_total|daily_average:today_j|groupnum }}</strong><small>از اول ماه تا امروز</small></div></article>
   <article class="kpi-card amber"><div class="kpi-icon">◷</div><div><span>خرج این هفته</span><strong class="money" id="week-total">{{ week_total|groupnum }}</strong><small>تومان</small></div></article>
   <article class="kpi-card blue"><div class="kpi-icon">▣</div><div><span>خرج ماه {{ month_label }}</span><strong class="money" id="month-total">{{ month_total|groupnum }}</strong><small>تومان</small></div></article>
 </div>
@@ -117,4 +117,19 @@
     <a class="secondary-btn" href="{% url 'expense_tracker:receivables' %}">＋ ثبت طلب جدید</a>
   </section>
 </div>
+
+<script>
+(function(){
+  const month=document.getElementById('month-total');
+  const avg=document.getElementById('daily-average');
+  if(!month||!avg)return;
+  const digits={'۰':'0','۱':'1','۲':'2','۳':'3','۴':'4','۵':'5','۶':'6','۷':'7','۸':'8','۹':'9','٠':'0','١':'1','٢':'2','٣':'3','٤':'4','٥':'5','٦':'6','٧':'7','٨':'8','٩':'9'};
+  const raw=v=>Number(String(v||'').replace(/[۰-۹٠-٩]/g,c=>digits[c]||c).replace(/[^0-9-]/g,''))||0;
+  const parts=String(avg.dataset.jalali||'').split('/');
+  const elapsed=Math.max(1,raw(parts[parts.length-1]||1));
+  const render=()=>{avg.textContent=Math.round(raw(month.textContent)/elapsed).toLocaleString('en-US').replace(/,/g,'٬');};
+  new MutationObserver(render).observe(month,{childList:true,subtree:true,characterData:true});
+  render();
+})();
+</script>
 {% endblock %}
