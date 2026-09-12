@@ -18,6 +18,7 @@ from . import (
     excel_sales,
     final_views,
     inventory_operations_v15,
+    inventory_operations_v16,
     inventory_v20,
     material_report_v20,
     material_report_v21,
@@ -90,7 +91,12 @@ urlpatterns = [
 
     path("inventory/", inventory_v20.inventory, name="inventory"),
     path("inventory/color-model/add/", inventory_v20.add_color_model, name="inventory_add_color_model"),
-    path("inventory/operations/", inventory_operations_v15.inventory_operations, name="inventory_operations"),
+    path("inventory/operations/", inventory_operations_v16.inventory_operations, name="inventory_operations"),
+    path(
+        "inventory/operations/transfers/<int:transfer_id>/update/",
+        inventory_operations_v16.inventory_transfer_update,
+        name="inventory_transfer_update",
+    ),
     path(
         "inventory/operations/adjustments/<int:adjustment_id>/delete/",
         inventory_operations_v15.inventory_adjustment_delete,
