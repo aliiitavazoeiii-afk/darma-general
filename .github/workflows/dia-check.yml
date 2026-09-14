@@ -1,0 +1,66 @@
+name: Dia Gallery Check
+
+on:
+  push:
+    branches: [dia]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: dia_gallery
+          POSTGRES_USER: dia_gallery
+          POSTGRES_PASSWORD: dia_gallery_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U dia_gallery -d dia_gallery"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      DEBUG: "1"
+      SECRET_KEY: ci-dia-secret
+      ALLOWED_HOSTS: 127.0.0.1,localhost,testserver
+      DB_NAME: dia_gallery
+      DB_USER: dia_gallery
+      DB_PASSWORD: dia_gallery_test
+      DB_HOST: 127.0.0.1
+      DB_PORT: "5432"
+      APP_ADMIN_USERNAME: diaadmin
+      APP_ADMIN_PASSWORD: ci-only-password
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Django system check
+        run: python manage.py check
+      - name: Migration drift check
+        run: python manage.py makemigrations dia_core --check --dry-run
+      - name: Apply migrations
+        run: python manage.py migrate --noinput
+      - name: Seed isolation check
+        run: |
+          python manage.py seed_base
+          python manage.py shell -c 'from dia_core.models import Product,SaleDay,StockBalance,Account; assert Product.objects.count()==0; assert SaleDay.objects.count()==0; assert StockBalance.objects.count()==0; assert Account.objects.count()==0; print("fresh-data-isolation=OK")'
+      - name: Unit tests
+        run: python manage.py test dia_core -v 2
+      - name: Active-source legacy-name guard
+        run: |
+          if grep -R -n -E 'دارما|تکوین|Novani|انبارش|KHORSHID|darma-secrets' dia_core templates/dia_core config; then
+            echo "Legacy business-specific identifier found in active Dia source" >&2
+            exit 1
+          fi
+      - name: External API guard
+        run: |
+          if grep -R -n -E 'requests\.|httpx\.|open-api/v1|DIGIKALA_.*TOKEN|TELEGRAM_BOT_TOKEN' dia_core config compose.yml; then
+            echo "Unexpected external API integration found in active Dia runtime" >&2
+            exit 1
+          fi
