@@ -5,6 +5,7 @@ from django.core.management import call_command
 from django.test import TestCase
 from django.urls import Resolver404, resolve
 
+from .dateutils import month_calendar
 from .models import Account, Color, Product, ProductVariant, SaleDay, SaleLine, Size, StockBalance
 from .services import digikala_fee_for_unit, main_location, sync_sale_inventory
 
@@ -31,6 +32,14 @@ class DiaIsolationTests(TestCase):
 
     def test_reference_commission_formula_is_kept_local(self):
         self.assertEqual(digikala_fee_for_unit(100_000), 64_200)
+
+    def test_jalali_calendar_handles_esfand(self):
+        for year in (1404, 1405, 1406):
+            cal = month_calendar(year, 12)
+            days = [day for week in cal["weeks"] for day in week if day]
+            self.assertEqual(days[0], 1)
+            self.assertIn(days[-1], (29, 30))
+            self.assertEqual(len(days), days[-1])
 
 
 class DiaStockSyncTests(TestCase):

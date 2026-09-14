@@ -38,13 +38,25 @@ def jalali_month_bounds(value=None):
     return start, next_start, f"{PERSIAN_MONTHS[j.month - 1]} {j.year}"
 
 
+def _jalali_month_days(jy, jm):
+    if jm <= 6:
+        return 31
+    if jm <= 11:
+        return 30
+    try:
+        jdatetime.date(jy, 12, 30)
+        return 30
+    except ValueError:
+        return 29
+
+
 def month_calendar(jy=None, jm=None):
     today_j = jdatetime.date.fromgregorian(date=date.today())
     jy = int(jy or today_j.year)
     jm = int(jm or today_j.month)
     if jm < 1 or jm > 12:
         raise ValueError("ماه نامعتبر است.")
-    days_count = 31 if jm <= 6 else 30 if jm <= 11 else (30 if jdatetime.date.isleap(jy) else 29)
+    days_count = _jalali_month_days(jy, jm)
     first = jdatetime.date(jy, jm, 1)
     # Python weekday: Mon=0. Persian week starts Saturday.
     offset = (first.togregorian().weekday() + 2) % 7
