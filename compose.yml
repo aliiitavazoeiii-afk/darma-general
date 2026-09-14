@@ -1,3 +1,5 @@
+name: dia-gallery
+
 services:
   db:
     image: postgres:16-alpine
@@ -19,8 +21,6 @@ services:
     build: .
     restart: unless-stopped
     env_file: .env
-    volumes:
-      - /opt/darma-secrets/digikala/runtime:/run/secrets/digikala
     depends_on:
       db:
         condition: service_healthy
@@ -41,5 +41,8 @@ services:
 
 volumes:
   pgdata:
+    name: dia_gallery_pgdata
   caddy_data:
+    name: dia_gallery_caddy_data
   caddy_config:
+    name: dia_gallery_caddy_config

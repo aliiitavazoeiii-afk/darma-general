@@ -2,7 +2,7 @@ from pathlib import Path
 import os
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret")
+SECRET_KEY = os.getenv("SECRET_KEY", "dev-dia-gallery-secret")
 DEBUG = os.getenv("DEBUG", "0") == "1"
 ALLOWED_HOSTS = [x.strip() for x in os.getenv("ALLOWED_HOSTS", "127.0.0.1,localhost").split(",") if x.strip()]
 CSRF_TRUSTED_ORIGINS = [x.strip() for x in os.getenv("CSRF_TRUSTED_ORIGINS", "").split(",") if x.strip()]
@@ -14,7 +14,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "core",
+    "dia_core.apps.DiaCoreConfig",
 ]
 
 MIDDLEWARE = [
@@ -44,27 +44,21 @@ WSGI_APPLICATION = "config.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.getenv("DB_NAME", "darma"),
-        "USER": os.getenv("DB_USER", "darma"),
-        "PASSWORD": os.getenv("DB_PASSWORD", "darma"),
+        "NAME": os.getenv("DB_NAME", "dia_gallery"),
+        "USER": os.getenv("DB_USER", "dia_gallery"),
+        "PASSWORD": os.getenv("DB_PASSWORD", "dia_gallery"),
         "HOST": os.getenv("DB_HOST", "db"),
         "PORT": os.getenv("DB_PORT", "5432"),
         "CONN_MAX_AGE": 60,
     }
 }
 
-# V44: Gunicorn runs multiple workers. LocMemCache is process-local, which made
-# the Digikala API cache miss when a later request landed on another worker.
-# FileBasedCache keeps the small read-only API cache shared inside the web container.
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.filebased.FileBasedCache",
-        "LOCATION": "/tmp/darma-shared-cache",
+        "LOCATION": "/tmp/dia-gallery-cache",
         "TIMEOUT": 300,
-        "OPTIONS": {
-            "MAX_ENTRIES": 800,
-            "CULL_FREQUENCY": 3,
-        },
+        "OPTIONS": {"MAX_ENTRIES": 500, "CULL_FREQUENCY": 3},
     }
 }
 
@@ -82,7 +76,7 @@ USE_TZ = True
 
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
-STATICFILES_DIRS = [BASE_DIR / "static"]
+STATICFILES_DIRS = [BASE_DIR / "static"] if (BASE_DIR / "static").exists() else []
 STORAGES = {"staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"}}
 LOGIN_URL = "/login/"
 LOGIN_REDIRECT_URL = "/"

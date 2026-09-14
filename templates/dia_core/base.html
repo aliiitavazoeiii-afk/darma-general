@@ -1,0 +1,63 @@
+{% load static %}<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#071426">
+  <title>{% block title %}Dia Gallery{% endblock %}</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/core@1.4.0/dist/css/tabler.rtl.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css">
+  <style>
+    :root{--navy:#071426;--navy2:#0b1c33;--orange:#fb6514;--orange2:#f79009;--green:#12b76a;--red:#f04438;--ink:#f7f9fc;--muted:#aebdcd;--line:rgba(255,255,255,.14)}
+    *{box-sizing:border-box} html,body{min-height:100%;margin:0} body{font-family:Vazirmatn,Tahoma,sans-serif;background:#06111f;color:var(--ink)}
+    body:before{content:"";position:fixed;inset:0;pointer-events:none;background:radial-gradient(circle at 16% 4%,rgba(54,112,164,.48),transparent 33%),radial-gradient(circle at 82% 70%,rgba(251,101,20,.13),transparent 30%),linear-gradient(145deg,#071426,#06111f 54%,#0b2038);z-index:-2}
+    .erp-sidebar{width:252px;min-height:100vh;position:fixed;right:0;top:0;background:rgba(3,12,23,.72);border-left:1px solid rgba(255,255,255,.10);backdrop-filter:blur(22px);z-index:1030;padding:22px 14px;overflow-y:auto}
+    .brand{display:flex;gap:10px;align-items:center;color:#fff;text-decoration:none;padding:0 8px 18px}.brand-mark{width:42px;height:42px;border-radius:13px;background:linear-gradient(135deg,var(--orange),var(--orange2));display:grid;place-items:center;font-weight:900;box-shadow:0 8px 28px rgba(251,101,20,.26)}
+    .nav-title{color:#70849c;font-size:.72rem;padding:18px 12px 6px}.erp-nav a{display:flex;align-items:center;gap:10px;color:#c7d3df;text-decoration:none;padding:11px 12px;border-radius:10px;margin:2px 0}.erp-nav a:hover,.erp-nav a.active{background:rgba(55,91,127,.34);color:#fff}.erp-nav a.active{box-shadow:inset -3px 0 0 var(--orange)}.dot{width:7px;height:7px;border-radius:50%;background:#52657d}.active .dot{background:var(--orange)}
+    .erp-main{margin-right:252px;min-height:100vh}.topbar{height:66px;position:sticky;top:0;z-index:1020;display:flex;align-items:center;justify-content:space-between;padding:0 28px;background:rgba(7,20,38,.52);border-bottom:1px solid rgba(255,255,255,.10);backdrop-filter:blur(20px)}.content{padding:28px;max-width:1580px;margin:auto}.menu-btn{display:none}
+    .card,.glass-card{color:#f7f9fc;border:1px solid var(--line);border-radius:16px;box-shadow:0 20px 52px rgba(0,7,18,.26),inset 0 1px 0 rgba(255,255,255,.09);background:linear-gradient(135deg,rgba(18,43,72,.42),rgba(5,19,34,.26));backdrop-filter:blur(18px)}.card-header{border-bottom:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.025)}.card-title,.card h1,.card h2,.card h3,.card h4,.card h5,.card label,.card strong{color:#f7f9fc}.page-title{font-weight:800;color:#fff}.page-kicker{color:#fdb022;font-size:.8rem;font-weight:700}.muted,.text-secondary{color:var(--muted)!important}.kpi{font-size:1.8rem;font-weight:900;color:#fff}.money,.num{direction:ltr;unicode-bidi:isolate;text-align:left;font-variant-numeric:tabular-nums;white-space:nowrap}
+    .form-control,.form-select,.input-group-text{color:#f8fafc;border-color:rgba(255,255,255,.18);background:rgba(255,255,255,.075);min-height:42px}.form-control:focus,.form-select:focus{color:#fff;background:rgba(255,255,255,.12);border-color:#f79009;box-shadow:0 0 0 .2rem rgba(251,101,20,.14)}.form-select option{background:#0b1c33;color:#fff}.form-control::placeholder{color:#8293a5}
+    .btn-primary{--tblr-btn-bg:var(--orange);--tblr-btn-border-color:var(--orange);--tblr-btn-hover-bg:#e9540a;--tblr-btn-hover-border-color:#e9540a}.table{--tblr-table-color:#eef4fa;--tblr-table-bg:transparent;--tblr-table-border-color:rgba(255,255,255,.10);color:#eef4fa}.table>thead>tr>th{background:rgba(255,255,255,.06);color:#dce7f1}.table>tbody>tr>td{background:transparent;color:#eef4fa}.table>tbody>tr:hover>td{background:rgba(255,255,255,.045)}
+    .quick-card{transition:.18s ease;text-decoration:none}.quick-card:hover{transform:translateY(-3px);border-color:rgba(253,176,34,.65)}.quick-icon{width:42px;height:42px;border-radius:12px;background:rgba(251,101,20,.13);color:#ffad72;display:grid;place-items:center;font-weight:900}.alert-item{padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.08)}.alert-item:last-child{border-bottom:0}.chart-wrap{height:300px}.table-responsive{border-radius:12px}.sticky-actions{position:sticky;bottom:0;background:rgba(7,24,42,.82);backdrop-filter:blur(16px);border-top:1px solid rgba(255,255,255,.12);padding:12px;z-index:10}
+    .mobile-nav{display:none}.backdrop{display:none}
+    @media(max-width:991.98px){body{padding-bottom:75px}.erp-main{margin-right:0}.content{padding:16px 11px 92px}.topbar{height:58px;padding:0 10px}.menu-btn{display:inline-grid;place-items:center;width:40px;height:40px}.erp-sidebar{transform:translateX(110%);transition:.2s;width:min(86vw,320px);box-shadow:-18px 0 50px rgba(0,0,0,.4)}.erp-sidebar.open{transform:translateX(0)}.backdrop.show{display:block;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1025}.page-title{font-size:1.4rem}.kpi{font-size:1.35rem}.card-body{padding:13px}.table-responsive{overflow-x:auto}.mobile-nav{display:grid;grid-template-columns:repeat(5,1fr);position:fixed;left:8px;right:8px;bottom:calc(7px + env(safe-area-inset-bottom));height:62px;z-index:1040;background:rgba(5,19,34,.9);border:1px solid rgba(255,255,255,.14);border-radius:17px;backdrop-filter:blur(22px);overflow:hidden}.mobile-nav a,.mobile-nav button{border:0;background:transparent;color:#aebdcd;text-decoration:none;display:flex;flex-direction:column;align-items:center;justify-content:center;font:inherit;font-size:.63rem}.mobile-nav a.active{color:#fff;background:rgba(251,101,20,.1)}.mobile-nav .icon{font-size:1.05rem}.chart-wrap{height:230px}}
+  </style>
+  {% block head %}{% endblock %}
+</head>
+<body>
+<div class="backdrop" id="backdrop"></div>
+<aside class="erp-sidebar" id="sidebar">
+  <a class="brand" href="{% url 'dashboard' %}"><span class="brand-mark">D</span><span><strong>Dia Gallery</strong><small class="d-block text-secondary">Business Panel</small></span></a>
+  <div class="erp-nav">
+    <div class="nav-title">اصلی</div>
+    <a href="{% url 'dashboard' %}" class="{% if request.path == '/' %}active{% endif %}"><span class="dot"></span>داشبورد</a>
+    <a href="{% url 'sale_start' %}" class="{% if '/sales/' in request.path %}active{% endif %}"><span class="dot"></span>فروش روزانه</a>
+    <a href="{% url 'report' %}" class="{% if '/report/' in request.path %}active{% endif %}"><span class="dot"></span>گزارش جامع</a>
+    <div class="nav-title">کالا و عملیات</div>
+    <a href="{% url 'inventory' %}" class="{% if '/inventory/' in request.path %}active{% endif %}"><span class="dot"></span>موجودی کالا</a>
+    <a href="{% url 'purchase' %}" class="{% if '/purchase/' in request.path %}active{% endif %}"><span class="dot"></span>خرید روز</a>
+    <a href="{% url 'returns' %}" class="{% if '/returns/' in request.path %}active{% endif %}"><span class="dot"></span>مرجوعی</a>
+    <div class="nav-title">مالی و مدیریت</div>
+    <a href="{% url 'finance' %}" class="{% if '/finance/' in request.path %}active{% endif %}"><span class="dot"></span>مالی و پرداخت‌ها</a>
+    <a href="{% url 'settings_home' %}" class="{% if '/settings/' in request.path %}active{% endif %}"><span class="dot"></span>تنظیمات و تعاریف</a>
+  </div>
+</aside>
+<main class="erp-main">
+  <header class="topbar"><div class="d-flex align-items-center gap-2"><button class="btn btn-outline-light menu-btn" id="menuBtn" type="button">☰</button><div><strong>Dia Gallery</strong><div class="text-secondary small">پنل مستقل مدیریت فروش و موجودی</div></div></div><div class="d-flex gap-2"><a href="{% url 'settings_home' %}" class="btn btn-outline-light btn-sm">تنظیمات</a><form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="btn btn-outline-light btn-sm" type="submit">خروج</button></form></div></header>
+  <div class="content">
+    {% if messages %}<div class="mb-3">{% for message in messages %}<div class="alert {% if message.tags == 'error' %}alert-danger{% elif message.tags == 'success' %}alert-success{% else %}alert-info{% endif %}">{{ message }}</div>{% endfor %}</div>{% endif %}
+    {% block content %}{% endblock %}
+  </div>
+</main>
+<nav class="mobile-nav" aria-label="ناوبری موبایل">
+  <a href="{% url 'dashboard' %}" class="{% if request.path == '/' %}active{% endif %}"><span class="icon">⌂</span>داشبورد</a>
+  <a href="{% url 'report' %}" class="{% if '/report/' in request.path %}active{% endif %}"><span class="icon">▤</span>گزارش</a>
+  <a href="{% url 'sale_start' %}" class="{% if '/sales/' in request.path %}active{% endif %}"><span class="icon">＋</span>فروش</a>
+  <a href="{% url 'inventory' %}" class="{% if '/inventory/' in request.path %}active{% endif %}"><span class="icon">▦</span>موجودی</a>
+  <button type="button" id="mobileMenu"><span class="icon">☰</span>منو</button>
+</nav>
+<script>
+(function(){const s=document.getElementById('sidebar'),b=document.getElementById('backdrop');function open(){s.classList.add('open');b.classList.add('show')}function close(){s.classList.remove('open');b.classList.remove('show')}document.getElementById('menuBtn')?.addEventListener('click',open);document.getElementById('mobileMenu')?.addEventListener('click',open);b?.addEventListener('click',close)})();
+</script>
+{% block scripts %}{% endblock %}
+</body></html>
