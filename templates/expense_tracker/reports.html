@@ -1,6 +1,10 @@
 {% extends 'expense_tracker/base.html' %}{% load jalali %}
 {% block title %}گزارش | خرج من{% endblock %}
 {% block content %}
+<style>
+.page-head-actions{display:flex;align-items:center;justify-content:flex-end;gap:12px;flex-wrap:wrap}.page-head-actions .primary-btn{white-space:nowrap}
+@media(max-width:760px){.page-head{display:block}.page-head-actions{width:100%;margin-top:14px;justify-content:stretch}.page-head-actions .primary-btn{width:100%}}
+</style>
 <div class="page-head">
   <div><div class="eyebrow">تحلیل ماه</div><h1>گزارش {{ month_label }}</h1><p>تصویر ساده از اینکه پول این ماه کجا خرج شده.</p></div>
   <div class="page-head-actions">
