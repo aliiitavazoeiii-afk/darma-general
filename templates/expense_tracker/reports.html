@@ -1,7 +1,13 @@
 {% extends 'expense_tracker/base.html' %}{% load jalali %}
 {% block title %}گزارش | خرج من{% endblock %}
 {% block content %}
-<div class="page-head"><div><div class="eyebrow">تحلیل ماه</div><h1>گزارش {{ month_label }}</h1><p>تصویر ساده از اینکه پول این ماه کجا خرج شده.</p></div><div class="page-head-stats"><span>جمع ماه</span><strong class="money">{{ month_total|groupnum }} تومان</strong><small>{{ expense_count }} تراکنش</small></div></div>
+<div class="page-head">
+  <div><div class="eyebrow">تحلیل ماه</div><h1>گزارش {{ month_label }}</h1><p>تصویر ساده از اینکه پول این ماه کجا خرج شده.</p></div>
+  <div class="page-head-actions">
+    <a class="primary-btn" href="{% url 'expense_tracker:financial_export_xlsx' %}">⇩ خروجی اکسل مالی</a>
+    <div class="page-head-stats"><span>جمع ماه</span><strong class="money">{{ month_total|groupnum }} تومان</strong><small>{{ expense_count }} تراکنش</small></div>
+  </div>
+</div>
 <div class="dashboard-grid">
   <section class="panel">
     <div class="panel-head"><div><div class="eyebrow">دسته‌ها</div><h2>توزیع هزینه</h2></div></div>
