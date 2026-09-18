@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import views
+from . import export_xlsx, views
 
 app_name = "expense_tracker"
 
@@ -20,4 +20,5 @@ urlpatterns = [
     path("categories/<int:category_id>/toggle/", views.category_toggle, name="category_toggle"),
     path("categories/<int:category_id>/delete/", views.category_delete, name="category_delete"),
     path("reports/", views.reports, name="reports"),
+    path("reports/export.xlsx", export_xlsx.financial_export_xlsx, name="financial_export_xlsx"),
 ]
