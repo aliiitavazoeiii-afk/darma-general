@@ -28,6 +28,12 @@ def _safe_text(value):
     return text
 
 
+def _local_timestamp(value):
+    if timezone.is_aware(value):
+        value = timezone.localtime(value)
+    return value.strftime("%Y-%m-%d %H:%M:%S")
+
+
 def _style_sheet(ws, *, money_columns=()):
     ws.sheet_view.rightToLeft = True
     ws.freeze_panes = "A2"
@@ -126,12 +132,12 @@ def build_financial_workbook(*, today=None):
             _safe_text(expense.title or expense.category.name),
             int(expense.amount or 0),
             _safe_text(expense.note),
-            timezone.localtime(expense.created_at).strftime("%Y-%m-%d %H:%M:%S"),
+            _local_timestamp(expense.created_at),
         ])
     _style_sheet(ws, money_columns=(6,))
     _fit_columns(ws, {2: 14, 3: 14, 4: 18, 5: 28, 6: 18, 7: 36, 8: 21})
 
-    # 2) Receivable / repayment ledger
+    # 2) Receivable / repayment ledger with per-person running balance
     ws = wb.create_sheet("گردش طلب‌ها")
     ws.append([
         "ردیف",
@@ -140,11 +146,17 @@ def build_financial_workbook(*, today=None):
         "شخص",
         "نوع",
         "مبلغ (تومان)",
+        "مانده شخص بعد از ردیف",
         "اثر روی ملت اعمال شده",
         "توضیح",
         "زمان ثبت",
     ])
+    running_by_person = defaultdict(int)
     for idx, entry in enumerate(receivable_entries, 1):
+        if entry.kind == ReceivableEntry.CLAIM:
+            running_by_person[entry.person_id] += int(entry.amount or 0)
+        else:
+            running_by_person[entry.person_id] -= int(entry.amount or 0)
         ws.append([
             idx,
             format_jalali(entry.date),
@@ -152,12 +164,13 @@ def build_financial_workbook(*, today=None):
             _safe_text(entry.person.name),
             "طلب" if entry.kind == ReceivableEntry.CLAIM else "تسویه",
             int(entry.amount or 0),
+            int(running_by_person[entry.person_id]),
             "بله" if entry.mellat_applied else "خیر (قدیمی)",
             _safe_text(entry.note),
-            timezone.localtime(entry.created_at).strftime("%Y-%m-%d %H:%M:%S"),
+            _local_timestamp(entry.created_at),
         ])
-    _style_sheet(ws, money_columns=(6,))
-    _fit_columns(ws, {2: 14, 3: 14, 4: 22, 5: 12, 6: 18, 7: 23, 8: 36, 9: 21})
+    _style_sheet(ws, money_columns=(6, 7))
+    _fit_columns(ws, {2: 14, 3: 14, 4: 22, 5: 12, 6: 18, 7: 22, 8: 23, 9: 36, 10: 21})
 
     # 3) Monthly expense summary (Jalali months)
     monthly = defaultdict(lambda: {"total": 0, "count": 0})
@@ -206,8 +219,8 @@ def build_financial_workbook(*, today=None):
         cell.number_format = '0.0"%"'
     _fit_columns(ws, {1: 22, 2: 17, 3: 20, 4: 17})
 
-    # 5) Current financial snapshot
-    total_outstanding, open_people, _people_rows = _receivable_snapshot()
+    # 5) Current financial snapshot + current outstanding by person
+    total_outstanding, open_people, people_rows = _receivable_snapshot()
     current_month_total = sum(
         int(expense.amount or 0)
         for expense in expenses
@@ -232,12 +245,32 @@ def build_financial_workbook(*, today=None):
     ]
     for row in snapshot_rows:
         ws.append([_safe_text(row[0]), row[1], _safe_text(row[2])])
+
+    # Add a compact person-level receivable snapshot below the current-state metrics.
+    ws.append([])
+    person_header_row = ws.max_row + 1
+    ws.append(["شخص", "کل طلب", "تسویه‌شده", "مانده فعلی"])
+    for person, claim, payment, outstanding in people_rows:
+        ws.append([
+            _safe_text(person.name),
+            int(claim),
+            int(payment),
+            int(outstanding),
+        ])
+
     _style_sheet(ws, money_columns=(2,))
+    for cell in ws[person_header_row]:
+        cell.fill = HEADER_FILL
+        cell.font = HEADER_FONT
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+    for row in ws.iter_rows(min_row=person_header_row + 1, min_col=2, max_col=4):
+        for cell in row:
+            cell.number_format = MONEY_FORMAT
     # Count/date rows should stay readable as ordinary values.
     for row_index in (2, 5, 10, 11):
         if row_index <= ws.max_row:
             ws.cell(row=row_index, column=2).number_format = "General"
-    _fit_columns(ws, {1: 28, 2: 22, 3: 40})
+    _fit_columns(ws, {1: 28, 2: 22, 3: 22, 4: 22})
 
     return wb
 
