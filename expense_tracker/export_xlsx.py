@@ -110,19 +110,9 @@ def build_financial_workbook(*, today=None):
 
     wb = Workbook()
 
-    # 1) Raw expense ledger
     ws = wb.active
     ws.title = "هزینه‌ها"
-    ws.append([
-        "ردیف",
-        "تاریخ شمسی",
-        "تاریخ میلادی",
-        "دسته",
-        "عنوان",
-        "مبلغ (تومان)",
-        "توضیح",
-        "زمان ثبت",
-    ])
+    ws.append(["ردیف", "تاریخ شمسی", "تاریخ میلادی", "دسته", "عنوان", "مبلغ (تومان)", "توضیح", "زمان ثبت"])
     for idx, expense in enumerate(expenses, 1):
         ws.append([
             idx,
@@ -137,19 +127,10 @@ def build_financial_workbook(*, today=None):
     _style_sheet(ws, money_columns=(6,))
     _fit_columns(ws, {2: 14, 3: 14, 4: 18, 5: 28, 6: 18, 7: 36, 8: 21})
 
-    # 2) Receivable / repayment ledger with per-person running balance
     ws = wb.create_sheet("گردش طلب‌ها")
     ws.append([
-        "ردیف",
-        "تاریخ شمسی",
-        "تاریخ میلادی",
-        "شخص",
-        "نوع",
-        "مبلغ (تومان)",
-        "مانده شخص بعد از ردیف",
-        "اثر روی ملت اعمال شده",
-        "توضیح",
-        "زمان ثبت",
+        "ردیف", "تاریخ شمسی", "تاریخ میلادی", "شخص", "نوع", "مبلغ (تومان)",
+        "مانده شخص بعد از ردیف", "اثر روی ملت اعمال شده", "توضیح", "زمان ثبت",
     ])
     running_by_person = defaultdict(int)
     for idx, entry in enumerate(receivable_entries, 1):
@@ -172,7 +153,6 @@ def build_financial_workbook(*, today=None):
     _style_sheet(ws, money_columns=(6, 7))
     _fit_columns(ws, {2: 14, 3: 14, 4: 22, 5: 12, 6: 18, 7: 22, 8: 23, 9: 36, 10: 21})
 
-    # 3) Monthly expense summary (Jalali months)
     monthly = defaultdict(lambda: {"total": 0, "count": 0})
     for expense in expenses:
         key = _jalali_month_key(expense.date)
@@ -183,21 +163,14 @@ def build_financial_workbook(*, today=None):
     ws.append(["ماه شمسی", "جمع خرج (تومان)", "تعداد تراکنش", "روزهای مبنای میانگین", "میانگین روزانه (تومان)"])
     for year, month in sorted(monthly):
         values = monthly[(year, month)]
-        if year == today_j.year and month == today_j.month:
-            elapsed_days = max(1, today_j.day)
-        else:
-            elapsed_days = _jalali_month_days(year, month)
+        elapsed_days = max(1, today_j.day) if (year, month) == (today_j.year, today_j.month) else _jalali_month_days(year, month)
         ws.append([
-            f"{year}/{month:02d}",
-            values["total"],
-            values["count"],
-            elapsed_days,
+            f"{year}/{month:02d}", values["total"], values["count"], elapsed_days,
             int(round(values["total"] / elapsed_days)) if elapsed_days else 0,
         ])
     _style_sheet(ws, money_columns=(2, 5))
     _fit_columns(ws, {1: 14, 2: 20, 3: 16, 4: 22, 5: 24})
 
-    # 4) Category summary, all recorded expenses
     ws = wb.create_sheet("خلاصه دسته‌ها")
     ws.append(["دسته", "تعداد تراکنش", "جمع خرج (تومان)", "سهم از کل خرج"])
     category_rows = list(
@@ -209,9 +182,7 @@ def build_financial_workbook(*, today=None):
     for row in category_rows:
         total = int(row["total"] or 0)
         ws.append([
-            _safe_text(row["category__name"]),
-            int(row["count"] or 0),
-            total,
+            _safe_text(row["category__name"]), int(row["count"] or 0), total,
             round(total * 100 / grand_total, 1) if grand_total else 0,
         ])
     _style_sheet(ws, money_columns=(3,))
@@ -219,7 +190,6 @@ def build_financial_workbook(*, today=None):
         cell.number_format = '0.0"%"'
     _fit_columns(ws, {1: 22, 2: 17, 3: 20, 4: 17})
 
-    # 5) Current financial snapshot + current outstanding by person
     total_outstanding, open_people, people_rows = _receivable_snapshot()
     current_month_total = sum(
         int(expense.amount or 0)
@@ -246,17 +216,11 @@ def build_financial_workbook(*, today=None):
     for row in snapshot_rows:
         ws.append([_safe_text(row[0]), row[1], _safe_text(row[2])])
 
-    # Add a compact person-level receivable snapshot below the current-state metrics.
     ws.append([])
-    person_header_row = ws.max_row + 1
+    person_header_row = ws.max_row + 2
     ws.append(["شخص", "کل طلب", "تسویه‌شده", "مانده فعلی"])
     for person, claim, payment, outstanding in people_rows:
-        ws.append([
-            _safe_text(person.name),
-            int(claim),
-            int(payment),
-            int(outstanding),
-        ])
+        ws.append([_safe_text(person.name), int(claim), int(payment), int(outstanding)])
 
     _style_sheet(ws, money_columns=(2,))
     for cell in ws[person_header_row]:
@@ -266,7 +230,6 @@ def build_financial_workbook(*, today=None):
     for row in ws.iter_rows(min_row=person_header_row + 1, min_col=2, max_col=4):
         for cell in row:
             cell.number_format = MONEY_FORMAT
-    # Count/date rows should stay readable as ordinary values.
     for row_index in (2, 5, 10, 11):
         if row_index <= ws.max_row:
             ws.cell(row=row_index, column=2).number_format = "General"
