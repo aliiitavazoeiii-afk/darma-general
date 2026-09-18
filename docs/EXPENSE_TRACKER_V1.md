@@ -126,6 +126,32 @@ V4 temporarily replaced the open-receivable KPI with today's ERP gross sales. Th
 - delete paths reverse only cash effects that were actually applied;
 - historical claims are preserved safely and are not retroactively debited.
 
-Regression success marker for this revision:
+Regression success marker for V5:
 
 `SUCCESS: EXPENSE TRACKER CASHFLOW V5 REGRESSION PASSED`
+
+## Financial Excel Export V6 — current
+
+The reports page now has an authenticated `خروجی اکسل مالی` download at:
+
+`/reports/export.xlsx`
+
+The generated XLSX is read-only and contains five sheets:
+
+1. `هزینه‌ها` — every recorded expense with Jalali/Gregorian date, category, title, amount and note.
+2. `گردش طلب‌ها` — claims and repayments, per-person running balance, and whether that historical row actually affected Mellat.
+3. `خلاصه ماهانه` — total expenses, transaction count and calendar-day daily average for every Jalali month represented in the data.
+4. `خلاصه دسته‌ها` — all-time expense totals/counts and category share.
+5. `وضعیت فعلی` — Mellat balance, open receivables, current-month expense/average, today's expense, overall totals, plus current receivable balance per person.
+
+User-controlled text is protected against Excel formula injection before it is written to cells.
+
+`openpyxl` is installed only in `Dockerfile.expense`; the main ERP requirements file remains unchanged.
+
+V6 regression command:
+
+`python manage.py check_expense_export_v6 --settings=expense_site.settings`
+
+Expected success marker:
+
+`SUCCESS: EXPENSE TRACKER FINANCIAL EXPORT V6 REGRESSION PASSED`
