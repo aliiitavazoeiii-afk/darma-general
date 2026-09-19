@@ -5,11 +5,17 @@ from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
 
+from .brand_colors import colors_for_brand
 from .dateutils import format_jalali, parse_jalali_date
 from .models import Brand, Color, ProductCode, ProductComposition, ProductSize, Size
 from .sale_price_v60 import MANAGED_BRANDS, next_sale_price_rule, sale_price_for, set_sale_price_rule
 from .special_darma_products_v66 import variable_color_pack_qty
+from .takvin_pricing_v17 import takvin_cost_for
 from .variant_sale_v12 import is_variable_color_product_code
+
+
+INVENTORY_COMPOSITION_BRANDS = {"دارما", "تکوین"}
+TAKVIN_SIZE_NAMES = {"M", "L", "XL", "XXL"}
 
 
 def _to_int(value, default=0):
@@ -23,6 +29,12 @@ def _to_int(value, default=0):
 
 def _default_effective_date():
     return date.today() + timedelta(days=1)
+
+
+def _inventory_color_ids_for_brand(brand):
+    if not brand or brand.name not in INVENTORY_COMPOSITION_BRANDS:
+        return set()
+    return set(colors_for_brand(brand).values_list("id", flat=True))
 
 
 @login_required
@@ -73,17 +85,32 @@ def settings_product_form(request, product_id=None):
             form_effective = _default_effective_date()
             errors.append(str(exc))
 
+        allowed_inventory_color_ids = _inventory_color_ids_for_brand(brand)
         comp = {}
         comp_total = 0
+        invalid_colors = []
         for color in colors:
             qty = max(0, _to_int(request.POST.get(f"color_{color.id}")))
-            if qty:
-                comp[color.id] = qty
-                comp_total += qty
+            if not qty:
+                continue
+            if (
+                brand.name in INVENTORY_COMPOSITION_BRANDS
+                and color.id not in allowed_inventory_color_ids
+            ):
+                invalid_colors.append(color.name)
+                continue
+            comp[color.id] = qty
+            comp_total += qty
+
+        if invalid_colors:
+            errors.append(
+                f"این رنگ‌ها در موجودی {brand.name} تعریف نشده‌اند و نمی‌توانند در ترکیب کد باشند: "
+                + "، ".join(invalid_colors)
+            )
 
         enabled_sizes = [size for size in sizes if request.POST.get(f"size_{size.id}")]
         if brand.name == "تکوین":
-            enabled_sizes = [size for size in enabled_sizes if size.name not in {"3XL", "4XL"}]
+            enabled_sizes = [size for size in enabled_sizes if size.name in TAKVIN_SIZE_NAMES]
 
         if not form_code:
             errors.append("کد محصول را وارد کن.")
@@ -141,6 +168,8 @@ def settings_product_form(request, product_id=None):
             for size in enabled_sizes:
                 entered_price = max(0, _to_int(request.POST.get(f"sale_price_{size.id}")))
                 entered_cost = max(0, _to_int(request.POST.get(f"unit_cost_{size.id}")))
+                if brand.name == "تکوین":
+                    entered_cost = int(takvin_cost_for(size))
 
                 ps = ProductSize.objects.filter(product=product, size=size).first()
                 if ps is None:
@@ -187,6 +216,12 @@ def settings_product_form(request, product_id=None):
         for err in errors:
             messages.error(request, err)
 
+    brand_inventory_color_ids = {
+        brand.id: _inventory_color_ids_for_brand(brand)
+        for brand in brands
+        if brand.name in INVENTORY_COMPOSITION_BRANDS
+    }
+
     color_rows = []
     for color in colors:
         qty = (
@@ -194,7 +229,26 @@ def settings_product_form(request, product_id=None):
             if request.method == "POST"
             else existing_comp.get(color.id, 0)
         )
-        color_rows.append({"obj": color, "qty": qty})
+        visible_brand_ids = []
+        for brand in brands:
+            if brand.name not in INVENTORY_COMPOSITION_BRANDS:
+                visible_brand_ids.append(str(brand.id))
+                continue
+            linked = color.id in brand_inventory_color_ids.get(brand.id, set())
+            legacy_existing = bool(
+                product
+                and product.brand_id == brand.id
+                and color.id in existing_comp
+            )
+            if linked or legacy_existing:
+                visible_brand_ids.append(str(brand.id))
+        color_rows.append(
+            {
+                "obj": color,
+                "qty": qty,
+                "brand_ids": ",".join(visible_brand_ids),
+            }
+        )
 
     size_rows = []
     selected_brand = Brand.objects.filter(id=form_brand_id).first()
@@ -212,7 +266,7 @@ def settings_product_form(request, product_id=None):
             else:
                 sale_price = int(ps.default_sale_price or 0) if ps else 0
             unit_cost = int(ps.unit_cost or 0) if ps else 0
-        if selected_brand and selected_brand.name == "تکوین" and size.name in {"3XL", "4XL"}:
+        if selected_brand and selected_brand.name == "تکوین" and size.name not in TAKVIN_SIZE_NAMES:
             checked = False
         size_rows.append(
             {
@@ -220,7 +274,7 @@ def settings_product_form(request, product_id=None):
                 "checked": checked,
                 "sale_price": sale_price,
                 "unit_cost": unit_cost,
-                "takvin_forbidden": bool(size.name in {"3XL", "4XL"}),
+                "takvin_forbidden": bool(size.name not in TAKVIN_SIZE_NAMES),
             }
         )
 
