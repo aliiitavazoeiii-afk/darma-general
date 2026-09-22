@@ -53,7 +53,8 @@ class Command(BaseCommand):
         if result["elastic_unit_cost"] != 2700:
             raise RuntimeError("elastic-per-piece formula mismatch")
 
-        fabric_source = getsource(cost.fabric_price)
+        wrapped = getattr(cost.fabric_price, "__wrapped__", cost.fabric_price)
+        fabric_source = getsource(wrapped)
         if "location=TAILOR" not in fabric_source or "location=WAREHOUSE" not in fabric_source:
             raise RuntimeError("fabric price no longer uses tailor -> warehouse fallback")
 
