@@ -54,6 +54,45 @@ def _elastic_group(rows):
     return sorted(result, key=lambda x: x["title"])
 
 
+def _fabric_tailor_group(rows):
+    """Present tailor fabric as one stable row per logical color/material key.
+
+    Underlying source-lot rows stay intact for exact reverse/edit behavior and
+    valuation. The grouped row is display-only and therefore cannot drift stock.
+    """
+    grouped = {}
+    for row in rows:
+        key = row.material_key or f"legacy-{row.id}"
+        cell = grouped.setdefault(
+            key,
+            {
+                "key": key,
+                "title": row.title,
+                "quantity": Decimal("0"),
+                "total_value": 0,
+                "unit_price": 0,
+                "rows": [],
+            },
+        )
+        qty = Decimal(row.quantity or 0)
+        cell["quantity"] += qty
+        cell["total_value"] += int(row.total_value or 0)
+        cell["rows"].append(row)
+        if not cell["title"]:
+            cell["title"] = row.title
+
+    result = []
+    for cell in grouped.values():
+        qty = Decimal(cell["quantity"] or 0)
+        if qty > 0:
+            cell["unit_price"] = int(Decimal(cell["total_value"]) / qty)
+        elif cell["rows"]:
+            cell["unit_price"] = int(cell["rows"][-1].unit_price or 0)
+        cell["lot_count"] = len(cell["rows"])
+        result.append(cell)
+    return sorted(result, key=lambda x: x["title"] or x["key"])
+
+
 def _raw_material_context():
     rows = list(RawMaterialStock.objects.filter(active=True).order_by("kind", "location", "id"))
     fw = [r for r in rows if r.kind == RawMaterialStock.FABRIC and r.location == RawMaterialStock.WAREHOUSE]
@@ -69,7 +108,10 @@ def _raw_material_context():
     fabric_total = fw_total + ft_total + fd_total
     elastic_total = ew_total + et_total
     return {
-        "fabric_warehouse": fw, "fabric_tailor": ft, "fabric_depot": fd,
+        "fabric_warehouse": fw,
+        "fabric_tailor": ft,
+        "fabric_tailor_groups": _fabric_tailor_group(ft),
+        "fabric_depot": fd,
         "elastic_warehouse": _elastic_group(ew_raw), "elastic_tailor": _elastic_group(et_raw),
         "fabric_warehouse_total": fw_total, "fabric_tailor_total": ft_total, "fabric_depot_total": fd_total,
         "elastic_warehouse_total": ew_total, "elastic_tailor_total": et_total,
