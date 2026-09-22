@@ -146,6 +146,13 @@ def _return_fabric_to_warehouse(source, amount):
 
 @transaction.atomic
 def transfer_fabric_to_tailor(source_id, quantity):
+    """Move fabric to the tailor without creating duplicate rows for the same source lot.
+
+    Warehouse fabric stays lot-based for purchase/reversal traceability. At the tailor,
+    repeated transfers from the exact same warehouse row are accumulated into the
+    existing row. Different source lots may still remain separate internally so their
+    purchase provenance is not destroyed; the report UI groups them by material_key.
+    """
     quantity = q(quantity)
     source = RawMaterialStock.objects.select_for_update().get(
         id=source_id, kind=FABRIC, location=WAREHOUSE, active=True
@@ -154,12 +161,36 @@ def transfer_fabric_to_tailor(source_id, quantity):
         raise ValueError("وزن انتقال باید بیشتر از صفر باشد.")
     if q(source.quantity) < quantity:
         raise ValueError("وزن انتقال از موجودی انبار بیشتر است.")
+
     source.quantity = q(source.quantity) - quantity
     source.save(update_fields=["quantity", "updated_at"])
+
+    source_note = f"انتقال از انبار / ردیف {source.id}"
+    target = (
+        RawMaterialStock.objects.select_for_update()
+        .filter(
+            active=True,
+            kind=FABRIC,
+            location=TAILOR,
+            material_key=source.material_key,
+            variant="",
+            title=source.title,
+            unit_price=source.unit_price,
+            note=source_note,
+        )
+        .order_by("id")
+        .first()
+    )
+    if target:
+        target.quantity = q(target.quantity) + quantity
+        target.unit = source.unit
+        target.save(update_fields=["quantity", "unit", "updated_at"])
+        return target
+
     return RawMaterialStock.objects.create(
         kind=FABRIC, location=TAILOR, material_key=source.material_key, variant="",
         title=source.title, quantity=quantity, unit_price=source.unit_price, unit=source.unit,
-        note=f"انتقال از انبار / ردیف {source.id}",
+        note=source_note,
     )
 
 
