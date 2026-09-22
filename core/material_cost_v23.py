@@ -1,10 +1,8 @@
 from decimal import Decimal, ROUND_HALF_UP
 from functools import lru_cache
 
-from django.db.models import Q
-
 from .brand_colors import title_for_material_key
-from .material_flow import ELASTIC, FABRIC, TAILOR, q
+from .material_flow import ELASTIC, FABRIC, TAILOR, WAREHOUSE, q
 from .models import RawMaterialStock
 
 
@@ -25,9 +23,8 @@ def weighted_unit_price(rows):
     if total_qty > 0:
         return round_money(total_value / total_qty)
 
-    # The report's costing is intentionally LIVE. If a material has just been fully
-    # consumed, keep using the current unit price stored on its active tailor row
-    # instead of collapsing the finished-goods cost to zero.
+    # Live costing should keep the latest known active unit price even if that stock
+    # row has just reached zero, instead of collapsing the finished-goods cost to 0.
     for row in reversed(rows):
         price = int(row.unit_price or 0)
         if price > 0:
@@ -35,34 +32,48 @@ def weighted_unit_price(rows):
     return 0
 
 
+def _material_rows(*, kind, location, material_key, variant=None):
+    filters = {
+        "active": True,
+        "kind": kind,
+        "location": location,
+        "material_key": material_key,
+    }
+    if variant is not None:
+        filters["variant"] = str(variant)
+    return list(RawMaterialStock.objects.filter(**filters).order_by("id"))
+
+
 @lru_cache(maxsize=512)
 def fabric_price(material_key, fabric_code=""):
-    qs = RawMaterialStock.objects.filter(
-        active=True,
-        kind=FABRIC,
-        location=TAILOR,
-        material_key=material_key,
-    ).order_by("id")
-    code = (fabric_code or "").strip()
-    if code:
-        exact = list(qs.filter(Q(title__iexact=code) | Q(note__icontains=code)))
-        if exact:
-            return weighted_unit_price(exact)
-    return weighted_unit_price(list(qs))
+    """Return the live weighted price per kg for this fabric color/model.
+
+    The material-report code is descriptive only. Costing is intentionally based on
+    the current finished unit price of the color/model itself: first the stock at the
+    tailor, and if that color has no usable tailor price, the warehouse stock.
+    """
+    tailor_price = weighted_unit_price(
+        _material_rows(kind=FABRIC, location=TAILOR, material_key=material_key)
+    )
+    if tailor_price > 0:
+        return tailor_price
+
+    return weighted_unit_price(
+        _material_rows(kind=FABRIC, location=WAREHOUSE, material_key=material_key)
+    )
 
 
 @lru_cache(maxsize=512)
 def elastic_price(material_key, variant):
-    rows = list(
-        RawMaterialStock.objects.filter(
-            active=True,
+    # Elastic costing must come from the current stock held by the tailor.
+    return weighted_unit_price(
+        _material_rows(
             kind=ELASTIC,
             location=TAILOR,
             material_key=material_key,
             variant=str(variant),
-        ).order_by("id")
+        )
     )
-    return weighted_unit_price(rows)
 
 
 def used_elastic(values, field, remain_field):
@@ -74,6 +85,17 @@ def used_elastic(values, field, remain_field):
 
 
 def calculate_model_cost(material_key, values, wage):
+    """Live finished unit cost for one material/color.
+
+    Formula, without hidden multipliers:
+      fabric per piece = (fabric kg * live fabric price/kg) / cut
+      labor per piece  = total tailor wage / cut
+      elastic per piece = ((used 16 kg * price16/kg) + (used 25 kg * price25/kg)) / cut
+      unit cost = fabric per piece + labor per piece + elastic per piece
+
+    `used` elastic remains delivery minus returned/remain quantity, preserving the
+    existing material-consumption semantics.
+    """
     values = values or {}
     cut_qty = max(q(values.get("cut")), Decimal("0"))
     fabric_qty = max(q(values.get("weight")), Decimal("0"))
@@ -87,12 +109,29 @@ def calculate_model_cost(material_key, values, wage):
     e16_price = elastic_price(elastic16_key, "16") if elastic16_key else 0
     e25_price = elastic_price(elastic25_key, "25") if elastic25_key else 0
 
-    fabric_cost = round_money(fabric_qty * Decimal(f_price))
-    elastic16_cost = round_money(elastic16_qty * Decimal(e16_price))
-    elastic25_cost = round_money(elastic25_qty * Decimal(e25_price))
-    labor_cost = int(wage or 0)
-    total_cost = fabric_cost + elastic16_cost + elastic25_cost + labor_cost
-    unit_cost = round_money(Decimal(total_cost) / cut_qty) if cut_qty > 0 else 0
+    fabric_cost_exact = fabric_qty * Decimal(f_price)
+    elastic16_cost_exact = elastic16_qty * Decimal(e16_price)
+    elastic25_cost_exact = elastic25_qty * Decimal(e25_price)
+    labor_cost_exact = Decimal(int(wage or 0))
+    elastic_cost_exact = elastic16_cost_exact + elastic25_cost_exact
+    total_cost_exact = fabric_cost_exact + labor_cost_exact + elastic_cost_exact
+
+    if cut_qty > 0:
+        fabric_unit_cost = fabric_cost_exact / cut_qty
+        labor_unit_cost = labor_cost_exact / cut_qty
+        elastic_unit_cost = elastic_cost_exact / cut_qty
+        unit_cost = round_money(fabric_unit_cost + labor_unit_cost + elastic_unit_cost)
+    else:
+        fabric_unit_cost = Decimal("0")
+        labor_unit_cost = Decimal("0")
+        elastic_unit_cost = Decimal("0")
+        unit_cost = 0
+
+    fabric_cost = round_money(fabric_cost_exact)
+    elastic16_cost = round_money(elastic16_cost_exact)
+    elastic25_cost = round_money(elastic25_cost_exact)
+    labor_cost = round_money(labor_cost_exact)
+    total_cost = round_money(total_cost_exact)
 
     return {
         "unit_cost": unit_cost,
@@ -106,6 +145,9 @@ def calculate_model_cost(material_key, values, wage):
         "labor_cost": labor_cost,
         "total_cost": total_cost,
         "cut_qty": cut_qty,
+        "fabric_unit_cost": round_money(fabric_unit_cost),
+        "labor_unit_cost": round_money(labor_unit_cost),
+        "elastic_unit_cost": round_money(elastic_unit_cost),
         "fabric_key": material_key,
         "fabric_label": title_for_material_key(material_key),
         "elastic16_key": elastic16_key,
