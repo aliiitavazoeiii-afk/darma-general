@@ -27,6 +27,43 @@ def _finished_inventory_value():
     return total
 
 
+def _fabric_tailor_groups(rows):
+    """Presentation-only grouping: one visible tailor row per material_key.
+
+    Raw rows stay untouched because they preserve the warehouse source lot used for
+    purchase reversal. The UI receives one stable color/model row whose quantity and
+    value are the sum of those internal rows.
+    """
+    grouped = {}
+    for row in rows:
+        key = row.material_key or f"legacy-{row.id}"
+        cell = grouped.setdefault(
+            key,
+            {
+                "key": key,
+                "material_key": row.material_key,
+                "title": title_for_material_key(row.material_key) or row.title,
+                "quantity": Decimal("0"),
+                "total_value": 0,
+                "unit_price": 0,
+                "unit": row.unit or "کیلو",
+                "rows": [],
+                "row_count": 0,
+            },
+        )
+        cell["quantity"] += Decimal(row.quantity or 0)
+        cell["total_value"] += int(row.total_value or 0)
+        cell["rows"].append(row)
+        cell["row_count"] += 1
+
+    result = []
+    for cell in grouped.values():
+        qty = Decimal(cell["quantity"] or 0)
+        cell["unit_price"] = int(Decimal(cell["total_value"]) / qty) if qty > 0 else 0
+        result.append(cell)
+    return sorted(result, key=lambda x: (x["title"], x["key"]))
+
+
 def _elastic_group(rows):
     grouped = {}
     for row in rows:
@@ -58,6 +95,7 @@ def _raw_material_context():
     rows = list(RawMaterialStock.objects.filter(active=True).order_by("kind", "location", "id"))
     fw = [r for r in rows if r.kind == RawMaterialStock.FABRIC and r.location == RawMaterialStock.WAREHOUSE]
     ft = [r for r in rows if r.kind == RawMaterialStock.FABRIC and r.location == RawMaterialStock.TAILOR]
+    ft_groups = _fabric_tailor_groups(ft)
     fd = [r for r in rows if r.kind == RawMaterialStock.FABRIC and r.location == RawMaterialStock.DEPOT]
     ew_raw = [r for r in rows if r.kind == RawMaterialStock.ELASTIC and r.location == RawMaterialStock.WAREHOUSE]
     et_raw = [r for r in rows if r.kind == RawMaterialStock.ELASTIC and r.location == RawMaterialStock.TAILOR]
@@ -69,7 +107,7 @@ def _raw_material_context():
     fabric_total = fw_total + ft_total + fd_total
     elastic_total = ew_total + et_total
     return {
-        "fabric_warehouse": fw, "fabric_tailor": ft, "fabric_depot": fd,
+        "fabric_warehouse": fw, "fabric_tailor": ft, "fabric_tailor_groups": ft_groups, "fabric_depot": fd,
         "elastic_warehouse": _elastic_group(ew_raw), "elastic_tailor": _elastic_group(et_raw),
         "fabric_warehouse_total": fw_total, "fabric_tailor_total": ft_total, "fabric_depot_total": fd_total,
         "elastic_warehouse_total": ew_total, "elastic_tailor_total": et_total,
