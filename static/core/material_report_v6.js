@@ -21,20 +21,21 @@
     style.id = 'materialReportV84Style';
     style.textContent = `
       .excel-scroll{overflow-x:auto!important;direction:rtl!important}
-      .material-grid{width:max-content!important;min-width:0!important;margin-right:0!important;margin-left:auto!important;table-layout:auto!important;direction:rtl!important}
-      .material-grid th,.material-grid td{padding:4px 5px!important;text-align:center!important;vertical-align:middle!important;white-space:nowrap}
-      .material-grid .sticky-col{min-width:108px!important;width:108px!important;text-align:center!important}
-      .material-grid .grid-input,.material-grid .form-select{min-width:88px!important;width:88px!important;max-width:88px!important;height:34px!important;padding:4px 6px!important;margin:0 auto!important;text-align:center!important}
-      .material-grid .form-select{text-align-last:center!important;padding-inline:4px 22px!important}
-      .material-grid .select-cell{min-width:112px!important;width:112px!important}
-      .material-grid .select-cell .form-select{min-width:104px!important;width:104px!important;max-width:104px!important}
+      .material-grid{width:max-content!important;min-width:0!important;margin-right:0!important;margin-left:auto!important;table-layout:auto!important;direction:rtl!important;font-size:.84rem!important}
+      .material-grid th,.material-grid td{padding:6px 8px!important;text-align:center!important;vertical-align:middle!important;white-space:nowrap}
+      .material-grid .sticky-col{min-width:126px!important;width:126px!important;text-align:center!important}
+      .material-grid .grid-input,.material-grid .form-select{min-width:108px!important;width:108px!important;max-width:108px!important;height:39px!important;padding:6px 8px!important;margin:0 auto!important;text-align:center!important;font-size:.84rem!important}
+      .material-grid .form-select{text-align-last:center!important;padding-inline:6px 24px!important}
+      .material-grid .select-cell{min-width:136px!important;width:136px!important}
+      .material-grid .select-cell .form-select{min-width:126px!important;width:126px!important;max-width:126px!important}
       .material-grid input,.material-grid select{direction:ltr!important;text-align:center!important}
       .material-grid th{direction:rtl!important}
       .output-grid .output-status{text-align:center!important}
       .delivery-total-box{text-align:center!important}
       @media(max-width:575.98px){
-        .material-grid .grid-input,.material-grid .form-select{min-width:96px!important;width:96px!important;max-width:96px!important}
-        .material-grid .select-cell,.material-grid .select-cell .form-select{min-width:112px!important;width:112px!important;max-width:112px!important}
+        .material-grid{font-size:.9rem!important}
+        .material-grid .grid-input,.material-grid .form-select{min-width:114px!important;width:114px!important;max-width:114px!important;height:42px!important;font-size:16px!important}
+        .material-grid .select-cell,.material-grid .select-cell .form-select{min-width:132px!important;width:132px!important;max-width:132px!important}
       }
     `;
     document.head.appendChild(style);
