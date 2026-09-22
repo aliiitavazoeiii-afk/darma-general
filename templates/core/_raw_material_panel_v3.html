@@ -36,7 +36,7 @@
       {% include 'core/_raw_fabric_table.html' with rows=fabric_warehouse mode='warehouse' panel_title='پارچه — انبار' panel_subtitle='هر طاق را با وزن و فی خودش ثبت کن.' section_total=fabric_warehouse_total transfer_sources=fabric_warehouse %}
     </div>
     <div class="raw-pane d-none" data-pane="fabric-tailor">
-      {% include 'core/_raw_fabric_table.html' with rows=fabric_tailor mode='tailor' panel_title='پارچه — نزد خیاط' panel_subtitle='ورود این بخش با انتقال از انبار است؛ اصلاح و حذف، موجودی انبار را هم معکوس اصلاح می‌کند.' section_total=fabric_tailor_total transfer_sources=fabric_warehouse %}
+      {% include 'core/_raw_fabric_tailor_grouped.html' with rows=fabric_tailor_groups panel_title='پارچه — نزد خیاط' panel_subtitle='هر رنگ/مدل یک ردیف ثابت دارد؛ جزئیات طاق‌های منبع جداگانه برای حسابرسی حفظ می‌شوند.' section_total=fabric_tailor_total transfer_sources=fabric_warehouse %}
     </div>
     <div class="raw-pane d-none" data-pane="fabric-depot">
       {% include 'core/_raw_fabric_table.html' with rows=fabric_depot mode='depot' panel_title='پارچه — دپو' panel_subtitle='پارچه‌های ذخیره‌ای که وارد گردش تولید روزانه نمی‌شوند.' section_total=fabric_depot_total %}
