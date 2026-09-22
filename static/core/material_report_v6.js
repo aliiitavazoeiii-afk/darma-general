@@ -15,6 +15,31 @@
   const fmt = (value) => String(Math.round(Number(value) || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, '٬');
   const wageForPieces = (pieces) => (Math.max(0, pieces) * DOZEN_RATE) / 12;
 
+  function installCompactCenteredGridStyle() {
+    if (document.getElementById('materialReportV84Style')) return;
+    const style = document.createElement('style');
+    style.id = 'materialReportV84Style';
+    style.textContent = `
+      .excel-scroll{overflow-x:auto!important;direction:rtl!important}
+      .material-grid{width:max-content!important;min-width:0!important;margin-right:0!important;margin-left:auto!important;table-layout:auto!important;direction:rtl!important}
+      .material-grid th,.material-grid td{padding:4px 5px!important;text-align:center!important;vertical-align:middle!important;white-space:nowrap}
+      .material-grid .sticky-col{min-width:108px!important;width:108px!important;text-align:center!important}
+      .material-grid .grid-input,.material-grid .form-select{min-width:88px!important;width:88px!important;max-width:88px!important;height:34px!important;padding:4px 6px!important;margin:0 auto!important;text-align:center!important}
+      .material-grid .form-select{text-align-last:center!important;padding-inline:4px 22px!important}
+      .material-grid .select-cell{min-width:112px!important;width:112px!important}
+      .material-grid .select-cell .form-select{min-width:104px!important;width:104px!important;max-width:104px!important}
+      .material-grid input,.material-grid select{direction:ltr!important;text-align:center!important}
+      .material-grid th{direction:rtl!important}
+      .output-grid .output-status{text-align:center!important}
+      .delivery-total-box{text-align:center!important}
+      @media(max-width:575.98px){
+        .material-grid .grid-input,.material-grid .form-select{min-width:96px!important;width:96px!important;max-width:96px!important}
+        .material-grid .select-cell,.material-grid .select-cell .form-select{min-width:112px!important;width:112px!important;max-width:112px!important}
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
   function field(form, name) {
     const item = form.elements.namedItem(name);
     if (!item) return null;
@@ -48,33 +73,39 @@
 
   function recalcModelCost(form, key, catalog) {
     const cut = Math.max(0, clean(read(form, 'in_' + key + '_cut')));
-    const wage = cut > 0 ? wageForPieces(cut) : 0;
-    write(form, 'in_' + key + '_wage', wage > 0 ? fmt(wage) : '');
+    const wageTotal = cut > 0 ? wageForPieces(cut) : 0;
+    write(form, 'in_' + key + '_wage', wageTotal > 0 ? fmt(wageTotal) : '');
 
-    const weight = Math.max(0, clean(read(form, 'in_' + key + '_weight')));
+    const fabricKg = Math.max(0, clean(read(form, 'in_' + key + '_weight')));
     const delivered16 = Math.max(0, clean(read(form, 'in_' + key + '_elastic16')));
     const delivered25 = Math.max(0, clean(read(form, 'in_' + key + '_elastic25')));
     const remain16Raw = read(form, 'in_' + key + '_remain16');
     const remain25Raw = read(form, 'in_' + key + '_remain25');
-    const used16 = Math.max(0, remain16Raw === '' ? delivered16 : delivered16 - Math.max(0, clean(remain16Raw)));
-    const used25 = Math.max(0, remain25Raw === '' ? delivered25 : delivered25 - Math.max(0, clean(remain25Raw)));
+    const used16Kg = Math.max(0, remain16Raw === '' ? delivered16 : delivered16 - Math.max(0, clean(remain16Raw)));
+    const used25Kg = Math.max(0, remain25Raw === '' ? delivered25 : delivered25 - Math.max(0, clean(remain25Raw)));
 
     const e16Key = read(form, 'in_' + key + '_elastic16_key') || key;
     const e25Key = read(form, 'in_' + key + '_elastic25_key') || key;
-    const fabricPrice = Number(catalog?.fabric?.[key] || 0);
-    const elastic16Price = Number(catalog?.elastic16?.[e16Key] || 0);
-    const elastic25Price = Number(catalog?.elastic25?.[e25Key] || 0);
+    const fabricPricePerKg = Number(catalog?.fabric?.[key] || 0);
+    const elastic16PricePerKg = Number(catalog?.elastic16?.[e16Key] || 0);
+    const elastic25PricePerKg = Number(catalog?.elastic25?.[e25Key] || 0);
 
-    const totalCost =
-      (weight * fabricPrice) +
-      (used16 * elastic16Price) +
-      (used25 * elastic25Price) +
-      wage;
+    const fabricBatchCost = fabricKg * fabricPricePerKg;
+    const elasticBatchCost = (used16Kg * elastic16PricePerKg) + (used25Kg * elastic25PricePerKg);
 
-    const unitCost = cut > 0 ? totalCost / cut : 0;
+    // V84 mirrors the server formula explicitly:
+    // fabric/cut + tailor wage/cut + used elastic/cut.
+    const fabricPerPiece = cut > 0 ? fabricBatchCost / cut : 0;
+    const laborPerPiece = cut > 0 ? wageTotal / cut : 0;
+    const elasticPerPiece = cut > 0 ? elasticBatchCost / cut : 0;
+    const unitCost = fabricPerPiece + laborPerPiece + elasticPerPiece;
+
     write(form, 'in_' + key + '_cost', unitCost > 0 ? fmt(unitCost) : '');
 
-    return { cut, totalCost };
+    return {
+      cut,
+      totalCost: fabricBatchCost + wageTotal + elasticBatchCost,
+    };
   }
 
   function recalcOutputRow(form, row) {
@@ -157,7 +188,6 @@
       form.addEventListener('change', (event) => {
         if (event.target.matches('.material-source-select')) recalcForm(form);
       });
-
     });
   }
 
@@ -175,6 +205,7 @@
   }
 
   document.addEventListener('DOMContentLoaded', () => {
+    installCompactCenteredGridStyle();
     bindForms();
     bindSearch();
   });
