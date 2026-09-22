@@ -156,11 +156,41 @@ def transfer_fabric_to_tailor(source_id, quantity):
         raise ValueError("وزن انتقال از موجودی انبار بیشتر است.")
     source.quantity = q(source.quantity) - quantity
     source.save(update_fields=["quantity", "updated_at"])
-    return RawMaterialStock.objects.create(
-        kind=FABRIC, location=TAILOR, material_key=source.material_key, variant="",
-        title=source.title, quantity=quantity, unit_price=source.unit_price, unit=source.unit,
-        note=f"انتقال از انبار / ردیف {source.id}",
+
+    # Keep one underlying tailor row per source lot instead of creating a new
+    # duplicate every time the same warehouse lot is transferred again. The UI
+    # groups all source lots by material_key, so the user sees one stable color.
+    source_note = f"انتقال از انبار / ردیف {source.id}"
+    target = (
+        RawMaterialStock.objects.select_for_update()
+        .filter(
+            active=True,
+            kind=FABRIC,
+            location=TAILOR,
+            material_key=source.material_key,
+            variant="",
+            title=source.title,
+            unit_price=source.unit_price,
+            note=source_note,
+        )
+        .order_by("id")
+        .first()
     )
+    if target is None:
+        target = RawMaterialStock.objects.create(
+            kind=FABRIC,
+            location=TAILOR,
+            material_key=source.material_key,
+            variant="",
+            title=source.title,
+            quantity=Decimal("0"),
+            unit_price=source.unit_price,
+            unit=source.unit,
+            note=source_note,
+        )
+    target.quantity = q(target.quantity) + quantity
+    target.save(update_fields=["quantity", "updated_at"])
+    return target
 
 
 @transaction.atomic
