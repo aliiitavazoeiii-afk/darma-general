@@ -15,28 +15,20 @@
   const fmt = (value) => String(Math.round(Number(value) || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, '٬');
   const wageForPieces = (pieces) => (Math.max(0, pieces) * DOZEN_RATE) / 12;
 
-  function installCompactCenteredGridStyle() {
-    if (document.getElementById('materialReportV84Style')) return;
+  function installCenteredGridStyle() {
+    if (document.getElementById('materialReportV86Style')) return;
     const style = document.createElement('style');
-    style.id = 'materialReportV84Style';
+    style.id = 'materialReportV86Style';
     style.textContent = `
-      .excel-scroll{overflow-x:auto!important;direction:rtl!important}
-      .material-grid{width:max-content!important;min-width:0!important;margin-right:0!important;margin-left:auto!important;table-layout:auto!important;direction:rtl!important;font-size:.84rem!important}
-      .material-grid th,.material-grid td{padding:6px 8px!important;text-align:center!important;vertical-align:middle!important;white-space:nowrap}
-      .material-grid .sticky-col{min-width:126px!important;width:126px!important;text-align:center!important}
-      .material-grid .grid-input,.material-grid .form-select{min-width:108px!important;width:108px!important;max-width:108px!important;height:39px!important;padding:6px 8px!important;margin:0 auto!important;text-align:center!important;font-size:.84rem!important}
-      .material-grid .form-select{text-align-last:center!important;padding-inline:6px 24px!important}
-      .material-grid .select-cell{min-width:136px!important;width:136px!important}
-      .material-grid .select-cell .form-select{min-width:126px!important;width:126px!important;max-width:126px!important}
+      .excel-scroll{direction:rtl!important}
+      .material-grid th,.material-grid td{text-align:center!important;vertical-align:middle!important}
+      .material-grid .sticky-col{text-align:center!important}
+      .material-grid .grid-input,.material-grid .form-select{margin-left:auto!important;margin-right:auto!important;text-align:center!important}
+      .material-grid .form-select{text-align-last:center!important}
       .material-grid input,.material-grid select{direction:ltr!important;text-align:center!important}
-      .material-grid th{direction:rtl!important}
+      .material-grid th{direction:rtl!important;text-align:center!important}
       .output-grid .output-status{text-align:center!important}
       .delivery-total-box{text-align:center!important}
-      @media(max-width:575.98px){
-        .material-grid{font-size:.9rem!important}
-        .material-grid .grid-input,.material-grid .form-select{min-width:114px!important;width:114px!important;max-width:114px!important;height:42px!important;font-size:16px!important}
-        .material-grid .select-cell,.material-grid .select-cell .form-select{min-width:132px!important;width:132px!important;max-width:132px!important}
-      }
     `;
     document.head.appendChild(style);
   }
@@ -94,7 +86,7 @@
     const fabricBatchCost = fabricKg * fabricPricePerKg;
     const elasticBatchCost = (used16Kg * elastic16PricePerKg) + (used25Kg * elastic25PricePerKg);
 
-    // V84 mirrors the server formula explicitly:
+    // V84 formula preserved:
     // fabric/cut + tailor wage/cut + used elastic/cut.
     const fabricPerPiece = cut > 0 ? fabricBatchCost / cut : 0;
     const laborPerPiece = cut > 0 ? wageTotal / cut : 0;
@@ -206,7 +198,7 @@
   }
 
   document.addEventListener('DOMContentLoaded', () => {
-    installCompactCenteredGridStyle();
+    installCenteredGridStyle();
     bindForms();
     bindSearch();
   });
