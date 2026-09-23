@@ -9,9 +9,8 @@ from django.db.models import Sum
 from django.utils import timezone
 
 from .dia_gallery_v45 import dia_gallery_receivable_total
-from .finance_excel_v9 import digikala_base_receivable, digikala_ledger_total
 from .inventory_valuation_v17 import finished_inventory_value_v17
-from .models import CapitalSnapshot, ExcelManualRow, ExcelManualSetting, RawMaterialStock, StockBalance
+from .models import Account, AccountEntry, CapitalSnapshot, ExcelManualRow, ExcelManualSetting, RawMaterialStock, StockBalance
 from .report_v5 import _raw_material_context
 from .self_spend_v62 import is_self_tracking_row
 
@@ -64,8 +63,12 @@ def capture_current_capital_payload():
     raw = _raw_material_context()
     materials = int(raw["materials_total"])
     inventory = finished + materials
-    digi_base = int(digikala_base_receivable())
-    digi_ledger = int(digikala_ledger_total())
+    base_row = ExcelManualSetting.objects.filter(key="digikala_receivable").first()
+    digi_base = int(base_row.value or 0) if base_row else 0
+    digi_account = Account.objects.filter(key=Account.DIGIKALA).first()
+    digi_ledger = int(AccountEntry.objects.filter(
+        account=digi_account, entry_type__in=["sale", "receipt"]
+    ).aggregate(v=Sum("delta"))["v"] or 0) if digi_account else 0
     digi = digi_base + digi_ledger
     debt_obj = ExcelManualSetting.objects.filter(key="takvin_debt").first()
     debt = int(debt_obj.value or 0) if debt_obj else 0
