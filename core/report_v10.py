@@ -5,6 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_POST
 
+from .capital_history_v87 import capital_as_of
 from .dateutils import format_jalali
 from .dia_gallery_v45 import dia_gallery_period_metrics, dia_gallery_receivable_total
 from .excel_views import DISPLAY_SIZES, _add_metrics, _empty_metrics, _finish_metrics, _int, _period_range
@@ -113,7 +114,10 @@ def report(request):
     finished_inventory_total = finished_inventory_value_v17()
     raw = _raw_material_context()
     inventory_total = finished_inventory_total + raw["materials_total"]
-    capital_total = accounts_total + inventory_total + digikala_receivable - takvin_debt + assets_total
+    current_capital_total = accounts_total + inventory_total + digikala_receivable - takvin_debt + assets_total
+    historical_capital = capital_as_of(end)
+    capital_total = int(historical_capital["capital_total"])
+
 
     context = {
         "period": period,
@@ -132,6 +136,11 @@ def report(request):
         "finished_inventory_total": finished_inventory_total,
         "inventory_total": inventory_total,
         "capital_total": capital_total,
+        "current_capital_total": current_capital_total,
+        "capital_is_historical": bool(historical_capital.get("is_historical")),
+        "capital_history_source": historical_capital.get("source"),
+        "capital_history_warnings": historical_capital.get("warnings") or [],
+        "capital_post_period_delta": int(historical_capital.get("post_period_delta") or 0),
         "takvin_debt": takvin_debt,
         "digikala_receivable": digikala_receivable,
         "digikala_base_receivable": digikala_base,
