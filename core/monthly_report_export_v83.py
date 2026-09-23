@@ -12,6 +12,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
 from django.utils import timezone
 
+from .capital_history_v87 import capital_as_of
 from .dateutils import format_jalali
 from .dia_gallery_v45 import dia_gallery_period_metrics, dia_gallery_receivable_total
 from .excel_views import DISPLAY_SIZES, _period_range
@@ -181,17 +182,19 @@ def _snapshot_sheets(start, end, data, exported_at):
     )
     debt_row = ExcelManualSetting.objects.filter(key="takvin_debt").first()
     takvin_debt = int(debt_row.value or 0) if debt_row else 0
-    capital_total = (
+    current_capital_total = (
         accounts_total + finished_total + materials_total
         + digikala_receivable - takvin_debt + assets_total
     )
+    historical_capital = capital_as_of(end)
+    period_capital_total = int(historical_capital["capital_total"])
 
     label = f"{_label_date(start)} تا {_label_date(end)}"
     asof = timezone.localtime(exported_at).strftime("%Y-%m-%d %H:%M %Z")
     summary = [
         ["دوره گزارش", label],
         ["زمان تهیه فایل", asof],
-        ["توضیح مهم", "فروش و هزینه‌ها مربوط به بازه انتخابی‌اند؛ موجودی، حساب‌ها و سرمایه، مقدار فعلی در لحظه خروجی هستند."],
+        ["توضیح مهم", "فروش و هزینه‌ها مربوط به بازه انتخابی‌اند؛ سرمایه کل برای پایان بازه محاسبه می‌شود. ریز حساب‌ها و موجودی‌های فاقد تاریخچه کامل، همچنان مانده فعلی‌اند."],
         ["جمع فروش ماه", total["gross"]],
         ["جمع کارمزد ماه", total["digikala_fee"]],
         ["بهای کالای فروش‌رفته ماه", total["cogs"]],
@@ -208,9 +211,13 @@ def _snapshot_sheets(start, end, data, exported_at):
         ["طلب دیجی‌کالا - فعلی", digikala_receivable],
         ["بدهی تکوین - فعلی", takvin_debt],
         ["کالای سرمایه‌ای - فعلی", assets_total],
-        ["سرمایه کل - فعلی", capital_total],
+        ["سرمایه کل - پایان بازه", period_capital_total],
+        ["سرمایه کل - فعلی", current_capital_total],
         ["طلب Dia Gallery در جمع حساب‌ها لحاظ شده", dia_receivable],
     ]
+    if historical_capital.get("warnings"):
+        summary.append(["هشدار بازسازی سرمایه", " | ".join(historical_capital["warnings"])])
+
 
     account_sheet = []
     section_names = {
