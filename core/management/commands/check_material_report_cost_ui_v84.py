@@ -12,7 +12,7 @@ from core import material_report_v23
 
 
 class Command(BaseCommand):
-    help = "Read-only regression check for V84 material-report costing and compact centered UI."
+    help = "Read-only regression check for V84 material-report costing; V86 owns current sizing/UI."
 
     def handle(self, *args, **options):
         # Template must still be the established V23/V77 material-report surface.
@@ -61,16 +61,14 @@ class Command(BaseCommand):
         js_path = Path(settings.BASE_DIR) / "static" / "core" / "material_report_v6.js"
         js = js_path.read_text(encoding="utf-8")
         for marker in (
-            "materialReportV84Style",
             "fabricPerPiece",
             "laborPerPiece",
             "elasticPerPiece",
             "direction:rtl",
             "text-align:center",
-            "width:max-content",
         ):
             if marker not in js:
-                raise RuntimeError(f"V84 browser/UI marker missing: {marker}")
+                raise RuntimeError(f"V84 cost/browser marker missing: {marker}")
 
         self.stdout.write("MATERIAL REPORT ROUTE = V23")
         self.stdout.write("FORMULA = fabric/cut + tailor-wage/cut + used-elastic/cut")
@@ -78,8 +76,8 @@ class Command(BaseCommand):
         self.stdout.write("ELASTIC PRICE SOURCE = tailor")
         self.stdout.write("ELASTIC USED = delivered - remain")
         self.stdout.write("GRID ALIGNMENT = centered")
-        self.stdout.write("GRID WIDTH = compact / content-sized")
         self.stdout.write("MODEL COLUMN GROWTH = RTL / new models extend left")
         self.stdout.write("TEMPLATE COMPILE = OK")
         self.stdout.write("CHECK MODE = READ ONLY")
-        self.stdout.write(self.style.SUCCESS("MATERIAL REPORT COST + UI V84 CHECK OK"))
+        self.stdout.write("CURRENT SIZE/UI CONTRACT = checked by V86 command")
+        self.stdout.write(self.style.SUCCESS("MATERIAL REPORT COST V84 CHECK OK"))
