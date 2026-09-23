@@ -1,7 +1,8 @@
 """Read-only Excel export of the selected Jalali report period.
 
-Period transactions are date-filtered. Balance-sheet and inventory figures are
-the live balance at export time, NOT reconstructed historical month-end values.
+Period transactions are date-filtered. V87 resolves the headline capital at the
+selected end date from dated ledgers. Detailed account/inventory sheets remain
+explicitly current where old versions did not preserve complete historical values.
 """
 from collections import defaultdict
 from datetime import datetime
