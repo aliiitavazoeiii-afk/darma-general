@@ -10,8 +10,7 @@ overwritten without a ledger.  Such cases are returned as warnings so the UI
 can say the value is ledger-reconstructed rather than pretending it is a
 stored historical snapshot.
 """
-from datetime import date
-from decimal import Decimal, ROUND_HALF_UP
+from datetime import date, timedelta
 
 from django.db.models import Sum
 
@@ -26,7 +25,6 @@ from .models import (
     BusinessPayment,
     ExcelManualRow,
     ExcelManualSetting,
-    Expense,
     InventoryAdjustment,
     InventoryModelCost,
     MaterialReportBlock,
@@ -37,10 +35,6 @@ from .novani_cost_v59 import novani_cost_for
 from .report_v5 import _raw_material_context
 from .self_spend_v62 import SELF_PAYEE, capital_accounts_queryset, is_self_tracking_row
 from .takvin_pricing_v17 import takvin_cost_for
-
-
-def _round_money(value):
-    return int(Decimal(value or 0).quantize(Decimal("1"), rounding=ROUND_HALF_UP))
 
 
 def current_capital_breakdown():
@@ -102,7 +96,7 @@ def _dia_profit_after(as_of):
     today = date.today()
     if as_of >= today:
         return 0
-    return int(dia_gallery_period_metrics(as_of.fromordinal(as_of.toordinal() + 1), today)["total"]["profit"] or 0)
+    return int(dia_gallery_period_metrics(as_of + timedelta(days=1), today)["total"]["profit"] or 0)
 
 
 def _inventory_adjustment_unit_cost(row):
@@ -157,10 +151,8 @@ def _self_spend_after(as_of):
     return -int(value)
 
 
-def _legacy_expense_after(as_of):
-    value = Expense.objects.filter(date__gt=as_of).aggregate(v=Sum("amount"))["v"] or 0
-    return -int(value)
-
+# Legacy Expense rows debit Account.MELAT, while the active report capital
+# formula reads ExcelManualRow accounts. They must not be subtracted here.
 
 def _takvin_purchase_capital_after(as_of):
     """Active Excel-style Takvin purchase: stock asset rises, supplier debt rises."""
@@ -241,7 +233,6 @@ def capital_as_of(as_of):
         "sales_profit": _regular_sales_profit_after(as_of),
         "dia_profit": _dia_profit_after(as_of),
         "self_spend": _self_spend_after(as_of),
-        "legacy_expense": _legacy_expense_after(as_of),
         "material_purchase_difference": _material_purchase_capital_after(as_of),
         "inventory_adjustment": _inventory_adjustment_capital_after(as_of),
         "takvin_purchase_difference": _takvin_purchase_capital_after(as_of),
