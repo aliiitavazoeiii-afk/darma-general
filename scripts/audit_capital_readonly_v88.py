@@ -9,8 +9,7 @@ PostgreSQL transaction is explicitly READ ONLY.
 import json
 import os
 import sys
-from collections import Counter, defaultdict
-from datetime import date, datetime
+from collections import defaultdict
 from decimal import Decimal
 from django.db import connection, transaction
 from django.db.models import Sum
@@ -31,7 +30,7 @@ from core.models import (
     Account, AccountEntry, AppSetting, BusinessPayment, DiaGallerySale,
     DigikalaSettlement, ExcelManualRow, ExcelManualSetting,
     InventoryAdjustment, InventoryModelCost, InventoryMovement,
-    MaterialReportBlock, MoneyMovement, ProductSize, RawMaterialStock,
+    MaterialReportBlock, MoneyMovement, RawMaterialStock,
     SaleLine, SaleSnapshot, StockBalance, StockTransfer, TakvinPurchase,
     TailorBalanceEntry,
 )
@@ -128,7 +127,6 @@ def build_report(as_of):
     stock_rows = []
     stock_total = 0
     stock_brand_totals = defaultdict(lambda: {"qty": 0, "capital_value": 0})
-    stock_cells = {}
     stock_balances = StockBalance.objects.select_related(
         "brand", "color", "size", "location"
     ).order_by("brand__name", "color__name", "size__name", "location__key", "id")
@@ -150,8 +148,6 @@ def build_report(as_of):
         if included:
             stock_brand_totals[brand]["qty"] += i(row.qty)
         stock_brand_totals[brand]["capital_value"] += value
-        key = (row.brand_id, row.color_id, row.size_id, row.location_id)
-        stock_cells[key] = i(row.qty)
         stock_rows.append({
             "id": row.id, "brand": brand, "color": row.color.name,
             "size": size, "location": row.location.key, "qty": i(row.qty),
@@ -165,11 +161,8 @@ def build_report(as_of):
         })
 
     movement_rows = []
-    movement_net = defaultdict(int)
     movement_types = defaultdict(lambda: {"rows": 0, "net_qty": 0})
     for r in InventoryMovement.objects.select_related("brand", "color", "size", "location").all().order_by("id"):
-        cell = (r.brand_id, r.color_id, r.size_id, r.location_id)
-        movement_net[cell] += i(r.delta)
         movement_types[r.movement_type]["rows"] += 1
         movement_types[r.movement_type]["net_qty"] += i(r.delta)
         movement_rows.append({
@@ -179,13 +172,6 @@ def build_report(as_of):
             "delta": i(r.delta), "reference": r.reference,
         })
     movement_opening = []
-    for row in stock_rows:
-        # Name-based mapping is unique per canonical brand/color/size/location.
-        matching = next(
-            (k for k in stock_cells if k[0] == next(
-                (m.brand_id for m in []), None)), None
-        ) if False else None
-        # Filled below using the already-fetched movement rows' dimensions.
     named_net = defaultdict(int)
     for r in movement_rows:
         named_net[(r["brand"], r["color"], r["size"], r["location"])] += r["delta"]
@@ -558,20 +544,31 @@ def build_report(as_of):
     }
     # Historical V87 estimates may NOT include changes to manually overwritten
     # balances, materials production, valuation revisions or pre-deployment data.
-    try:
-        from core.capital_history_v87 import capital_as_of
-        previous = capital_as_of(as_of)
-        report["historical_v87_estimate"] = {
-            "capital_total": i(previous["capital_total"]),
-            "post_period_delta": i(previous.get("post_period_delta")),
-            "delta_parts": previous.get("delta_parts", {}),
-            "warnings": previous.get("warnings", []),
-            "warning": "V87 is a reconstruction estimate, not an independently verified end-of-day snapshot.",
-        }
-    except ImportError:
+    if "digikala" in account_by_key and "digikala_receivable" in manual_setting_map:
+        try:
+            from core.capital_history_v87 import capital_as_of
+            previous = capital_as_of(as_of)
+            report["historical_v87_estimate"] = {
+                "capital_total": i(previous["capital_total"]),
+                "post_period_delta": i(previous.get("post_period_delta")),
+                "delta_parts": previous.get("delta_parts", {}),
+                "warnings": previous.get("warnings", []),
+                "warning": "V87 is an unverified estimate; a zero warning count does not prove historical accuracy.",
+            }
+        except ImportError:
+            report["historical_v87_estimate"] = {
+                "available": False,
+                "warning": "The running web image does not include the V87 historical resolver.",
+            }
+        except Exception as exc:
+            report["historical_v87_estimate"] = {
+                "available": False, "error": str(exc),
+                "warning": "Could not calculate the unverified V87 estimate.",
+            }
+    else:
         report["historical_v87_estimate"] = {
             "available": False,
-            "warning": "The running web image does not include the V87 historical resolver.",
+            "warning": "Missing Digikala account or receivable baseline; historical V87 would try to create records.",
         }
     return report
 
