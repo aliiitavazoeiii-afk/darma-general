@@ -339,3 +339,23 @@ class TailorBalanceEntry(models.Model):
 
     class Meta:
         ordering = ["-date", "-id"]
+
+
+class CapitalSnapshot(models.Model):
+    """Dated, non-posting observation of the unchanged capital equation."""
+    date = models.DateField(unique=True, db_index=True)
+    captured_at = models.DateTimeField()
+    source = models.CharField(
+        max_length=16, choices=[("live", "Live"), ("archive", "Verified backup")],
+        default="live",
+    )
+    source_reference = models.CharField(max_length=255, blank=True)
+    data = models.JSONField(default=dict)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-date"]
+
+    def __str__(self):
+        return f"Capital snapshot {self.date} ({self.source})"
