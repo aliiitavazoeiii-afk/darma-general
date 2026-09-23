@@ -367,6 +367,48 @@ def build_report(as_of):
                 "expected_delta": -i(row.amount), "recorded_delta": net,
             })
 
+    # Independently reconstruct each receivable from current active sales,
+    # current settlement rows, and the explicitly entered opening/base amount.
+    digikala_settled = sum(
+        row["amount"] for row in settlements if row["source"] == "digikala"
+    )
+    dia_settled = sum(
+        row["amount"] for row in settlements if row["source"] == "dia_gallery"
+    )
+    expected_digikala_total = (
+        digikala_base + sale_expected_receivable - digikala_settled
+    )
+    dia_opening = (
+        i(account_by_key["dia_gallery"].opening_balance)
+        if "dia_gallery" in account_by_key else 0
+    )
+    expected_dia_total = dia_opening + dia_expected_receivable - dia_settled
+    if digikala_total != expected_digikala_total:
+        findings.append({
+            "kind": "digikala_total_receivable_reconciliation",
+            "actual": digikala_total,
+            "expected_from_sales_and_settlements": expected_digikala_total,
+            "difference": digikala_total - expected_digikala_total,
+        })
+    if dia_total != expected_dia_total:
+        findings.append({
+            "kind": "dia_total_receivable_reconciliation",
+            "actual": dia_total,
+            "expected_from_sales_and_settlements": expected_dia_total,
+            "difference": dia_total - expected_dia_total,
+        })
+    for row in account_rows:
+        if not row["included_in_capital"] or row["section"] != "accounts":
+            continue
+        normalized = (row["title"] or "").replace(" ", "").lower()
+        if "دیجی" in normalized or "digikala" in normalized or "dia gallery" in normalized:
+            findings.append({
+                "kind": "possible_duplicate_receivable_in_manual_accounts",
+                "row_id": row["id"], "title": row["title"],
+                "amount": row["amount"],
+                "warning": "This balance may overlap the separately calculated receivable.",
+            })
+
     purchases = []
     purchase_totals = defaultdict(lambda: {"rows": 0, "invoice_value": 0, "cash_paid": 0})
     for row in BusinessPayment.objects.all().order_by("date", "id"):
@@ -502,6 +544,24 @@ def build_report(as_of):
                 "expected_gross_less_fee_receivable_from_active_sales": sale_expected_receivable,
             },
             "dia_active_sale_expected_receivable": dia_expected_receivable,
+            "receivable_reconciliation": {
+                "digikala": {
+                    "opening_base": digikala_base,
+                    "active_sales_net": sale_expected_receivable,
+                    "recorded_settlements": digikala_settled,
+                    "expected": expected_digikala_total,
+                    "actual": digikala_total,
+                    "difference": digikala_total - expected_digikala_total,
+                },
+                "dia_gallery": {
+                    "account_opening": dia_opening,
+                    "active_sales_gross": dia_expected_receivable,
+                    "recorded_settlements": dia_settled,
+                    "expected": expected_dia_total,
+                    "actual": dia_total,
+                    "difference": dia_total - expected_dia_total,
+                },
+            },
             "account_entry_totals": dict(ledger_totals),
             "account_entry_by_type": [
                 {"account": k[0], "type": k[1], "delta": v}
