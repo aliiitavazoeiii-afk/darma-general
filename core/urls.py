@@ -27,6 +27,7 @@ from . import (
     material_report_v23,
     monthly_report_export_v83,
     pricing_v60,
+    pricing_monitor_v88,
     report_v10,
     returns_v37,
     sale_brand_v19,
@@ -68,6 +69,8 @@ urlpatterns = [
     path("returns/<str:group>/delete/", returns_v37.return_delete, name="return_delete"),
 
     path("report/", report_v10.report, name="report"),
+    path("pricing-monitor/", pricing_monitor_v88.pricing_monitor, name="pricing_monitor"),
+    path("pricing-monitor/export/xlsx/", pricing_monitor_v88.pricing_monitor_xlsx, name="pricing_monitor_xlsx"),
     path("report/export/xlsx/", monthly_report_export_v83.export_monthly_report_xlsx, name="report_monthly_xlsx"),
     path("report/manual/", report_v10.manual_report_action, name="manual_report_action"),
     path("report/financial-summary/", business_tools_v14.financial_summary, name="financial_summary"),
