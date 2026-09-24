@@ -111,7 +111,7 @@ def _sale_lines(start, end):
         )
         .select_related(
             "day", "product_size__product__brand",
-            "product_size__product", "product_size__size",
+            "product_size__product", "product_size__size", "snapshot",
         )
         .order_by("day__date", "id")
     )
@@ -289,35 +289,68 @@ def _window_for_dates(dates):
     }
 
 
-def _latest_price_evaluations(as_of):
+def _latest_price_evaluations(as_of, *, history=None):
+    """Compute every latest ten-day evaluation from ONE bounded sale query.
+
+    The old implementation scanned two windows for every product/size, then did
+    it again for dashboard, HTML and XLSX rendering. That query fan-out can
+    exhaust a small production VPS. Only the exact needed dates are fetched.
+    """
     latest = {}
-    for row in _price_history():
+    for row in history if history is not None else _price_history():
         if row["effective_from"] <= as_of:
             latest[(row["code"], row["size"])] = row
 
-    rows = []
-    complete_through = min(as_of - timedelta(days=1), date.today() - timedelta(days=1))
-    current_cost = int(darma_cost_for(as_of) or 0)
+    complete_through = (
+        as_of if as_of < date.today()
+        else date.today() - timedelta(days=1)
+    )
+    windows = {}
+    wanted = set()
     for key, rule in latest.items():
-        start = rule["effective_from"]
-        if start > complete_through:
-            complete_days = 0
+        # V60 has date precision only: conservatively exclude the price-change
+        # date because the actual activation time may be unknown.
+        first_full = rule["effective_from"] + timedelta(days=1)
+        complete_days = min(
+            10, max(0, (complete_through - first_full).days + 1)
+        )
+        if complete_days:
+            last_full = first_full + timedelta(days=complete_days - 1)
+            pairs = _same_jalali_dates(first_full, last_full)
+            current_dates = [pair[0] for pair in pairs]
+            prior_dates = [pair[1] for pair in pairs]
+            wanted.update(current_dates)
+            wanted.update(prior_dates)
         else:
-            complete_days = min(10, (complete_through - start).days + 1)
-        if complete_days <= 0:
-            rows.append({
-                **rule, "complete_days": 0, "status": "شروع نشده/روز ناقص",
-                "current": _finish(_zero()), "previous": _finish(_zero()),
-                "adjusted_previous_profit": 0,
-                "packs_pct": None, "profit_pct": None, "adjusted_profit_pct": None,
-            })
-            continue
-        end = start + timedelta(days=complete_days - 1)
-        pairs = _same_jalali_dates(start, end)
-        current_data = _window_for_dates([x[0] for x in pairs])
-        previous_data = _window_for_dates([x[1] for x in pairs])
-        cur = current_data["products"].get(key, _finish(_zero()))
-        prev = previous_data["products"].get(key, _finish(_zero()))
+            current_dates, prior_dates = [], []
+        windows[key] = (rule, complete_days, current_dates, prior_dates)
+
+    by_date_product = defaultdict(_zero)
+    all_darma_by_date = defaultdict(_zero)
+    if wanted:
+        qs = _sale_lines(min(wanted), max(wanted)).filter(day__date__in=wanted)
+        for line in qs.iterator(chunk_size=250):
+            metrics = sale_line_metrics(line)
+            key = (
+                _canonical_code(line.product_size.product.code),
+                line.product_size.size.name,
+            )
+            _add(by_date_product[(line.day.date, key)], metrics)
+            _add(all_darma_by_date[line.day.date], metrics)
+
+    current_cost = int(darma_cost_for(as_of) or 0)
+    rows = []
+    for key, (rule, complete_days, current_dates, prior_dates) in windows.items():
+        cur_raw, prev_raw, all_cur, all_prev = (
+            _zero(), _zero(), _zero(), _zero()
+        )
+        for day in current_dates:
+            _add(cur_raw, by_date_product.get((day, key), _zero()))
+            _add(all_cur, all_darma_by_date.get(day, _zero()))
+        for day in prior_dates:
+            _add(prev_raw, by_date_product.get((day, key), _zero()))
+            _add(all_prev, all_darma_by_date.get(day, _zero()))
+        cur, prev = _finish(cur_raw), _finish(prev_raw)
         adjusted_prev_profit = (
             int(prev["gross"] or 0)
             - int(prev["fee"] or 0)
@@ -326,16 +359,27 @@ def _latest_price_evaluations(as_of):
         packs_pct = _pct_change(cur["packs"], prev["packs"])
         profit_pct = _pct_change(cur["profit"], prev["profit"])
         adjusted_profit_pct = _pct_change(cur["profit"], adjusted_prev_profit)
-        if complete_days < 10:
+        cur_share = (
+            cur["gross"] * 100 / all_cur["gross"] if all_cur["gross"] else 0
+        )
+        prev_share = (
+            prev["gross"] * 100 / all_prev["gross"] if all_prev["gross"] else 0
+        )
+        share_delta_pp = cur_share - prev_share
+
+        if complete_days < 10 or prev["packs"] == 0:
             status = "نیازمند داده بیشتر"
-        elif (packs_pct is not None and packs_pct >= 0) and (
-            adjusted_profit_pct is not None and adjusted_profit_pct > 0
+        elif (
+            packs_pct is not None and packs_pct >= 0
+            and adjusted_profit_pct is not None and adjusted_profit_pct > 0
+            and share_delta_pp >= -1
         ):
-            status = "نامزد بررسی افزایش"
-        elif (adjusted_profit_pct is not None and adjusted_profit_pct > 0):
-            status = "نیازمند پایش بیشتر"
-        elif (packs_pct is not None and packs_pct < 0) and (
-            adjusted_profit_pct is not None and adjusted_profit_pct < 0
+            # Conversion and order-level credit data are unavailable; this
+            # cannot be presented as a fully verified green recommendation.
+            status = "نشانه مثبت؛ نرخ تبدیل نامشخص"
+        elif (
+            packs_pct is not None and packs_pct < 0
+            and adjusted_profit_pct is not None and adjusted_profit_pct < 0
         ):
             status = "نیازمند بررسی افت عملکرد"
         else:
@@ -343,21 +387,27 @@ def _latest_price_evaluations(as_of):
         rows.append({
             **rule,
             "complete_days": complete_days,
-            "period_start_j": format_jalali(start),
-            "period_end_j": format_jalali(end),
+            "period_start_j": (
+                format_jalali(current_dates[0]) if current_dates else "—"
+            ),
+            "period_end_j": (
+                format_jalali(current_dates[-1]) if current_dates else "—"
+            ),
             "current": cur,
             "previous": prev,
             "adjusted_previous_profit": adjusted_prev_profit,
             "packs_pct": packs_pct,
             "profit_pct": profit_pct,
             "adjusted_profit_pct": adjusted_profit_pct,
+            "current_share": cur_share,
+            "previous_share": prev_share,
+            "share_delta_pp": share_delta_pp,
             "status": status,
         })
     rows.sort(key=lambda r: (-r["complete_days"], r["code"], r["size"]))
     return rows
 
-
-def pricing_monitor_data(as_of=None):
+def pricing_monitor_data(as_of=None, *, include_evaluations=True):
     as_of = as_of or date.today()
     previous_day = _previous_jalali_same_day(as_of)
     is_partial_day = as_of == date.today()
@@ -446,8 +496,11 @@ def pricing_monitor_data(as_of=None):
         "previous_mtd_start_j": format_jalali(previous_mtd_start),
         "previous_mtd_end_j": format_jalali(previous_mtd_end) if previous_mtd_end >= previous_mtd_start else "—",
         "top_keys": top_keys,
-        "price_history": _price_history(),
-        "evaluations": _latest_price_evaluations(as_of),
+        "price_history": (history := _price_history()) if include_evaluations else [],
+        "evaluations": (
+            _latest_price_evaluations(as_of, history=history)
+            if include_evaluations else []
+        ),
         "current_cost": current_cost,
         "credit_data_available": False,
         "credit_note": "نوع پرداخت نقدی/اعتباری در SaleLine/SaleSnapshot فعلی ذخیره نشده؛ بنابراین این ماژول مبلغ اعتباری یا کارمزد اضافه را حدس نمی‌زند.",
@@ -460,15 +513,23 @@ def pricing_monitor_data(as_of=None):
 
 
 def dashboard_pricing_context(as_of=None):
-    data = pricing_monitor_data(as_of)
+    """Lightweight dashboard card: avoid MTD, price-history and 10-day scans."""
+    as_of = as_of or date.today()
+    prev_date = _previous_jalali_same_day(as_of)
+    current_day = _aggregate(as_of, as_of)
+    previous_day = _aggregate(prev_date, prev_date)
+    top_keys = _top_previous_month_keys(as_of, 20)
     return {
         "pricing_monitor": {
-            "as_of_j": data["as_of_j"],
-            "previous_day_j": data["previous_day_j"],
-            "is_partial_day": data["is_partial_day"],
-            "rows": data["day_rows"][:8],
-            "current_total": data["day_current"]["total"],
-            "previous_total": data["day_previous"]["total"],
+            "as_of_j": format_jalali(as_of),
+            "previous_day_j": format_jalali(prev_date),
+            "is_partial_day": as_of == date.today(),
+            "rows": _combined_rows(
+                current_day, previous_day,
+                partial=as_of == date.today(), top_keys=top_keys,
+            )[:8],
+            "current_total": current_day["total"],
+            "previous_total": previous_day["total"],
         }
     }
 
