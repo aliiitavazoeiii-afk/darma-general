@@ -89,3 +89,8 @@ TAKVIN_PURCHASES=10
 This V65 deployment-boundary snapshot is continuity data, not a reset target.
 
 Standing rule: after every important change update context; after every confirmed successful deployment update the live checkpoint with actual server output.
+
+
+## V88 pricing monitor
+
+40. `40_PRICING_MONITOR_V88.md` — read-only Darma code+size comparison against the same Jalali day/month-to-date in the prior month, historical SaleSnapshot economics, V60 price history, adjusted-profit analysis, 10-day evaluation and filtered XLSX export. No accounting or inventory mutation.
