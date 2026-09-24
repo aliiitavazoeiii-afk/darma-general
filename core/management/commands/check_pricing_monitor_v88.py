@@ -5,8 +5,9 @@ from types import SimpleNamespace
 from xml.etree import ElementTree as ET
 from zipfile import ZipFile
 
+from django.conf import settings
 from django.core.management.base import BaseCommand
-from django.test import RequestFactory
+from django.test import RequestFactory, override_settings
 from django.template.loader import get_template
 from django.urls import resolve
 
@@ -52,7 +53,18 @@ class Command(BaseCommand):
 
         request = factory.get("/pricing-monitor/", {"date": historical_j})
         request.user = user
-        response = pricing_monitor(request)
+        # docker compose run --entrypoint python intentionally skips entrypoint.sh,
+        # which normally runs collectstatic before starting Gunicorn. Rendering
+        # the test page must not require a production staticfiles manifest.
+        # Override the test storage only; production still uses WhiteNoise's
+        # CompressedManifestStaticFilesStorage after its normal collectstatic.
+        with override_settings(STORAGES={
+            **settings.STORAGES,
+            "staticfiles": {
+                "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+            },
+        }):
+            response = pricing_monitor(request)
         if response.status_code != 200:
             raise RuntimeError(f"Pricing monitor HTTP status {response.status_code}")
 
@@ -88,7 +100,7 @@ class Command(BaseCommand):
         self.stdout.write(f"MTD COMPARISON ROWS = {len(data['mtd_rows'])}")
         self.stdout.write("PACK6 / 06 CANONICAL GROUP = OK")
         self.stdout.write("HISTORICAL DATE FILTER = OK")
-        self.stdout.write("TEMPLATES / ROUTES = OK")
+        self.stdout.write("TEMPLATES / ROUTES / RENDER (TEST STATIC STORAGE) = OK")
         self.stdout.write("XLSX ZIP / SHEETS = OK")
         self.stdout.write("NO ROW-COUNT WRITE = OK")
         self.stdout.write(self.style.SUCCESS("SUCCESS: PRICING MONITOR V88 CHECK PASSED"))
