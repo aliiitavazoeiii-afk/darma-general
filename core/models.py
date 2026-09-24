@@ -339,3 +339,60 @@ class TailorBalanceEntry(models.Model):
 
     class Meta:
         ordering = ["-date", "-id"]
+
+
+# V88: Analytics-only price monitoring. These tables never change SaleLine,
+# ProductSize, SaleSnapshot, receivables, inventory, or existing price rules.
+class PriceMonitorEvent(models.Model):
+    PLANNED = "planned"
+    APPLIED = "applied"
+    STATUS_CHOICES = [(PLANNED, "برنامه‌ریزی‌شده"), (APPLIED, "اعمال‌شده")]
+    product_size = models.ForeignKey(
+        ProductSize, on_delete=models.PROTECT, related_name="price_monitor_events"
+    )
+    status = models.CharField(max_length=12, choices=STATUS_CHOICES, db_index=True)
+    old_price = models.PositiveBigIntegerField(default=0)
+    new_price = models.PositiveBigIntegerField()
+    planned_for = models.DateField(null=True, blank=True)
+    effective_date = models.DateField(null=True, blank=True, db_index=True)
+    effective_time = models.TimeField(null=True, blank=True)
+    reason = models.CharField(max_length=240, blank=True)
+    corrects = models.ForeignKey(
+        "self", null=True, blank=True, on_delete=models.PROTECT,
+        related_name="corrections"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+
+    def __str__(self):
+        return f"{self.product_size_id}: {self.old_price} -> {self.new_price} ({self.status})"
+
+
+class PriceMonitorPin(models.Model):
+    product_size = models.OneToOneField(
+        ProductSize, on_delete=models.CASCADE, related_name="price_monitor_pin"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
+class PriceMonitorPaymentSplit(models.Model):
+    """Optional manual evidence about payment method, NOT another sale or fee."""
+    UNKNOWN = "unknown"
+    INCLUDED = "included_in_report"
+    ADDITIONAL = "additional_documented"
+    FEE_BASIS = [
+        (UNKNOWN, "نامشخص"),
+        (INCLUDED, "در کارمزد گزارش اصلی منظور شده"),
+        (ADDITIONAL, "کارمزد اضافه با سند مستقل؛ صرفاً سناریوی تحلیلی"),
+    ]
+    sale_line = models.OneToOneField(
+        SaleLine, on_delete=models.CASCADE, related_name="price_monitor_split"
+    )
+    cash_packs = models.PositiveIntegerField(default=0)
+    credit_packs = models.PositiveIntegerField(default=0)
+    credit_extra_fee = models.PositiveBigIntegerField(null=True, blank=True)
+    fee_basis = models.CharField(max_length=32, choices=FEE_BASIS, default=UNKNOWN)
+    evidence_reference = models.CharField(max_length=120, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
