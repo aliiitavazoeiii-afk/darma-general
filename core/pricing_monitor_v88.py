@@ -13,7 +13,7 @@ from django.http import HttpResponse
 from django.shortcuts import render
 
 from .darma_cost_v55 import darma_cost_for
-from .dateutils import format_jalali
+from .dateutils import format_jalali, parse_jalali_date
 from .finance import sale_line_metrics
 from .models import AppSetting, ProductSize, SaleLine
 from .monthly_xlsx_v83 import Sheet, make_workbook
@@ -238,18 +238,19 @@ def _price_history():
             "effective_from": effective_from,
             "effective_j": format_jalali(effective_from),
             "price": price,
+            "legacy_price": int(ps.default_sale_price or 0),
             "updated_at": setting.updated_at,
         })
     rows.sort(key=lambda r: (r["effective_from"], r["setting_id"]))
     previous = {}
     for row in rows:
-        key = (row["code"], row["size"])
-        row["previous_price"] = previous.get(key)
+        ps_id = row["product_size_id"]
+        row["previous_price"] = previous.get(ps_id, row["legacy_price"] or None)
         row["change_pct"] = (
             _pct_change(row["price"], row["previous_price"])
             if row["previous_price"] else None
         )
-        previous[key] = row["price"]
+        previous[ps_id] = row["price"]
     return rows
 
 
@@ -359,7 +360,7 @@ def _latest_price_evaluations(as_of):
 def pricing_monitor_data(as_of=None):
     as_of = as_of or date.today()
     previous_day = _previous_jalali_same_day(as_of)
-    is_partial_day = as_of >= date.today()
+    is_partial_day = as_of == date.today()
 
     current_day = _aggregate(as_of, as_of)
     previous_same_day = _aggregate(previous_day, previous_day)
@@ -472,9 +473,24 @@ def dashboard_pricing_context(as_of=None):
     }
 
 
+def _requested_as_of(request):
+    raw = (request.GET.get("date") or "").strip()
+    if not raw:
+        return date.today(), ""
+    try:
+        value = parse_jalali_date(raw)
+    except ValueError:
+        return date.today(), "تاریخ نامعتبر بود؛ گزارش امروز نمایش داده شد."
+    if value > date.today():
+        return date.today(), "تاریخ آینده قابل گزارش نیست؛ گزارش امروز نمایش داده شد."
+    return value, ""
+
+
 @login_required
 def pricing_monitor(request):
-    data = pricing_monitor_data()
+    as_of, date_warning = _requested_as_of(request)
+    data = pricing_monitor_data(as_of)
+    data["date_warning"] = date_warning
     code_filter = (request.GET.get("code") or "").strip()
     size_filter = (request.GET.get("size") or "").strip()
     if code_filter:
@@ -487,6 +503,7 @@ def pricing_monitor(request):
         data["evaluations"] = [r for r in data["evaluations"] if r["size"] == size_filter]
     data["code_filter"] = code_filter
     data["size_filter"] = size_filter
+    data["date_filter"] = data["as_of_j"]
     data["filter_codes"] = sorted({k[0] for k in data["top_keys"]})
     data["filter_sizes"] = sorted({k[1] for k in data["top_keys"]})
     return render(request, "core/pricing_monitor_v88.html", data)
@@ -513,7 +530,8 @@ def _comparison_sheet_rows(rows):
 
 @login_required
 def pricing_monitor_xlsx(request):
-    data = pricing_monitor_data()
+    as_of, _ = _requested_as_of(request)
+    data = pricing_monitor_data(as_of)
     code_filter = (request.GET.get("code") or "").strip()
     size_filter = (request.GET.get("size") or "").strip()
     day_rows = data["day_rows"]
