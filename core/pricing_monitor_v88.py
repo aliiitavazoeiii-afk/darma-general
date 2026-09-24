@@ -391,6 +391,23 @@ def pricing_monitor_data(as_of=None):
         top_keys=top_keys,
     )
 
+    # Fair pricing analysis: preserve the historical previous-period profit, but
+    # also show what that same previous-period sales mix would have earned using
+    # today's Darma accounting cost. This isolates selling-price effect from COGS.
+    current_cost = int(darma_cost_for(as_of) or 0)
+    for row in mtd_rows:
+        prev = row["previous"]
+        adjusted_previous_profit = (
+            int(prev["gross"] or 0)
+            - int(prev["fee"] or 0)
+            - int(prev["shorts"] or 0) * current_cost
+        )
+        row["adjusted_previous_profit"] = adjusted_previous_profit
+        row["adjusted_profit_delta"] = {
+            "value": int(row["current"]["profit"] or 0) - adjusted_previous_profit,
+            "pct": _pct_change(row["current"]["profit"], adjusted_previous_profit),
+        }
+
     # cumulative complete-day chart
     labels, current_cum, previous_cum, current_profit_cum, previous_profit_cum = [], [], [], [], []
     if fair_end >= month_start:
@@ -430,7 +447,7 @@ def pricing_monitor_data(as_of=None):
         "top_keys": top_keys,
         "price_history": _price_history(),
         "evaluations": _latest_price_evaluations(as_of),
-        "current_cost": int(darma_cost_for(as_of) or 0),
+        "current_cost": current_cost,
         "credit_data_available": False,
         "credit_note": "نوع پرداخت نقدی/اعتباری در SaleLine/SaleSnapshot فعلی ذخیره نشده؛ بنابراین این ماژول مبلغ اعتباری یا کارمزد اضافه را حدس نمی‌زند.",
         "chart_labels": labels,
