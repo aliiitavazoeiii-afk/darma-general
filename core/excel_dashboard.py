@@ -10,6 +10,7 @@ from .dateutils import format_jalali
 from .dia_gallery_v45 import dia_gallery_period_metrics
 from .finance import sale_line_metrics
 from .models import InventoryMovement, MaterialReportBlock, SaleDay, SaleLine, StockBalance, StockLocation, TakvinPurchase
+from .pricing_monitor_v88 import dashboard_pricing_context
 
 EXCEL_TAKVIN_PREFIX = "[excel-web]"
 
@@ -135,18 +136,16 @@ def dashboard(request):
         note__startswith=EXCEL_TAKVIN_PREFIX,
     ).aggregate(v=Sum("total_cost"))["v"] or 0
 
-    return render(
-        request,
-        "core/dashboard_excel.html",
-        {
-            "today_metrics": today_metrics,
-            "month_metrics": month_metrics,
-            "today_j": format_jalali(today),
-            "material_blocks": MaterialReportBlock.objects.count(),
-            "chart_labels": chart_labels,
-            "chart_sales": chart_sales,
-            "chart_profit": chart_profit,
-            "alerts": alerts,
-            "purchase_month_total": purchase_month_total,
-        },
-    )
+    context = {
+        "today_metrics": today_metrics,
+        "month_metrics": month_metrics,
+        "today_j": format_jalali(today),
+        "material_blocks": MaterialReportBlock.objects.count(),
+        "chart_labels": chart_labels,
+        "chart_sales": chart_sales,
+        "chart_profit": chart_profit,
+        "alerts": alerts,
+        "purchase_month_total": purchase_month_total,
+    }
+    context.update(dashboard_pricing_context(today))
+    return render(request, "core/dashboard_excel.html", context)
