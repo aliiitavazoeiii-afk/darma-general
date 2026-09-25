@@ -47,7 +47,9 @@ def dashboard(request):
     )
     chart_days.sort(key=lambda day: day.date)
 
-    daily = defaultdict(lambda: {"gross": 0, "profit": 0})
+    # Keep the summary metrics on exactly the same population as the chart:
+    # latest N recorded-sale dates, with both ordinary sales and Dia Gallery.
+    daily = defaultdict(lambda: {"gross": 0, "profit": 0, "shorts": 0})
     if chart_days:
         chart_start = chart_days[0].date
         chart_end = chart_days[-1].date
@@ -58,18 +60,32 @@ def dashboard(request):
         ).select_related("day", "product_size__product", "product_size__size")
         for line in chart_lines:
             metrics = sale_line_metrics(line)
-            daily[line.day.date]["gross"] += metrics["gross"]
-            daily[line.day.date]["profit"] += metrics["profit"]
+            daily[line.day.date]["gross"] += int(metrics["gross"] or 0)
+            daily[line.day.date]["profit"] += int(metrics["profit"] or 0)
+            daily[line.day.date]["shorts"] += int(metrics["shorts"] or 0)
         for row in dia_gallery_period_metrics(chart_start, chart_end)["rows"]:
             daily[row["date"]]["gross"] += int(row["gross"] or 0)
             daily[row["date"]]["profit"] += int(row["profit"] or 0)
+            daily[row["date"]]["shorts"] += int(row["shorts"] or 0)
 
-    chart_labels, chart_sales, chart_profit = [], [], []
+    chart_labels, chart_sales, chart_profit, chart_shorts = [], [], [], []
     for day in chart_days:
         jlabel = format_jalali(day.date)
         chart_labels.append(jlabel[5:] if len(jlabel) >= 10 else jlabel)
         chart_sales.append(daily[day.date]["gross"])
         chart_profit.append(daily[day.date]["profit"])
+        chart_shorts.append(daily[day.date]["shorts"])
+
+    chart_day_count = len(chart_days)
+    chart_avg_sales = (
+        round(sum(chart_sales) / chart_day_count) if chart_day_count else 0
+    )
+    chart_avg_profit = (
+        round(sum(chart_profit) / chart_day_count) if chart_day_count else 0
+    )
+    chart_avg_shorts = (
+        round(sum(chart_shorts) / chart_day_count, 1) if chart_day_count else 0
+    )
 
     purchase_month_total = TakvinPurchase.objects.filter(
         date__gte=month_start,
@@ -85,7 +101,11 @@ def dashboard(request):
         "chart_labels": chart_labels,
         "chart_sales": chart_sales,
         "chart_profit": chart_profit,
-        "chart_day_count": len(chart_days),
+        "chart_shorts": chart_shorts,
+        "chart_day_count": chart_day_count,
+        "chart_avg_sales": chart_avg_sales,
+        "chart_avg_profit": chart_avg_profit,
+        "chart_avg_shorts": chart_avg_shorts,
         "purchase_month_total": purchase_month_total,
     }
     context.update(dashboard_pricing_context(today))
