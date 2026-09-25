@@ -14,7 +14,7 @@ from . import (
     daily_views,
     dia_gallery_v45,
     digikala_views_v40,
-    excel_dashboard,
+    excel_dashboard_v89,
     excel_sales,
     final_views,
     inventory_operations_v15,
@@ -26,8 +26,9 @@ from . import (
     material_report_v22,
     material_report_v23,
     monthly_report_export_v83,
+    pricing_export_v89,
     pricing_v60,
-    pricing_monitor_v88,
+    pricing_monitor_v89,
     report_v10,
     returns_v37,
     sale_brand_v19,
@@ -40,7 +41,7 @@ from . import (
 )
 
 urlpatterns = [
-    path("", excel_dashboard.dashboard, name="dashboard"),
+    path("", excel_dashboard_v89.dashboard, name="dashboard"),
     path("digikala/", digikala_views_v40.digikala_home, name="digikala"),
     path("digikala/summary/", digikala_views_v40.digikala_summary, name="digikala_summary"),
     path("digikala/orders/", digikala_views_v40.digikala_orders, name="digikala_orders"),
@@ -69,8 +70,8 @@ urlpatterns = [
     path("returns/<str:group>/delete/", returns_v37.return_delete, name="return_delete"),
 
     path("report/", report_v10.report, name="report"),
-    path("pricing-monitor/", pricing_monitor_v88.pricing_monitor, name="pricing_monitor"),
-    path("pricing-monitor/export/xlsx/", pricing_monitor_v88.pricing_monitor_xlsx, name="pricing_monitor_xlsx"),
+    path("pricing-monitor/", pricing_monitor_v89.pricing_monitor, name="pricing_monitor"),
+    path("pricing-monitor/export/xlsx/", pricing_export_v89.pricing_monitor_xlsx, name="pricing_monitor_xlsx"),
     path("report/export/xlsx/", monthly_report_export_v83.export_monthly_report_xlsx, name="report_monthly_xlsx"),
     path("report/manual/", report_v10.manual_report_action, name="manual_report_action"),
     path("report/financial-summary/", business_tools_v14.financial_summary, name="financial_summary"),
