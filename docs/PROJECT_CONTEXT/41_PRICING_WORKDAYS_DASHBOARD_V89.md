@@ -1,6 +1,7 @@
 # V89 — WORKING-DAY PRICING COMPARISON + DASHBOARD CLEANUP
 
 Prepared: 2026-09-25
+Updated: 2026-09-26
 
 ## Scope
 
@@ -76,6 +77,16 @@ As in V88, empty/holiday dates are omitted; the chart is a sequence of actual re
 
 The chart is full-width and horizontally scrollable on narrow screens so all 30 dates remain inspectable.
 
+Above this chart V89 now shows three averages derived from exactly the same displayed sale-day population:
+
+- average daily gross sales;
+- average daily profit;
+- average shorts sold per sale day.
+
+The denominator is `chart_day_count`, not a hard-coded 30. Therefore if only 23 recorded sale dates are available, all three averages are divided by 23. Holiday/empty dates never dilute these averages.
+
+The shorts average includes both ordinary `SaleLine` shorts and Dia Gallery quantities, matching the chart's existing inclusion of Dia Gallery gross/profit.
+
 ## Accounting / inventory safety
 
 V89 does not modify:
@@ -110,6 +121,7 @@ The regression is read-only and verifies:
 - V89 templates compile;
 - dashboard alert block is absent;
 - 30-sale-day marker is present;
+- the three 30-sale-day average KPI cards are present in source and rendered HTML;
 - pricing table alignment guard exists;
 - positive evaluation status text is current;
 - working-day detection and ordinal mapping;
