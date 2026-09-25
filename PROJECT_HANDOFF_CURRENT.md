@@ -8,8 +8,14 @@ Then read every file in:
 
 `docs/PROJECT_CONTEXT/`
 
-in numeric order.
+in numeric order, including the newest:
 
-`PROJECT_HANDOFF.md` is preserved as an older historical/forensic record and contains assumptions superseded by later V18–V37 work. Do not use it as the sole current source.
+`docs/PROJECT_CONTEXT/41_PRICING_WORKDAYS_DASHBOARD_V89.md`
 
-Latest confirmed live feature deployment at creation of this pointer: V37 standalone returns + calculator.
+`PROJECT_HANDOFF.md` is preserved as an older historical/forensic record and contains assumptions superseded by later work. Do not use it as the sole current source.
+
+Current GitHub development line at this pointer: `v89-working-day-pricing-dashboard`.
+
+Important: GitHub branch state is not proof of production deployment. V89 is production-confirmed only after the actual VPS deploy finishes with:
+
+`SUCCESS: PRICING WORKDAYS + DASHBOARD V89 DEPLOYED`
