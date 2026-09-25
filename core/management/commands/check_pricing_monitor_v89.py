@@ -47,6 +47,9 @@ class Command(BaseCommand):
             raise RuntimeError("Legacy dashboard alerts block still exists")
         if "تا ۳۰ روز" not in dashboard_source:
             raise RuntimeError("30-day dashboard marker missing")
+        for marker in ("میانگین فروش روزانه", "میانگین سود روزانه", "میانگین فروش تعدادی"):
+            if marker not in dashboard_source:
+                raise RuntimeError(f"Dashboard average KPI missing: {marker}")
         if "pm-table" not in pricing_source or "white-space:nowrap" not in pricing_source:
             raise RuntimeError("Pricing table alignment guard missing")
         if "نشانه مثبت؛ نرخ تبدیل نامشخص" not in pricing_source:
@@ -110,6 +113,10 @@ class Command(BaseCommand):
             response = excel_dashboard_v89.dashboard(request)
         if response.status_code != 200:
             raise RuntimeError(f"V89 dashboard render HTTP {response.status_code}")
+        dashboard_html = response.content.decode("utf-8")
+        for marker in ("میانگین فروش روزانه", "میانگین سود روزانه", "میانگین فروش تعدادی"):
+            if marker not in dashboard_html:
+                raise RuntimeError(f"Rendered dashboard average KPI missing: {marker}")
 
         request = factory.get("/pricing-monitor/export/xlsx/", {"date": format_jalali(probe)})
         request.user = user
@@ -137,6 +144,7 @@ class Command(BaseCommand):
         self.stdout.write("PACK6 / 06 CANONICAL GROUP = OK")
         self.stdout.write("DASHBOARD ALERTS REMOVED = OK")
         self.stdout.write("DASHBOARD 30 SALE DAYS = OK")
+        self.stdout.write("DASHBOARD 30-DAY AVERAGE KPIS = OK")
         self.stdout.write("DASHBOARD / PRICING RENDER = OK")
         self.stdout.write("PRICING TABLE ALIGNMENT GUARD = OK")
         self.stdout.write("WORKING-DAY XLSX = OK")
