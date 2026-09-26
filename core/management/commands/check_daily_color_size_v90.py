@@ -1,5 +1,6 @@
 """Read-only regression for V90 daily product/color/size sales matrix."""
 from types import SimpleNamespace
+from unittest.mock import patch
 
 from django.conf import settings
 from django.core.management.base import BaseCommand
@@ -59,7 +60,10 @@ class Command(BaseCommand):
                 **settings.STORAGES,
                 "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
             }
-            with override_settings(STORAGES=static_override):
+            with override_settings(STORAGES=static_override), patch(
+                "core.daily_report_v8.notify_after_daily_report",
+                return_value=None,
+            ):
                 response = daily_report(request, latest_day.id)
             if response.status_code != 200:
                 raise RuntimeError(f"V90 daily report render HTTP {response.status_code}")
@@ -74,5 +78,6 @@ class Command(BaseCommand):
         self.stdout.write("PRODUCT + COLOR + SIZE AGGREGATION = OK")
         self.stdout.write("REPLACEMENT COLOR MARKER = OK")
         self.stdout.write("DAILY REPORT TEMPLATE / RENDER = OK")
+        self.stdout.write("TELEGRAM SIDE EFFECT SUPPRESSED = OK")
         self.stdout.write("NO SALE ROW WRITE = OK")
         self.stdout.write(self.style.SUCCESS("SUCCESS: DAILY COLOR-SIZE MATRIX V90 CHECK PASSED"))
