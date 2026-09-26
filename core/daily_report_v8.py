@@ -18,14 +18,6 @@ FILTER_SIZES = {
 MATRIX_SIZE_ORDER = ("M", "L", "XL", "XXL", "3XL", "4XL")
 
 
-def _canonical_daily_code(code):
-    raw = str(code or "").strip()
-    compact = raw.replace("-", "").replace("_", "").replace(" ", "").lower()
-    if compact in {"06", "6", "pack6", "pack06"}:
-        return "06"
-    return raw
-
-
 def _line_color_breakdown(line):
     """Return the physical colors represented by this sale line.
 
@@ -103,7 +95,7 @@ def _build_filter_brands(detail_rows):
 
 
 def _build_color_size_matrix(detail_rows):
-    """Build a read-only physical-short matrix: product/color rows × size columns."""
+    """Build one daily matrix: color rows × size columns, across all sale models."""
     present_sizes = {str(row.get("size_name") or "").strip() for row in detail_rows}
     present_sizes.discard("")
     ordered_sizes = [name for name in MATRIX_SIZE_ORDER if name in present_sizes]
@@ -115,11 +107,8 @@ def _build_color_size_matrix(detail_rows):
     physical_color_total = 0
     has_inferred = False
     has_replacement = False
-    brand_rank = {name: index for index, name in enumerate(("دارما", "تکوین", "انبارش"))}
 
     for row in detail_rows:
-        brand_name = str(row.get("brand_name") or "")
-        code = _canonical_daily_code(row.get("code"))
         size_name = str(row.get("size_name") or "")
         expected_shorts += int(row.get("shorts") or 0)
         color_source = row.get("color_source")
@@ -140,31 +129,22 @@ def _build_color_size_matrix(detail_rows):
                 continue
             color_name = str(color.get("name") or "رنگ نامشخص")
             replacement_qty = int(color.get("replacement_qty") or 0)
-            key = (brand_name, code, color_name)
-            if key not in grouped:
-                grouped[key] = {
-                    "brand_name": brand_name,
-                    "code": code,
+            if color_name not in grouped:
+                grouped[color_name] = {
                     "color_name": color_name,
                     "sizes": defaultdict(int),
                     "total": 0,
                     "replacement_qty": 0,
                 }
-            grouped[key]["sizes"][size_name] += qty
-            grouped[key]["total"] += qty
-            grouped[key]["replacement_qty"] += replacement_qty
+            grouped[color_name]["sizes"][size_name] += qty
+            grouped[color_name]["total"] += qty
+            grouped[color_name]["replacement_qty"] += replacement_qty
             size_totals[size_name] += qty
             physical_color_total += qty
             if replacement_qty:
                 has_replacement = True
 
-    rows = list(grouped.values())
-    rows.sort(key=lambda item: (
-        brand_rank.get(item["brand_name"], 99),
-        item["brand_name"],
-        str(item["code"]),
-        item["color_name"],
-    ))
+    rows = sorted(grouped.values(), key=lambda item: item["color_name"])
     for item in rows:
         item["size_values"] = [
             {"name": size_name, "qty": int(item["sizes"].get(size_name, 0))}
