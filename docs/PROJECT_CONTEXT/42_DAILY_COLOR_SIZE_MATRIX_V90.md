@@ -1,4 +1,4 @@
-# V90 — DAILY COLOR / SIZE SALES MATRIX
+# V90 — DARMA DAILY COLOR / SIZE SALES MATRIX
 
 Prepared: 2026-09-26
 
@@ -10,36 +10,38 @@ No sale, stock, receivable, accounting, cost, price, capital or snapshot formula
 
 ## User-visible behavior
 
-Below the existing daily sales/profit report, V90 adds one simple matrix:
+Below the existing daily sales/profit report, V90 adds one simple DARMA-ONLY matrix:
 
-- rows: physical colors sold that day;
-- columns: sizes present in that day's SaleLine data;
-- cell: total number of shorts sold for that color + size across ALL products/packs/brands in the daily XLSX report;
-- final column: total shorts sold for that color;
-- footer: total shorts sold for each size and grand total.
+- rows: physical Darma colors sold that day;
+- columns: Darma sizes present in that day's Darma SaleLine data;
+- cell: total number of Darma shorts sold for that color + size across all Darma models/packs;
+- final column: total Darma shorts sold for that color;
+- footer: total Darma shorts sold for each size and grand total.
 
-There is deliberately NO product-code or brand dimension in this matrix.
+There is deliberately NO product-code dimension in this matrix.
 
-Example: if multiple models/packs together sold 30 navy M shorts, the single `سرمه‌ای × M` cell is `30`.
+Only SaleLines whose brand name is exactly `دارما` are included. Takvin, Anbaresh, Dia Gallery and any other brand/channel are excluded from this matrix.
 
-Dia Gallery remains in its existing separate section and is not mixed into the XLSX/SaleLine matrix.
+Example: if multiple Darma models/packs together sold 30 navy M shorts, the single `سرمه‌ای × M` cell is `30`.
+
+Dia Gallery remains in its existing separate section and is not mixed into the matrix.
 
 ## Physical-color source
 
-V90 reuses the existing daily-report color-breakdown rule:
+V90 reuses the existing daily-report color-breakdown rule for Darma SaleLines:
 
 1. `SaleAllocation` is authoritative when present, because it records the physical color actually deducted from stock, including replacements.
-2. Older rows without allocations fall back to the product's configured `ProductComposition`.
+2. Older Darma rows without allocations fall back to the product's configured `ProductComposition`.
 3. If neither source yields a color, the row is shown as `رنگ نامشخص` rather than silently disappearing.
 
-Replacement quantities may be marked on the color row, but the numeric matrix cell always represents the full sold quantity of that color/size.
+Replacement quantities may be marked on the color row, but the numeric matrix cell always represents the full sold quantity of that Darma color/size.
 
 ## Safety / reconciliation
 
 The matrix calculates both:
 
-- expected shorts = sum of canonical `sale_line_metrics(...)[shorts]` for SaleLines in the report;
-- physical-color total = sum of the color/size matrix.
+- expected shorts = sum of canonical `sale_line_metrics(...)[shorts]` for Darma SaleLines only;
+- physical-color total = sum of the Darma color/size matrix.
 
 If they differ, the daily report shows an explicit reconciliation warning. V90 does not force either number to match and does not mutate historical rows.
 
@@ -59,8 +61,8 @@ SUCCESS: DAILY COLOR-SIZE MATRIX V90 CHECK PASSED
 
 The regression checks:
 
-- same color/size is aggregated across different products and brands;
-- product/brand dimensions do not leak into the matrix rows;
+- Takvin and Anbaresh rows have zero effect on the matrix;
+- same Darma color/size is aggregated across different Darma products/packs;
 - replacement-color marker;
 - daily report template/render;
 - Telegram notification is mocked during regression;
