@@ -67,6 +67,46 @@ class Command(BaseCommand):
         if any(row["color_name"] == "مشکی" for row in matrix["rows"]):
             raise RuntimeError("V90 leaked Anbaresh/non-Darma colors into Darma matrix")
 
+        preferred_order = [
+            "مشکی", "سفید", "سرمه‌ای", "صورتی", "کرم", "طوسی",
+            "راه راه", "راه راه طوسی", "برعکس مشکی", "برعکس سفید", "برعکس سرمه‌ای",
+        ]
+        scrambled = [
+            "برعکس سرمه‌ای", "صورتی", "راه راه طوسی", "مشکی", "طوسی",
+            "برعکس سفید", "کرم", "سرمه‌ای", "راه راه", "سفید", "برعکس مشکی",
+        ]
+        order_probe = _build_color_size_matrix([{
+            "brand_name": "دارما",
+            "code": "order-probe",
+            "size_name": "M",
+            "shorts": len(scrambled),
+            "color_source": "allocation",
+            "colors": [
+                {"name": name, "qty": 1, "replacement_qty": 0}
+                for name in scrambled
+            ],
+        }])
+        actual_order = [row["color_name"] for row in order_probe["rows"]]
+        if actual_order != preferred_order:
+            raise RuntimeError(f"V90 Darma color order mismatch: {actual_order}")
+
+        alias_probe = _build_color_size_matrix([{
+            "brand_name": "دارما",
+            "code": "alias-probe",
+            "size_name": "M",
+            "shorts": 4,
+            "color_source": "allocation",
+            "colors": [
+                {"name": "سرمه ای", "qty": 1, "replacement_qty": 0},
+                {"name": "توسی", "qty": 1, "replacement_qty": 0},
+                {"name": "راه‌راه طوسی", "qty": 1, "replacement_qty": 0},
+                {"name": "مشکی برعکس", "qty": 1, "replacement_qty": 0},
+            ],
+        }])
+        alias_names = [row["color_name"] for row in alias_probe["rows"]]
+        if alias_names != ["سرمه ای", "توسی", "راه‌راه طوسی", "مشکی برعکس"]:
+            raise RuntimeError(f"V90 color alias ordering mismatch: {alias_names}")
+
         get_template("core/daily_report_v45.html")
 
         latest_day = SaleDay.objects.order_by("-date", "-id").first()
@@ -99,6 +139,8 @@ class Command(BaseCommand):
         self.stdout.write("DARMA-ONLY FILTER = OK")
         self.stdout.write("TAKVIN / ANBARESH EXCLUDED = OK")
         self.stdout.write("DARMA COLOR + SIZE AGGREGATION = OK")
+        self.stdout.write("DARMA BUSINESS COLOR ORDER = OK")
+        self.stdout.write("COLOR ORDER ALIASES = OK")
         self.stdout.write("REPLACEMENT COLOR MARKER = OK")
         self.stdout.write("DAILY REPORT TEMPLATE / RENDER = OK")
         self.stdout.write("TELEGRAM SIDE EFFECT SUPPRESSED = OK")
