@@ -16,6 +16,49 @@ FILTER_SIZES = {
     "دارما": ("M", "L", "XL", "XXL", "3XL", "4XL"),
 }
 MATRIX_SIZE_ORDER = ("M", "L", "XL", "XXL", "3XL", "4XL")
+MATRIX_COLOR_ORDER = (
+    "مشکی",
+    "سفید",
+    "سرمه‌ای",
+    "صورتی",
+    "کرم",
+    "طوسی",
+    "راه راه",
+    "راه راه طوسی",
+    "برعکس مشکی",
+    "برعکس سفید",
+    "برعکس سرمه‌ای",
+)
+
+
+def _normalize_matrix_color(value):
+    text = str(value or "").strip().replace("ي", "ی").replace("ك", "ک")
+    text = text.replace("توسی", "طوسی")
+    for token in (" ", "‌", "-", "_", "/"):
+        text = text.replace(token, "")
+    return text
+
+
+def _matrix_color_rank(value):
+    normalized = _normalize_matrix_color(value)
+    aliases = {
+        _normalize_matrix_color("مشکی"): 0,
+        _normalize_matrix_color("سفید"): 1,
+        _normalize_matrix_color("سرمه‌ای"): 2,
+        _normalize_matrix_color("صورتی"): 3,
+        _normalize_matrix_color("کرم"): 4,
+        _normalize_matrix_color("طوسی"): 5,
+        _normalize_matrix_color("راه راه"): 6,
+        _normalize_matrix_color("راه راه طوسی"): 7,
+        _normalize_matrix_color("طوسی راه راه"): 7,
+        _normalize_matrix_color("برعکس مشکی"): 8,
+        _normalize_matrix_color("مشکی برعکس"): 8,
+        _normalize_matrix_color("برعکس سفید"): 9,
+        _normalize_matrix_color("سفید برعکس"): 9,
+        _normalize_matrix_color("برعکس سرمه‌ای"): 10,
+        _normalize_matrix_color("سرمه‌ای برعکس"): 10,
+    }
+    return aliases.get(normalized, len(MATRIX_COLOR_ORDER))
 
 
 def _line_color_breakdown(line):
@@ -149,7 +192,10 @@ def _build_color_size_matrix(detail_rows):
             if replacement_qty:
                 has_replacement = True
 
-    rows = sorted(grouped.values(), key=lambda item: item["color_name"])
+    rows = sorted(
+        grouped.values(),
+        key=lambda item: (_matrix_color_rank(item["color_name"]), item["color_name"]),
+    )
     for item in rows:
         item["size_values"] = [
             {"name": size_name, "qty": int(item["sizes"].get(size_name, 0))}
