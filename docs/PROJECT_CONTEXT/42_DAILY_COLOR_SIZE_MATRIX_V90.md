@@ -1,4 +1,4 @@
-# V90 — DAILY PRODUCT / COLOR / SIZE SALES MATRIX
+# V90 — DAILY COLOR / SIZE SALES MATRIX
 
 Prepared: 2026-09-26
 
@@ -10,15 +10,17 @@ No sale, stock, receivable, accounting, cost, price, capital or snapshot formula
 
 ## User-visible behavior
 
-Below the existing daily sales/profit report, V90 adds a matrix:
+Below the existing daily sales/profit report, V90 adds one simple matrix:
 
-- row identity: brand + product code + physical color;
+- rows: physical colors sold that day;
 - columns: sizes present in that day's SaleLine data;
-- cell: number of physical shorts sold for that product/color/size;
-- final column: row total;
-- footer: total shorts for every size and grand total.
+- cell: total number of shorts sold for that color + size across ALL products/packs/brands in the daily XLSX report;
+- final column: total shorts sold for that color;
+- footer: total shorts sold for each size and grand total.
 
-`06`, `6`, `pack6` and `pack06` are canonicalized to product code `06` in this matrix.
+There is deliberately NO product-code or brand dimension in this matrix.
+
+Example: if multiple models/packs together sold 30 navy M shorts, the single `سرمه‌ای × M` cell is `30`.
 
 Dia Gallery remains in its existing separate section and is not mixed into the XLSX/SaleLine matrix.
 
@@ -30,7 +32,7 @@ V90 reuses the existing daily-report color-breakdown rule:
 2. Older rows without allocations fall back to the product's configured `ProductComposition`.
 3. If neither source yields a color, the row is shown as `رنگ نامشخص` rather than silently disappearing.
 
-Replacement quantities are marked in the matrix UI.
+Replacement quantities may be marked on the color row, but the numeric matrix cell always represents the full sold quantity of that color/size.
 
 ## Safety / reconciliation
 
@@ -57,8 +59,8 @@ SUCCESS: DAILY COLOR-SIZE MATRIX V90 CHECK PASSED
 
 The regression checks:
 
-- `pack6/06` canonical aggregation;
-- product/color/size aggregation;
+- same color/size is aggregated across different products and brands;
+- product/brand dimensions do not leak into the matrix rows;
 - replacement-color marker;
 - daily report template/render;
 - Telegram notification is mocked during regression;
