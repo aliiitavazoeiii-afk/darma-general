@@ -9,10 +9,10 @@
 <div class="card glass-card mt-4 mb-4">
   <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
     <div>
-      <h3 class="card-title mb-1">فروش تعدادی به تفکیک رنگ و سایز</h3>
-      <div class="text-secondary small">جمع کل شورت‌های فروخته‌شده همان روز؛ بدون تفکیک مدل و پک.</div>
+      <h3 class="card-title mb-1">فروش تعدادی دارما به تفکیک رنگ و سایز</h3>
+      <div class="text-secondary small">فقط فروش‌های برند دارما؛ مجموع شورت هر رنگ در هر سایز، بدون تفکیک مدل و پک.</div>
     </div>
-    <span class="badge bg-transparent border">جمع {{ color_size_matrix.total|groupnum }} شورت</span>
+    <span class="badge bg-transparent border">جمع دارما {{ color_size_matrix.total|groupnum }} شورت</span>
   </div>
   <div class="daily-color-size-matrix-wrap">
     <table class="table table-vcenter card-table daily-color-size-matrix mb-0">
@@ -42,10 +42,10 @@
     </table>
   </div>
   <div class="card-body pt-3">
-    <div class="daily-color-size-note">مثلاً خانه «سرمه‌ای × M» یعنی مجموع تمام شورت‌های سرمه‌ای سایز M فروخته‌شده در این صورت، فارغ از اینکه از کدام مدل یا پک آمده‌اند.</div>
-    {% if color_size_matrix.has_replacement %}<div class="daily-color-size-note mt-1">رنگ‌های جایگزین بر اساس رنگی شمرده می‌شوند که واقعاً از موجودی کسر شده است.</div>{% endif %}
-    {% if color_size_matrix.has_inferred %}<div class="text-warning small mt-2">بعضی فروش‌های قدیمی Allocation دقیق ندارند؛ رنگ آن‌ها از ترکیب ثبت‌شده محصول بازسازی شده است.</div>{% endif %}
-    {% if color_size_matrix.has_mismatch %}<div class="text-danger small mt-2 fw-bold">هشدار تطبیق: جمع رنگ/سایز {{ color_size_matrix.total|groupnum }} شورت است ولی جمع SaleLineهای این صورت {{ color_size_matrix.expected_shorts|groupnum }} شورت است.</div>{% endif %}
+    <div class="daily-color-size-note">مثلاً خانه «سرمه‌ای × M» یعنی مجموع تمام شورت‌های سرمه‌ای سایز M برند دارما که در همین صورت فروخته شده‌اند.</div>
+    {% if color_size_matrix.has_replacement %}<div class="daily-color-size-note mt-1">رنگ‌های جایگزین بر اساس رنگی شمرده می‌شوند که واقعاً از موجودی دارما کسر شده است.</div>{% endif %}
+    {% if color_size_matrix.has_inferred %}<div class="text-warning small mt-2">بعضی فروش‌های قدیمی دارما Allocation دقیق ندارند؛ رنگ آن‌ها از ترکیب ثبت‌شده محصول بازسازی شده است.</div>{% endif %}
+    {% if color_size_matrix.has_mismatch %}<div class="text-danger small mt-2 fw-bold">هشدار تطبیق دارما: جمع رنگ/سایز {{ color_size_matrix.total|groupnum }} شورت است ولی جمع SaleLineهای دارما در این صورت {{ color_size_matrix.expected_shorts|groupnum }} شورت است.</div>{% endif %}
   </div>
 </div>
 {% endif %}
