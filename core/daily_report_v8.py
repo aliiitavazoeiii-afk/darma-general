@@ -15,6 +15,15 @@ FILTER_SIZES = {
     "تکوین": ("M", "L", "XL", "XXL"),
     "دارما": ("M", "L", "XL", "XXL", "3XL", "4XL"),
 }
+MATRIX_SIZE_ORDER = ("M", "L", "XL", "XXL", "3XL", "4XL")
+
+
+def _canonical_daily_code(code):
+    raw = str(code or "").strip()
+    compact = raw.replace("-", "").replace("_", "").replace(" ", "").lower()
+    if compact in {"06", "6", "pack6", "pack06"}:
+        return "06"
+    return raw
 
 
 def _line_color_breakdown(line):
@@ -93,6 +102,91 @@ def _build_filter_brands(detail_rows):
     return result
 
 
+def _build_color_size_matrix(detail_rows):
+    """Build a read-only physical-short matrix: product/color rows × size columns."""
+    present_sizes = {str(row.get("size_name") or "").strip() for row in detail_rows}
+    present_sizes.discard("")
+    ordered_sizes = [name for name in MATRIX_SIZE_ORDER if name in present_sizes]
+    ordered_sizes.extend(sorted(present_sizes - set(ordered_sizes)))
+
+    grouped = {}
+    size_totals = defaultdict(int)
+    expected_shorts = 0
+    physical_color_total = 0
+    has_inferred = False
+    has_replacement = False
+    brand_rank = {name: index for index, name in enumerate(("دارما", "تکوین", "انبارش"))}
+
+    for row in detail_rows:
+        brand_name = str(row.get("brand_name") or "")
+        code = _canonical_daily_code(row.get("code"))
+        size_name = str(row.get("size_name") or "")
+        expected_shorts += int(row.get("shorts") or 0)
+        color_source = row.get("color_source")
+        if color_source != "allocation":
+            has_inferred = True
+
+        colors = list(row.get("colors") or [])
+        if not colors and int(row.get("shorts") or 0) > 0:
+            colors = [{
+                "name": "رنگ نامشخص",
+                "qty": int(row.get("shorts") or 0),
+                "replacement_qty": 0,
+            }]
+
+        for color in colors:
+            qty = int(color.get("qty") or 0)
+            if qty <= 0:
+                continue
+            color_name = str(color.get("name") or "رنگ نامشخص")
+            replacement_qty = int(color.get("replacement_qty") or 0)
+            key = (brand_name, code, color_name)
+            if key not in grouped:
+                grouped[key] = {
+                    "brand_name": brand_name,
+                    "code": code,
+                    "color_name": color_name,
+                    "sizes": defaultdict(int),
+                    "total": 0,
+                    "replacement_qty": 0,
+                }
+            grouped[key]["sizes"][size_name] += qty
+            grouped[key]["total"] += qty
+            grouped[key]["replacement_qty"] += replacement_qty
+            size_totals[size_name] += qty
+            physical_color_total += qty
+            if replacement_qty:
+                has_replacement = True
+
+    rows = list(grouped.values())
+    rows.sort(key=lambda item: (
+        brand_rank.get(item["brand_name"], 99),
+        item["brand_name"],
+        str(item["code"]),
+        item["color_name"],
+    ))
+    for item in rows:
+        item["size_values"] = [
+            {"name": size_name, "qty": int(item["sizes"].get(size_name, 0))}
+            for size_name in ordered_sizes
+        ]
+        item.pop("sizes", None)
+
+    return {
+        "sizes": ordered_sizes,
+        "rows": rows,
+        "size_totals": [
+            {"name": size_name, "qty": int(size_totals.get(size_name, 0))}
+            for size_name in ordered_sizes
+        ],
+        "total": int(physical_color_total),
+        "expected_shorts": int(expected_shorts),
+        "has_mismatch": int(physical_color_total) != int(expected_shorts),
+        "has_inferred": has_inferred,
+        "has_replacement": has_replacement,
+    }
+
+
 @login_required
 def daily_report(request, day_id):
     day = get_object_or_404(SaleDay, id=day_id)
@@ -164,6 +258,7 @@ def daily_report(request, day_id):
     filter_brands = _build_filter_brands(detail_rows)
     primary_detail_rows = [row for row in detail_rows if row["brand_name"] in PRIMARY_REPORT_BRANDS]
     other_detail_rows = [row for row in detail_rows if row["brand_name"] not in PRIMARY_REPORT_BRANDS]
+    color_size_matrix = _build_color_size_matrix(detail_rows)
 
     default_brand = "دارما"
     if not any(row["brand_name"] == "دارما" for row in primary_detail_rows):
@@ -186,4 +281,5 @@ def daily_report(request, day_id):
         "by_brand": ordered_brands,
         "total": total,
         "dia_gallery": dia_gallery,
+        "color_size_matrix": color_size_matrix,
     })
