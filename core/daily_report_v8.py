@@ -95,8 +95,13 @@ def _build_filter_brands(detail_rows):
 
 
 def _build_color_size_matrix(detail_rows):
-    """Build one daily matrix: color rows × size columns, across all sale models."""
-    present_sizes = {str(row.get("size_name") or "").strip() for row in detail_rows}
+    """Build Darma-only daily matrix: physical color rows × size columns."""
+    darma_rows = [
+        row for row in detail_rows
+        if str(row.get("brand_name") or "").strip() == "دارما"
+    ]
+
+    present_sizes = {str(row.get("size_name") or "").strip() for row in darma_rows}
     present_sizes.discard("")
     ordered_sizes = [name for name in MATRIX_SIZE_ORDER if name in present_sizes]
     ordered_sizes.extend(sorted(present_sizes - set(ordered_sizes)))
@@ -108,7 +113,7 @@ def _build_color_size_matrix(detail_rows):
     has_inferred = False
     has_replacement = False
 
-    for row in detail_rows:
+    for row in darma_rows:
         size_name = str(row.get("size_name") or "")
         expected_shorts += int(row.get("shorts") or 0)
         color_source = row.get("color_source")
