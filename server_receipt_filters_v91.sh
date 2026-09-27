@@ -12,6 +12,48 @@ set +a
 export COMPOSE_IGNORE_ORPHANS=1
 
 BASE=f9d90fcdc186ec5e03eacf87f97069dc3835e587
+MIRROR_DOCKERFILE=.Dockerfile.v91.mirror.tmp
+MIRROR_COMPOSE=.compose.v91.mirror.tmp.yml
+
+cleanup_tmp_build_files() {
+  rm -f "$MIRROR_DOCKERFILE" "$MIRROR_COMPOSE"
+}
+trap cleanup_tmp_build_files EXIT INT TERM
+
+build_web_image() {
+  if docker compose build web; then
+    return 0
+  fi
+
+  echo ""
+  echo "Primary Docker Hub build failed. Retrying same Dockerfile via mirror.gcr.io ..."
+  cleanup_tmp_build_files
+
+  awk '
+    NR == 1 {
+      if ($0 != "FROM python:3.12-slim") {
+        print "Unexpected Dockerfile base image: " $0 > "/dev/stderr"
+        exit 42
+      }
+      print "FROM mirror.gcr.io/library/python:3.12-slim"
+      next
+    }
+    { print }
+  ' Dockerfile > "$MIRROR_DOCKERFILE" || return 1
+
+  cat > "$MIRROR_COMPOSE" <<'YAML'
+services:
+  web:
+    build:
+      context: .
+      dockerfile: .Dockerfile.v91.mirror.tmp
+YAML
+
+  docker compose -f compose.yml -f "$MIRROR_COMPOSE" build web || return 1
+  echo "Mirror build succeeded; image contents are otherwise identical to the project Dockerfile."
+  cleanup_tmp_build_files
+  return 0
+}
 
 snapshot_code() {
 cat <<'PY'
@@ -114,7 +156,7 @@ git diff --quiet "$BASE"..HEAD -- \
   || fail "protected business/accounting/import source changed"
 
 step "3) BUILD + READ-ONLY REGRESSIONS"
-docker compose build web || fail "web build failed"
+build_web_image || fail "web build failed on Docker Hub and mirror.gcr.io"
 docker compose run --rm --entrypoint python web manage.py makemigrations --check --dry-run || fail "migration drift"
 docker compose run --rm --entrypoint python web manage.py check || fail "Django system check failed"
 docker compose run --rm --entrypoint python web manage.py check_daily_color_size_v90 || fail "V90 regression failed"
