@@ -5,6 +5,7 @@ from . import (
     business_tools_v14,
     business_tools_v21,
     business_tools_v62,
+    business_tools_v91,
     calculator_v37,
     calendar_views,
     catalog_v5,
@@ -84,7 +85,7 @@ urlpatterns = [
     path("material-report/<int:block_id>/delete/", material_report_v20.material_block_delete, name="material_block_delete"),
     path("takvin/", takvin_v5.takvin_excel, name="takvin"),
 
-    path("payments/", business_tools_v62.payments, name="payments"),
+    path("payments/", business_tools_v91.payments, name="payments"),
     path("payments/add/", business_tools_v62.payment_add, name="payment_add"),
     path("payments/<int:payment_id>/edit/", business_tools_v62.payment_update, name="payment_update"),
     path("payments/<int:payment_id>/delete/", business_tools_v62.payment_delete, name="payment_delete"),
