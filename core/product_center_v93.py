@@ -15,6 +15,7 @@ from .takvin_pricing_v17 import TAKVIN_SIZES, current_takvin_costs
 
 DARMA_PRICE_SIZES = tuple(pricing_v60.SIZE_NAMES)
 TAKVIN_PRICE_SIZES = tuple(TAKVIN_SIZES)
+TAKVIN_BULK_PACKS = (1, 2, 3, 5, 6)
 RULE_ACTIONS = {
     "darma_cost_rule",
     "darma_delete_rule",
@@ -163,38 +164,53 @@ def _product_pricing_rows(brand_name, size_names):
     return rows
 
 
-def _takvin_bulk_row():
-    cells = []
-    for size_name in TAKVIN_PRICE_SIZES:
-        product_sizes = list(
-            ProductSize.objects.filter(
-                product__brand__name="تکوین",
-                product__active=True,
-                active=True,
-                size__name=size_name,
+def _takvin_bulk_rows():
+    rows = []
+    for pack_qty in TAKVIN_BULK_PACKS:
+        cells = []
+        future_dates = []
+        product_ids = set()
+        for size_name in TAKVIN_PRICE_SIZES:
+            product_sizes = list(
+                ProductSize.objects.filter(
+                    product__brand__name="تکوین",
+                    product__pack_qty=pack_qty,
+                    product__active=True,
+                    active=True,
+                    size__name=size_name,
+                )
+                .select_related("product__brand", "product", "size")
+                .order_by("product__code", "id")
             )
-            .select_related("product__brand", "size")
-            .order_by("product__code", "id")
-        )
-        values = []
-        for ps in product_sizes:
-            values.append(_display_price(ps)["value"])
-        unique = sorted(set(values))
-        cells.append(
+            product_ids.update(ps.product_id for ps in product_sizes)
+            values = []
+            for ps in product_sizes:
+                info = _display_price(ps)
+                values.append(info["value"])
+                if info["effective_from"]:
+                    future_dates.append(info["effective_from"])
+            unique = sorted(set(values))
+            cells.append(
+                {
+                    "size": size_name,
+                    "value": unique[0] if len(unique) == 1 else "",
+                    "mixed": len(unique) > 1,
+                    "count": len(product_sizes),
+                    "active": bool(product_sizes),
+                }
+            )
+        rows.append(
             {
-                "size": size_name,
-                "value": unique[0] if len(unique) == 1 else "",
-                "mixed": len(unique) > 1,
-                "count": len(product_sizes),
+                "pack_qty": pack_qty,
+                "cells": cells,
+                "effective_j": format_jalali(
+                    min(future_dates) if future_dates else _tomorrow()
+                ),
+                "product_count": len(product_ids),
+                "has_products": bool(product_ids),
             }
         )
-    return {
-        "cells": cells,
-        "effective_j": format_jalali(_tomorrow()),
-        "product_count": ProductCode.objects.filter(
-            brand__name="تکوین", active=True, sizes__active=True
-        ).distinct().count(),
-    }
+    return rows
 
 
 def _schedule_product_prices(product, effective_from, post):
@@ -227,27 +243,33 @@ def _schedule_product_prices(product, effective_from, post):
     return len(product_sizes)
 
 
-def _schedule_takvin_bulk(effective_from, post):
+def _schedule_takvin_bulk(pack_qty, effective_from, post):
+    if pack_qty not in TAKVIN_BULK_PACKS:
+        raise ValueError("تعداد پک تکوین معتبر نیست.")
     if effective_from < date.today():
         raise ValueError("تاریخ شروع قیمت فروش نمی‌تواند قبل از امروز باشد.")
-
-    prices = {}
-    for size_name in TAKVIN_PRICE_SIZES:
-        price = _money(post.get(f"price_{size_name}"))
-        if price <= 0:
-            raise ValueError(f"قیمت فروش تکوین سایز {size_name} باید بیشتر از صفر باشد.")
-        prices[size_name] = price
 
     product_sizes = list(
         ProductSize.objects.filter(
             product__brand__name="تکوین",
+            product__pack_qty=pack_qty,
             product__active=True,
             active=True,
             size__name__in=TAKVIN_PRICE_SIZES,
         ).select_related("product__brand", "product", "size")
     )
     if not product_sizes:
-        raise ValueError("هیچ کد فعال تکوین برای قیمت‌گذاری پیدا نشد.")
+        raise ValueError(f"هیچ کد فعال تکوین با پک {pack_qty} تایی پیدا نشد.")
+
+    active_sizes = {ps.size.name for ps in product_sizes}
+    prices = {}
+    for size_name in TAKVIN_PRICE_SIZES:
+        if size_name not in active_sizes:
+            continue
+        price = _money(post.get(f"price_{size_name}"))
+        if price <= 0:
+            raise ValueError(f"قیمت فروش تکوین پک {pack_qty} / سایز {size_name} باید بیشتر از صفر باشد.")
+        prices[size_name] = price
 
     with transaction.atomic():
         for ps in product_sizes:
@@ -256,6 +278,7 @@ def _schedule_takvin_bulk(effective_from, post):
     return {
         "rows": len(product_sizes),
         "products": len({ps.product_id for ps in product_sizes}),
+        "pack_qty": pack_qty,
     }
 
 
@@ -280,14 +303,15 @@ def _handle_pricing_post(request):
         return "darma"
 
     if action == "bulk_takvin_prices":
+        pack_qty = _money(request.POST.get("pack_qty"))
         effective_from = parse_jalali_date(
             request.POST.get("effective_from") or format_jalali(_tomorrow())
         )
-        result = _schedule_takvin_bulk(effective_from, request.POST)
+        result = _schedule_takvin_bulk(pack_qty, effective_from, request.POST)
         messages.success(
             request,
-            f"قیمت فروش {result['products']} کد فعال تکوین از تاریخ "
-            f"{format_jalali(effective_from)} به‌صورت گروهی زمان‌بندی شد.",
+            f"قیمت فروش پک {result['pack_qty']} تایی تکوین برای {result['products']} کد فعال از تاریخ "
+            f"{format_jalali(effective_from)} زمان‌بندی شد.",
         )
         return "takvin"
 
@@ -352,7 +376,7 @@ def settings_products(request):
         "bulk_effective_j": format_jalali(_tomorrow()),
         "darma_bulk_rows": pricing_v60._pricing_rows(),
         "darma_price_rows": _product_pricing_rows("دارما", DARMA_PRICE_SIZES),
-        "takvin_bulk": _takvin_bulk_row(),
+        "takvin_bulk_rows": _takvin_bulk_rows(),
         "takvin_price_rows": _product_pricing_rows("تکوین", TAKVIN_PRICE_SIZES),
     }
     return render(request, "core/settings_products_v93.html", context)
