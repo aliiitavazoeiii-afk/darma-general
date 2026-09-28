@@ -122,8 +122,78 @@ def _check_v60_sale_price_semantics():
             transaction.set_rollback(True)
 
 
+def _check_takvin_pack_bulk():
+    rows = product_center_v93._takvin_bulk_rows()
+    packs = [row["pack_qty"] for row in rows]
+    if packs != list(product_center_v93.TAKVIN_BULK_PACKS):
+        raise RuntimeError(f"Takvin bulk packs mismatch: {packs}")
+
+    for row in rows:
+        expected_products = ProductCode.objects.filter(
+            brand__name="تکوین",
+            active=True,
+            pack_qty=row["pack_qty"],
+            sizes__active=True,
+            sizes__size__name__in=product_center_v93.TAKVIN_PRICE_SIZES,
+        ).distinct().count()
+        if row["product_count"] != expected_products:
+            raise RuntimeError(
+                f"Takvin pack {row['pack_qty']} product count mismatch: "
+                f"{row['product_count']} != {expected_products}"
+            )
+
+    target_row = next((row for row in rows if row["has_products"]), None)
+    if not target_row:
+        raise RuntimeError("V93 regression needs at least one active Takvin pack in 1/2/3/5/6")
+
+    target_pack = target_row["pack_qty"]
+    target_sizes = list(
+        ProductSize.objects.filter(
+            product__brand__name="تکوین",
+            product__pack_qty=target_pack,
+            product__active=True,
+            active=True,
+            size__name__in=product_center_v93.TAKVIN_PRICE_SIZES,
+        ).select_related("product", "product__brand", "size")
+    )
+    other_ps = (
+        ProductSize.objects.filter(
+            product__brand__name="تکوین",
+            product__active=True,
+            active=True,
+            size__name__in=product_center_v93.TAKVIN_PRICE_SIZES,
+        )
+        .exclude(product__pack_qty=target_pack)
+        .select_related("product", "product__brand", "size")
+        .first()
+    )
+
+    future = date.today() + timedelta(days=3660)
+    by_size = {}
+    for ps in target_sizes:
+        by_size.setdefault(ps.size.name, int(sale_price_for(ps, future)))
+    post = {f"price_{size}": str(value + 54_321) for size, value in by_size.items()}
+    other_before = int(sale_price_for(other_ps, future)) if other_ps else None
+
+    with transaction.atomic():
+        try:
+            result = product_center_v93._schedule_takvin_bulk(target_pack, future, post)
+            if result["pack_qty"] != target_pack:
+                raise RuntimeError("Takvin pack bulk returned wrong pack")
+            for ps in target_sizes:
+                expected = by_size[ps.size.name] + 54_321
+                if int(sale_price_for(ps, future)) != expected:
+                    raise RuntimeError(
+                        f"Takvin pack bulk missed {ps.product.code}/{ps.size.name}"
+                    )
+            if other_ps and int(sale_price_for(other_ps, future)) != other_before:
+                raise RuntimeError("Takvin pack bulk leaked into another pack quantity")
+        finally:
+            transaction.set_rollback(True)
+
+
 class Command(BaseCommand):
-    help = "Read-only: validate V93 product center routes, pricing semantics, coverage, templates, and no-write behavior."
+    help = "Read-only: validate V93 product center routes, pricing semantics, pack bulk coverage, templates, and no-write behavior."
 
     def handle(self, *args, **kwargs):
         before = _state()
@@ -171,6 +241,7 @@ class Command(BaseCommand):
             raise RuntimeError("V93 Takvin per-code pricing coverage mismatch")
 
         _check_v60_sale_price_semantics()
+        _check_takvin_pack_bulk()
 
         factory = RequestFactory()
         static_override = {
@@ -182,8 +253,8 @@ class Command(BaseCommand):
         cases = [
             ({}, ("قوانین و قیمت‌های پایه", "قیمت‌گذاری‌ها", "رنگ‌بندی‌ها")),
             ({"section": "rules"}, ("بهای تمام‌شده هر شورت دارما", "قیمت تمام‌شده تکوین", "سایر تنظیمات محاسباتی")),
-            ({"section": "pricing", "brand": "darma"}, ("ویرایش گروهی قیمت فروش دارما", "قیمت مستقل هر کد دارما")),
-            ({"section": "pricing", "brand": "takvin"}, ("ویرایش گروهی قیمت فروش تکوین", "قیمت مستقل هر کد تکوین")),
+            ({"section": "pricing", "brand": "darma"}, ("ویرایش گروهی قیمت فروش دارما", "قیمت مستقل هر کد دارما", "کد", "از تاریخ")),
+            ({"section": "pricing", "brand": "takvin"}, ("ویرایش گروهی قیمت فروش تکوین", "قیمت مستقل هر کد تکوین", "پک 1 تایی", "پک 2 تایی", "پک 3 تایی", "پک 5 تایی", "پک 6 تایی")),
             ({"section": "colors"}, ("ترکیب رنگ", "سایزهای فعال", "ویرایش")),
         ]
         with override_settings(STORAGES=static_override):
@@ -213,6 +284,8 @@ class Command(BaseCommand):
         self.stdout.write("PRODUCT CENTER V93 ROUTES = OK")
         self.stdout.write("DARMA PER-CODE PRICE COVERAGE = OK")
         self.stdout.write("TAKVIN PER-CODE PRICE COVERAGE = OK")
+        self.stdout.write("TAKVIN PACK BULK 1/2/3/5/6 = OK")
+        self.stdout.write("TAKVIN PACK BULK ISOLATION = OK")
         self.stdout.write("V60 DATE-EFFECTIVE SALE PRICE SEMANTICS = OK")
         self.stdout.write("HISTORICAL SALELINE PRICE FREEZE = OK")
         self.stdout.write("RULES / PRICING / COLORS TEMPLATES = OK")
