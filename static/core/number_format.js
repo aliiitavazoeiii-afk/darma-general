@@ -82,7 +82,22 @@
     document.head.appendChild(link);
   }
 
+  // V94: this file is already included by base.html on every ERP page.
+  // Load the Jalali calendar once from here so all date inputs share one picker.
+  function injectGlobalJalaliPicker() {
+    if (window.__darmaJalaliPickerLoading || window.__darmaJalaliPickerLoaded) return;
+    window.__darmaJalaliPickerLoading = true;
+    const script = document.createElement('script');
+    script.id = 'darma-global-jalali-picker-v94';
+    script.src = '/static/core/jalali_picker.js?v=94';
+    script.async = false;
+    script.onload = () => { window.__darmaJalaliPickerLoading = false; };
+    script.onerror = () => { window.__darmaJalaliPickerLoading = false; };
+    document.head.appendChild(script);
+  }
+
   injectV39Styles();
+  injectGlobalJalaliPicker();
   window.DarmaNumber = { raw, grouped, separator: SEP };
   document.addEventListener('DOMContentLoaded', () => {
     bind();
