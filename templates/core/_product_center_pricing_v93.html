@@ -1,0 +1,52 @@
+<div class="pc-panel-head"><div><div class="page-kicker">قیمت فروش</div><h3 class="mb-1">قیمت‌گذاری‌ها</h3><div class="text-secondary small">قیمت‌های تاریخ‌دار فقط برای فروش‌های جدید از تاریخ انتخاب‌شده استفاده می‌شوند؛ فروش‌های ثبت‌شده قبلی بازنویسی نمی‌شوند.</div></div></div>
+
+<div class="brand-choice-grid mb-4">
+  <a class="brand-choice {% if pricing_brand == 'darma' %}active{% endif %}" href="?section=pricing&brand=darma#pricing-panel"><strong>دارما</strong><span>ویرایش گروهی بر اساس تعداد پک + قیمت مستقل همه کدها</span></a>
+  <a class="brand-choice {% if pricing_brand == 'takvin' %}active{% endif %}" href="?section=pricing&brand=takvin#pricing-panel"><strong>تکوین</strong><span>ویرایش گروهی همه کدها + قیمت مستقل هر کد</span></a>
+</div>
+
+{% if pricing_brand == 'darma' %}
+<div class="card mb-4"><div class="card-header"><div><div class="fw-bold">ویرایش گروهی قیمت فروش دارما</div><div class="text-secondary small">هر ردیف روی تمام کدهای فعال دارما با همان تعداد داخل پک اعمال می‌شود. قیمت‌های تکی پایین می‌توانند بعداً متفاوت باشند.</div></div></div><div class="card-body"><div class="pricing-scroll"><div class="pricing-inner darma">
+{% for row in darma_bulk_rows %}
+<form method="post" class="pricing-row darma">{% csrf_token %}<input type="hidden" name="action" value="bulk_darma_prices"><input type="hidden" name="pack_qty" value="{{ row.pack_qty }}">
+  <div class="price-code"><strong>پک {{ row.pack_qty }} تایی</strong><span>{{ row.product_count }} کد فعال</span></div>
+  <div><label class="price-label">از تاریخ</label><input class="form-control jalali-date ltr" name="effective_from" value="{{ row.effective_j }}" required></div>
+  {% for cell in row.prices %}<div class="price-cell"><label class="price-label">{{ cell.size }}</label><input class="form-control money-input" name="price_{{ cell.size }}" value="{{ cell.value }}" inputmode="numeric" required></div>{% endfor %}
+  <div><button class="btn btn-primary w-100">اعمال گروهی</button></div>
+</form>
+{% endfor %}
+</div></div></div></div>
+
+<div class="card"><div class="card-header"><div><div class="fw-bold">قیمت مستقل هر کد دارما</div><div class="text-secondary small">اگر مثلاً پک سه‌تایی ساده و راه‌راه قیمت متفاوت دارند، فقط ردیف همان کد را تغییر بده.</div></div></div><div class="card-body"><div class="pricing-scroll"><div class="pricing-inner darma">
+{% for row in darma_price_rows %}
+<form method="post" class="pricing-row darma">{% csrf_token %}<input type="hidden" name="action" value="product_sale_prices"><input type="hidden" name="product_id" value="{{ row.product.id }}">
+  <div class="price-code"><strong class="code-cell">{{ row.product.code }}</strong><span>پک {{ row.product.pack_qty }} تایی</span></div>
+  <div><label class="price-label">از تاریخ</label><input class="form-control jalali-date ltr" name="effective_from" value="{{ row.effective_j }}" required></div>
+  {% for cell in row.cells %}<div class="price-cell"><label class="price-label">{{ cell.size }}</label>{% if cell.active %}<input class="form-control money-input" name="price_{{ cell.ps_id }}" value="{{ cell.value }}" inputmode="numeric" required><div class="price-meta {% if cell.future %}future{% endif %}">{% if cell.future %}از {{ cell.effective_j }} · امروز {{ cell.current|groupnum }}{% else %}قیمت مؤثر امروز{% endif %}</div>{% else %}<div class="form-control text-secondary text-center">—</div><div class="price-meta">غیرفعال</div>{% endif %}</div>{% endfor %}
+  <div><button class="btn btn-outline-primary w-100">ثبت همین کد</button></div>
+</form>
+{% empty %}<div class="empty-state">کد فعال دارما پیدا نشد.</div>{% endfor %}
+</div></div></div></div>
+{% endif %}
+
+{% if pricing_brand == 'takvin' %}
+<div class="card mb-4"><div class="card-header"><div><div class="fw-bold">ویرایش گروهی قیمت فروش تکوین</div><div class="text-secondary small">قیمت‌های M/L/XL/XXL را روی تمام کدهای فعال تکوین اعمال می‌کند. اگر قیمت فعلی کدها با هم متفاوت باشد، فیلد آن سایز خالی و با برچسب «مختلط» نمایش داده می‌شود.</div></div></div><div class="card-body"><div class="pricing-scroll"><div class="pricing-inner takvin"><form method="post" class="pricing-row takvin">{% csrf_token %}<input type="hidden" name="action" value="bulk_takvin_prices">
+  <div class="price-code"><strong>همه کدهای تکوین</strong><span>{{ takvin_bulk.product_count }} کد فعال</span></div>
+  <div><label class="price-label">از تاریخ</label><input class="form-control jalali-date ltr" name="effective_from" value="{{ takvin_bulk.effective_j }}" required></div>
+  {% for cell in takvin_bulk.cells %}<div class="price-cell"><label class="price-label">{{ cell.size }}</label><input class="form-control money-input" name="price_{{ cell.size }}" value="{{ cell.value }}" inputmode="numeric" placeholder="{% if cell.mixed %}مختلط{% endif %}" required><div class="price-meta {% if cell.mixed %}future{% endif %}">{% if cell.mixed %}قیمت کدها متفاوت است{% else %}{{ cell.count }} سایز فعال{% endif %}</div></div>{% endfor %}
+  <div><button class="btn btn-primary w-100">اعمال روی همه</button></div>
+</form></div></div></div></div>
+
+<div class="card"><div class="card-header"><div><div class="fw-bold">قیمت مستقل هر کد تکوین</div><div class="text-secondary small">هر ردیف فقط قیمت فروش همان کد را زمان‌بندی می‌کند؛ بهای تمام‌شده تکوین از بخش «قوانین و قیمت‌های پایه» می‌آید و مستقل است.</div></div></div><div class="card-body"><div class="pricing-scroll"><div class="pricing-inner takvin">
+{% for row in takvin_price_rows %}
+<form method="post" class="pricing-row takvin">{% csrf_token %}<input type="hidden" name="action" value="product_sale_prices"><input type="hidden" name="product_id" value="{{ row.product.id }}">
+  <div class="price-code"><strong class="code-cell">{{ row.product.code }}</strong><span>پک {{ row.product.pack_qty }} تایی</span></div>
+  <div><label class="price-label">از تاریخ</label><input class="form-control jalali-date ltr" name="effective_from" value="{{ row.effective_j }}" required></div>
+  {% for cell in row.cells %}<div class="price-cell"><label class="price-label">{{ cell.size }}</label>{% if cell.active %}<input class="form-control money-input" name="price_{{ cell.ps_id }}" value="{{ cell.value }}" inputmode="numeric" required><div class="price-meta {% if cell.future %}future{% endif %}">{% if cell.future %}از {{ cell.effective_j }} · امروز {{ cell.current|groupnum }}{% else %}قیمت مؤثر امروز{% endif %}</div>{% else %}<div class="form-control text-secondary text-center">—</div><div class="price-meta">غیرفعال</div>{% endif %}</div>{% endfor %}
+  <div><button class="btn btn-outline-primary w-100">ثبت همین کد</button></div>
+</form>
+{% empty %}<div class="empty-state">کد فعال تکوین پیدا نشد.</div>{% endfor %}
+</div></div></div></div>
+{% endif %}
+
+{% if not pricing_brand %}<div class="card"><div class="empty-state">برای دیدن قیمت‌گذاری‌ها، دارما یا تکوین را انتخاب کن.</div></div>{% endif %}
