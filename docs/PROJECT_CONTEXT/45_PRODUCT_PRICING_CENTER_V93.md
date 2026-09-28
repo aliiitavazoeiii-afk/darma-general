@@ -106,15 +106,21 @@ Writes happen only when the user explicitly submits one of the existing/new pric
 
 ## Regression
 
-`check_product_pricing_center_v93` is read-only and verifies:
+`check_product_pricing_center_v93` is read-only after transactional rollback and verifies:
 
 - `/settings/products/` is routed to V93;
 - old `/settings/rules/` compatibility is active;
 - all V93 templates compile and render;
 - every active Darma ProductSize in supported sale sizes is represented in the per-code editor;
 - every active Takvin ProductSize in supported sale sizes is represented in the per-code editor;
+- V60 date-effective sale-price semantics directly through the authoritative `sale_price_v60` engine:
+  - future Darma/Takvin prices do not leak into today;
+  - prices activate on their effective date;
+  - changing a rule does not rewrite an existing historical `SaleLine.sale_price`;
 - Rules / Darma Pricing / Takvin Pricing / Colors UI markers render;
-- GET rendering does not change AppSettings, Takvin cost rules, products, product sizes, or compositions.
+- final fingerprints prove AppSettings, Takvin cost rules, products, product sizes, compositions, SaleDays and SaleLines are unchanged.
+
+The older V60 regression still contains a historical route assertion that `/settings/products/` must point directly at `pricing_v60`. V93 intentionally wraps that engine, so V93 owns the replacement route-aware sale-price semantic check instead of changing the old V60 regression.
 
 Expected marker:
 
@@ -133,7 +139,8 @@ The deploy script:
 - protects authoritative pricing/cost/accounting/import/material mutation files;
 - uses the Docker Hub -> `mirror.gcr.io` fallback introduced after the V91 registry 403;
 - runs migration drift / Django checks;
-- runs V59 cost, V60 sale-price, V91, V92, and V93 regressions;
+- runs V59 cost, V89 pricing-monitor, V90, V91, V92, and V93 regressions;
+- V93 itself transactionally regression-tests the V60 sale-price engine semantics described above;
 - compares pre/projected/final business + catalog/pricing fingerprints;
 - recreates only `web`;
 - never uses `--remove-orphans`.
