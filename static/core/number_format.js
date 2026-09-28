@@ -96,12 +96,26 @@
     document.head.appendChild(script);
   }
 
+  // Presentation-only default. The inventory POST handlers and stock mutation
+  // code remain untouched; this only selects Darma in the existing adjustment UI.
+  function defaultInventoryAdjustmentToDarma() {
+    if (window.location.pathname !== '/inventory/operations/') return;
+    const select = document.getElementById('adjust-brand');
+    if (!select || select.dataset.v94DefaultApplied === '1') return;
+    const darma = [...select.options].find((option) => (option.textContent || '').trim() === 'دارما');
+    if (!darma) return;
+    select.dataset.v94DefaultApplied = '1';
+    select.value = darma.value;
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+
   injectV39Styles();
   injectGlobalJalaliPicker();
   window.DarmaNumber = { raw, grouped, separator: SEP };
   document.addEventListener('DOMContentLoaded', () => {
     bind();
     injectToolNav();
+    defaultInventoryAdjustmentToDarma();
   });
   document.body?.addEventListener('htmx:afterSwap', (event) => bind(event.target));
 })();
