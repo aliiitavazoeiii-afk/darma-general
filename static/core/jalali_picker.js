@@ -1,10 +1,25 @@
 (function(){
+  if(window.__darmaJalaliPickerLoaded){
+    window.DarmaJalaliPicker?.attach?.(document);
+    return;
+  }
+  window.__darmaJalaliPickerLoaded=true;
+  window.__darmaJalaliPickerLoading=false;
+
   const selectors = [
+    'input:not([type="hidden"]).jalali-date',
+    'input:not([type="hidden"]).jalali-picker',
+    'input:not([type="hidden"])[data-jalali-date]',
     'input:not([type="hidden"])[name="date"]',
     'input:not([type="hidden"])[name="start"]',
     'input:not([type="hidden"])[name="end"]',
-    'input:not([type="hidden"])[name^="delivery_"]',
-    'input.jalali-picker'
+    'input:not([type="hidden"])[name="effective_from"]',
+    'input:not([type="hidden"])[name="effective_to"]',
+    'input:not([type="hidden"])[name="receipt_from"]',
+    'input:not([type="hidden"])[name="receipt_to"]',
+    'input:not([type="hidden"])[name$="_date"]',
+    'input:not([type="hidden"])[name^="date_"]',
+    'input:not([type="hidden"])[name*="_date_"]'
   ].join(',');
   let activeInput = null;
   let overlay = null;
@@ -64,7 +79,7 @@
     body.querySelectorAll('.jp-day').forEach(b=>b.addEventListener('click',()=>{
       if(!activeInput) return;
       activeInput.value=b.dataset.value;
-      if(['start','end'].includes(activeInput.name)){
+      if(['start','end','receipt_from','receipt_to'].includes(activeInput.name)){
         const period=activeInput.form?.querySelector('select[name="period"]');
         if(period) period.value='custom';
       }
@@ -75,7 +90,11 @@
   }
 
   function attach(root=document){
-    root.querySelectorAll(selectors).forEach(input=>{
+    if(!root) return;
+    const inputs=[];
+    if(root.matches?.(selectors)) inputs.push(root);
+    root.querySelectorAll?.(selectors).forEach(input=>inputs.push(input));
+    inputs.forEach(input=>{
       if(input.dataset.jpReady) return;
       input.dataset.jpReady='1';
       input.readOnly=true;
@@ -93,6 +112,14 @@
   addStyles();
   ensureOverlay();
   attach();
+  window.DarmaJalaliPicker={attach,close};
+  document.addEventListener('DOMContentLoaded',()=>attach(document));
   document.addEventListener('htmx:afterSwap',e=>attach(e.target));
+  const observer=new MutationObserver(records=>{
+    records.forEach(record=>record.addedNodes.forEach(node=>{
+      if(node.nodeType===1) attach(node);
+    }));
+  });
+  observer.observe(document.body,{childList:true,subtree:true});
   document.addEventListener('keydown',e=>{if(e.key==='Escape') close();});
 })();
