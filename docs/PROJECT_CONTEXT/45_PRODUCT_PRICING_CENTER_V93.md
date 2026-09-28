@@ -14,6 +14,8 @@ The V93 landing page contains exactly three top-level sections:
 2. **قیمت‌گذاری‌ها**
 3. **رنگ‌بندی‌ها**
 
+The visible UI is intentionally compact: explanatory subtitles were removed from the landing cards and inner section headers, while the primary section titles were enlarged.
+
 ## 1. Rules and base prices
 
 The old `settings/rules/` data sources are preserved.
@@ -54,11 +56,27 @@ Both still use the same V60 date-effective rule storage.
 
 ### Takvin
 
-A new bulk sale-price row applies M/L/XL/XXL sale prices across all active Takvin codes.
+Takvin bulk sale pricing is grouped by the requested pack quantities:
 
-Below it, every active Takvin code is listed separately with its active sizes for per-code overrides.
+- pack 1
+- pack 2
+- pack 3
+- pack 5
+- pack 6
+
+Each bulk row applies M/L/XL/XXL sale prices **only** to active Takvin ProductSize rows whose product has that exact `pack_qty`. It never creates missing products or sizes. A pack row with no active products is disabled.
+
+Below the bulk editor, every active Takvin code is listed separately with its active sizes for per-code overrides.
 
 Takvin **sale price** remains independent of Takvin **cost**.
+
+### Pricing layout
+
+Both Darma and Takvin per-code pricing editors use aligned fixed-column grids:
+
+`code | pack | effective date | sizes | save`
+
+The bulk editors use the same aligned approach. Input heights are fixed, size headings live in one header row, and product-code text uses the normal UI font instead of the previous code-style font.
 
 ### Historical safety
 
@@ -113,6 +131,9 @@ Writes happen only when the user explicitly submits one of the existing/new pric
 - all V93 templates compile and render;
 - every active Darma ProductSize in supported sale sizes is represented in the per-code editor;
 - every active Takvin ProductSize in supported sale sizes is represented in the per-code editor;
+- Takvin bulk rows are exactly pack 1/2/3/5/6;
+- each Takvin pack row reports the exact active products for that pack;
+- a transactional Takvin bulk test changes only the selected pack and does not leak into another pack quantity;
 - V60 date-effective sale-price semantics directly through the authoritative `sale_price_v60` engine:
   - future Darma/Takvin prices do not leak into today;
   - prices activate on their effective date;
@@ -140,7 +161,7 @@ The deploy script:
 - uses the Docker Hub -> `mirror.gcr.io` fallback introduced after the V91 registry 403;
 - runs migration drift / Django checks;
 - runs V59 cost, V89 pricing-monitor, V90, V91, V92, and V93 regressions;
-- V93 itself transactionally regression-tests the V60 sale-price engine semantics described above;
+- V93 itself transactionally regression-tests the V60 sale-price engine semantics and Takvin per-pack isolation described above;
 - compares pre/projected/final business + catalog/pricing fingerprints;
 - recreates only `web`;
 - never uses `--remove-orphans`.
