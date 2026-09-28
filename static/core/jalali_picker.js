@@ -17,9 +17,8 @@
     'input:not([type="hidden"])[name="effective_to"]',
     'input:not([type="hidden"])[name="receipt_from"]',
     'input:not([type="hidden"])[name="receipt_to"]',
-    'input:not([type="hidden"])[name$="_date"]',
-    'input:not([type="hidden"])[name^="date_"]',
-    'input:not([type="hidden"])[name*="_date_"]'
+    'input:not([type="hidden"])[name*="date"]',
+    'input:not([type="hidden"])[id*="date"]'
   ].join(',');
   let activeInput = null;
   let overlay = null;
