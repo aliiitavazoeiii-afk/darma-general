@@ -9,19 +9,27 @@ from .report_v10 import manual_report_action as report_manual_report_action
 from .self_spend_v62 import capital_accounts_queryset
 
 
-@login_required
-def finance_home(request):
-    return render(request, "core/finance_center_v97.html")
+def _finance_account_context():
+    """Canonical finance/account context reused by the hub and full accounts page.
 
-
-@login_required
-def accounts(request):
+    This intentionally reads the exact same ExcelManualRow / ExcelManualSetting
+    sources that the comprehensive report has always used. No data is copied or
+    migrated; V100 only makes the existing rows visible from Finance & Tools.
+    """
     manual_rows = ExcelManualRow.objects.filter(active=True)
-    accounts_rows = list(manual_rows.filter(section=ExcelManualRow.ACCOUNTS).order_by("sort_order", "id"))
-    person_rows = list(manual_rows.filter(section=ExcelManualRow.PERSONS).order_by("sort_order", "id"))
+    accounts_rows = list(
+        manual_rows.filter(section=ExcelManualRow.ACCOUNTS).order_by("sort_order", "id")
+    )
+    person_rows = list(
+        manual_rows.filter(section=ExcelManualRow.PERSONS).order_by("sort_order", "id")
+    )
     settings = {obj.key: obj for obj in ExcelManualSetting.objects.all()}
     takvin_debt = int(settings.get("takvin_debt").value or 0) if settings.get("takvin_debt") else 0
-    digikala_base = int(settings.get("digikala_receivable").value or 0) if settings.get("digikala_receivable") else 0
+    digikala_base = (
+        int(settings.get("digikala_receivable").value or 0)
+        if settings.get("digikala_receivable")
+        else 0
+    )
     digikala_ledger = int(digikala_ledger_total())
     digikala_receivable = int(digikala_receivable_total())
     dia_gallery_receivable = int(dia_gallery_receivable_total())
@@ -35,20 +43,29 @@ def accounts(request):
         + dia_gallery_receivable
     )
 
-    return render(
-        request,
-        "core/finance_accounts_v97.html",
-        {
-            "accounts_rows": accounts_rows,
-            "person_rows": person_rows,
-            "accounts_total": accounts_total,
-            "takvin_debt": takvin_debt,
-            "digikala_receivable": digikala_receivable,
-            "digikala_base_receivable": digikala_base,
-            "digikala_ledger_total": digikala_ledger,
-            "dia_gallery_receivable": dia_gallery_receivable,
-        },
-    )
+    return {
+        "accounts_rows": accounts_rows,
+        "person_rows": person_rows,
+        "accounts_total": accounts_total,
+        "takvin_debt": takvin_debt,
+        "digikala_receivable": digikala_receivable,
+        "digikala_base_receivable": digikala_base,
+        "digikala_ledger_total": digikala_ledger,
+        "dia_gallery_receivable": dia_gallery_receivable,
+    }
+
+
+@login_required
+def finance_home(request):
+    # V100: show the actual current account rows on the Finance & Tools landing
+    # page as well as the three navigation cards. This makes the migration from
+    # Comprehensive Report explicit and prevents accounts from becoming hidden.
+    return render(request, "core/finance_center_v97.html", _finance_account_context())
+
+
+@login_required
+def accounts(request):
+    return render(request, "core/finance_accounts_v97.html", _finance_account_context())
 
 
 @login_required
