@@ -166,6 +166,19 @@ class Command(BaseCommand):
                     f"Finance/Accounts missing row id={row.id} title={row.title!r}"
                 )
 
+        report_response = _render(report_v10.report, "/report/?period=today")
+        if report_response.status_code != 200:
+            raise RuntimeError(f"Comprehensive Report HTTP {report_response.status_code}")
+        report_html = report_response.content.decode("utf-8", errors="replace")
+        if 'data-report-accounts-moved="1"' not in report_html:
+            raise RuntimeError("Comprehensive Report account-move marker missing")
+        if 'id="section-accounts"' in report_html:
+            raise RuntimeError("Comprehensive Report still server-renders account rows")
+        if 'name="key" value="digikala_receivable"' in report_html:
+            raise RuntimeError("Comprehensive Report still renders editable Digikala account form")
+        if 'name="key" value="takvin_debt"' in report_html:
+            raise RuntimeError("Comprehensive Report still renders editable Takvin debt form")
+
         canonical = current_capital_breakdown()
         expected = _independent_capital()
         for key, value in expected.items():
@@ -193,6 +206,7 @@ class Command(BaseCommand):
         self.stdout.write("FINANCE SIDEBAR = DIRECT ROOT LINK")
         self.stdout.write(f"ACCOUNT ROW COVERAGE = OK ({len(expected_accounts)})")
         self.stdout.write(f"PERSON ROW COVERAGE = OK ({len(expected_persons)})")
+        self.stdout.write("COMPREHENSIVE REPORT ACCOUNT MANAGEMENT = REMOVED")
         self.stdout.write("PAYMENTS = UNCHANGED ROUTE")
         self.stdout.write("CALCULATOR = UNCHANGED ROUTE")
         self.stdout.write("CURRENT CAPITAL COMPONENTS = CANONICAL")
