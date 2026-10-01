@@ -3,31 +3,12 @@
 {% block content %}
 {% include 'core/_mobile_shell.html' %}
 <style>
-.finance97-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.finance97-card{display:block;text-decoration:none;color:#fff;border:1px solid rgba(255,255,255,.13);border-radius:20px;padding:24px;min-height:185px;background:linear-gradient(145deg,rgba(24,54,84,.48),rgba(5,20,36,.28));transition:.16s}.finance97-card:hover{transform:translateY(-2px);border-color:rgba(251,101,20,.48);color:#fff}.finance97-icon{width:48px;height:48px;border-radius:14px;background:rgba(251,101,20,.14);color:#ffb27d;display:grid;place-items:center;font-size:1.3rem;margin-bottom:22px}.finance97-card h2{font-size:1.12rem;margin:0 0 8px;font-weight:900}.finance97-card p{color:#9fb0c4;margin:0;font-size:.82rem;line-height:1.9}.finance97-arrow{margin-top:20px;color:#ffd08a;font-weight:800}.finance100-accounts{margin-top:20px;border:1px solid rgba(255,255,255,.11);border-radius:18px;background:linear-gradient(145deg,rgba(23,50,79,.38),rgba(6,20,36,.24));overflow:hidden}.finance100-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:16px 18px;border-bottom:1px solid rgba(255,255,255,.08)}.finance100-head h2{margin:0;font-size:1.08rem}.finance100-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:14px}.finance100-row{display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.025);border-radius:12px;padding:12px 14px}.finance100-row .title{font-weight:800}.finance100-row .note{font-size:.7rem;color:#91a6bc;margin-top:2px}.finance100-row .amount{font-weight:900;white-space:nowrap}.finance100-empty{padding:24px;text-align:center;color:#91a6bc}.finance100-subtitle{padding:0 16px 4px;color:#9fb0c4;font-size:.75rem;font-weight:700}.finance100-divider{height:1px;background:rgba(255,255,255,.07);margin:4px 14px 12px}@media(max-width:900px){.finance97-grid{grid-template-columns:1fr 1fr}.finance100-list{grid-template-columns:1fr}}@media(max-width:575.98px){.finance97-grid{grid-template-columns:1fr}.finance97-card{min-height:150px}.finance100-head{align-items:flex-start;flex-direction:column}}
+.finance97-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.finance97-card{display:block;text-decoration:none;color:#fff;border:1px solid rgba(255,255,255,.13);border-radius:20px;padding:24px;min-height:185px;background:linear-gradient(145deg,rgba(24,54,84,.48),rgba(5,20,36,.28));transition:.16s}.finance97-card:hover{transform:translateY(-2px);border-color:rgba(251,101,20,.48);color:#fff}.finance97-icon{width:48px;height:48px;border-radius:14px;background:rgba(251,101,20,.14);color:#ffb27d;display:grid;place-items:center;font-size:1.3rem;margin-bottom:22px}.finance97-card h2{font-size:1.12rem;margin:0 0 8px;font-weight:900}.finance97-card p{color:#9fb0c4;margin:0;font-size:.82rem;line-height:1.9}.finance97-arrow{margin-top:20px;color:#ffd08a;font-weight:800}@media(max-width:900px){.finance97-grid{grid-template-columns:1fr 1fr}}@media(max-width:575.98px){.finance97-grid{grid-template-columns:1fr}.finance97-card{min-height:150px}}
 </style>
-<div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4 mobile-page-head"><div><div class="text-secondary">مرکز مالی</div><h1 class="page-title mb-1">مالی و ابزار</h1><div class="page-muted">همه ابزارهای مالی از یک نقطه</div></div></div>
-<div class="finance97-grid">
-  <a class="finance97-card" href="{% url 'payments' %}"><div class="finance97-icon">↔</div><h2>دریافتی‌ها و پرداختی‌ها</h2><p>همان بخش فعلی پرداخت‌ها و دریافتی‌ها، بدون تغییر در منطق یا فرم‌ها.</p><div class="finance97-arrow">ورود ←</div></a>
-  <a class="finance97-card" href="{% url 'finance_accounts' %}"><div class="finance97-icon">▤</div><h2>حساب‌ها</h2><p>ریز حساب‌ها، حساب اشخاص، طلب دیجی‌کالا، Dia Gallery و بدهی تکوین.</p><div class="finance97-arrow">ورود ←</div></a>
-  <a class="finance97-card" href="{% url 'calculator' %}"><div class="finance97-icon">∑</div><h2>محاسبه‌گر</h2><p>ورودی مستقل محاسبه‌گر. محتوای فعلی آن فعلاً دست‌نخورده می‌ماند تا بعداً بازطراحی شود.</p><div class="finance97-arrow">ورود ←</div></a>
+<div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4 mobile-page-head"><div><div class="text-secondary">مرکز مالی</div><h1 class="page-title mb-1">مالی و ابزار</h1><div class="page-muted">ورودی واحد پرداخت‌ها، حساب‌ها و محاسبه‌گر</div></div></div>
+<div class="finance97-grid" data-finance-hub="v102">
+  <a class="finance97-card" data-finance-card="payments" href="{% url 'payments' %}"><div class="finance97-icon">↔</div><h2>پرداخت‌ها</h2><p>صورت پرداختی و دریافتی فعلی، بدون تغییر در منطق و فرم‌ها.</p><div class="finance97-arrow">ورود ←</div></a>
+  <a class="finance97-card" data-finance-card="accounts" href="{% url 'finance_accounts' %}"><div class="finance97-icon">▤</div><h2>حساب‌ها</h2><p>همان حساب‌های منتقل‌شده از گزارش جامع؛ بانک، اشخاص، طلب‌ها و بدهی تکوین.</p><div class="finance97-arrow">ورود ←</div></a>
+  <a class="finance97-card" data-finance-card="calculator" href="{% url 'calculator' %}"><div class="finance97-icon">∑</div><h2>محاسبه‌گر</h2><p>نسخه فعلی محاسبه‌گر فعلاً بدون تغییر باقی می‌ماند.</p><div class="finance97-arrow">ورود ←</div></a>
 </div>
-
-<section class="finance100-accounts" data-finance-accounts-preview="v100">
-  <div class="finance100-head"><div><div class="text-secondary small">انتقال‌شده از گزارش جامع</div><h2>حساب‌های فعلی</h2></div><a class="btn btn-outline-light" href="{% url 'finance_accounts' %}">مشاهده و ویرایش همه حساب‌ها</a></div>
-  <div class="finance100-subtitle">حساب‌ها</div>
-  <div class="finance100-list">
-    {% for row in accounts_rows %}
-      <div class="finance100-row" data-finance-account-id="{{ row.id }}"><div><div class="title">{{ row.title }}</div>{% if row.note %}<div class="note">{{ row.note }}</div>{% endif %}</div><div class="amount money-center">{{ row.amount|groupnum }} تومان</div></div>
-    {% empty %}<div class="finance100-empty">هیچ حساب فعالی ثبت نشده.</div>{% endfor %}
-  </div>
-  {% if person_rows %}
-    <div class="finance100-divider"></div>
-    <div class="finance100-subtitle">حساب اشخاص</div>
-    <div class="finance100-list">
-      {% for row in person_rows %}
-        <div class="finance100-row" data-finance-person-id="{{ row.id }}"><div><div class="title">{{ row.title }}</div>{% if row.note %}<div class="note">{{ row.note }}</div>{% endif %}</div><div class="amount money-center">{{ row.amount|groupnum }} تومان</div></div>
-      {% endfor %}
-    </div>
-  {% endif %}
-</section>
 {% endblock %}
