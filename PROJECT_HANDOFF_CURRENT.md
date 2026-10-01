@@ -22,10 +22,11 @@ in numeric order through:
 - `docs/PROJECT_CONTEXT/50_FINANCE_NAV_POLISH_V98.md`
 - `docs/PROJECT_CONTEXT/51_FINANCE_ACCOUNTS_VISIBLE_V100.md`
 - `docs/PROJECT_CONTEXT/52_FINANCE_HUB_CAPITAL_V102.md`
+- `docs/PROJECT_CONTEXT/53_NATIVE_FINANCE_NAV_V103.md`
 
 ## Current authoritative development line
 
-`v102-finance-hub-consolidated`
+`v103-native-finance-nav`
 
 V100 and V101 diverged from V99. V101 is **not** a superset of V100 and its restored Finance submenu conflicts with the user's final requirement.
 
@@ -43,3 +44,16 @@ V102 intentionally continues V100 and defines the final Finance structure:
 GitHub branch state is not proof of production deployment. V102 is production-confirmed only after the VPS prints:
 
 `SUCCESS: FINANCE HUB + CAPITAL V102 DEPLOYED`
+
+
+## V103 correction after V102 production
+
+V102 was successfully deployed with PRE = PROJECTED = FINAL business-state hashes and marker:
+
+`SUCCESS: FINANCE HUB + CAPITAL V102 DEPLOYED`
+
+However the user reported no visible Finance navigation change. V103 fixes the presentation architecture itself: Finance is now a native direct link in `templates/base.html`, not a middleware/JavaScript transformation. The three-card Finance hub and Accounts backend from V102 remain unchanged.
+
+V103 is production-confirmed only after:
+
+`SUCCESS: NATIVE FINANCE NAV V103 DEPLOYED`
