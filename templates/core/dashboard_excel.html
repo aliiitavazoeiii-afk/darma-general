@@ -1,43 +1,340 @@
-{% extends 'base.html' %}{% load jalali %}{% block title %}داشبورد | DARMA{% endblock %}{% block content %}{% include 'core/_mobile_shell.html' %}
-<div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4 mobile-page-head"><div><div class="page-kicker">نسخه وب اکسل کسب‌وکار</div><h1 class="page-title mb-1">داشبورد</h1><div class="page-muted">{{ today_j }} · ثبت فروش روزانه و گزارش‌های اصلی</div></div><div class="mobile-page-actions"><a class="btn btn-primary px-4" href="{% url 'sale_start' %}">+ ثبت صورت فروش</a></div></div>
+{% extends 'base.html' %}{% load jalali %}
+{% block title %}داشبورد | DARMA{% endblock %}
+{% block content %}
+{% include 'core/_mobile_shell.html' %}
 
-<div class="row g-2 g-md-3 mb-4">
-  <div class="col-6 col-xl-3"><div class="card glass-card h-100"><div class="card-body"><div class="subheader">فروش امروز</div><div class="kpi money mt-2">{{ today_metrics.gross|groupnum }}</div><div class="text-secondary">تومان</div></div></div></div>
-  <div class="col-6 col-xl-3"><div class="card glass-card h-100"><div class="card-body"><div class="subheader">سود امروز</div><div class="kpi money mt-2 {% if today_metrics.profit >= 0 %}text-success{% else %}text-danger{% endif %}">{{ today_metrics.profit|groupnum }}</div><div class="text-secondary">تومان</div></div></div></div>
-  <div class="col-6 col-xl-3"><div class="card glass-card h-100"><div class="card-body"><div class="subheader">فروش ماه جاری</div><div class="kpi money mt-2">{{ month_metrics.gross|groupnum }}</div><div class="text-secondary">{{ month_metrics.packs|groupnum }} کالا · {{ month_metrics.shorts|groupnum }} شورت</div></div></div></div>
-  <div class="col-6 col-xl-3"><div class="card glass-card h-100"><div class="card-body"><div class="subheader">سود ماه جاری</div><div class="kpi money mt-2 {% if month_metrics.profit >= 0 %}text-success{% else %}text-danger{% endif %}">{{ month_metrics.profit|groupnum }}</div><div class="text-secondary">{{ month_metrics.margin|pct1 }}٪ حاشیه سود</div></div></div></div>
-</div>
+<div class="control-room">
+  <header class="cr-head">
+    <div>
+      <div class="cr-eyebrow">DARMA / CONTROL ROOM</div>
+      <h1 class="cr-title">داشبورد</h1>
+      <div class="cr-subtitle">تصویر لحظه‌ای فروش، سود و عملیات اصلی کسب‌وکار</div>
+    </div>
+    <div class="cr-head-actions">
+      <div class="cr-date"><span class="cr-date-dot"></span><span>{{ today_j }}</span></div>
+      <a class="cr-primary-action" href="{% url 'sale_start' %}">
+        <span>＋</span><span>ثبت فروش امروز</span>
+      </a>
+    </div>
+  </header>
 
-<div class="row g-3 mb-4">
-  <div class="col-xl-8"><div class="card glass-card h-100"><div class="card-header d-flex justify-content-between align-items-center"><div><h3 class="card-title mb-1">روند فروش ۱۴ روز اخیر</h3><div class="text-secondary small">فقط روزهایی که فروش ثبت شده؛ روزهای خالی و تعطیل نمایش داده نمی‌شوند</div></div><span class="badge badge-soft-orange">تا ۱۴ روز</span></div><div class="card-body"><div class="chart-wrap" dir="ltr"><canvas id="salesTrendChart" height="112" dir="ltr" style="direction:ltr"></canvas></div></div></div></div>
-  <div class="col-xl-4"><div class="card glass-card h-100"><div class="card-header d-flex justify-content-between align-items-center"><div><h3 class="card-title mb-1">هشدارها</h3><div class="text-secondary small">مواردی که بهتر است بررسی کنی</div></div><span class="alert-count">{{ alerts|length }}</span></div><div class="card-body p-0"><div class="alert-list">{% for alert in alerts %}<a href="{{ alert.url }}" class="alert-item text-decoration-none"><span class="alert-dot alert-dot-{{ alert.level }}"></span><span class="flex-fill"><strong>{{ alert.title }}</strong><small>{{ alert.detail }}</small></span><span class="alert-arrow">‹</span></a>{% empty %}<div class="empty-state py-5"><strong class="text-success">همه‌چیز آرام است</strong><div class="mt-1">هشدار فعالی وجود ندارد.</div></div>{% endfor %}</div></div></div></div>
-</div>
+  <section class="cr-top-grid">
+    <article class="cr-panel cr-month">
+      <div>
+        <div class="cr-panel-top">
+          <div class="cr-label">فروش ماه جاری</div>
+          <div class="cr-chip">ماه جاری</div>
+        </div>
+        <div class="cr-hero-value" data-counter="{{ month_metrics.gross|default:0 }}">{{ month_metrics.gross|groupnum }}</div>
+        <div class="cr-unit">تومان</div>
+      </div>
 
-<div class="row g-2 g-md-3">
-  <div class="col-12 col-sm-6 col-xl-3"><a class="card quick-card glass-card h-100 text-decoration-none" href="{% url 'sale_start' %}"><div class="card-body"><span class="quick-icon">01</span><h3 class="mt-3 mb-1">فروش روزانه</h3><div class="text-secondary">تقویم شمسی، ثبت صورت و گزارش نهایی همان روز</div></div></a></div>
-  <div class="col-12 col-sm-6 col-xl-3"><a class="card quick-card glass-card h-100 text-decoration-none" href="{% url 'report' %}"><div class="card-body"><span class="quick-icon">02</span><h3 class="mt-3 mb-1">گزارش جامع</h3><div class="text-secondary">فروش اکسل‌مانند + سرمایه، حساب‌ها و موجودی دستی</div></div></a></div>
-  <div class="col-12 col-sm-6 col-xl-3"><a class="card quick-card glass-card h-100 text-decoration-none" href="{% url 'material_report' %}"><div class="card-body"><span class="quick-icon">03</span><h3 class="mt-3 mb-1">گزارش مواد اولیه</h3><div class="text-secondary">{{ material_blocks }} صورت ثبت‌شده · ورود دستی مشابه اکسل</div></div></a></div>
-  <div class="col-12 col-sm-6 col-xl-3"><a class="card quick-card glass-card h-100 text-decoration-none" href="{% url 'takvin' %}"><div class="card-body"><span class="quick-icon">04</span><h3 class="mt-3 mb-1">خرید تکوین</h3><div class="text-secondary">خرید خالص ماه: <span class="money fw-bold">{{ purchase_month_total|groupnum }}</span> تومان</div></div></a></div>
+      <div class="cr-stat-row">
+        <div class="cr-stat">
+          <span>سود ماه</span>
+          <strong class="{% if month_metrics.profit >= 0 %}positive{% else %}negative{% endif %}" data-counter="{{ month_metrics.profit|default:0 }}">{{ month_metrics.profit|groupnum }}</strong>
+        </div>
+        <div class="cr-stat">
+          <span>حاشیه سود</span>
+          <strong class="{% if month_metrics.margin >= 0 %}positive{% else %}negative{% endif %}">{{ month_metrics.margin|pct1 }}٪</strong>
+        </div>
+        <div class="cr-stat">
+          <span>تعداد کالا</span>
+          <strong data-counter="{{ month_metrics.packs|default:0 }}">{{ month_metrics.packs|groupnum }}</strong>
+        </div>
+        <div class="cr-stat">
+          <span>تعداد شورت</span>
+          <strong data-counter="{{ month_metrics.shorts|default:0 }}">{{ month_metrics.shorts|groupnum }}</strong>
+        </div>
+      </div>
+    </article>
+
+    <aside class="cr-panel cr-today">
+      <div class="cr-panel-top">
+        <div>
+          <div class="cr-today-kicker">TODAY</div>
+          <div class="cr-label mt-1">عملکرد امروز</div>
+        </div>
+        <div class="cr-chip">زنده</div>
+      </div>
+
+      <div class="cr-today-main">
+        <span>فروش امروز</span>
+        <strong data-counter="{{ today_metrics.gross|default:0 }}">{{ today_metrics.gross|groupnum }}</strong>
+        <div class="cr-unit">تومان</div>
+      </div>
+
+      <div class="cr-today-grid">
+        <div class="cr-mini">
+          <span>سود امروز</span>
+          <strong class="{% if today_metrics.profit >= 0 %}text-success{% else %}text-danger{% endif %}" data-counter="{{ today_metrics.profit|default:0 }}">{{ today_metrics.profit|groupnum }}</strong>
+        </div>
+        <div class="cr-mini">
+          <span>حاشیه سود</span>
+          <strong class="{% if today_metrics.margin >= 0 %}text-success{% else %}text-danger{% endif %}">{{ today_metrics.margin|pct1 }}٪</strong>
+        </div>
+        <div class="cr-mini">
+          <span>کالا</span>
+          <strong data-counter="{{ today_metrics.packs|default:0 }}">{{ today_metrics.packs|groupnum }}</strong>
+        </div>
+        <div class="cr-mini">
+          <span>شورت</span>
+          <strong data-counter="{{ today_metrics.shorts|default:0 }}">{{ today_metrics.shorts|groupnum }}</strong>
+        </div>
+      </div>
+
+      <a class="cr-primary-action" href="{% url 'sale_start' %}"><span>＋</span><span>ثبت صورت فروش</span></a>
+    </aside>
+  </section>
+
+  <section class="cr-middle-grid">
+    <article class="cr-section">
+      <div class="cr-section-head">
+        <div>
+          <h2 class="cr-section-title">Performance</h2>
+          <div class="cr-section-copy">فروش و سود در ۱۴ روز ثبت‌شده اخیر</div>
+        </div>
+        <div class="cr-range">آخرین ۱۴ روز فروش</div>
+      </div>
+      <div class="cr-chart-body">
+        <div class="cr-chart" dir="ltr">
+          <canvas id="salesTrendChart" dir="ltr" style="direction:ltr"></canvas>
+        </div>
+      </div>
+    </article>
+
+    <aside class="cr-section cr-attention">
+      <div class="cr-section-head">
+        <div>
+          <h2 class="cr-section-title">Attention</h2>
+          <div class="cr-section-copy">مواردی که نیاز به بررسی دارند</div>
+        </div>
+        <div class="cr-attention-count">{{ alerts|length }}</div>
+      </div>
+
+      <div class="cr-alert-list">
+        {% for alert in alerts %}
+          <a href="{{ alert.url }}" class="cr-alert">
+            <span class="cr-alert-beacon"></span>
+            <span class="cr-alert-copy">
+              <strong>{{ alert.title }}</strong>
+              <small>{{ alert.detail }}</small>
+            </span>
+            <span class="cr-alert-arrow">‹</span>
+          </a>
+        {% empty %}
+          <div class="cr-empty">
+            <div>
+              <div class="cr-empty-icon">✓</div>
+              <strong>وضعیت عادی</strong>
+              <span>مورد نیاز به بررسی وجود ندارد.</span>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </aside>
+  </section>
+
+  <section class="cr-command">
+    <div class="cr-command-head">
+      <h3>دسترسی سریع</h3>
+      <span>عملیات اصلی DARMA</span>
+    </div>
+
+    <div class="cr-command-grid">
+      <a class="cr-command-item" href="{% url 'sale_start' %}">
+        <span class="cr-command-icon">
+          <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+        </span>
+        <span><strong>فروش روزانه</strong><span>ثبت و گزارش فروش امروز</span></span>
+      </a>
+
+      <a class="cr-command-item" href="{% url 'report' %}">
+        <span class="cr-command-icon">
+          <svg viewBox="0 0 24 24"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></svg>
+        </span>
+        <span><strong>گزارش جامع</strong><span>فروش، سرمایه و حساب‌ها</span></span>
+      </a>
+
+      <a class="cr-command-item" href="{% url 'material_report' %}">
+        <span class="cr-command-icon">
+          <svg viewBox="0 0 24 24"><path d="M12 3 4 7l8 4 8-4-8-4Z"/><path d="m4 12 8 4 8-4M4 17l8 4 8-4"/></svg>
+        </span>
+        <span><strong>مواد اولیه</strong><span>{{ material_blocks }} صورت ثبت‌شده</span></span>
+      </a>
+
+      <a class="cr-command-item" href="{% url 'takvin' %}">
+        <span class="cr-command-icon">
+          <svg viewBox="0 0 24 24"><path d="M3 6h18M6 10h12M8 14h8M10 18h4"/></svg>
+        </span>
+        <span><strong>خرید تکوین</strong><span>{{ purchase_month_total|groupnum }} تومان در ماه</span></span>
+      </a>
+
+      <a class="cr-command-item" href="{% url 'inventory' %}">
+        <span class="cr-command-icon">
+          <svg viewBox="0 0 24 24"><path d="M4 7 12 3l8 4v10l-8 4-8-4V7Z"/><path d="m4 7 8 4 8-4M12 11v10"/></svg>
+        </span>
+        <span><strong>موجودی کالا</strong><span>مشاهده وضعیت انبار</span></span>
+      </a>
+    </div>
+  </section>
 </div>
 
 {{ chart_labels|json_script:"dashboard-chart-labels" }}
 {{ chart_sales|json_script:"dashboard-chart-sales" }}
 {{ chart_profit|json_script:"dashboard-chart-profit" }}
 {% endblock %}
-{% block scripts %}<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script><script>
-(function(){
- const canvas=document.getElementById('salesTrendChart'); if(!canvas||typeof Chart==='undefined') return;
- canvas.dir='ltr'; canvas.style.direction='ltr';
- const ctx=canvas.getContext('2d'); if(ctx) ctx.direction='ltr';
- Chart.defaults.color='#c7d3df'; Chart.defaults.borderColor='rgba(255,255,255,.10)'; Chart.defaults.font.family='Vazirmatn';
- const rawLabels=JSON.parse(document.getElementById('dashboard-chart-labels').textContent);
- const labels=rawLabels.map(v=>'\u200E'+String(v));
- const sales=JSON.parse(document.getElementById('dashboard-chart-sales').textContent);
- const profit=JSON.parse(document.getElementById('dashboard-chart-profit').textContent);
- const nf=new Intl.NumberFormat('en-US',{maximumFractionDigits:0});
- const fmt=v=>'\u200E'+nf.format(Math.round(Number(v)||0));
- const small=window.innerWidth<576;
- new Chart(canvas,{type:'bar',data:{labels,datasets:[{label:'فروش',data:sales,backgroundColor:'rgba(251,101,20,.82)',borderColor:'#fb6514',borderWidth:1,borderRadius:6,borderSkipped:false,maxBarThickness:32},{label:'سود',data:profit,backgroundColor:'rgba(57,217,138,.72)',borderColor:'#39d98a',borderWidth:1,borderRadius:6,borderSkipped:false,maxBarThickness:32}]},options:{locale:'en-US',responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:!small,position:'top',align:'end',rtl:false,textDirection:'ltr',labels:{color:'#dce7f1',usePointStyle:true,boxWidth:8}},tooltip:{rtl:false,textDirection:'ltr',backgroundColor:'rgba(5,19,34,.94)',titleColor:'#fff',bodyColor:'#dce7f1',borderColor:'rgba(255,255,255,.14)',borderWidth:1,callbacks:{title:items=>items.length?String(items[0].label).replace(/^\u200E/,''):'',label:c=>c.dataset.label+' : '+fmt(c.parsed.y)+' تومان'}}},scales:{x:{grid:{display:false},ticks:{color:'#aebdcd',maxRotation:0,autoSkip:false,callback:function(value){return '\u200E'+this.getLabelForValue(value).replace(/^\u200E/,'');}}},y:{beginAtZero:true,grid:{color:'rgba(255,255,255,.075)'},ticks:{color:'#aebdcd',maxTicksLimit:small?5:8,callback:v=>fmt(v)}}}}});
-})();
 
-</script>{% endblock %}
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script>
+(function(){
+  const reduceMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  if(!reduceMotion){
+    const nf=new Intl.NumberFormat('en-US',{maximumFractionDigits:0});
+    document.querySelectorAll('[data-counter]').forEach(el=>{
+      const end=Number(el.dataset.counter||0);
+      if(!Number.isFinite(end)) return;
+      const duration=620;
+      const startAt=performance.now();
+      const tick=(now)=>{
+        const p=Math.min(1,(now-startAt)/duration);
+        const eased=1-Math.pow(1-p,4);
+        el.textContent=nf.format(Math.round(end*eased));
+        if(p<1) requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    });
+  }
+
+  const canvas=document.getElementById('salesTrendChart');
+  if(!canvas||typeof Chart==='undefined') return;
+
+  canvas.dir='ltr';
+  canvas.style.direction='ltr';
+  const ctx=canvas.getContext('2d');
+  if(!ctx) return;
+  ctx.direction='ltr';
+
+  const rawLabels=JSON.parse(document.getElementById('dashboard-chart-labels').textContent);
+  const labels=rawLabels.map(v=>'\u200E'+String(v));
+  const sales=JSON.parse(document.getElementById('dashboard-chart-sales').textContent);
+  const profit=JSON.parse(document.getElementById('dashboard-chart-profit').textContent);
+  const nf=new Intl.NumberFormat('en-US',{maximumFractionDigits:0});
+  const fmt=v=>'\u200E'+nf.format(Math.round(Number(v)||0));
+  const small=window.innerWidth<576;
+
+  const salesFill=ctx.createLinearGradient(0,0,0,330);
+  salesFill.addColorStop(0,'rgba(255,107,44,.30)');
+  salesFill.addColorStop(.48,'rgba(255,107,44,.10)');
+  salesFill.addColorStop(1,'rgba(255,107,44,0)');
+
+  Chart.defaults.color='#7f8993';
+  Chart.defaults.borderColor='rgba(255,255,255,.055)';
+  Chart.defaults.font.family='Vazirmatn';
+
+  new Chart(canvas,{
+    type:'line',
+    data:{
+      labels,
+      datasets:[
+        {
+          label:'فروش',
+          data:sales,
+          borderColor:'#ff7440',
+          backgroundColor:salesFill,
+          fill:true,
+          tension:.42,
+          borderWidth:2.2,
+          pointRadius:0,
+          pointHoverRadius:4,
+          pointHoverBackgroundColor:'#ff7440',
+          pointHoverBorderColor:'#171b21',
+          pointHoverBorderWidth:3
+        },
+        {
+          label:'سود',
+          data:profit,
+          borderColor:'#42d392',
+          backgroundColor:'rgba(66,211,146,.08)',
+          fill:false,
+          tension:.42,
+          borderWidth:1.8,
+          pointRadius:0,
+          pointHoverRadius:4,
+          pointHoverBackgroundColor:'#42d392',
+          pointHoverBorderColor:'#171b21',
+          pointHoverBorderWidth:3
+        }
+      ]
+    },
+    options:{
+      locale:'en-US',
+      responsive:true,
+      maintainAspectRatio:false,
+      animation:reduceMotion?false:{duration:750,easing:'easeOutQuart'},
+      interaction:{mode:'index',intersect:false},
+      plugins:{
+        legend:{
+          display:true,
+          position:'top',
+          align:'end',
+          rtl:false,
+          textDirection:'ltr',
+          labels:{
+            color:'#8d97a1',
+            usePointStyle:true,
+            pointStyle:'circle',
+            boxWidth:6,
+            boxHeight:6,
+            padding:18,
+            font:{size:11,weight:'600'}
+          }
+        },
+        tooltip:{
+          rtl:false,
+          textDirection:'ltr',
+          backgroundColor:'rgba(13,17,23,.96)',
+          titleColor:'#f7f5f0',
+          bodyColor:'#a9b1b8',
+          borderColor:'rgba(255,255,255,.10)',
+          borderWidth:1,
+          padding:12,
+          cornerRadius:12,
+          displayColors:true,
+          callbacks:{
+            title:items=>items.length?String(items[0].label).replace(/^\u200E/,''):'',
+            label:c=>c.dataset.label+' : '+fmt(c.parsed.y)+' تومان'
+          }
+        }
+      },
+      scales:{
+        x:{
+          border:{display:false},
+          grid:{display:false},
+          ticks:{
+            color:'#626c76',
+            maxRotation:0,
+            autoSkip:true,
+            maxTicksLimit:small?6:10,
+            callback:function(value){return '\u200E'+this.getLabelForValue(value).replace(/^\u200E/,'');}
+          }
+        },
+        y:{
+          beginAtZero:true,
+          border:{display:false},
+          grid:{color:'rgba(255,255,255,.045)',drawTicks:false},
+          ticks:{
+            color:'#626c76',
+            maxTicksLimit:small?5:6,
+            padding:10,
+            callback:v=>fmt(v)
+          }
+        }
+      }
+    }
+  });
+})();
+</script>
+{% endblock %}
