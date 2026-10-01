@@ -109,13 +109,15 @@ def _summarize_month_blocks(blocks):
 def _all_time_cut_summary(blocks):
     """Average saved cut quantity across the five canonical Darma colors.
 
-    Only positive saved cut entries are included. This is intentionally all-time,
+    Only Darma blocks and positive saved cut entries are included. This is all-time,
     matching the user's request to summarize every cutting sheet on the page.
     """
     total = 0
     count = 0
     allowed = set(v23.BASE_KEYS)
     for block in blocks:
+        if getattr(block.brand, "name", "") != "دارما":
+            continue
         input_data = block.input_data or {}
         for key in allowed:
             values = input_data.get(key, {}) or {}
