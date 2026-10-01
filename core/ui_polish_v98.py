@@ -5,11 +5,11 @@ class V98PresentationMiddleware:
     """Server-rendered finance navigation + cache-busted presentation helper.
 
     Presentation-only: no models, forms, accounting logic, inventory logic, or
-    routes are mutated. V100 also disables HTML caching so the browser cannot
+    routes are mutated. V102 also disables HTML caching so the browser cannot
     keep an older Finance hub after deployment.
     """
 
-    SCRIPT = '<script src="/static/core/number_format.js?v=100"></script>'
+    SCRIPT = '<script src="/static/core/number_format.js?v=102"></script>'
     FINANCE_GROUP_RE = re.compile(
         r'<section class="erp-nav-group[^\"]*">\s*'
         r'<button class="erp-nav-group-toggle"[^>]*>.*?'
@@ -43,7 +43,7 @@ class V98PresentationMiddleware:
             or path.startswith("/calculator/")
         ) else ""
         finance_link = (
-            f'<a data-finance-root-nav="server-v100" class="{active}" href="/finance/">'
+            f'<a data-finance-root-nav="server-v102" class="{active}" href="/finance/">'
             '<span class="erp-dot"></span>مالی و ابزار</a>'
         )
 
@@ -53,8 +53,8 @@ class V98PresentationMiddleware:
             content = content.replace("</body>", self.SCRIPT + "</body>", 1)
 
         response.content = content.encode("utf-8")
-        response["X-Darma-Finance-Nav-V100"] = "server" if replaced else "not-found"
-        # V100: force fresh ERP HTML after deploy. Static assets still have their
+        response["X-Darma-Finance-Nav-V102"] = "server" if replaced else "not-found"
+        # V102: force fresh ERP HTML after deploy. Static assets still have their
         # own cache policy; this only prevents stale rendered pages/navigation.
         response["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
         response["Pragma"] = "no-cache"
