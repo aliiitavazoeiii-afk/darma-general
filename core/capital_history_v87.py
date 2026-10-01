@@ -37,21 +37,32 @@ from .self_spend_v62 import SELF_PAYEE, capital_accounts_queryset, is_self_track
 from .takvin_pricing_v17 import takvin_cost_for
 
 
-def current_capital_breakdown():
-    """Return the current canonical report components without changing formulas."""
+def current_account_breakdown():
+    """Canonical current accounts/persons component used by Finance and capital."""
     manual_rows = ExcelManualRow.objects.filter(active=True)
     person_rows = manual_rows.filter(section=ExcelManualRow.PERSONS)
-    asset_rows = manual_rows.filter(section=ExcelManualRow.ASSETS)
     capital_accounts = capital_accounts_queryset(
         manual_rows.filter(section=ExcelManualRow.ACCOUNTS)
     )
-
     dia_receivable = int(dia_gallery_receivable_total() or 0)
     accounts_total = (
         sum(int(row.amount or 0) for row in capital_accounts)
         + sum(int(row.amount or 0) for row in person_rows)
         + dia_receivable
     )
+    return {
+        "accounts_total": int(accounts_total),
+        "dia_gallery_receivable": int(dia_receivable),
+    }
+
+
+def current_capital_breakdown():
+    """Return the current canonical report components without changing formulas."""
+    manual_rows = ExcelManualRow.objects.filter(active=True)
+    asset_rows = manual_rows.filter(section=ExcelManualRow.ASSETS)
+    account_breakdown = current_account_breakdown()
+    accounts_total = int(account_breakdown["accounts_total"])
+    dia_receivable = int(account_breakdown["dia_gallery_receivable"])
     assets_total = sum(int(row.amount or 0) for row in asset_rows)
     finished_total = int(finished_inventory_value_v17() or 0)
     raw = _raw_material_context()
