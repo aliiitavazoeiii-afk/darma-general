@@ -103,3 +103,10 @@ Standing rule: after every important change update context; after every confirme
 **Current GitHub continuation line:** `v102-finance-hub-consolidated`.
 
 V101's expandable Finance submenu is superseded by V102 and must not be reintroduced unless the user explicitly changes this UX rule.
+
+
+## V103 native Finance navigation
+
+53. `53_NATIVE_FINANCE_NAV_V103.md` — replaces the V102 post-render Finance-navigation rewrite with a native direct link in `base.html`. The Finance hub remains exactly three cards and Accounts remains `/finance/accounts/`; no business/accounting logic changes.
+
+**Current GitHub continuation line:** `v103-native-finance-nav`.
