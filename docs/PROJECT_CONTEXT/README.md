@@ -117,3 +117,10 @@ V101's expandable Finance submenu is superseded by V102 and must not be reintrod
 54. `54_FINANCE_KPIS_CALCULATOR_V104.md` — reuses one six-balance KPI source across Payments and Finance, improves Accounts KPI typography, and rebuilds Calculator as target-profit pricing + direct profit calculation + live current profitability for every active Darma/Takvin ProductSize.
 
 **Current GitHub continuation line:** `v104-finance-kpis-calculator`.
+
+
+## V105 margin semantics + code summary + material KPIs
+
+55. `55_MARGIN_CODE_SUMMARY_MATERIAL_KPIS_V105.md` — changes calculator target percentage to sale-margin semantics, collapses profitability to one summary row per code with expandable size details, moves material-report KPI cards below the title, improves number/unit typography, and adds all-history Darma average cut for the five base colors.
+
+**Current GitHub continuation line:** `v105-margin-code-summary-material-kpis`.
