@@ -33,14 +33,8 @@ def _finance_account_context():
     digikala_receivable = int(digikala_receivable_total())
     dia_gallery_receivable = int(dia_gallery_receivable_total())
 
-    capital_account_rows = list(
-        capital_accounts_queryset(manual_rows.filter(section=ExcelManualRow.ACCOUNTS))
-    )
-    accounts_total = (
-        sum(int(row.amount or 0) for row in capital_account_rows)
-        + sum(int(row.amount or 0) for row in person_rows)
-        + dia_gallery_receivable
-    )
+    account_breakdown = current_account_breakdown()
+    accounts_total = int(account_breakdown["accounts_total"])
 
     return {
         "accounts_rows": accounts_rows,
