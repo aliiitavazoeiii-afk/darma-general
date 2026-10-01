@@ -73,7 +73,7 @@
     row.className="transaction new-transaction";
     row.innerHTML=
       '<div class="transaction-icon accent-'+escapeHtml(expense.accent)+'">'+escapeHtml(expense.category.slice(0,1))+'</div>'+
-      '<div class="transaction-main"><strong>'+escapeHtml(expense.title)+'</strong><small>'+escapeHtml(expense.category)+' · '+escapeHtml(expense.date)+'</small></div>'+
+      '<div class="transaction-main"><strong>'+escapeHtml(expense.title)+'</strong><small>'+escapeHtml(expense.category)+' · '+escapeHtml(expense.payment_source_label||'ملت')+' · '+escapeHtml(expense.date)+'</small></div>'+
       '<div class="transaction-money"><strong class="money">−'+formatNumber(expense.amount)+'</strong><small>تومان</small></div>'+
       '<a class="icon-btn" href="/expenses/'+encodeURIComponent(expense.id)+'/edit/" aria-label="ویرایش">⋯</a>';
 
@@ -112,6 +112,7 @@
 
       var selectedDate=dateInput ? dateInput.value : "";
       var selectedCategory=form.querySelector('[name="category"]:checked');
+      var selectedSource=form.querySelector('[name="payment_source"]:checked');
 
       var data=new FormData(form);
       data.set("amount",amountRaw);
@@ -149,8 +150,9 @@
         if(note) note.value="";
         if(dateInput) dateInput.value=selectedDate;
         if(selectedCategory) selectedCategory.checked=true;
+        if(selectedSource) selectedSource.checked=true;
 
-        setSaveStatus("ثبت شد؛ تاریخ برای خرج بعدی همان ماند ✓","success");
+        setSaveStatus(payload.message || "ثبت شد ✓","success");
         if(amount) amount.focus({preventScroll:true});
       }catch(err){
         setSaveStatus(err && err.message ? err.message : "ثبت خرج انجام نشد","error");
