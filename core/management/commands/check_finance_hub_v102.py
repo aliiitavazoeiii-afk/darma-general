@@ -137,12 +137,12 @@ class Command(BaseCommand):
                 raise RuntimeError(f"Finance card missing: {marker}")
         if 'data-finance-accounts-preview=' in hub or 'finance100-accounts' in hub:
             raise RuntimeError("Account preview must not be rendered on the Finance hub")
-        if 'data-finance-root-nav="server-v102"' not in hub:
-            raise RuntimeError("Server-side direct Finance navigation missing")
+        if 'data-finance-root-nav="base-v103"' not in hub:
+            raise RuntimeError("Native direct Finance navigation missing from rendered HTML")
         if '<span class="erp-nav-group-title">مالی و ابزار</span>' in hub:
             raise RuntimeError("Finance & Tools must not remain an expandable sidebar group")
-        if '/static/core/number_format.js?v=102' not in hub:
-            raise RuntimeError("V102 cache-busted presentation helper missing")
+        if '/static/core/number_format.js?v=103' not in hub:
+            raise RuntimeError("V103 cache-busted presentation helper missing")
         if hub_response.get("Cache-Control") != "no-store, no-cache, must-revalidate, max-age=0":
             raise RuntimeError("V102 Finance hub no-cache header missing")
 
@@ -203,7 +203,7 @@ class Command(BaseCommand):
             raise RuntimeError("V102 read-only regression changed business state")
 
         self.stdout.write("FINANCE HUB = EXACTLY 3 CARDS")
-        self.stdout.write("FINANCE SIDEBAR = DIRECT ROOT LINK")
+        self.stdout.write("FINANCE SIDEBAR = NATIVE DIRECT ROOT LINK")
         self.stdout.write(f"ACCOUNT ROW COVERAGE = OK ({len(expected_accounts)})")
         self.stdout.write(f"PERSON ROW COVERAGE = OK ({len(expected_persons)})")
         self.stdout.write("COMPREHENSIVE REPORT ACCOUNT MANAGEMENT = REMOVED")
