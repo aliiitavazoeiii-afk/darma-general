@@ -45,48 +45,23 @@
   function normalizeFinanceNav() {
     const nav = document.querySelector('.erp-nav');
     if (!nav) return;
-    const definitionsTitle = [...nav.querySelectorAll('.erp-nav-title')].find((el) =>
-      (el.textContent || '').trim() === 'تعاریف'
-    );
-    if (!definitionsTitle) return;
 
-    if (!nav.querySelector('[data-returns-nav]')) {
-      const path = window.location.pathname;
-      const link = document.createElement('a');
-      link.dataset.returnsNav = '1';
-      link.href = '/returns/';
-      link.className = path.startsWith('/returns/') ? 'active' : '';
-      link.innerHTML = '<span class="erp-dot"></span>مرجوعی';
-      definitionsTitle.parentNode.insertBefore(link, definitionsTitle);
-    }
+    // V103: base.html owns the Finance navigation. Never construct or relocate
+    // the Finance entry in JavaScript; only clean up a stale legacy duplicate.
+    const nativeFinance = nav.querySelector('[data-finance-root-nav="base-v103"]');
+    if (!nativeFinance) return;
 
-    if (!nav.querySelector('[data-digikala-nav]')) {
-      const path = window.location.pathname;
-      const link = document.createElement('a');
-      link.dataset.digikalaNav = '1';
-      link.href = '/digikala/';
-      link.className = path.startsWith('/digikala/') ? 'active' : '';
-      link.innerHTML = '<span class="erp-dot"></span>دیجی‌کالا';
-      definitionsTitle.parentNode.insertBefore(link, definitionsTitle);
-    }
-
-    // V98: Finance & Tools is exactly one direct sidebar destination.
-    // Remove both the old expandable group and any prior injected finance links,
-    // then insert one canonical link before Definitions.
-    nav.querySelectorAll('[data-business-tools-nav],[data-finance-root-nav]').forEach((node) => node.remove());
-    const oldFinanceGroup = [...nav.querySelectorAll('.erp-nav-group')].find((group) =>
-      (group.querySelector('.erp-nav-group-title')?.textContent || '').trim() === 'مالی و ابزار'
-    );
-    if (oldFinanceGroup) oldFinanceGroup.remove();
+    [...nav.querySelectorAll('.erp-nav-group')].forEach((group) => {
+      const title = (group.querySelector('.erp-nav-group-title')?.textContent || '').trim();
+      if (title === 'مالی و ابزار') group.remove();
+    });
+    nav.querySelectorAll('[data-business-tools-nav],[data-finance-root-nav]').forEach((node) => {
+      if (node !== nativeFinance) node.remove();
+    });
 
     const path = window.location.pathname;
     const financeActive = path.startsWith('/finance/') || path.startsWith('/payments/') || path.startsWith('/calculator/');
-    const financeLink = document.createElement('a');
-    financeLink.dataset.financeRootNav = '1';
-    financeLink.href = '/finance/';
-    financeLink.className = financeActive ? 'active' : '';
-    financeLink.innerHTML = '<span class="erp-dot"></span>مالی و ابزار';
-    definitionsTitle.parentNode.insertBefore(financeLink, definitionsTitle);
+    nativeFinance.classList.toggle('active', financeActive);
   }
 
   function injectV39Styles() {
