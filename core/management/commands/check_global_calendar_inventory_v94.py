@@ -56,15 +56,18 @@ class Command(BaseCommand):
         if "core/number_format.js" not in base_html:
             raise RuntimeError("V94 global loader host script is not loaded by base.html")
 
+        # Match the literal JavaScript source. The previous regression accidentally
+        # searched for backslash-escaped quote characters (name=\"date\"), while
+        # the actual selector source correctly contains name="date".
         for marker in (
             "__darmaJalaliPickerLoaded",
             "jalali-date",
-            'name=\\"date\\"',
-            'name=\\"start\\"',
-            'name=\\"end\\"',
-            'name=\\"effective_from\\"',
-            'name=\\"receipt_from\\"',
-            'name=\\"receipt_to\\"',
+            'name="date"',
+            'name="start"',
+            'name="end"',
+            'name="effective_from"',
+            'name="receipt_from"',
+            'name="receipt_to"',
             "MutationObserver",
             "input.readOnly=true",
             "/calendar/picker/",
