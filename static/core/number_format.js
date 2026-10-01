@@ -31,7 +31,18 @@
     });
   }
 
-  function injectToolNav() {
+  function injectPresentationPolish() {
+    if (document.getElementById('darma-v98-presentation-polish')) return;
+    const style = document.createElement('style');
+    style.id = 'darma-v98-presentation-polish';
+    style.textContent = `
+      a,a:hover,a:focus,a:active{text-decoration:none!important}
+      .rm97-kpi strong{font-size:1.35rem!important;line-height:1.35!important;font-weight:900!important}
+    `;
+    document.head.appendChild(style);
+  }
+
+  function normalizeFinanceNav() {
     const nav = document.querySelector('.erp-nav');
     if (!nav) return;
     const definitionsTitle = [...nav.querySelectorAll('.erp-nav-title')].find((el) =>
@@ -59,11 +70,15 @@
       definitionsTitle.parentNode.insertBefore(link, definitionsTitle);
     }
 
-    // V97: Finance & Tools is one direct destination, not an expandable submenu.
-    nav.querySelectorAll('[data-business-tools-nav]').forEach((node) => node.remove());
-    const legacyFinanceGroup = [...nav.querySelectorAll('.erp-nav-group')].find((group) =>
+    // V98: Finance & Tools is exactly one direct sidebar destination.
+    // Remove both the old expandable group and any prior injected finance links,
+    // then insert one canonical link before Definitions.
+    nav.querySelectorAll('[data-business-tools-nav],[data-finance-root-nav]').forEach((node) => node.remove());
+    const oldFinanceGroup = [...nav.querySelectorAll('.erp-nav-group')].find((group) =>
       (group.querySelector('.erp-nav-group-title')?.textContent || '').trim() === 'مالی و ابزار'
     );
+    if (oldFinanceGroup) oldFinanceGroup.remove();
+
     const path = window.location.pathname;
     const financeActive = path.startsWith('/finance/') || path.startsWith('/payments/') || path.startsWith('/calculator/');
     const financeLink = document.createElement('a');
@@ -71,11 +86,7 @@
     financeLink.href = '/finance/';
     financeLink.className = financeActive ? 'active' : '';
     financeLink.innerHTML = '<span class="erp-dot"></span>مالی و ابزار';
-    if (legacyFinanceGroup) {
-      legacyFinanceGroup.replaceWith(financeLink);
-    } else if (!nav.querySelector('[data-finance-root-nav]')) {
-      definitionsTitle.parentNode.insertBefore(financeLink, definitionsTitle);
-    }
+    definitionsTitle.parentNode.insertBefore(financeLink, definitionsTitle);
   }
 
   function injectV39Styles() {
@@ -116,11 +127,17 @@
 
   injectV39Styles();
   injectGlobalJalaliPicker();
+  injectPresentationPolish();
   window.DarmaNumber = { raw, grouped, separator: SEP };
   document.addEventListener('DOMContentLoaded', () => {
     bind();
-    injectToolNav();
+    injectPresentationPolish();
+    normalizeFinanceNav();
     defaultInventoryAdjustmentToDarma();
   });
-  document.body?.addEventListener('htmx:afterSwap', (event) => bind(event.target));
+  document.body?.addEventListener('htmx:afterSwap', (event) => {
+    bind(event.target);
+    injectPresentationPolish();
+    normalizeFinanceNav();
+  });
 })();
