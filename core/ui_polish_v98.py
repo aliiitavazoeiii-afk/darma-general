@@ -2,15 +2,14 @@ import re
 
 
 class V98PresentationMiddleware:
-    """V99 server-rendered finance navigation + cache-busted presentation helper.
+    """Server-rendered finance navigation + cache-busted presentation helper.
 
-    This middleware is presentation-only. It does not touch models, forms,
-    accounting logic, inventory logic, or routes. The Finance & Tools sidebar
-    entry is rewritten on the SERVER before HTML reaches the browser so the
-    result no longer depends on JavaScript selectors or browser cache.
+    Presentation-only: no models, forms, accounting logic, inventory logic, or
+    routes are mutated. V100 also disables HTML caching so the browser cannot
+    keep an older Finance hub after deployment.
     """
 
-    SCRIPT = '<script src="/static/core/number_format.js?v=99"></script>'
+    SCRIPT = '<script src="/static/core/number_format.js?v=100"></script>'
     FINANCE_GROUP_RE = re.compile(
         r'<section class="erp-nav-group[^\"]*">\s*'
         r'<button class="erp-nav-group-toggle"[^>]*>.*?'
@@ -44,21 +43,22 @@ class V98PresentationMiddleware:
             or path.startswith("/calculator/")
         ) else ""
         finance_link = (
-            f'<a data-finance-root-nav="server-v99" class="{active}" href="/finance/">'
+            f'<a data-finance-root-nav="server-v100" class="{active}" href="/finance/">'
             '<span class="erp-dot"></span>مالی و ابزار</a>'
         )
 
-        # Replace the actual hard-coded submenu emitted by base.html. This is the
-        # canonical V99 fix and happens before the browser/JS sees the document.
         content, replaced = self.FINANCE_GROUP_RE.subn(finance_link, content, count=1)
 
-        # Always inject the cache-busted V99 helper as well; it handles global
-        # underline removal + slightly larger raw-material KPI numbers.
         if self.SCRIPT not in content and "</body>" in content:
             content = content.replace("</body>", self.SCRIPT + "</body>", 1)
 
         response.content = content.encode("utf-8")
-        response["X-Darma-Finance-Nav-V99"] = "server" if replaced else "not-found"
+        response["X-Darma-Finance-Nav-V100"] = "server" if replaced else "not-found"
+        # V100: force fresh ERP HTML after deploy. Static assets still have their
+        # own cache policy; this only prevents stale rendered pages/navigation.
+        response["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+        response["Pragma"] = "no-cache"
+        response["Expires"] = "0"
         if response.has_header("Content-Length"):
             response["Content-Length"] = str(len(response.content))
         return response
