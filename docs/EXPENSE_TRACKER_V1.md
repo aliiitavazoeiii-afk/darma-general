@@ -102,6 +102,7 @@ The deployment regressions are rollback-only/read-only and explicitly prove:
 - new claims debit Mellat exactly;
 - repayments and delete paths reverse their exact cash effects;
 - transaction search totals are scoped to the current Jalali month while previous matching months remain in the archive;
+- category reports keep current-month totals separate from all-time totals and sort largest expenses correctly;
 - BusinessPayment, SaleLine, AccountEntry and inventory ledgers remain unchanged.
 
 ## UI V2 — repeated backdated expense entry
@@ -162,9 +163,9 @@ The generated XLSX is read-only and contains five sheets:
 
 User-controlled text is protected against Excel formula injection before it is written to cells. `openpyxl` is installed only in `Dockerfile.expense`; the main ERP requirements file remains unchanged.
 
-## Dual Account + Monthly Transactions V7 — current
+## Dual Account + Monthly Transactions V7
 
-- quick expense entry now has `پرداخت از` with `ملت` and `مفید`;
+- quick expense entry has `پرداخت از` with `ملت` and `مفید`;
 - default source is Mellat;
 - no Mofid balance card is shown on the home dashboard;
 - the selected source is stored on every expense and shown in recent/history rows;
@@ -173,13 +174,30 @@ User-controlled text is protected against Excel formula injection before it is w
 - deleting an expense restores money to the account originally stored on that expense;
 - transaction filters/search run across history, but the top `جمع نتایج` is only the current Jalali month;
 - previous matching months appear as collapsed month headers with their own count and total;
-- opening a historical month reveals its day groups and transaction details;
-- the PWA static cache is bumped to `kharj-man-shell-v7` so the new UI assets replace old cached versions.
+- opening a historical month reveals its day groups and transaction details.
 
-V7 regression command:
+## Detailed Category Reports V8 — current
 
-`python manage.py check_expense_v7 --settings=expense_site.settings`
+Category rows in both the home dashboard expense rhythm and the reports category distribution are clickable/tappable and open a dedicated category report.
+
+Each category report contains:
+
+- current Jalali month total and transaction count;
+- all-time total and all-time transaction count for that category;
+- the largest recorded expense amount;
+- a ranked top-five largest-expenses section, sorted by amount descending;
+- full category history grouped by Jalali month;
+- current month open by default and previous months collapsible;
+- daily sub-groups inside each month;
+- title, note, amount, date and Mellat/Mofid payment source on transaction detail rows;
+- direct links back to the monthly report and to the transaction list filtered by that category.
+
+The report is read-only and does not mutate Mellat, Mofid, expenses or ERP business data. The PWA static cache is bumped to `kharj-man-shell-v8` so category click behavior is refreshed on installed/mobile clients.
+
+V8 regression command:
+
+`python manage.py check_expense_category_report_v8 --settings=expense_site.settings`
 
 Expected deployment marker:
 
-`SUCCESS: EXPENSE TRACKER DUAL ACCOUNT V7 DEPLOYED`
+`SUCCESS: EXPENSE TRACKER CATEGORY REPORT V8 DEPLOYED`
