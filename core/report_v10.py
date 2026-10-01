@@ -11,7 +11,6 @@ from .dia_gallery_v45 import dia_gallery_period_metrics
 from .excel_views import DISPLAY_SIZES, _add_metrics, _empty_metrics, _finish_metrics, _int, _period_range
 from .finance import sale_line_metrics
 from .finance_excel_v9 import digikala_ledger_total
-from .inventory_valuation_v17 import finished_inventory_value_v17
 from .models import ExcelManualRow, ExcelManualSetting, SaleLine
 from .report_v5 import _raw_material_context, manual_report_action as legacy_manual_report_action
 from .self_spend_v62 import is_self_tracking_row
