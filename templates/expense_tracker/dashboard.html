@@ -17,7 +17,7 @@
   <div class="hero-copy">
     <div class="eyebrow">موجودی ملت</div>
     <div class="hero-balance"><span class="money" id="mellat-balance">{{ mellat_balance|groupnum }}</span><small>تومان</small></div>
-    <div class="hero-note">خرج‌ها و طلب‌های جدیدی که واقعاً پرداخت می‌کنی، از مانده ملت کم می‌شوند.</div>
+    <div class="hero-note">خرج‌ها از حسابی که انتخاب می‌کنی کم می‌شوند؛ طلب‌های جدید همچنان روی ملت ثبت می‌شوند.</div>
   </div>
   <div class="wallet-icon">▣</div>
 </div>
@@ -42,6 +42,21 @@
         <label for="expense-amount">مبلغ</label>
         <div class="amount-input"><input id="expense-amount" class="money-input" name="amount" inputmode="numeric" autocomplete="off" placeholder="۰"><span>تومان</span></div>
       </div>
+
+      <div class="payment-source-field">
+        <span class="payment-source-label">پرداخت از</span>
+        <div class="source-pills">
+          <label class="source-choice">
+            <input type="radio" name="payment_source" value="melat" checked>
+            <span>ملت</span>
+          </label>
+          <label class="source-choice">
+            <input type="radio" name="payment_source" value="mofid">
+            <span>مفید</span>
+          </label>
+        </div>
+      </div>
+
       <div class="category-pills">
         {% for category in categories %}
         <label class="category-choice accent-{{ category.accent }}">
@@ -59,7 +74,7 @@
       <label><span>توضیح</span><input name="note" placeholder="اختیاری"></label>
       <div class="save-row">
         <button class="primary-btn save-expense-btn" type="submit">＋ ثبت خرج</button>
-        <div class="save-status" id="expense-save-status" aria-live="polite"><span class="save-dot"></span><span>تاریخ بعد از ثبت ثابت می‌ماند</span></div>
+        <div class="save-status" id="expense-save-status" aria-live="polite"><span class="save-dot"></span><span>تاریخ و حساب پرداخت برای خرج بعدی ثابت می‌مانند</span></div>
       </div>
     </form>
   </section>
@@ -95,7 +110,7 @@
       {% for expense in recent_expenses %}
       <div class="transaction">
         <div class="transaction-icon accent-{{ expense.category.accent }}">{{ expense.category.name|slice:":1" }}</div>
-        <div class="transaction-main"><strong>{{ expense.title|default:expense.category.name }}</strong><small>{{ expense.category.name }} · {{ expense.date|jalali }}</small></div>
+        <div class="transaction-main"><strong>{{ expense.title|default:expense.category.name }}</strong><small>{{ expense.category.name }} · {{ expense.get_payment_source_display }} · {{ expense.date|jalali }}</small></div>
         <div class="transaction-money"><strong class="money">−{{ expense.amount|groupnum }}</strong><small>تومان</small></div>
         <a class="icon-btn" href="{% url 'expense_tracker:expense_edit' expense.id %}" aria-label="ویرایش">⋯</a>
       </div>
