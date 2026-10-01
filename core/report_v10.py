@@ -85,10 +85,12 @@ def report(request):
         color_rows.append({"color": color, "cells": cells, "total": sum(cells)})
     color_rows.sort(key=lambda row: row["total"], reverse=True)
 
-    manual_rows = ExcelManualRow.objects.filter(active=True)
-    accounts_rows = list(manual_rows.filter(section=ExcelManualRow.ACCOUNTS).order_by("sort_order", "id"))
-    person_rows = list(manual_rows.filter(section=ExcelManualRow.PERSONS).order_by("sort_order", "id"))
-    asset_rows = list(manual_rows.filter(section=ExcelManualRow.ASSETS).order_by("sort_order", "id"))
+    # Account/person management moved to /finance/accounts/ in V102.
+    # Comprehensive Report keeps only asset rows plus read-only capital summaries.
+    asset_rows = list(
+        ExcelManualRow.objects.filter(active=True, section=ExcelManualRow.ASSETS)
+        .order_by("sort_order", "id")
+    )
     settings = {obj.key: obj for obj in ExcelManualSetting.objects.all()}
     digikala_base = int(settings.get("digikala_receivable").value or 0) if settings.get("digikala_receivable") else 0
     digikala_ledger = digikala_ledger_total()
@@ -119,9 +121,8 @@ def report(request):
         "display_sizes": DISPLAY_SIZES,
         "product_rows": product_rows,
         "color_rows": color_rows,
-        "accounts_rows": accounts_rows,
-        "person_rows": person_rows,
         "asset_rows": asset_rows,
+        "account_management_moved": True,
         "accounts_total": accounts_total,
         "assets_total": assets_total,
         "finished_inventory_total": finished_inventory_total,
