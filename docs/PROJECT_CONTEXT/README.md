@@ -94,3 +94,12 @@ Standing rule: after every important change update context; after every confirme
 ## V88 pricing monitor
 
 40. `40_PRICING_MONITOR_V88.md` — read-only Darma code+size comparison against the same Jalali day/month-to-date in the prior month, historical SaleSnapshot economics, V60 price history, adjusted-profit analysis, 10-day evaluation and filtered XLSX export. No accounting or inventory mutation.
+
+
+## V102 finance consolidation
+
+52. `52_FINANCE_HUB_CAPITAL_V102.md` — resolves the V100/V101 branch split in favor of the user's final direct Finance-root design: exactly three Finance cards, dedicated Accounts page using the existing account sources/mutations, no account preview on the hub, and one canonical current-capital calculator consumed by Comprehensive Report without changing the economic formula.
+
+**Current GitHub continuation line:** `v102-finance-hub-consolidated`.
+
+V101's expandable Finance submenu is superseded by V102 and must not be reintroduced unless the user explicitly changes this UX rule.
