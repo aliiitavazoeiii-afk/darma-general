@@ -1,7 +1,12 @@
 from django.db import transaction
 from django.db.models import Sum
 
-from core.payment_source_v63 import SOURCE_MELAT, source_balance, source_row
+from core.payment_source_v63 import (
+    SOURCE_MELAT,
+    normalize_source,
+    source_balance,
+    source_row,
+)
 
 from .models import DailyExpense, ReceivableEntry, ReceivablePerson
 
@@ -17,45 +22,83 @@ def _positive_amount(value, label="مبلغ"):
     return amount
 
 
+def _lock_sources(*sources):
+    locked = {}
+    for source in sorted({normalize_source(source) for source in sources}):
+        row = source_row(source, create=True, for_update=True)
+        if row is None:
+            raise RuntimeError("حساب مبدا پرداخت پیدا نشد.")
+        locked[source] = row
+    return locked
+
+
 def _lock_mellat():
-    row = source_row(SOURCE_MELAT, create=True, for_update=True)
-    if row is None:
-        raise RuntimeError("حساب ملت پیدا نشد.")
-    return row
+    return _lock_sources(SOURCE_MELAT)[SOURCE_MELAT]
 
 
 @transaction.atomic
-def create_expense(*, expense_date, amount, category, title="", note=""):
+def create_expense(
+    *,
+    expense_date,
+    amount,
+    category,
+    payment_source=SOURCE_MELAT,
+    title="",
+    note="",
+):
     amount = _positive_amount(amount, "مبلغ هزینه")
-    mellat = _lock_mellat()
+    payment_source = normalize_source(payment_source)
+    account = _lock_sources(payment_source)[payment_source]
     expense = DailyExpense.objects.create(
         date=expense_date,
         amount=amount,
         category=category,
+        payment_source=payment_source,
         title=(title or "").strip()[:160],
         note=(note or "").strip(),
     )
-    mellat.amount = int(mellat.amount or 0) - amount
-    mellat.save(update_fields=["amount", "updated_at"])
+    account.amount = int(account.amount or 0) - amount
+    account.save(update_fields=["amount", "updated_at"])
     return expense
 
 
 @transaction.atomic
-def update_expense(expense, *, expense_date, amount, category, title="", note=""):
+def update_expense(
+    expense,
+    *,
+    expense_date,
+    amount,
+    category,
+    payment_source=None,
+    title="",
+    note="",
+):
     amount = _positive_amount(amount, "مبلغ هزینه")
     expense = DailyExpense.objects.select_for_update().get(pk=expense.pk)
     old_amount = int(expense.amount or 0)
-    mellat = _lock_mellat()
+    old_source = normalize_source(expense.payment_source)
+    new_source = normalize_source(payment_source or old_source)
+    accounts = _lock_sources(old_source, new_source)
 
     expense.date = expense_date
     expense.amount = amount
     expense.category = category
+    expense.payment_source = new_source
     expense.title = (title or "").strip()[:160]
     expense.note = (note or "").strip()
     expense.save()
 
-    mellat.amount = int(mellat.amount or 0) + old_amount - amount
-    mellat.save(update_fields=["amount", "updated_at"])
+    if old_source == new_source:
+        account = accounts[new_source]
+        account.amount = int(account.amount or 0) + old_amount - amount
+        account.save(update_fields=["amount", "updated_at"])
+    else:
+        old_account = accounts[old_source]
+        new_account = accounts[new_source]
+        old_account.amount = int(old_account.amount or 0) + old_amount
+        new_account.amount = int(new_account.amount or 0) - amount
+        old_account.save(update_fields=["amount", "updated_at"])
+        new_account.save(update_fields=["amount", "updated_at"])
     return expense
 
 
@@ -63,10 +106,11 @@ def update_expense(expense, *, expense_date, amount, category, title="", note=""
 def delete_expense(expense):
     expense = DailyExpense.objects.select_for_update().get(pk=expense.pk)
     amount = int(expense.amount or 0)
-    mellat = _lock_mellat()
+    payment_source = normalize_source(expense.payment_source)
+    account = _lock_sources(payment_source)[payment_source]
     expense.delete()
-    mellat.amount = int(mellat.amount or 0) + amount
-    mellat.save(update_fields=["amount", "updated_at"])
+    account.amount = int(account.amount or 0) + amount
+    account.save(update_fields=["amount", "updated_at"])
 
 
 def _totals_for_person(person):
