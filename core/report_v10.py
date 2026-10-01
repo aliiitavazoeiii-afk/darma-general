@@ -148,7 +148,7 @@ def report(request):
         "dia_gallery": dia_gallery,
     }
     context.update(raw)
-    return render(request, "core/report_excel_v96.html", context)
+    return render(request, "core/report_excel_v97.html", context)
 
 
 @login_required
