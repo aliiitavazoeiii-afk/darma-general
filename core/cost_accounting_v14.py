@@ -28,6 +28,6 @@ def snapshot_sale_line(line, ps=None, price=None):
         snap.unit_cost = int(ps.unit_cost)
     else:
         snap.unit_cost = int(inventory_unit_cost(ps.product.brand, ps.size))
-    snap.digikala_fee_unit = digikala_fee_for_unit(price)
+    snap.digikala_fee_unit = digikala_fee_for_unit(price, line.day.date)
     snap.save()
     return snap
