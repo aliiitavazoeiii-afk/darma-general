@@ -11,6 +11,7 @@ from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 
 from core.dateutils import format_jalali
+from core.payment_source_v63 import SOURCE_MOFID, source_balance
 
 from .models import DailyExpense, ReceivableEntry, ReceivablePerson
 from .services import mellat_balance
@@ -112,20 +113,21 @@ def build_financial_workbook(*, today=None):
 
     ws = wb.active
     ws.title = "هزینه‌ها"
-    ws.append(["ردیف", "تاریخ شمسی", "تاریخ میلادی", "دسته", "عنوان", "مبلغ (تومان)", "توضیح", "زمان ثبت"])
+    ws.append(["ردیف", "تاریخ شمسی", "تاریخ میلادی", "دسته", "پرداخت از", "عنوان", "مبلغ (تومان)", "توضیح", "زمان ثبت"])
     for idx, expense in enumerate(expenses, 1):
         ws.append([
             idx,
             format_jalali(expense.date),
             expense.date.isoformat(),
             _safe_text(expense.category.name),
+            expense.get_payment_source_display(),
             _safe_text(expense.title or expense.category.name),
             int(expense.amount or 0),
             _safe_text(expense.note),
             _local_timestamp(expense.created_at),
         ])
-    _style_sheet(ws, money_columns=(6,))
-    _fit_columns(ws, {2: 14, 3: 14, 4: 18, 5: 28, 6: 18, 7: 36, 8: 21})
+    _style_sheet(ws, money_columns=(7,))
+    _fit_columns(ws, {2: 14, 3: 14, 4: 18, 5: 14, 6: 28, 7: 18, 8: 36, 9: 21})
 
     ws = wb.create_sheet("گردش طلب‌ها")
     ws.append([
@@ -204,6 +206,7 @@ def build_financial_workbook(*, today=None):
     snapshot_rows = [
         ("تاریخ تهیه خروجی", format_jalali(today), ""),
         ("موجودی ملت", int(mellat_balance()), "مانده فعلی حساب ملت"),
+        ("موجودی مفید", int(source_balance(SOURCE_MOFID)), "مانده فعلی حساب مفید"),
         ("کل طلب باز", int(total_outstanding), "جمع طلب باقی‌مانده از همه اشخاص"),
         ("تعداد اشخاص دارای طلب باز", int(open_people), ""),
         ("جمع خرج ماه جاری", int(current_month_total), f"ماه {today_j.year}/{today_j.month:02d}"),
@@ -230,7 +233,7 @@ def build_financial_workbook(*, today=None):
     for row in ws.iter_rows(min_row=person_header_row + 1, min_col=2, max_col=4):
         for cell in row:
             cell.number_format = MONEY_FORMAT
-    for row_index in (2, 5, 10, 11):
+    for row_index in (2, 6, 11, 12):
         if row_index <= ws.max_row:
             ws.cell(row=row_index, column=2).number_format = "General"
     _fit_columns(ws, {1: 28, 2: 22, 3: 22, 4: 22})
