@@ -1,8 +1,14 @@
+from datetime import date
 from decimal import Decimal, ROUND_HALF_UP
 
 from .darma_cost_v55 import darma_cost_for
 from .models import AppSetting
 from .novani_cost_v59 import novani_cost_for
+
+
+# One-off Digikala promotion/settlement rule reported for 1405/07/08 only.
+# 1405/07/08 == 2026-09-30 Gregorian.
+DIGIKALA_ZERO_COMMISSION_DATES = {date(2026, 9, 30)}
 
 
 def _setting(key, default):
@@ -17,9 +23,15 @@ def _round_toman(value):
     return int(Decimal(value).quantize(Decimal("1"), rounding=ROUND_HALF_UP))
 
 
-def digikala_fee_for_unit(sale_price):
+def is_digikala_zero_commission_date(sale_date):
+    return sale_date in DIGIKALA_ZERO_COMMISSION_DATES
+
+
+def digikala_fee_for_unit(sale_price, sale_date=None):
     price = Decimal(sale_price or 0)
     commission_rate = _setting("digikala_commission_percent", 24) / Decimal(100)
+    if is_digikala_zero_commission_date(sale_date):
+        commission_rate = Decimal(0)
     processing_rate = _setting("digikala_processing_percent", 7) / Decimal(100)
     processing_floor = _setting("digikala_processing_floor", 36000)
     vat_rate = _setting("digikala_vat_percent", 10) / Decimal(100)
@@ -44,7 +56,10 @@ def sale_line_metrics(line):
         snap = None
     pack_qty = int((snap.pack_qty if snap else 0) or line.product_size.product.pack_qty or 0)
     gross = qty * int(line.sale_price or 0)
-    fee_unit = int((snap.digikala_fee_unit if snap else 0) or digikala_fee_for_unit(line.sale_price))
+    fee_unit = int(
+        (snap.digikala_fee_unit if snap else 0)
+        or digikala_fee_for_unit(line.sale_price, line.day.date)
+    )
     digikala_fee = qty * fee_unit
     shorts = qty * pack_qty
 
