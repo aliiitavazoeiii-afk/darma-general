@@ -8,9 +8,14 @@ This is a separate Django site carried in the same repository but deployed from 
 
 ## Business boundary
 
-The only intentional business-data bridge to DARMA General is the canonical Mellat account row via:
+The intentional business-data bridge to DARMA General is limited to the canonical payment-source account rows via:
 
-`core.payment_source_v63.source_row(SOURCE_MELAT)`
+`core.payment_source_v63.source_row(...)`
+
+Current linked accounts:
+
+- `SOURCE_MELAT` → canonical Mellat account row;
+- `SOURCE_MOFID` → canonical Mofid account row.
 
 Expense tracker does not create or mutate:
 
@@ -21,15 +26,29 @@ Expense tracker does not create or mutate:
 - materials / production / returns
 - fee/cost/valuation rules
 
-## Expense semantics
+## Expense semantics — V7 authoritative
 
-Create expense: `Mellat -= expense.amount`
+Each `DailyExpense` stores its payment source. Historical expenses are migrated with `payment_source="melat"` because all expense cash mutations before V7 were applied to Mellat.
 
-Edit expense: `Mellat += old_amount - new_amount`
+Create expense:
 
-Delete expense: `Mellat += deleted_amount`
+`selected_source -= expense.amount`
 
-All three operations are atomic and lock the canonical Mellat row.
+Edit on the same source:
+
+`selected_source += old_amount - new_amount`
+
+Edit while changing source:
+
+`old_source += old_amount`
+
+`new_source -= new_amount`
+
+Delete expense:
+
+`expense.payment_source += expense.amount`
+
+All account mutations are atomic and lock the canonical source row(s). The quick-entry default is Mellat; Mofid is optional per expense.
 
 ## Receivable semantics — V5 authoritative
 
@@ -74,13 +93,15 @@ GitHub main is not production evidence. Production is confirmed only after the e
 
 The branch diff from the base commit contains only expense-specific new paths plus the isolated runtime/deploy files. Existing ERP `core/`, `config/`, `compose.yml`, `Caddyfile`, `templates/core/` and `static/core/` remain byte-unchanged on this branch.
 
-The deployment regression is rollback-only and explicitly proves:
+The deployment regressions are rollback-only/read-only and explicitly prove:
 
-- expense create/edit/delete debits/reconciles/restores Mellat exactly;
+- Mellat expense create/edit/delete still reconciles exactly;
+- Mofid expense create/edit/delete affects Mofid and not Mellat;
+- changing an expense source restores the old account and debits the new account exactly;
 - historical unapplied claims can be deleted without changing Mellat;
 - new claims debit Mellat exactly;
-- real claim repayment credits Mellat exactly;
-- deleting repayment and deleting the new claim reverse their exact cash effects;
+- repayments and delete paths reverse their exact cash effects;
+- transaction search totals are scoped to the current Jalali month while previous matching months remain in the archive;
 - BusinessPayment, SaleLine, AccountEntry and inventory ledgers remain unchanged.
 
 ## UI V2 — repeated backdated expense entry
@@ -113,9 +134,9 @@ Full browser PWA installation requires a secure origin (HTTPS, except localhost)
 
 ## Daily Revenue V4 — historical note
 
-V4 temporarily replaced the open-receivable KPI with today's ERP gross sales. This dashboard choice was superseded by V5 below. The read-only revenue helper remains harmless but is no longer displayed on the home dashboard.
+V4 temporarily replaced the open-receivable KPI with today's ERP gross sales. This dashboard choice was superseded by V5. The read-only revenue helper remains harmless but is no longer displayed on the home dashboard.
 
-## Cashflow + Daily Average V5 — current
+## Cashflow + Daily Average V5
 
 - top dashboard KPIs are: today's expense, elapsed-month daily average, this week's expense, current Jalali month's expense;
 - the daily average is `current Jalali month expense total / elapsed calendar days in the month through today`;
@@ -123,35 +144,42 @@ V4 temporarily replaced the open-receivable KPI with today's ERP gross sales. Th
 - after AJAX expense entry, the average updates from the updated month total without a full page reload;
 - new receivable claims debit canonical Mellat immediately;
 - repayments credit Mellat;
-- delete paths reverse only cash effects that were actually applied;
 - historical claims are preserved safely and are not retroactively debited.
 
-Regression success marker for V5:
+## Financial Excel Export V6/V7
 
-`SUCCESS: EXPENSE TRACKER CASHFLOW V5 REGRESSION PASSED`
-
-## Financial Excel Export V6 — current
-
-The reports page now has an authenticated `خروجی اکسل مالی` download at:
+The reports page has an authenticated `خروجی اکسل مالی` download at:
 
 `/reports/export.xlsx`
 
 The generated XLSX is read-only and contains five sheets:
 
-1. `هزینه‌ها` — every recorded expense with Jalali/Gregorian date, category, title, amount and note.
+1. `هزینه‌ها` — every recorded expense with Jalali/Gregorian date, category, payment source, title, amount and note.
 2. `گردش طلب‌ها` — claims and repayments, per-person running balance, and whether that historical row actually affected Mellat.
 3. `خلاصه ماهانه` — total expenses, transaction count and calendar-day daily average for every Jalali month represented in the data.
 4. `خلاصه دسته‌ها` — all-time expense totals/counts and category share.
-5. `وضعیت فعلی` — Mellat balance, open receivables, current-month expense/average, today's expense, overall totals, plus current receivable balance per person.
+5. `وضعیت فعلی` — Mellat balance, Mofid balance, open receivables, current-month expense/average, today's expense, overall totals, plus current receivable balance per person.
 
-User-controlled text is protected against Excel formula injection before it is written to cells.
+User-controlled text is protected against Excel formula injection before it is written to cells. `openpyxl` is installed only in `Dockerfile.expense`; the main ERP requirements file remains unchanged.
 
-`openpyxl` is installed only in `Dockerfile.expense`; the main ERP requirements file remains unchanged.
+## Dual Account + Monthly Transactions V7 — current
 
-V6 regression command:
+- quick expense entry now has `پرداخت از` with `ملت` and `مفید`;
+- default source is Mellat;
+- no Mofid balance card is shown on the home dashboard;
+- the selected source is stored on every expense and shown in recent/history rows;
+- AJAX entry preserves the chosen source for the next rapid entry until a manual refresh;
+- edit can change both amount and payment source safely;
+- deleting an expense restores money to the account originally stored on that expense;
+- transaction filters/search run across history, but the top `جمع نتایج` is only the current Jalali month;
+- previous matching months appear as collapsed month headers with their own count and total;
+- opening a historical month reveals its day groups and transaction details;
+- the PWA static cache is bumped to `kharj-man-shell-v7` so the new UI assets replace old cached versions.
 
-`python manage.py check_expense_export_v6 --settings=expense_site.settings`
+V7 regression command:
 
-Expected success marker:
+`python manage.py check_expense_v7 --settings=expense_site.settings`
 
-`SUCCESS: EXPENSE TRACKER FINANCIAL EXPORT V6 REGRESSION PASSED`
+Expected deployment marker:
+
+`SUCCESS: EXPENSE TRACKER DUAL ACCOUNT V7 DEPLOYED`
