@@ -67,11 +67,21 @@ def _category_report_context(category, *, today=None):
     }
 
 
-@login_required
-def category_report(request, category_id):
-    category = get_object_or_404(ExpenseCategory, id=category_id)
+def _render_category_report(request, category):
     return render(
         request,
         "expense_tracker/category_report.html",
         _category_report_context(category),
     )
+
+
+@login_required
+def category_report(request, category_id):
+    category = get_object_or_404(ExpenseCategory, id=category_id)
+    return _render_category_report(request, category)
+
+
+@login_required
+def category_report_by_name(request, category_name):
+    category = get_object_or_404(ExpenseCategory, name=category_name)
+    return _render_category_report(request, category)
