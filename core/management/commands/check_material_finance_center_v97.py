@@ -20,9 +20,9 @@ from core.models import (
     MaterialReportConsumption,
     RawMaterialStock,
     SaleLine,
+    SaleSnapshot,
     StockBalance,
 )
-from core.models_final import SaleSnapshot
 from core.report_v5 import _raw_material_context
 
 
