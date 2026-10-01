@@ -24,10 +24,11 @@ in numeric order through:
 - `docs/PROJECT_CONTEXT/52_FINANCE_HUB_CAPITAL_V102.md`
 - `docs/PROJECT_CONTEXT/53_NATIVE_FINANCE_NAV_V103.md`
 - `docs/PROJECT_CONTEXT/54_FINANCE_KPIS_CALCULATOR_V104.md`
+- `docs/PROJECT_CONTEXT/55_MARGIN_CODE_SUMMARY_MATERIAL_KPIS_V105.md`
 
 ## Current authoritative development line
 
-`v104-finance-kpis-calculator`
+`v105-margin-code-summary-material-kpis`
 
 V100 and V101 diverged from V99. V101 is **not** a superset of V100 and its restored Finance submenu conflicts with the user's final requirement.
 
@@ -74,3 +75,16 @@ V104 keeps that navigation and:
 V104 is production-confirmed only after:
 
 `SUCCESS: FINANCE KPI + CALCULATOR V104 DEPLOYED`
+
+
+## V105 calculator/material corrections
+
+V105 corrects target-profit semantics to net profit / sale price, groups profitability by product code with collapsed size details, and moves/material-styles the material-report KPIs below the page title.
+
+The average-cut KPI is Darma-only, all-history, and limited to black/white/navy/pink/cream positive saved cuts.
+
+The requested all-page average finished-cost KPI is intentionally deferred because the canonical live cost engine includes sewing wage and the user's latest wording did not explicitly confirm whether that wage belongs in the new global KPI.
+
+V105 is production-confirmed only after:
+
+`SUCCESS: MARGIN + MATERIAL KPI V105 DEPLOYED`
