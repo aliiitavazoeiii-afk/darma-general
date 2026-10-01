@@ -18,6 +18,7 @@ from . import (
     excel_dashboard_v89,
     excel_sales,
     final_views,
+    inventory_center_v96,
     inventory_operations_v15,
     inventory_operations_v16,
     inventory_operations_v17,
@@ -97,7 +98,10 @@ urlpatterns = [
     path("calculator/quote/", calculator_v37.calculator_quote, name="calculator_quote"),
     path("calculator/target-quote/", calculator_v37.calculator_target_quote, name="calculator_target_quote"),
 
-    path("inventory/", inventory_v20.inventory, name="inventory"),
+    path("inventory/", inventory_center_v96.inventory_home, name="inventory"),
+    path("inventory/stock/", inventory_v20.inventory, name="inventory_stock"),
+    path("inventory/materials/", inventory_center_v96.raw_materials, name="inventory_materials"),
+    path("inventory/materials/action/", inventory_center_v96.raw_material_action, name="inventory_material_action"),
     path("inventory/color-model/add/", inventory_v20.add_color_model, name="inventory_add_color_model"),
     path("inventory/operations/", inventory_operations_v16.inventory_operations, name="inventory_operations"),
     path(
