@@ -3,7 +3,6 @@ from django.shortcuts import redirect, render
 from django.views.decorators.http import require_POST
 
 from .capital_history_v87 import current_account_breakdown
-from .dia_gallery_v45 import dia_gallery_receivable_total
 from .finance_excel_v9 import digikala_ledger_total, digikala_receivable_total
 from .models import ExcelManualRow, ExcelManualSetting
 from .report_v10 import manual_report_action as report_manual_report_action
@@ -31,10 +30,10 @@ def _finance_account_context():
     )
     digikala_ledger = int(digikala_ledger_total())
     digikala_receivable = int(digikala_receivable_total())
-    dia_gallery_receivable = int(dia_gallery_receivable_total())
 
     account_breakdown = current_account_breakdown()
     accounts_total = int(account_breakdown["accounts_total"])
+    dia_gallery_receivable = int(account_breakdown["dia_gallery_receivable"])
 
     return {
         "accounts_rows": accounts_rows,
