@@ -59,11 +59,11 @@ def current_capital_breakdown():
     digikala_receivable = int(digikala_receivable_total() or 0)
     debt_row = ExcelManualSetting.objects.filter(key="takvin_debt").first()
     takvin_debt = int(debt_row.value or 0) if debt_row else 0
+    inventory_total = finished_total + materials_total
 
     total = (
         accounts_total
-        + finished_total
-        + materials_total
+        + inventory_total
         + digikala_receivable
         - takvin_debt
         + assets_total
@@ -73,6 +73,7 @@ def current_capital_breakdown():
         "assets_total": int(assets_total),
         "finished_inventory_total": int(finished_total),
         "materials_total": int(materials_total),
+        "inventory_total": int(inventory_total),
         "digikala_receivable": int(digikala_receivable),
         "takvin_debt": int(takvin_debt),
         "dia_gallery_receivable": int(dia_receivable),
