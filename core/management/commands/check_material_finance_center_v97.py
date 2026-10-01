@@ -146,21 +146,17 @@ class Command(BaseCommand):
         if "title==='حساب‌ها'" not in report_template:
             raise RuntimeError("Report account-management domain is not removed in V97")
 
-        # V97 originally checked an exact implementation comment/string. V98 keeps
-        # the same direct Finance & Tools behavior but normalizes the old submenu
-        # more robustly. Validate behavior markers instead of a stale comment.
+        # V103: Finance navigation is native in base.html. Do not accept a
+        # middleware/JavaScript-only rewrite as proof of the real sidebar.
+        base_template = (Path(settings.BASE_DIR) / "templates/base.html").read_text(encoding="utf-8")
+        if 'data-finance-root-nav="base-v103"' not in base_template:
+            raise RuntimeError("Native Finance root link missing from base.html")
+        if '<span class="erp-nav-group-title">مالی و ابزار</span>' in base_template:
+            raise RuntimeError("Legacy expandable Finance group still exists in base.html")
+
         nav_js = (Path(settings.BASE_DIR) / "static/core/number_format.js").read_text(encoding="utf-8")
-        for marker in (
-            "financeLink.href = '/finance/'",
-            "financeLink.dataset.financeRootNav = '1'",
-        ):
-            if marker not in nav_js:
-                raise RuntimeError(f"Finance direct-navigation marker missing: {marker}")
-        if not (
-            "legacyFinanceGroup.replaceWith(financeLink)" in nav_js
-            or "oldFinanceGroup.remove()" in nav_js
-        ):
-            raise RuntimeError("Finance navigation does not remove/replace the old submenu")
+        if "base.html owns the Finance navigation" not in nav_js:
+            raise RuntimeError("Finance JS still appears to own navigation construction")
 
         after = _state()
         if before != after:
@@ -174,7 +170,7 @@ class Command(BaseCommand):
         self.stdout.write("LEGACY INTERNAL-ROW TABLE UI = REMOVED")
         self.stdout.write("FABRIC QUANTITY/VALUE AGGREGATION = NEUTRAL")
         self.stdout.write("FINANCE HUB 3 CARDS = OK")
-        self.stdout.write("FINANCE DIRECT NAV = OK")
+        self.stdout.write("FINANCE NATIVE DIRECT NAV = OK")
         self.stdout.write("PAYMENTS/RECEIPTS FLOW = UNCHANGED")
         self.stdout.write("CALCULATOR ROUTE = UNCHANGED")
         self.stdout.write("REPORT ACCOUNT MANAGEMENT UI = MOVED")
