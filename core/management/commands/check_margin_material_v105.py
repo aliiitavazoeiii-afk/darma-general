@@ -3,6 +3,7 @@ from datetime import date
 from decimal import Decimal, ROUND_HALF_UP
 from hashlib import sha256
 from pathlib import Path
+import re
 from types import SimpleNamespace
 
 from django.conf import settings
@@ -224,8 +225,11 @@ class Command(BaseCommand):
         if material_response.status_code != 200:
             raise RuntimeError(f"Material report HTTP {material_response.status_code}")
         material_html = material_response.content.decode("utf-8", errors="replace")
-        if material_html.count('class="material-month-kpi') != 6:
-            raise RuntimeError("Material report must render exactly six KPI cards in V105")
+        kpi_cards = re.findall(r'class="material-month-kpi(?:\s[^"]*)?"', material_html)
+        if len(kpi_cards) != 6:
+            raise RuntimeError(
+                f"Material report must render exactly six KPI cards in V105; got {len(kpi_cards)}"
+            )
         if 'data-material-kpi="average-cut"' not in material_html:
             raise RuntimeError("Average cut KPI marker missing")
         if "میانگین تعداد برش" not in material_html:
