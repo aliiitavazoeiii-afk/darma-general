@@ -2,7 +2,7 @@
 
 **AUTHORITATIVE CONTINUATION ENTRYPOINT — READ THIS FILE COMPLETELY BEFORE TOUCHING CODE OR DATA**
 
-Last continuation synchronization: **2026-10-01 through V102 Finance hub consolidation**.
+Last continuation synchronization: **2026-10-01 through V103 native Finance navigation**.
 
 Repository: `aliiitavazoeiii-afk/darma-general`
 
@@ -16,9 +16,9 @@ Functional-code head immediately before this handoff-document synchronization: `
 
 ## V102 CURRENT CONTINUATION
 
-After this entrypoint, read **every numbered file** in `docs/PROJECT_CONTEXT/` through `52_FINANCE_HUB_CAPITAL_V102.md`.
+After this entrypoint, read **every numbered file** in `docs/PROJECT_CONTEXT/` through `53_NATIVE_FINANCE_NAV_V103.md`.
 
-Current GitHub development line: `v102-finance-hub-consolidated`.
+Current GitHub development line: `v103-native-finance-nav`.
 
 For Finance, V102 supersedes the sibling V101 branch: the sidebar has one direct `مالی و ابزار` root, and `/finance/` contains exactly three cards (Payments, Accounts, Calculator). Do not restore an expandable Finance submenu unless the user explicitly changes this rule.
 
