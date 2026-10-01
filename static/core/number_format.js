@@ -59,18 +59,23 @@
       definitionsTitle.parentNode.insertBefore(link, definitionsTitle);
     }
 
-    if (nav.querySelector('[data-business-tools-nav]')) return;
-    const wrap = document.createElement('div');
-    wrap.dataset.businessToolsNav = '1';
+    // V97: Finance & Tools is one direct destination, not an expandable submenu.
+    nav.querySelectorAll('[data-business-tools-nav]').forEach((node) => node.remove());
+    const legacyFinanceGroup = [...nav.querySelectorAll('.erp-nav-group')].find((group) =>
+      (group.querySelector('.erp-nav-group-title')?.textContent || '').trim() === 'مالی و ابزار'
+    );
     const path = window.location.pathname;
-    const payActive = path.startsWith('/payments/');
-    const calcActive = path.startsWith('/calculator/');
-    wrap.innerHTML = `
-      <div class="erp-nav-title">مالی و ابزار</div>
-      <a class="${payActive ? 'active' : ''}" href="/payments/"><span class="erp-dot"></span>پرداختی‌ها</a>
-      <a class="${calcActive ? 'active' : ''}" href="/calculator/"><span class="erp-dot"></span>محاسبه‌گر</a>
-    `;
-    definitionsTitle.parentNode.insertBefore(wrap, definitionsTitle);
+    const financeActive = path.startsWith('/finance/') || path.startsWith('/payments/') || path.startsWith('/calculator/');
+    const financeLink = document.createElement('a');
+    financeLink.dataset.financeRootNav = '1';
+    financeLink.href = '/finance/';
+    financeLink.className = financeActive ? 'active' : '';
+    financeLink.innerHTML = '<span class="erp-dot"></span>مالی و ابزار';
+    if (legacyFinanceGroup) {
+      legacyFinanceGroup.replaceWith(financeLink);
+    } else if (!nav.querySelector('[data-finance-root-nav]')) {
+      definitionsTitle.parentNode.insertBefore(financeLink, definitionsTitle);
+    }
   }
 
   function injectV39Styles() {
