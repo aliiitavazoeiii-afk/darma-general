@@ -112,7 +112,7 @@ class Command(BaseCommand):
                 raise RuntimeError("Tailor elastic page lost transfer/table UI")
 
             text = _render(finance_center_v97.finance_home, "/finance/")
-            for marker in ("دریافتی‌ها و پرداختی‌ها", "حساب‌ها", "محاسبه‌گر"):
+            for marker in ("پرداخت‌ها", "حساب‌ها", "محاسبه‌گر"):
                 if marker not in text:
                     raise RuntimeError(f"Finance card missing: {marker}")
 
@@ -134,13 +134,13 @@ class Command(BaseCommand):
 
         report_source = getsource(report_v10.report)
         for marker in (
-            'raw = _raw_material_context()',
-            'inventory_total = finished_inventory_total + raw["materials_total"]',
-            'current_capital_total = accounts_total + inventory_total + digikala_receivable - takvin_debt + assets_total',
+            'current_capital = current_capital_breakdown()',
+            'inventory_total = int(current_capital["inventory_total"])',
+            'current_capital_total = int(current_capital["capital_total"])',
             '"core/report_excel_v97.html"',
         ):
             if marker not in report_source:
-                raise RuntimeError(f"Report formula/template marker missing: {marker}")
+                raise RuntimeError(f"Report canonical-capital/template marker missing: {marker}")
 
         report_template = (Path(settings.BASE_DIR) / "templates/core/report_excel_v97.html").read_text(encoding="utf-8")
         if "title==='حساب‌ها'" not in report_template:
@@ -178,6 +178,6 @@ class Command(BaseCommand):
         self.stdout.write("PAYMENTS/RECEIPTS FLOW = UNCHANGED")
         self.stdout.write("CALCULATOR ROUTE = UNCHANGED")
         self.stdout.write("REPORT ACCOUNT MANAGEMENT UI = MOVED")
-        self.stdout.write("REPORT CAPITAL FORMULA = UNCHANGED")
+        self.stdout.write("REPORT CURRENT CAPITAL = CANONICAL V102 SOURCE")
         self.stdout.write("NO BUSINESS STATE WRITE = OK")
         self.stdout.write(self.style.SUCCESS("SUCCESS: MATERIAL + FINANCE CENTER V97 CHECK PASSED"))
