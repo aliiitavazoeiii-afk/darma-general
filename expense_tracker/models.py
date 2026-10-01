@@ -19,12 +19,25 @@ class ExpenseCategory(models.Model):
 
 
 class DailyExpense(models.Model):
+    SOURCE_MELAT = "melat"
+    SOURCE_MOFID = "mofid"
+    SOURCE_CHOICES = (
+        (SOURCE_MELAT, "ملت"),
+        (SOURCE_MOFID, "مفید"),
+    )
+
     date = models.DateField(db_index=True)
     amount = models.BigIntegerField()
     category = models.ForeignKey(
         ExpenseCategory,
         on_delete=models.PROTECT,
         related_name="expenses",
+    )
+    payment_source = models.CharField(
+        max_length=16,
+        choices=SOURCE_CHOICES,
+        default=SOURCE_MELAT,
+        db_index=True,
     )
     title = models.CharField(max_length=160, blank=True)
     note = models.TextField(blank=True)
