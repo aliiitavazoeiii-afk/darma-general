@@ -2,7 +2,7 @@
 
 **AUTHORITATIVE CONTINUATION ENTRYPOINT — READ THIS FILE COMPLETELY BEFORE TOUCHING CODE OR DATA**
 
-Last continuation synchronization: **2026-10-01 through V104 Finance KPIs and calculator rebuild**.
+Last continuation synchronization: **2026-10-01 through V105 margin/code summary/material KPI corrections**.
 
 Repository: `aliiitavazoeiii-afk/darma-general`
 
@@ -16,9 +16,9 @@ Functional-code head immediately before this handoff-document synchronization: `
 
 ## V102 CURRENT CONTINUATION
 
-After this entrypoint, read **every numbered file** in `docs/PROJECT_CONTEXT/` through `54_FINANCE_KPIS_CALCULATOR_V104.md`.
+After this entrypoint, read **every numbered file** in `docs/PROJECT_CONTEXT/` through `55_MARGIN_CODE_SUMMARY_MATERIAL_KPIS_V105.md`.
 
-Current GitHub development line: `v104-finance-kpis-calculator`.
+Current GitHub development line: `v105-margin-code-summary-material-kpis`.
 
 For Finance, V102 supersedes the sibling V101 branch: the sidebar has one direct `مالی و ابزار` root, and `/finance/` contains exactly three cards (Payments, Accounts, Calculator). Do not restore an expandable Finance submenu unless the user explicitly changes this rule.
 
