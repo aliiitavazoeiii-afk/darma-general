@@ -146,7 +146,8 @@ docker compose run --rm --entrypoint python web manage.py check_material_month_a
 docker compose run --rm --entrypoint python web manage.py check_product_pricing_center_v93 || fail "V93 regression failed"
 docker compose run --rm --entrypoint python web manage.py check_global_calendar_inventory_v94 || fail "V94 regression failed"
 docker compose run --rm --entrypoint python web manage.py check_multi_delivery_mehr8_v95 || fail "V95 regression failed"
-docker compose run --rm --entrypoint python web manage.py check_inventory_material_center_v96 || fail "V96 regression failed"
+# V96's regression asserts the old V96 route functions exactly, so V97 supersedes
+# that route-level check with the V97 command below while retaining its data invariants.
 docker compose run --rm --entrypoint python web manage.py check_material_finance_center_v97 || fail "V97 regression failed"
 
 step "4) VERIFY NEW IMAGE IS STATE NEUTRAL"
@@ -158,7 +159,6 @@ step "5) RECREATE LIVE WEB"
 docker compose up -d --no-deps --force-recreate web || fail "web recreate failed"
 sleep 7
 docker compose exec -T web python manage.py check || fail "live Django check failed"
-docker compose exec -T web python manage.py check_inventory_material_center_v96 || fail "live V96 regression failed"
 docker compose exec -T web python manage.py check_material_finance_center_v97 || fail "live V97 regression failed"
 
 step "6) FINAL STATE INVARIANTS"
