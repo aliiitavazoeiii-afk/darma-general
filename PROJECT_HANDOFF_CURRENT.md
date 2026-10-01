@@ -8,7 +8,7 @@ Then read every file in:
 
 `docs/PROJECT_CONTEXT/`
 
-in numeric order, including the newest continuation records:
+in numeric order through:
 
 - `docs/PROJECT_CONTEXT/41_PRICING_WORKDAYS_DASHBOARD_V89.md`
 - `docs/PROJECT_CONTEXT/42_DAILY_COLOR_SIZE_MATRIX_V90.md`
@@ -21,11 +21,25 @@ in numeric order, including the newest continuation records:
 - `docs/PROJECT_CONTEXT/49_MATERIAL_FINANCE_CENTER_V97.md`
 - `docs/PROJECT_CONTEXT/50_FINANCE_NAV_POLISH_V98.md`
 - `docs/PROJECT_CONTEXT/51_FINANCE_ACCOUNTS_VISIBLE_V100.md`
+- `docs/PROJECT_CONTEXT/52_FINANCE_HUB_CAPITAL_V102.md`
 
-`PROJECT_HANDOFF.md` is preserved as an older historical/forensic record and contains assumptions superseded by later work. Do not use it as the sole current source.
+## Current authoritative development line
 
-Current GitHub development line at this pointer: `v100-finance-accounts-visible`.
+`v102-finance-hub-consolidated`
 
-Important: GitHub branch state is not proof of production deployment. V100 is production-confirmed only after the actual VPS deploy finishes with:
+V100 and V101 diverged from V99. V101 is **not** a superset of V100 and its restored Finance submenu conflicts with the user's final requirement.
 
-`SUCCESS: FINANCE ACCOUNTS VISIBLE V100 DEPLOYED`
+V102 intentionally continues V100 and defines the final Finance structure:
+
+- one direct `مالی و ابزار` sidebar destination;
+- `/finance/` contains exactly three cards: Payments, Accounts, Calculator;
+- Payments/Receipts logic is unchanged;
+- Accounts uses the historical Comprehensive Report account sources and mutation semantics;
+- the Finance hub itself does not duplicate account rows;
+- the current-capital formula has one canonical implementation in `current_capital_breakdown()`; the economic formula itself is unchanged.
+
+`PROJECT_HANDOFF.md` is preserved as older historical/forensic context and must not override newer explicit context documents or active code.
+
+GitHub branch state is not proof of production deployment. V102 is production-confirmed only after the VPS prints:
+
+`SUCCESS: FINANCE HUB + CAPITAL V102 DEPLOYED`
