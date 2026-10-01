@@ -5,16 +5,16 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_POST
 
-from .capital_history_v87 import capital_as_of
+from .capital_history_v87 import capital_as_of, current_capital_breakdown
 from .dateutils import format_jalali
-from .dia_gallery_v45 import dia_gallery_period_metrics, dia_gallery_receivable_total
+from .dia_gallery_v45 import dia_gallery_period_metrics
 from .excel_views import DISPLAY_SIZES, _add_metrics, _empty_metrics, _finish_metrics, _int, _period_range
 from .finance import sale_line_metrics
-from .finance_excel_v9 import digikala_ledger_total, digikala_receivable_total
+from .finance_excel_v9 import digikala_ledger_total
 from .inventory_valuation_v17 import finished_inventory_value_v17
 from .models import ExcelManualRow, ExcelManualSetting, SaleLine
 from .report_v5 import _raw_material_context, manual_report_action as legacy_manual_report_action
-from .self_spend_v62 import capital_accounts_queryset, is_self_tracking_row
+from .self_spend_v62 import is_self_tracking_row
 
 
 @login_required
@@ -91,30 +91,23 @@ def report(request):
     person_rows = list(manual_rows.filter(section=ExcelManualRow.PERSONS).order_by("sort_order", "id"))
     asset_rows = list(manual_rows.filter(section=ExcelManualRow.ASSETS).order_by("sort_order", "id"))
     settings = {obj.key: obj for obj in ExcelManualSetting.objects.all()}
-    takvin_debt = int(settings.get("takvin_debt").value or 0) if settings.get("takvin_debt") else 0
     digikala_base = int(settings.get("digikala_receivable").value or 0) if settings.get("digikala_receivable") else 0
     digikala_ledger = digikala_ledger_total()
-    digikala_receivable = digikala_receivable_total()
-    dia_gallery_receivable = dia_gallery_receivable_total()
 
-    # V62: «خودم» lives visibly inside حساب‌ها as a cumulative personal-spend
-    # tracker, but it is not an asset. Mellat already falls by the payment amount,
-    # so counting the tracking row again would wrongly cancel the capital decrease.
-    capital_account_rows = list(
-        capital_accounts_queryset(
-            manual_rows.filter(section=ExcelManualRow.ACCOUNTS)
-        )
-    )
-    accounts_total = (
-        sum(int(row.amount or 0) for row in capital_account_rows)
-        + sum(int(row.amount or 0) for row in person_rows)
-        + int(dia_gallery_receivable or 0)
-    )
-    assets_total = sum(int(row.amount or 0) for row in asset_rows)
-    finished_inventory_total = finished_inventory_value_v17()
+    # V102: the current-capital number has exactly one canonical calculator.
+    # This does not change the economic formula; it removes a duplicate copy from
+    # report_v10 so Finance/report/history cannot silently drift apart later.
+    current_capital = current_capital_breakdown()
+    accounts_total = int(current_capital["accounts_total"])
+    assets_total = int(current_capital["assets_total"])
+    finished_inventory_total = int(current_capital["finished_inventory_total"])
+    inventory_total = int(current_capital["inventory_total"])
+    current_capital_total = int(current_capital["capital_total"])
+    takvin_debt = int(current_capital["takvin_debt"])
+    digikala_receivable = int(current_capital["digikala_receivable"])
+    dia_gallery_receivable = int(current_capital["dia_gallery_receivable"])
+
     raw = _raw_material_context()
-    inventory_total = finished_inventory_total + raw["materials_total"]
-    current_capital_total = accounts_total + inventory_total + digikala_receivable - takvin_debt + assets_total
     historical_capital = capital_as_of(end)
     capital_total = int(historical_capital["capital_total"])
 
