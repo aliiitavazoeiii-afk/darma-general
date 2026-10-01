@@ -14,6 +14,14 @@ from expense_tracker.category_report_v8 import _category_report_context
 from expense_tracker.models import DailyExpense, ExpenseCategory
 
 
+class _RegressionUser:
+    is_authenticated = True
+    username = "expense-v8-regression"
+
+    def get_short_name(self):
+        return "expense-v8-regression"
+
+
 class Command(BaseCommand):
     help = "Rollback-only regression for detailed category reports V8."
 
@@ -118,7 +126,7 @@ class Command(BaseCommand):
                     raise CommandError("category report by-name route does not resolve correctly")
 
                 if production_static_ready:
-                    auth_user = type("AuthUser", (), {"is_authenticated": True})()
+                    auth_user = _RegressionUser()
                     factory = RequestFactory()
                     from expense_tracker.category_report_v8 import category_report, category_report_by_name
 
