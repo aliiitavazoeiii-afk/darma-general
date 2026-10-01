@@ -1,15 +1,15 @@
 from django.urls import path
 
-from . import export_xlsx, views
+from . import expense_v7, export_xlsx, views
 
 app_name = "expense_tracker"
 
 urlpatterns = [
     path("", views.dashboard, name="dashboard"),
-    path("expenses/", views.expense_list, name="expense_list"),
-    path("expenses/add/", views.expense_add, name="expense_add"),
-    path("expenses/<int:expense_id>/edit/", views.expense_edit, name="expense_edit"),
-    path("expenses/<int:expense_id>/delete/", views.expense_delete, name="expense_delete"),
+    path("expenses/", expense_v7.expense_list, name="expense_list"),
+    path("expenses/add/", expense_v7.expense_add, name="expense_add"),
+    path("expenses/<int:expense_id>/edit/", expense_v7.expense_edit, name="expense_edit"),
+    path("expenses/<int:expense_id>/delete/", expense_v7.expense_delete, name="expense_delete"),
     path("receivables/", views.receivables, name="receivables"),
     path("receivables/person/add/", views.receivable_person_add, name="receivable_person_add"),
     path("receivables/<int:person_id>/claim/", views.receivable_claim_add, name="receivable_claim_add"),
