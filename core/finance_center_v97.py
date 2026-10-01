@@ -10,11 +10,10 @@ from .self_spend_v62 import capital_accounts_queryset
 
 
 def _finance_account_context():
-    """Canonical finance/account context reused by the hub and full accounts page.
+    """Canonical context for the dedicated Finance/Accounts page.
 
-    This intentionally reads the exact same ExcelManualRow / ExcelManualSetting
-    sources that the comprehensive report has always used. No data is copied or
-    migrated; V100 only makes the existing rows visible from Finance & Tools.
+    It reads the exact ExcelManualRow / ExcelManualSetting sources historically
+    used by the comprehensive report. No account data is copied or migrated.
     """
     manual_rows = ExcelManualRow.objects.filter(active=True)
     accounts_rows = list(
