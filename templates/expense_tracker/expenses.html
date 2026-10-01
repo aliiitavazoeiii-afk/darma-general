@@ -5,7 +5,7 @@
   <div>
     <div class="eyebrow">دفتر خرج</div>
     <h1>تراکنش‌ها</h1>
-    <p>خرج‌ها روزبه‌روز جدا شده‌اند تا مرور ماه خیلی سریع‌تر باشد.</p>
+    <p>جمع بالای صفحه فقط مربوط به ماه جاری است؛ ماه‌های قبل جدا و بازشدنی هستند.</p>
   </div>
   <a class="primary-btn compact" href="{% url 'expense_tracker:dashboard' %}#new-expense">＋ ثبت خرج</a>
 </div>
@@ -28,62 +28,55 @@
     <button class="secondary-btn compact">اعمال فیلتر</button>
   </form>
 
-  <div class="list-total">
-    <span>جمع نتایج</span>
-    <strong class="money">{{ total|groupnum }} تومان</strong>
+  <div class="list-total current-month-total">
+    <span>جمع نتایج {{ current_month_label }}</span>
+    <strong class="money">{{ current_total|groupnum }} تومان</strong>
   </div>
 
-  <div class="day-groups">
-    {% for group in grouped_expenses %}
-    <section class="day-group">
-      <header class="day-group-head">
-        <div class="day-title">
-          <div class="day-label-row">
-            <strong>{{ group.label }}</strong>
-            {% if group.label != "امروز" and group.label != "دیروز" %}
-              <span class="day-separator">•</span>
-            {% endif %}
-            <span class="day-jalali">{{ group.jalali }}</span>
-          </div>
-          <small>{{ group.count }} تراکنش</small>
+  <div class="current-month-block">
+    <div class="month-section-title">
+      <div><span class="eyebrow">ماه جاری</span><strong>{{ current_month_label }}</strong></div>
+    </div>
+    <div class="day-groups">
+      {% if current_day_groups %}
+        {% include 'expense_tracker/_expense_day_groups.html' with day_groups=current_day_groups %}
+      {% else %}
+        <div class="empty transactions-empty">
+          <strong>برای {{ current_month_label }} نتیجه‌ای پیدا نشد</strong>
+          <span>اگر نتیجه‌ای در ماه‌های قبل باشد پایین‌تر می‌بینی.</span>
         </div>
-        <div class="day-total">
-          <small>جمع روز</small>
-          <strong class="money">{{ group.total|groupnum }}</strong>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if historical_months %}
+  <div class="history-months">
+    <div class="history-title"><span class="eyebrow">ماه‌های گذشته</span><h2>آرشیو نتایج</h2></div>
+    {% for month in historical_months %}
+    <details class="history-month">
+      <summary class="history-month-summary">
+        <div class="history-month-name">
+          <strong>{{ month.label }}</strong>
+          <small>{{ month.count }} تراکنش</small>
+        </div>
+        <div class="history-month-total">
+          <small>جمع این ماه</small>
+          <strong class="money">{{ month.total|groupnum }}</strong>
           <span>تومان</span>
         </div>
-      </header>
-
-      <div class="transaction-list large grouped-list">
-        {% for expense in group.expenses %}
-        <div class="transaction">
-          <div class="transaction-icon accent-{{ expense.category.accent }}">{{ expense.category.name|slice:":1" }}</div>
-          <div class="transaction-main">
-            <strong>{{ expense.title|default:expense.category.name }}</strong>
-            <small>{{ expense.category.name }}{% if expense.note %} · {{ expense.note }}{% endif %}</small>
-          </div>
-          <div class="transaction-money">
-            <strong class="money">−{{ expense.amount|groupnum }}</strong>
-            <small>تومان</small>
-          </div>
-          <div class="row-actions">
-            <a class="icon-btn" href="{% url 'expense_tracker:expense_edit' expense.id %}" aria-label="ویرایش">✎</a>
-            <form method="post" action="{% url 'expense_tracker:expense_delete' expense.id %}">
-              {% csrf_token %}
-              <input type="hidden" name="next" value="{% url 'expense_tracker:expense_list' %}">
-              <button class="icon-btn danger" data-confirm="این هزینه حذف شود و مبلغش به ملت برگردد؟" aria-label="حذف">×</button>
-            </form>
-          </div>
-        </div>
-        {% endfor %}
+        <span class="history-month-chevron">⌄</span>
+      </summary>
+      <div class="history-month-body day-groups">
+        {% include 'expense_tracker/_expense_day_groups.html' with day_groups=month.day_groups %}
       </div>
-    </section>
-    {% empty %}
-    <div class="empty transactions-empty">
-      <strong>هیچ خرجی پیدا نشد</strong>
-      <span>فیلترها را عوض کن یا یک خرج جدید ثبت کن.</span>
-    </div>
+    </details>
     {% endfor %}
   </div>
+  {% elif not current_day_groups %}
+  <div class="empty transactions-empty">
+    <strong>هیچ خرجی پیدا نشد</strong>
+    <span>فیلترها را عوض کن یا یک خرج جدید ثبت کن.</span>
+  </div>
+  {% endif %}
 </section>
 {% endblock %}
