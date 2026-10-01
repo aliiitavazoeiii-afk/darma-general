@@ -158,9 +158,74 @@ def preview_delivery_report(file_bytes: bytes, filename: str = "") -> dict:
     }
 
 
+def merge_delivery_previews(previews: list[dict]) -> dict:
+    """Merge multiple Digikala shipment files into one authoritative day preview.
+
+    A day may be split into more than one Digikala shipment. Overlapping
+    product/size/color rows are summed. The merged result, not each file
+    individually, becomes the authoritative Darma/Takvin target for that day.
+    """
+    if not previews:
+        raise base.DailyOrderImportError("حداقل یک فایل اکسل دیجی‌کالا لازم است.")
+
+    grouped = defaultdict(int)
+    errors = []
+    filenames = []
+    source_rows = 0
+    ignored_rows = 0
+    raw_quantity = 0
+
+    for preview in previews:
+        filename = os.path.basename(preview.get("filename") or "")
+        filenames.append(filename)
+        source_rows += int(preview.get("source_rows") or 0)
+        ignored_rows += int(preview.get("ignored_rows") or 0)
+        raw_quantity += int(preview.get("raw_quantity") or 0)
+        for error in preview.get("errors") or []:
+            errors.append(f"{filename}: {error}" if filename else str(error))
+        for row in preview.get("rows") or []:
+            key = (
+                row.get("brand") or "",
+                row.get("code") or "",
+                row.get("size") or "",
+                row.get("color") or "",
+            )
+            grouped[key] += int(row.get("quantity") or 0)
+
+    rows = [
+        {
+            "brand": brand,
+            "code": code,
+            "size": size,
+            "color": color,
+            "quantity": qty,
+        }
+        for (brand, code, size, color), qty in sorted(
+            grouped.items(), key=lambda x: (x[0][0], x[0][2], x[0][1], x[0][3])
+        )
+        if qty > 0
+    ]
+    return {
+        "source_rows": source_rows,
+        "ignored_rows": ignored_rows,
+        "raw_quantity": raw_quantity,
+        "filename": " + ".join(name for name in filenames if name),
+        "filenames": filenames,
+        "files_count": len(previews),
+        "rows": rows,
+        "errors": errors,
+        "grouped_lines": len(rows),
+        "total_quantity": sum(row["quantity"] for row in rows),
+    }
+
+
+def preview_delivery_reports(reports: list[tuple[bytes, str]]) -> dict:
+    previews = [preview_delivery_report(file_bytes, filename) for file_bytes, filename in reports]
+    return merge_delivery_previews(previews)
+
+
 @transaction.atomic
-def apply_delivery_report(day: SaleDay, file_bytes: bytes, filename: str = "") -> dict:
-    preview = preview_delivery_report(file_bytes, filename)
+def apply_delivery_preview(day: SaleDay, preview: dict) -> dict:
     if preview["errors"]:
         raise base.DailyOrderImportError("\n".join(preview["errors"]))
 
@@ -256,3 +321,13 @@ def apply_delivery_report(day: SaleDay, file_bytes: bytes, filename: str = "") -
     preview["shortage_count"] = shortage_count
     preview["sale_day_id"] = day.id
     return preview
+
+
+@transaction.atomic
+def apply_delivery_report(day: SaleDay, file_bytes: bytes, filename: str = "") -> dict:
+    return apply_delivery_preview(day, preview_delivery_report(file_bytes, filename))
+
+
+@transaction.atomic
+def apply_delivery_reports(day: SaleDay, reports: list[tuple[bytes, str]]) -> dict:
+    return apply_delivery_preview(day, preview_delivery_reports(reports))
