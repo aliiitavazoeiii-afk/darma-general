@@ -9,11 +9,10 @@ from . import business_tools_v21 as v21
 from . import business_tools_v60 as v60
 from . import business_tools_v62 as v62
 from .dateutils import format_jalali, parse_jalali_date
-from .dia_gallery_v45 import dia_gallery_receivable_total
-from .finance_excel_v9 import digikala_receivable_total
 from .material_flow import COLOR_LABELS
 from .models import BusinessPayment, DigikalaSettlement
-from .payment_source_v63 import SOURCE_CHOICES, SOURCE_MOFID, source_balance
+from .payment_source_v63 import SOURCE_CHOICES
+from .finance_overview_v104 import finance_kpis
 
 
 RECEIPT_FILTER_ALL = "all"
@@ -141,12 +140,7 @@ def payments(request):
             "receipt_filter_source": receipt_filter["source"],
             "receipt_filter_sources": receipt_filter["sources"],
             "today_j": format_jalali(date.today()),
-            "mellat_balance": v21.mellat_balance(),
-            "mofid_balance": source_balance(SOURCE_MOFID),
-            "tailor_balance": v21.tailor_balance(),
-            "takvin_debt": int(v21._takvin_setting().value or 0),
-            "digikala_receivable": digikala_receivable_total(),
-            "dia_gallery_receivable": dia_gallery_receivable_total(),
+            **finance_kpis(),
             "receipt_source_choices": receipts_v64.SOURCE_CHOICES,
             "payees": v62.PAYEE_CHOICES,
             "payment_source_choices": SOURCE_CHOICES,
