@@ -1,0 +1,77 @@
+{% extends 'expense_tracker/base.html' %}{% load jalali %}
+{% block title %}گزارش {{ category.name }} | خرج من{% endblock %}
+{% block content %}
+<style>
+.category-report-head{align-items:flex-start}.category-report-actions{display:flex;gap:10px;flex-wrap:wrap}.category-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:0 0 18px}.category-kpi{padding:18px;border:1px solid rgba(255,255,255,.08);background:linear-gradient(145deg,rgba(14,28,29,.95),rgba(7,16,18,.96));border-radius:18px}.category-kpi span,.category-kpi small{display:block;color:var(--muted);font-size:.72rem}.category-kpi strong{display:block;margin:5px 0;font-size:1.35rem}.largest-list{display:grid;gap:10px}.largest-row{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid rgba(255,255,255,.06)}.largest-row:last-child{border-bottom:0}.largest-rank{width:40px;height:40px;display:grid;place-items:center;border-radius:12px;background:rgba(244,189,84,.10);color:#ffd481;font-weight:900}.largest-main strong,.largest-main small{display:block}.largest-main small{color:var(--muted)}.largest-money{text-align:left}.largest-money strong,.largest-money small{display:block}.largest-money strong{color:#ffaaa2}.largest-bar{grid-column:2/4;height:5px;border-radius:999px;background:rgba(255,255,255,.04);overflow:hidden}.largest-bar span{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#ff7d72,#f4bd54)}.category-months{display:grid;gap:12px}.category-month{border:1px solid rgba(255,255,255,.075);border-radius:18px;background:rgba(255,255,255,.018);overflow:hidden}.category-month summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:16px 18px}.category-month summary::-webkit-details-marker{display:none}.category-month-title strong,.category-month-title small{display:block}.category-month-title small{color:var(--muted)}.category-month-total{text-align:left}.category-month-total strong,.category-month-total small{display:block}.category-month-total strong{color:var(--green)}.category-month-body{padding:0 16px 16px}.source-badge{display:inline-flex;align-items:center;padding:3px 7px;border-radius:999px;background:rgba(255,255,255,.05);color:#a9bcb7;font-size:.65rem;margin-right:6px}
+@media(max-width:760px){.category-kpis{grid-template-columns:1fr}.category-report-actions{width:100%}.category-report-actions a{flex:1}.largest-row{grid-template-columns:36px minmax(0,1fr) auto}.largest-rank{width:34px;height:34px}.category-month summary{padding:13px}.category-month-body{padding:0 10px 12px}}
+</style>
+
+<div class="page-head category-report-head">
+  <div>
+    <div class="eyebrow">گزارش تفصیلی دسته</div>
+    <h1>{{ category.name }}</h1>
+    <p>بزرگ‌ترین خرج‌ها و تمام تراکنش‌های ثبت‌شده در این دسته.</p>
+  </div>
+  <div class="category-report-actions">
+    <a class="secondary-btn compact" href="{% url 'expense_tracker:reports' %}">گزارش ماه ←</a>
+    <a class="secondary-btn compact" href="{% url 'expense_tracker:expense_list' %}?category={{ category.id }}">تراکنش‌های فیلترشده</a>
+  </div>
+</div>
+
+<div class="category-kpis">
+  <article class="category-kpi"><span>خرج {{ current_month_label }}</span><strong class="money">{{ current_month_total|groupnum }}</strong><small>{{ current_month_count }} تراکنش</small></article>
+  <article class="category-kpi"><span>جمع کل این دسته</span><strong class="money">{{ all_total|groupnum }}</strong><small>{{ all_count }} تراکنش در کل تاریخچه</small></article>
+  <article class="category-kpi"><span>بزرگ‌ترین خرج ثبت‌شده</span><strong class="money">{% if largest_expenses %}{{ largest_expenses.0.amount|groupnum }}{% else %}۰{% endif %}</strong><small>تومان</small></article>
+</div>
+
+<section class="panel">
+  <div class="panel-head"><div><div class="eyebrow">از بزرگ به کوچک</div><h2>بزرگ‌ترین خرج‌ها</h2></div><span class="pill">۵ مورد اول</span></div>
+  <div class="largest-list">
+    {% for expense in largest_expenses %}
+    <div class="largest-row">
+      <div class="largest-rank">{{ forloop.counter }}</div>
+      <div class="largest-main">
+        <strong>{{ expense.title|default:category.name }}</strong>
+        <small>{{ expense.date|jalali }}{% if expense.note %} · {{ expense.note }}{% endif %}<span class="source-badge">{{ expense.get_payment_source_display }}</span></small>
+      </div>
+      <div class="largest-money"><strong class="money">−{{ expense.amount|groupnum }}</strong><small>تومان</small></div>
+      <div class="largest-bar"><span style="width:{{ expense.rank_pct }}%"></span></div>
+    </div>
+    {% empty %}<div class="empty">هنوز خرجی در این دسته ثبت نشده.</div>{% endfor %}
+  </div>
+</section>
+
+<section class="panel mt">
+  <div class="panel-head"><div><div class="eyebrow">تمام تاریخچه</div><h2>همه خرج‌های {{ category.name }}</h2></div></div>
+  <div class="category-months">
+    {% for month in month_groups %}
+    <details class="category-month" {% if month.is_current %}open{% endif %}>
+      <summary>
+        <div class="category-month-title"><strong>{{ month.label }}</strong><small>{{ month.count }} تراکنش</small></div>
+        <div class="category-month-total"><strong class="money">{{ month.total|groupnum }}</strong><small>تومان</small></div>
+      </summary>
+      <div class="category-month-body">
+        {% for group in month.day_groups %}
+        <section class="day-group">
+          <header class="day-group-head">
+            <div class="day-title"><div class="day-label-row"><strong>{{ group.label }}</strong>{% if group.label != "امروز" and group.label != "دیروز" %}<span class="day-separator">•</span>{% endif %}<span class="day-jalali">{{ group.jalali }}</span></div><small>{{ group.count }} تراکنش</small></div>
+            <div class="day-total"><small>جمع روز</small><strong class="money">{{ group.total|groupnum }}</strong><span>تومان</span></div>
+          </header>
+          <div class="transaction-list large grouped-list">
+            {% for expense in group.expenses %}
+            <div class="transaction">
+              <div class="transaction-icon accent-{{ expense.category.accent }}">{{ category.name|slice:":1" }}</div>
+              <div class="transaction-main"><strong>{{ expense.title|default:category.name }}</strong><small>{{ expense.note|default:"بدون توضیح" }} · {{ expense.get_payment_source_display }}</small></div>
+              <div class="transaction-money"><strong class="money">−{{ expense.amount|groupnum }}</strong><small>تومان</small></div>
+              <a class="icon-btn" href="{% url 'expense_tracker:expense_edit' expense.id %}" aria-label="ویرایش">✎</a>
+            </div>
+            {% endfor %}
+          </div>
+        </section>
+        {% endfor %}
+      </div>
+    </details>
+    {% empty %}<div class="empty">هنوز خرجی در این دسته ثبت نشده.</div>{% endfor %}
+  </div>
+</section>
+{% endblock %}
