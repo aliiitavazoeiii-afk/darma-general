@@ -110,3 +110,10 @@ V101's expandable Finance submenu is superseded by V102 and must not be reintrod
 53. `53_NATIVE_FINANCE_NAV_V103.md` — replaces the V102 post-render Finance-navigation rewrite with a native direct link in `base.html`. The Finance hub remains exactly three cards and Accounts remains `/finance/accounts/`; no business/accounting logic changes.
 
 **Current GitHub continuation line:** `v103-native-finance-nav`.
+
+
+## V104 Finance KPIs and calculator
+
+54. `54_FINANCE_KPIS_CALCULATOR_V104.md` — reuses one six-balance KPI source across Payments and Finance, improves Accounts KPI typography, and rebuilds Calculator as target-profit pricing + direct profit calculation + live current profitability for every active Darma/Takvin ProductSize.
+
+**Current GitHub continuation line:** `v104-finance-kpis-calculator`.
