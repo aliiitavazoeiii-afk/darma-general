@@ -154,19 +154,19 @@ class Command(BaseCommand):
         if "حفظ درصد سود فعلی" in calculator_html:
             raise RuntimeError("Legacy brand-current-profit calculator still visible")
 
-        # Target-price solver invariant: price reaches the requested net profit
-        # after the exact current Digikala fee; one toman below must not.
-        test_cost = 250_000
-        test_pct = Decimal("40")
+        # V105 semantics: target is net profit / sale price, not profit / cost.
+        test_cost = 210_000
+        test_pct = Decimal("15")
         exact = calculator_v37._solve_sale_price(test_cost, test_pct)
-        target_profit = Decimal(test_cost) * test_pct / Decimal(100)
-        achieved = Decimal(exact - digikala_fee_for_unit(exact, date.today()) - test_cost)
-        previous = Decimal((exact - 1) - digikala_fee_for_unit(exact - 1, date.today()) - test_cost)
-        if achieved < target_profit or previous >= target_profit:
-            raise RuntimeError("Target-price solver is not minimal/exact")
+        achieved_profit = Decimal(exact - digikala_fee_for_unit(exact, date.today()) - test_cost)
+        previous_price = exact - 1
+        previous_profit = Decimal(previous_price - digikala_fee_for_unit(previous_price, date.today()) - test_cost)
+        achieved_margin = achieved_profit * Decimal(100) / Decimal(exact)
+        previous_margin = previous_profit * Decimal(100) / Decimal(previous_price)
+        if achieved_margin < test_pct or previous_margin >= test_pct:
+            raise RuntimeError("Sale-margin target solver is not minimal/exact")
 
-        sections = calculator_v37._profitability_rows()
-        actual_rows = [row for section in sections for row in section["rows"]]
+        actual_rows = calculator_v37._size_profitability_rows()
         expected_sizes = list(
             ProductSize.objects.filter(
                 product__brand__name__in=calculator_v37.TARGET_BRANDS,
@@ -218,7 +218,7 @@ class Command(BaseCommand):
         self.stdout.write("FINANCE NAV CARDS = STILL 3")
         self.stdout.write("ACCOUNT SUMMARY TYPOGRAPHY = V104")
         self.stdout.write("CALCULATOR LEGACY STRUCTURE = REMOVED")
-        self.stdout.write("TARGET PROFIT SOLVER = VERIFIED")
+        self.stdout.write("TARGET SALE-MARGIN SOLVER = VERIFIED")
         self.stdout.write(f"PRODUCT PROFITABILITY COVERAGE = OK ({len(actual_rows)})")
         self.stdout.write("PRODUCT PRICE/COST/FEE/PROFIT = VERIFIED")
         self.stdout.write("NO BUSINESS STATE WRITE = OK")
