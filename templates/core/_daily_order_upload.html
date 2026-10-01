@@ -5,16 +5,16 @@
         <div class="page-kicker">ورود خودکار سفارش روزانه</div>
         <h3 class="mb-1">آپلود فایل اکسل دیجی‌کالا</h3>
         <div class="text-secondary small">
-          فایل همان روز را انتخاب کن؛ «تعداد ارسالی» به‌صورت خودکار بر اساس کد و سایز ثبت می‌شود.
-          آپلود دوباره باعث دوبرابرشدن نمی‌شود و مقادیر همان روز با فایل جایگزین می‌شوند.
+          اگر یک روز چند محموله داشتی، همه فایل‌های همان روز را با هم انتخاب کن. فایل‌ها با هم تجمیع می‌شوند و مجموع آن‌ها صورت کامل همان روز خواهد بود.
+          آپلود دوباره همان مجموعه فایل باعث دوبرابرشدن نمی‌شود.
         </div>
       </div>
       <form method="post" enctype="multipart/form-data" action="{% url 'daily_order_import' day.id %}" class="daily-order-upload-form">
         {% csrf_token %}
         <div class="d-flex flex-column flex-md-row gap-2 align-items-stretch">
-          <input class="form-control" type="file" name="orders_file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" required>
-          <button class="btn btn-primary px-4" type="submit" onclick="return confirm('مقادیر فروش این روز بر اساس فایل آپلودشده همگام شود؟')">
-            <span class="btn-symbol">↑</span> ثبت خودکار فایل
+          <input class="form-control" type="file" name="orders_file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" multiple required>
+          <button class="btn btn-primary px-4" type="submit" onclick="return confirm('همه فایل‌های انتخاب‌شده با هم به‌عنوان صورت کامل این روز ثبت شوند؟')">
+            <span class="btn-symbol">↑</span> ثبت خودکار فایل‌ها
           </button>
         </div>
       </form>
