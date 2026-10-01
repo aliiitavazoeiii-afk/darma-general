@@ -42,53 +42,6 @@
     document.head.appendChild(style);
   }
 
-  function normalizeFinanceNav() {
-    const nav = document.querySelector('.erp-nav');
-    if (!nav) return;
-    const definitionsTitle = [...nav.querySelectorAll('.erp-nav-title')].find((el) =>
-      (el.textContent || '').trim() === 'تعاریف'
-    );
-    if (!definitionsTitle) return;
-
-    if (!nav.querySelector('[data-returns-nav]')) {
-      const path = window.location.pathname;
-      const link = document.createElement('a');
-      link.dataset.returnsNav = '1';
-      link.href = '/returns/';
-      link.className = path.startsWith('/returns/') ? 'active' : '';
-      link.innerHTML = '<span class="erp-dot"></span>مرجوعی';
-      definitionsTitle.parentNode.insertBefore(link, definitionsTitle);
-    }
-
-    if (!nav.querySelector('[data-digikala-nav]')) {
-      const path = window.location.pathname;
-      const link = document.createElement('a');
-      link.dataset.digikalaNav = '1';
-      link.href = '/digikala/';
-      link.className = path.startsWith('/digikala/') ? 'active' : '';
-      link.innerHTML = '<span class="erp-dot"></span>دیجی‌کالا';
-      definitionsTitle.parentNode.insertBefore(link, definitionsTitle);
-    }
-
-    // V98: Finance & Tools is exactly one direct sidebar destination.
-    // Remove both the old expandable group and any prior injected finance links,
-    // then insert one canonical link before Definitions.
-    nav.querySelectorAll('[data-business-tools-nav],[data-finance-root-nav]').forEach((node) => node.remove());
-    const oldFinanceGroup = [...nav.querySelectorAll('.erp-nav-group')].find((group) =>
-      (group.querySelector('.erp-nav-group-title')?.textContent || '').trim() === 'مالی و ابزار'
-    );
-    if (oldFinanceGroup) oldFinanceGroup.remove();
-
-    const path = window.location.pathname;
-    const financeActive = path.startsWith('/finance/') || path.startsWith('/payments/') || path.startsWith('/calculator/');
-    const financeLink = document.createElement('a');
-    financeLink.dataset.financeRootNav = '1';
-    financeLink.href = '/finance/';
-    financeLink.className = financeActive ? 'active' : '';
-    financeLink.innerHTML = '<span class="erp-dot"></span>مالی و ابزار';
-    definitionsTitle.parentNode.insertBefore(financeLink, definitionsTitle);
-  }
-
   function injectV39Styles() {
     if (document.getElementById('darma-ui-v39')) return;
     const link = document.createElement('link');
@@ -98,8 +51,6 @@
     document.head.appendChild(link);
   }
 
-  // V94: this file is already included by base.html on every ERP page.
-  // Load the Jalali calendar once from here so all date inputs share one picker.
   function injectGlobalJalaliPicker() {
     if (window.__darmaJalaliPickerLoading || window.__darmaJalaliPickerLoaded) return;
     window.__darmaJalaliPickerLoading = true;
@@ -112,8 +63,6 @@
     document.head.appendChild(script);
   }
 
-  // Presentation-only default. The inventory POST handlers and stock mutation
-  // code remain untouched; this only selects Darma in the existing adjustment UI.
   function defaultInventoryAdjustmentToDarma() {
     if (window.location.pathname !== '/inventory/operations/') return;
     const select = document.getElementById('adjust-brand');
@@ -129,15 +78,15 @@
   injectGlobalJalaliPicker();
   injectPresentationPolish();
   window.DarmaNumber = { raw, grouped, separator: SEP };
+
   document.addEventListener('DOMContentLoaded', () => {
     bind();
     injectPresentationPolish();
-    normalizeFinanceNav();
     defaultInventoryAdjustmentToDarma();
   });
+
   document.body?.addEventListener('htmx:afterSwap', (event) => {
     bind(event.target);
     injectPresentationPolish();
-    normalizeFinanceNav();
   });
 })();
