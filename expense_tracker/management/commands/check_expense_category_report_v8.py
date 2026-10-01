@@ -28,8 +28,21 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         template = get_template("expense_tracker/category_report.html")
         template_source = template.template.source
-        if "بزرگ‌ترین خرج‌ها" not in template_source or "همه خرج‌های این دسته" not in template_source:
-            raise CommandError("category report template is missing V8 detail sections")
+        required_template_markers = (
+            'class="largest-list"',
+            'class="category-months"',
+            "largest_expenses",
+            "month_groups",
+            "current_month_total",
+            "all_total",
+        )
+        missing_markers = [
+            marker for marker in required_template_markers if marker not in template_source
+        ]
+        if missing_markers:
+            raise CommandError(
+                f"category report template is missing V8 structural markers: {missing_markers}"
+            )
 
         before = self._snapshot()
         today = date.today()
@@ -112,8 +125,16 @@ class Command(BaseCommand):
                     by_id_request = factory.get(by_id_path)
                     by_id_request.user = auth_user
                     response = category_report(by_id_request, category.id)
-                    if response.status_code != 200 or "بزرگ‌ترین خرج‌ها".encode("utf-8") not in response.content:
-                        raise CommandError("category report by id did not render correctly")
+                    if response.status_code != 200:
+                        raise CommandError("category report by id did not render HTTP 200")
+                    rendered = response.content.decode("utf-8")
+                    if (
+                        "بزرگ‌ترین خرج‌ها" not in rendered
+                        or category.name not in rendered
+                        or "largest-list" not in rendered
+                        or "category-months" not in rendered
+                    ):
+                        raise CommandError("category report by id rendered without required V8 detail sections")
 
                     by_name_request = factory.get(by_name_path)
                     by_name_request.user = auth_user
@@ -135,6 +156,7 @@ class Command(BaseCommand):
         if before != after:
             raise CommandError(f"category report regression leaked data: before={before} after={after}")
 
+        self.stdout.write("CATEGORY REPORT V8: template structural markers passed")
         self.stdout.write("CATEGORY REPORT V8: current-month and all-time totals passed")
         self.stdout.write("CATEGORY REPORT V8: largest expenses sorted descending")
         self.stdout.write("CATEGORY REPORT V8: full history grouped by Jalali month")
