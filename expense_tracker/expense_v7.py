@@ -103,9 +103,8 @@ def _historical_month_groups(rows, today):
     return result
 
 
-@login_required
-def expense_list(request):
-    today = date.today()
+def build_transaction_context(request, *, today=None):
+    today = today or date.today()
     month_start, month_next, current_j = _current_jalali_month_range(today)
     qs, category_id, query = _filtered_expenses(request)
 
@@ -119,19 +118,24 @@ def expense_list(request):
     )
     historical_months = _historical_month_groups(historical_rows, today)
 
+    return {
+        "current_day_groups": current_day_groups,
+        "historical_months": historical_months,
+        "categories": ExpenseCategory.objects.all(),
+        "selected_category": category_id,
+        "query": query,
+        "current_total": current_total,
+        "current_month_label": _jalali_month_label(current_j.year, current_j.month),
+        "today_j": format_jalali(today),
+    }
+
+
+@login_required
+def expense_list(request):
     return render(
         request,
         "expense_tracker/expenses.html",
-        {
-            "current_day_groups": current_day_groups,
-            "historical_months": historical_months,
-            "categories": ExpenseCategory.objects.all(),
-            "selected_category": category_id,
-            "query": query,
-            "current_total": current_total,
-            "current_month_label": _jalali_month_label(current_j.year, current_j.month),
-            "today_j": format_jalali(today),
-        },
+        build_transaction_context(request),
     )
 
 
