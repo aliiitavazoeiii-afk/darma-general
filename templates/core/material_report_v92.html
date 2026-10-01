@@ -3,17 +3,18 @@
 {% block scripts %}
 {{ block.super }}
 <style>
-.material-month-kpis{display:grid;grid-template-columns:repeat(5,minmax(135px,1fr));gap:8px;flex:1 1 780px}.material-month-kpi{border:1px solid rgba(255,255,255,.11);border-radius:13px;background:rgba(255,255,255,.035);padding:10px 12px;min-height:72px}.material-month-kpi span{display:block;color:#9fb0c4;font-size:.71rem;line-height:1.45}.material-month-kpi strong{display:block;color:#fff;font-size:1.13rem;font-weight:850;margin-top:5px;direction:rtl}.material-month-kpi .num{display:inline-block;direction:ltr!important;text-align:right!important}.material-month-archive{border:1px solid rgba(255,255,255,.12);border-radius:15px;background:linear-gradient(135deg,rgba(15,39,65,.34),rgba(6,22,39,.24));overflow:hidden}.material-month-archive>summary{cursor:pointer;list-style:none;padding:15px 17px;display:flex;justify-content:space-between;align-items:center;gap:12px}.material-month-archive>summary::-webkit-details-marker{display:none}.material-month-archive>summary:hover{background:rgba(255,255,255,.035)}.material-month-archive-title{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.material-month-archive-title strong{font-size:1rem}.material-month-count{display:inline-flex;align-items:center;border-radius:999px;padding:4px 9px;font-size:.72rem;color:#b9cbe0;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10)}.material-month-archive-toggle{font-size:.75rem;color:#95a7ba;white-space:nowrap}.material-month-archive-body{padding:0 12px 1px;border-top:1px solid rgba(255,255,255,.08)}.material-month-archive-body>.material-block{margin-top:12px!important}
-@media(max-width:1200px){.material-month-kpis{grid-template-columns:repeat(3,minmax(135px,1fr));flex-basis:100%}}@media(max-width:767.98px){.material-month-kpis{grid-template-columns:1fr 1fr}.material-page-tools{align-items:stretch}.material-search{width:100%;min-width:0!important;max-width:none!important}}@media(max-width:430px){.material-month-kpis{grid-template-columns:1fr}}
+.material-v105-kpi-wrap{width:100%}.material-month-kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}.material-month-kpi{min-width:0;border:1px solid rgba(255,255,255,.11);border-radius:14px;background:rgba(255,255,255,.035);padding:13px 14px;min-height:96px;display:flex;flex-direction:column;justify-content:space-between}.material-month-kpi .kpi-label{display:block;color:#9fb0c4;font-size:.72rem;line-height:1.45;font-weight:700}.material-month-kpi .kpi-value{direction:ltr;unicode-bidi:isolate;text-align:left;font-variant-numeric:tabular-nums;white-space:nowrap;color:#fff;font-size:1.42rem;font-weight:950;line-height:1.15;margin-top:12px}.material-month-kpi .kpi-unit{display:block;color:#8fa2b7;font-size:.68rem;margin-top:5px;line-height:1.4}.material-month-kpi.highlight .kpi-value{color:#ffd08a}.material-month-archive{border:1px solid rgba(255,255,255,.12);border-radius:15px;background:linear-gradient(135deg,rgba(15,39,65,.34),rgba(6,22,39,.24));overflow:hidden}.material-month-archive>summary{cursor:pointer;list-style:none;padding:15px 17px;display:flex;justify-content:space-between;align-items:center;gap:12px}.material-month-archive>summary::-webkit-details-marker{display:none}.material-month-archive>summary:hover{background:rgba(255,255,255,.035)}.material-month-archive-title{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.material-month-archive-title strong{font-size:1rem}.material-month-count{display:inline-flex;align-items:center;border-radius:999px;padding:4px 9px;font-size:.72rem;color:#b9cbe0;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10)}.material-month-archive-toggle{font-size:.75rem;color:#95a7ba;white-space:nowrap}.material-month-archive-body{padding:0 12px 1px;border-top:1px solid rgba(255,255,255,.08)}.material-month-archive-body>.material-block{margin-top:12px!important}
+@media(max-width:1200px){.material-month-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:767.98px){.material-month-kpis{grid-template-columns:1fr 1fr}.material-page-tools{align-items:stretch}.material-search{width:100%;min-width:0!important;max-width:none!important}}@media(max-width:430px){.material-month-kpis{grid-template-columns:1fr}.material-month-kpi{min-height:84px}.material-month-kpi .kpi-value{font-size:1.3rem}}
 </style>
 
 <template id="materialV92Kpis" data-current-month="{{ material_current_month_key }}">
-  <div class="material-month-kpis" aria-label="خلاصه ماه جاری">
-    <div class="material-month-kpi"><span>پارچه تحویلی این ماه</span><strong><span class="num">{{ material_month_summary.roll_count|groupnum }}</span> طاقه</strong></div>
-    <div class="material-month-kpi"><span>وزن تحویلی این ماه</span><strong><span class="num">{{ material_month_summary.weight_display }}</span> کیلو</strong></div>
-    <div class="material-month-kpi"><span>حداقل تعداد تحویلی</span><strong><span class="num">{{ material_month_summary.minimum_delivery|groupnum }}</span> عدد</strong></div>
-    <div class="material-month-kpi"><span>تعداد تحویل‌شده</span><strong><span class="num">{{ material_month_summary.delivered|groupnum }}</span> عدد</strong></div>
-    <div class="material-month-kpi"><span>مانده تحویل</span><strong><span class="num">{{ material_month_summary.pending|groupnum }}</span> عدد</strong></div>
+  <div class="material-month-kpis" aria-label="خلاصه گزارش مواد اولیه" data-material-kpis="v105">
+    <div class="material-month-kpi"><span class="kpi-label">پارچه تحویلی این ماه</span><div class="kpi-value">{{ material_month_summary.roll_count|groupnum }}</div><span class="kpi-unit">طاقه · {{ material_current_month_label }}</span></div>
+    <div class="material-month-kpi"><span class="kpi-label">وزن تحویلی این ماه</span><div class="kpi-value">{{ material_month_summary.weight_display }}</div><span class="kpi-unit">کیلو · {{ material_current_month_label }}</span></div>
+    <div class="material-month-kpi"><span class="kpi-label">حداقل تعداد تحویلی</span><div class="kpi-value">{{ material_month_summary.minimum_delivery|groupnum }}</div><span class="kpi-unit">عدد · مجموع برش ماه</span></div>
+    <div class="material-month-kpi"><span class="kpi-label">تعداد تحویل‌شده</span><div class="kpi-value">{{ material_month_summary.delivered|groupnum }}</div><span class="kpi-unit">عدد · تحویل اعمال‌شده</span></div>
+    <div class="material-month-kpi"><span class="kpi-label">مانده تحویل</span><div class="kpi-value">{{ material_month_summary.pending|groupnum }}</div><span class="kpi-unit">عدد · برش منهای تحویل</span></div>
+    <div class="material-month-kpi highlight" data-material-kpi="average-cut"><span class="kpi-label">میانگین تعداد برش</span><div class="kpi-value">{{ material_cut_summary.average_cut|groupnum }}</div><span class="kpi-unit">عدد · {{ material_cut_summary.cut_entry_count|groupnum }} برش ثبت‌شده در ۵ رنگ پایه</span></div>
   </div>
 </template>
 
@@ -30,8 +31,13 @@
   document.querySelector('.mobile-page-head .page-muted')?.remove();
   document.querySelector('.material-stock-note')?.remove();
 
-  const tools = document.querySelector('.material-page-tools');
-  if (tools && tpl) tools.appendChild(tpl.content.cloneNode(true));
+  const header = document.querySelector('.mobile-page-head');
+  if (header && tpl) {
+    const mount = document.createElement('div');
+    mount.className = 'material-v105-kpi-wrap mb-3';
+    mount.appendChild(tpl.content.cloneNode(true));
+    header.insertAdjacentElement('afterend', mount);
+  }
 
   const blocks = Array.from(document.querySelectorAll('.material-block'));
   const archives = new Map();
