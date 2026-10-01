@@ -47,6 +47,20 @@ Mutations still route through `report_v10.manual_report_action()`, preserving:
 
 Payments/receipts routes and their accounting semantics are unchanged.
 
+## Comprehensive Report separation
+
+V102 stops treating the account move as a JavaScript-only visual hide.
+
+When `report_v10` renders Comprehensive Report:
+
+- account/person rows are no longer fetched for the report UI;
+- editable Digikala receivable and Takvin debt forms are not rendered there;
+- the report keeps read-only capital summary values;
+- account/person editing lives only in `/finance/accounts/`;
+- asset management remains in Comprehensive Report because the user only moved the Accounts domain.
+
+The existing V97 presentation cleanup may still remove the legacy Accounts domain wrapper, but the sensitive account forms/rows are already absent from the server-rendered HTML.
+
 ## Canonical current-capital calculation
 
 The economic formula is unchanged:
