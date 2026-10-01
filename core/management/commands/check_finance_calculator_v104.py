@@ -21,11 +21,13 @@ from core.models import (
     ExcelManualRow,
     ExcelManualSetting,
     InventoryMovement,
+    ProductCode,
     ProductSize,
     RawMaterialStock,
     SaleLine,
     SaleSnapshot,
     StockBalance,
+    TakvinCostRule,
 )
 from core.sale_price_v60 import sale_price_for
 from core.takvin_pricing_v17 import takvin_cost_for
@@ -53,6 +55,9 @@ def _state():
         "manual_rows": _digest(ExcelManualRow),
         "payments": _digest(BusinessPayment),
         "receipts": _digest(DigikalaSettlement),
+        "product_codes": _digest(ProductCode),
+        "product_sizes": _digest(ProductSize),
+        "takvin_cost_rules": _digest(TakvinCostRule),
     }
 
 
