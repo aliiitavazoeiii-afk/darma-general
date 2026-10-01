@@ -23,10 +23,11 @@ in numeric order through:
 - `docs/PROJECT_CONTEXT/51_FINANCE_ACCOUNTS_VISIBLE_V100.md`
 - `docs/PROJECT_CONTEXT/52_FINANCE_HUB_CAPITAL_V102.md`
 - `docs/PROJECT_CONTEXT/53_NATIVE_FINANCE_NAV_V103.md`
+- `docs/PROJECT_CONTEXT/54_FINANCE_KPIS_CALCULATOR_V104.md`
 
 ## Current authoritative development line
 
-`v103-native-finance-nav`
+`v104-finance-kpis-calculator`
 
 V100 and V101 diverged from V99. V101 is **not** a superset of V100 and its restored Finance submenu conflicts with the user's final requirement.
 
@@ -57,3 +58,19 @@ However the user reported no visible Finance navigation change. V103 fixes the p
 V103 is production-confirmed only after:
 
 `SUCCESS: NATIVE FINANCE NAV V103 DEPLOYED`
+
+
+## V104 Finance overview + calculator
+
+V103 was confirmed by the user as visually correct and final for native Finance navigation.
+
+V104 keeps that navigation and:
+- shares the exact six Payments balances with the Finance root through one read-only helper/template;
+- improves Accounts summary-number layout;
+- replaces the old calculator with target-profit pricing, direct profit calculation and live Darma/Takvin ProductSize profitability;
+- leaves sale-price mutation in Product Center only;
+- does not change accounting, inventory, payment or sale formulas.
+
+V104 is production-confirmed only after:
+
+`SUCCESS: FINANCE KPI + CALCULATOR V104 DEPLOYED`
