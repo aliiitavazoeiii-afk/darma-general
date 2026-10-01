@@ -235,7 +235,7 @@ def add_color_model(request):
             )
         else:
             messages.success(request, f"«{name}» فقط به کاتالوگ موجودی {brand.name} اضافه شد.")
-    url = reverse("inventory")
+    url = reverse("inventory_stock")
     if brand:
         url += f"?brand={brand.id}"
     return redirect(url)
