@@ -1,5 +1,5 @@
 from datetime import date
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 
 import jdatetime
 from django.contrib.auth.decorators import login_required
@@ -106,6 +106,39 @@ def _summarize_month_blocks(blocks):
     }
 
 
+def _all_time_cut_summary(blocks):
+    """Average saved cut quantity across the five canonical Darma colors.
+
+    Only positive saved cut entries are included. This is intentionally all-time,
+    matching the user's request to summarize every cutting sheet on the page.
+    """
+    total = 0
+    count = 0
+    allowed = set(v23.BASE_KEYS)
+    for block in blocks:
+        input_data = block.input_data or {}
+        for key in allowed:
+            values = input_data.get(key, {}) or {}
+            cut = max(0, v23.v20._int(values.get("cut")))
+            if cut <= 0:
+                continue
+            total += cut
+            count += 1
+
+    average = 0
+    if count:
+        average = int(
+            (Decimal(total) / Decimal(count)).quantize(
+                Decimal("1"), rounding=ROUND_HALF_UP
+            )
+        )
+    return {
+        "average_cut": average,
+        "cut_entry_count": count,
+        "cut_total": total,
+    }
+
+
 def _decorate_block_month(row):
     parts = str(row.get("jalali_date") or "").split("/")
     if len(parts) >= 2:
@@ -142,6 +175,7 @@ def material_report(request):
     ]
     summary = _summarize_month_blocks(current_month_objects)
     summary["month_label"] = month["label"]
+    cut_summary = _all_time_cut_summary(objects)
 
     return render(
         request,
@@ -152,6 +186,7 @@ def material_report(request):
             "today_j": v23.v20._today_jalali(),
             "sewing_wage_rate": v23.v20._dozen_wage(),
             "material_month_summary": summary,
+            "material_cut_summary": cut_summary,
             "material_current_month_key": month["key"],
             "material_current_month_label": month["label"],
         },
