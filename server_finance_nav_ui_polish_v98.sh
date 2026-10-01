@@ -89,7 +89,7 @@ CHANGED=$(git diff --name-only "$BASE"..HEAD)
 echo "$CHANGED"
 for f in $CHANGED; do
   case "$f" in
-    PROJECT_HANDOFF_CURRENT.md|config/settings.py|core/ui_polish_v98.py|core/management/commands/check_finance_nav_polish_v98.py|static/core/number_format.js|docs/PROJECT_CONTEXT/50_FINANCE_NAV_POLISH_V98.md|server_finance_nav_ui_polish_v98.sh) ;;
+    PROJECT_HANDOFF_CURRENT.md|config/settings.py|core/ui_polish_v98.py|core/management/commands/check_material_finance_center_v97.py|core/management/commands/check_finance_nav_polish_v98.py|static/core/number_format.js|docs/PROJECT_CONTEXT/50_FINANCE_NAV_POLISH_V98.md|server_finance_nav_ui_polish_v98.sh) ;;
     *) fail "unexpected V98 file changed: $f" ;;
   esac
 done
