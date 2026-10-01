@@ -109,7 +109,7 @@ echo "$CHANGED"
 
 for f in $CHANGED; do
   case "$f" in
-    PROJECT_HANDOFF_CURRENT.md|    docs/00_NEW_CHAT_READ_FIRST.md|    docs/PROJECT_CONTEXT/README.md|    docs/PROJECT_CONTEXT/52_FINANCE_HUB_CAPITAL_V102.md|    core/finance_center_v97.py|    templates/core/finance_center_v97.html|    core/report_v10.py|    core/capital_history_v87.py|    core/ui_polish_v98.py|    core/management/commands/check_finance_hub_v102.py|    server_finance_hub_v102.sh) ;;
+    PROJECT_HANDOFF_CURRENT.md|    docs/00_NEW_CHAT_READ_FIRST.md|    docs/PROJECT_CONTEXT/README.md|    docs/PROJECT_CONTEXT/52_FINANCE_HUB_CAPITAL_V102.md|    core/finance_center_v97.py|    templates/core/finance_center_v97.html|    core/report_v10.py|    core/capital_history_v87.py|    core/ui_polish_v98.py|    core/management/commands/check_finance_hub_v102.py|    core/management/commands/check_material_finance_center_v97.py|    server_finance_hub_v102.sh) ;;
     *) fail "unexpected V102 file changed: $f" ;;
   esac
 done
