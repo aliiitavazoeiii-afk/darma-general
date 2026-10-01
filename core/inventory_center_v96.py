@@ -27,19 +27,19 @@ def _material_key_by_title():
 
 
 def _canonical_material_key(row, key_by_title=None):
-    """Resolve legacy blank-key rows to the same visible material identity.
+    """Resolve old/new material keys to one visible color identity.
 
     Storage rows are intentionally NOT merged: warehouse fabric remains lot-based so
-    purchase value / reversal provenance is preserved. This helper only gives the UI
-    a stable aggregate identity so repeated purchases of white/navy/etc. show as one
-    visible material row instead of duplicate colors.
+    purchase value / reversal provenance is preserved. Display grouping is keyed by
+    normalized color title first, so legacy blank keys, old color:* keys and current
+    legacy keys such as ``white`` still render as one visible «سفید» row.
     """
-    if row.material_key:
-        return row.material_key
     key_by_title = key_by_title or _material_key_by_title()
     title_key = norm(row.title)
     if title_key in key_by_title:
         return key_by_title[title_key]
+    if row.material_key:
+        return row.material_key
     return f"title:{title_key or row.id}"
 
 
