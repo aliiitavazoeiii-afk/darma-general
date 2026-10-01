@@ -1,5 +1,5 @@
 from datetime import date
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
@@ -29,38 +29,47 @@ def _percent(value):
         value = Decimal(text)
     except (InvalidOperation, ValueError):
         return None
-    if value < 0:
+    if value < 0 or value >= 100:
         return None
     return value
 
 
-def _solve_sale_price(cost, target_profit_on_cost):
-    """Minimum whole-toman sale price that reaches the requested net markup.
+def _round_half_up(value):
+    return int(Decimal(value or 0).quantize(Decimal("1"), rounding=ROUND_HALF_UP))
+
+
+def _solve_sale_price(cost, target_margin_on_sale):
+    """Minimum whole-toman sale price for a requested net margin on sale.
 
     Target percentage means:
-        net profit / finished cost * 100
+        net profit / sale price * 100
 
-    Digikala fee is always calculated by the canonical live fee engine.
+    Condition:
+        price - canonical Digikala fee(price) - cost >= price * target_margin
     """
     cost = max(0, int(cost or 0))
     if cost <= 0:
         return 0
-    ratio = Decimal(target_profit_on_cost)
-    target_profit = Decimal(cost) * ratio / Decimal(100)
 
-    def achieved(price):
-        return Decimal(int(price) - int(digikala_fee_for_unit(int(price), date.today())) - cost)
+    margin = Decimal(target_margin_on_sale) / Decimal(100)
+
+    def surplus(price):
+        price = int(price)
+        fee = int(digikala_fee_for_unit(price, date.today()))
+        profit = Decimal(price - fee - cost)
+        target_profit = Decimal(price) * margin
+        return profit - target_profit
 
     lo = 0
     hi = max(100_000, cost * 2)
-    while achieved(hi) < target_profit:
+    while surplus(hi) < 0:
         hi *= 2
         if hi > 100_000_000_000:
-            raise ValueError("قیمت مناسب در محدوده محاسبات پیدا نشد.")
+            raise ValueError("با این درصد سود و ساختار فعلی کارمزد دیجی‌کالا قیمت قابل‌دستیابی پیدا نشد.")
 
     while lo + 1 < hi:
         mid = (lo + hi) // 2
-        if achieved(mid) >= target_profit:
+        if surplus(mid) >= 0:
             hi = mid
         else:
             lo = mid
@@ -72,7 +81,7 @@ def _rounded_up(value, step=1000):
     return ((value + step - 1) // step) * step if value > 0 else 0
 
 
-def _profitability_rows():
+def _size_profitability_rows():
     today = date.today()
     rows = list(
         ProductSize.objects.filter(
@@ -84,7 +93,7 @@ def _profitability_rows():
         .order_by("product__brand__name", "product__code", "size__sort_order", "id")
     )
 
-    sections = {brand: [] for brand in TARGET_BRANDS}
+    result = []
     for ps in rows:
         brand = ps.product.brand.name
         pack_qty = int(ps.product.pack_qty or 0)
@@ -98,28 +107,81 @@ def _profitability_rows():
         finished_cost = pack_qty * unit_cost
         fee = int(digikala_fee_for_unit(sale_price, today)) if sale_price > 0 else 0
         profit = sale_price - fee - finished_cost if sale_price > 0 else 0
+        margin_on_sale = (profit * 100 / sale_price) if sale_price else 0
         profit_on_cost = (profit * 100 / finished_cost) if finished_cost else 0
-        profit_on_sale = (profit * 100 / sale_price) if sale_price else 0
 
-        sections[brand].append({
+        result.append({
             "ps_id": ps.id,
+            "product_id": ps.product_id,
             "brand": brand,
             "code": ps.product.code,
             "size": ps.size.name,
+            "size_order": int(ps.size.sort_order or 0),
             "pack_qty": pack_qty,
             "sale_price": sale_price,
             "unit_cost": unit_cost,
             "finished_cost": finished_cost,
             "fee": fee,
             "profit": profit,
+            "margin_on_sale": margin_on_sale,
             "profit_on_cost": profit_on_cost,
-            "profit_on_sale": profit_on_sale,
         })
+    return result
 
-    return [
-        {"brand": brand, "rows": sections[brand], "count": len(sections[brand])}
-        for brand in TARGET_BRANDS
-    ]
+
+def _mean_int(rows, key):
+    if not rows:
+        return 0
+    return _round_half_up(
+        sum(Decimal(int(row[key] or 0)) for row in rows) / Decimal(len(rows))
+    )
+
+
+def _mean_decimal(rows, key):
+    if not rows:
+        return 0
+    return float(
+        sum(Decimal(str(row[key] or 0)) for row in rows) / Decimal(len(rows))
+    )
+
+
+def _profitability_sections():
+    size_rows = _size_profitability_rows()
+    grouped = {brand: {} for brand in TARGET_BRANDS}
+
+    for row in size_rows:
+        key = int(row["product_id"])
+        grouped[row["brand"]].setdefault(key, []).append(row)
+
+    sections = []
+    for brand in TARGET_BRANDS:
+        codes = []
+        for product_rows in grouped[brand].values():
+            product_rows.sort(key=lambda row: (row["size_order"], row["ps_id"]))
+            first = product_rows[0]
+            codes.append({
+                "product_id": first["product_id"],
+                "brand": brand,
+                "code": first["code"],
+                "pack_qty": first["pack_qty"],
+                "size_count": len(product_rows),
+                "avg_sale_price": _mean_int(product_rows, "sale_price"),
+                "avg_finished_cost": _mean_int(product_rows, "finished_cost"),
+                "avg_fee": _mean_int(product_rows, "fee"),
+                "avg_profit": _mean_int(product_rows, "profit"),
+                "avg_margin_on_sale": _mean_decimal(product_rows, "margin_on_sale"),
+                "avg_profit_on_cost": _mean_decimal(product_rows, "profit_on_cost"),
+                "sizes": product_rows,
+            })
+
+        codes.sort(key=lambda row: str(row["code"]))
+        sections.append({
+            "brand": brand,
+            "codes": codes,
+            "code_count": len(codes),
+            "size_count": sum(code["size_count"] for code in codes),
+        })
+    return sections
 
 
 @login_required
@@ -127,9 +189,7 @@ def calculator(request):
     return render(
         request,
         "core/calculator_v37.html",
-        {
-            "profitability_sections": _profitability_rows(),
-        },
+        {"profitability_sections": _profitability_sections()},
     )
 
 
@@ -170,10 +230,18 @@ def calculator_target_quote(request):
         return render(
             request,
             "core/_calculator_target_result_v104.html",
-            {"error": "درصد سود هدف را به‌صورت عدد صفر یا بیشتر وارد کن."},
+            {"error": "حاشیه سود هدف را به‌صورت عددی از ۰ تا کمتر از ۱۰۰ وارد کن."},
         )
 
-    exact_price = _solve_sale_price(cost, target_percent)
+    try:
+        exact_price = _solve_sale_price(cost, target_percent)
+    except ValueError as exc:
+        return render(
+            request,
+            "core/_calculator_target_result_v104.html",
+            {"error": str(exc)},
+        )
+
     suggested_price = _rounded_up(exact_price, 1000)
     fee = int(digikala_fee_for_unit(suggested_price, date.today()))
     profit = suggested_price - fee - cost
