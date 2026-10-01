@@ -18,7 +18,8 @@ from . import (
     excel_dashboard_v89,
     excel_sales,
     final_views,
-    inventory_center_v96,
+    finance_center_v97,
+    inventory_center_v97,
     inventory_operations_v15,
     inventory_operations_v16,
     inventory_operations_v17,
@@ -86,6 +87,9 @@ urlpatterns = [
     path("material-report/<int:block_id>/delete/", material_report_v20.material_block_delete, name="material_block_delete"),
     path("takvin/", takvin_v5.takvin_excel, name="takvin"),
 
+    path("finance/", finance_center_v97.finance_home, name="finance"),
+    path("finance/accounts/", finance_center_v97.accounts, name="finance_accounts"),
+    path("finance/accounts/action/", finance_center_v97.accounts_action, name="finance_accounts_action"),
     path("payments/", business_tools_v91.payments, name="payments"),
     path("payments/add/", business_tools_v62.payment_add, name="payment_add"),
     path("payments/<int:payment_id>/edit/", business_tools_v62.payment_update, name="payment_update"),
@@ -98,10 +102,10 @@ urlpatterns = [
     path("calculator/quote/", calculator_v37.calculator_quote, name="calculator_quote"),
     path("calculator/target-quote/", calculator_v37.calculator_target_quote, name="calculator_target_quote"),
 
-    path("inventory/", inventory_center_v96.inventory_home, name="inventory"),
+    path("inventory/", inventory_center_v97.inventory_home, name="inventory"),
     path("inventory/stock/", inventory_v20.inventory, name="inventory_stock"),
-    path("inventory/materials/", inventory_center_v96.raw_materials, name="inventory_materials"),
-    path("inventory/materials/action/", inventory_center_v96.raw_material_action, name="inventory_material_action"),
+    path("inventory/materials/", inventory_center_v97.raw_materials, name="inventory_materials"),
+    path("inventory/materials/action/", inventory_center_v97.raw_material_action, name="inventory_material_action"),
     path("inventory/color-model/add/", inventory_v20.add_color_model, name="inventory_add_color_model"),
     path("inventory/operations/", inventory_operations_v16.inventory_operations, name="inventory_operations"),
     path(
@@ -117,7 +121,6 @@ urlpatterns = [
 
     path("materials/", final_views.materials, name="materials"),
     path("production/", final_views.production, name="production"),
-    path("finance/", final_views.finance, name="finance"),
     path("expenses/", final_views.expenses, name="expenses"),
     path("assets/", final_views.assets, name="assets"),
 
