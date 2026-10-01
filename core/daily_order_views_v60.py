@@ -6,7 +6,12 @@ from django.shortcuts import get_object_or_404, redirect
 from django.views.decorators.http import require_POST
 
 from .daily_order_import_v8 import DailyOrderImportError
-from .daily_order_import_v23 import apply_delivery_report, preview_delivery_report
+from .daily_order_import_v23 import (
+    apply_delivery_preview,
+    preview_delivery_report,
+    preview_delivery_reports,
+)
+from .finance import is_digikala_zero_commission_date
 from .finance_excel_v9 import sync_sale_receivable
 from .models import ProductSize, SaleDay, SaleLine, StockBalance
 from .sale_price_v60 import sale_price_for
@@ -36,13 +41,7 @@ def _day_applied_shorts(day):
     return totals
 
 
-def _preseed_date_effective_prices(day, file_bytes, filename):
-    """Ensure v23 sees the correct dated price for each brand-new import line.
-
-    Existing SaleLine.sale_price is intentionally untouched. Because the caller is
-    atomic, these zero-quantity seed rows roll back if the import later fails.
-    """
-    preview = preview_delivery_report(file_bytes, filename)
+def _preseed_date_effective_prices_from_preview(day, preview):
     if preview.get("errors"):
         raise DailyOrderImportError("\n".join(preview["errors"]))
 
@@ -82,10 +81,24 @@ def _preseed_date_effective_prices(day, file_bytes, filename):
     return seeded
 
 
+def _preseed_date_effective_prices(day, file_bytes, filename):
+    return _preseed_date_effective_prices_from_preview(
+        day, preview_delivery_report(file_bytes, filename)
+    )
+
+
 @transaction.atomic
 def apply_delivery_report_v60(day, file_bytes, filename=""):
-    _preseed_date_effective_prices(day, file_bytes, filename)
-    return apply_delivery_report(day, file_bytes, filename)
+    preview = preview_delivery_report(file_bytes, filename)
+    _preseed_date_effective_prices_from_preview(day, preview)
+    return apply_delivery_preview(day, preview)
+
+
+@transaction.atomic
+def apply_delivery_reports_v60(day, reports):
+    preview = preview_delivery_reports(reports)
+    _preseed_date_effective_prices_from_preview(day, preview)
+    return apply_delivery_preview(day, preview)
 
 
 @login_required
@@ -93,21 +106,23 @@ def apply_delivery_report_v60(day, file_bytes, filename=""):
 @transaction.atomic
 def import_daily_orders(request, day_id):
     day = get_object_or_404(SaleDay, id=day_id)
-    uploaded = request.FILES.get("orders_file")
-    if uploaded is None:
+    uploads = request.FILES.getlist("orders_file")
+    if not uploads:
         messages.error(request, "فایل اکسل سفارش روزانه را انتخاب کن.")
         return redirect("sale_brand", day_id=day.id)
 
-    filename = uploaded.name or "orders.xlsx"
-    if not filename.lower().endswith(".xlsx"):
-        messages.error(request, "فقط فایل XLSX دیجی‌کالا قابل قبول است.")
-        return redirect("sale_brand", day_id=day.id)
+    reports = []
+    for uploaded in uploads:
+        filename = uploaded.name or "orders.xlsx"
+        if not filename.lower().endswith(".xlsx"):
+            messages.error(request, f"فقط فایل XLSX دیجی‌کالا قابل قبول است: {filename}")
+            return redirect("sale_brand", day_id=day.id)
+        reports.append((uploaded.read(), filename))
 
     try:
         before_stock = _brand_stock_totals()
         before_applied = _day_applied_shorts(day)
-        data = uploaded.read()
-        result = apply_delivery_report_v60(day, data, filename)
+        result = apply_delivery_reports_v60(day, reports)
 
         after_stock = _brand_stock_totals()
         after_applied = _day_applied_shorts(day)
@@ -138,12 +153,19 @@ def import_daily_orders(request, day_id):
         return redirect("sale_brand", day_id=day.id)
 
     receivable_text = f"{result['digikala_receivable_added']:,}".replace(",", "٬")
+    file_count = int(result.get("files_count") or len(reports) or 1)
+    source_text = "یک فایل" if file_count == 1 else f"{file_count} فایل تجمیع‌شده"
     messages.success(
         request,
-        f"فایل {result['filename']} ثبت شد: {result['grouped_lines']} ردیف تجمیعی، "
+        f"{source_text} ثبت شد: {result['grouped_lines']} ردیف تجمیعی، "
         f"{result['total_quantity']} کالا. طلب خالص دیجی‌کالا برای این روز: "
         f"{receivable_text} تومان.",
     )
+    if is_digikala_zero_commission_date(day.date):
+        messages.info(
+            request,
+            "استثنای ۸ مهر ۱۴۰۵ اعمال شد: کمیسیون دیجی‌کالا صفر است؛ هزینه پردازش و مالیات مربوط به پردازش طبق فرمول معمول محاسبه شده است.",
+        )
     if result.get("shortage_count"):
         messages.warning(
             request,
