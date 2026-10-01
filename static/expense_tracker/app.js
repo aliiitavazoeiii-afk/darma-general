@@ -165,6 +165,31 @@
     });
   }
 
+  function bindCategoryReports(){
+    document.querySelectorAll(".breakdown-row,.report-category").forEach(function(row){
+      if(row.dataset.categoryReportReady) return;
+      var nameNode=row.querySelector("strong");
+      if(!nameNode) return;
+      var name=String(nameNode.textContent||"").trim();
+      if(!name) return;
+      var target="/reports/category-name/"+encodeURIComponent(name)+"/";
+      row.dataset.categoryReportReady="1";
+      row.setAttribute("role","link");
+      row.setAttribute("tabindex","0");
+      row.setAttribute("aria-label","گزارش تفصیلی "+name);
+      row.addEventListener("click",function(event){
+        if(event.target.closest("a,button,input,select,textarea")) return;
+        window.location.href=target;
+      });
+      row.addEventListener("keydown",function(event){
+        if(event.key==="Enter" || event.key===" "){
+          event.preventDefault();
+          window.location.href=target;
+        }
+      });
+    });
+  }
+
   function bindConfirmations(){
     document.querySelectorAll("[data-confirm]").forEach(function(btn){
       if(btn.dataset.confirmReady) return;
@@ -229,6 +254,7 @@
   bindMoneyInputs(document);
   bindNormalMoneyForms();
   bindExpenseAjax();
+  bindCategoryReports();
   bindConfirmations();
   bindPwaInstall();
 })();
