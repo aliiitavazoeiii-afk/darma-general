@@ -7,7 +7,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.template.loader import get_template
 from django.test import RequestFactory
-from django.urls import reverse
+from django.urls import resolve, reverse
 
 from core.payment_source_v63 import SOURCE_MELAT, SOURCE_MOFID, source_balance
 from expense_tracker.category_report_v8 import _category_report_context
@@ -26,7 +26,11 @@ class Command(BaseCommand):
         }
 
     def handle(self, *args, **options):
-        get_template("expense_tracker/category_report.html")
+        template = get_template("expense_tracker/category_report.html")
+        template_source = template.template.source
+        if "بزرگ‌ترین خرج‌ها" not in template_source or "همه خرج‌های این دسته" not in template_source:
+            raise CommandError("category report template is missing V8 detail sections")
+
         before = self._snapshot()
         today = date.today()
         current_j = jdatetime.date.fromgregorian(date=today)
@@ -39,6 +43,14 @@ class Command(BaseCommand):
         app_js = Path(settings.BASE_DIR, "static", "expense_tracker", "app.js").read_text(encoding="utf-8")
         if "bindCategoryReports" not in app_js or "/reports/category-name/" not in app_js:
             raise CommandError("dashboard/report category rows are not wired to detailed reports")
+
+        # `docker compose run` executes before the long-lived expense container's
+        # entrypoint runs collectstatic, so the WhiteNoise manifest may not exist yet.
+        # In that pre-start phase we validate context, routes and template source.
+        # The same regression runs again inside the live container after collectstatic;
+        # only then do we require a full template render using the production manifest.
+        static_manifest = Path(settings.STATIC_ROOT) / "staticfiles.json"
+        production_static_ready = static_manifest.exists()
 
         try:
             with transaction.atomic():
@@ -85,26 +97,32 @@ class Command(BaseCommand):
                 if not context["month_groups"][0]["is_current"]:
                     raise CommandError("current Jalali month is not the first/open category history group")
 
-                auth_user = type("AuthUser", (), {"is_authenticated": True})()
-                factory = RequestFactory()
-
                 by_id_path = reverse("expense_tracker:category_report", args=[category.id])
-                by_id_request = factory.get(by_id_path)
-                by_id_request.user = auth_user
-                from expense_tracker.category_report_v8 import category_report, category_report_by_name
-
-                response = category_report(by_id_request, category.id)
-                if response.status_code != 200 or "بزرگ‌ترین خرج‌ها".encode("utf-8") not in response.content:
-                    raise CommandError("category report by id did not render correctly")
-
                 by_name_path = reverse("expense_tracker:category_report_by_name", args=[category.name])
-                by_name_request = factory.get(by_name_path)
-                by_name_request.user = auth_user
-                response = category_report_by_name(by_name_request, category.name)
-                if response.status_code != 200:
-                    raise CommandError("category report by name did not render HTTP 200")
+                if resolve(by_id_path).url_name != "category_report":
+                    raise CommandError("category report by-id route does not resolve correctly")
+                if resolve(by_name_path).url_name != "category_report_by_name":
+                    raise CommandError("category report by-name route does not resolve correctly")
 
-                if self._snapshot()["mellat"] != before["mellat"] or self._snapshot()["mofid"] != before["mofid"]:
+                if production_static_ready:
+                    auth_user = type("AuthUser", (), {"is_authenticated": True})()
+                    factory = RequestFactory()
+                    from expense_tracker.category_report_v8 import category_report, category_report_by_name
+
+                    by_id_request = factory.get(by_id_path)
+                    by_id_request.user = auth_user
+                    response = category_report(by_id_request, category.id)
+                    if response.status_code != 200 or "بزرگ‌ترین خرج‌ها".encode("utf-8") not in response.content:
+                        raise CommandError("category report by id did not render correctly")
+
+                    by_name_request = factory.get(by_name_path)
+                    by_name_request.user = auth_user
+                    response = category_report_by_name(by_name_request, category.name)
+                    if response.status_code != 200:
+                        raise CommandError("category report by name did not render HTTP 200")
+
+                snapshot_now = self._snapshot()
+                if snapshot_now["mellat"] != before["mellat"] or snapshot_now["mofid"] != before["mofid"]:
                     raise CommandError("read-only category report regression changed account balances")
 
                 transaction.set_rollback(True)
@@ -121,5 +139,10 @@ class Command(BaseCommand):
         self.stdout.write("CATEGORY REPORT V8: largest expenses sorted descending")
         self.stdout.write("CATEGORY REPORT V8: full history grouped by Jalali month")
         self.stdout.write("CATEGORY REPORT V8: dashboard/report category click wiring present")
+        self.stdout.write("CATEGORY REPORT V8: by-id and by-name routes resolve")
+        if production_static_ready:
+            self.stdout.write("CATEGORY REPORT V8: live template render passed with production static manifest")
+        else:
+            self.stdout.write("CATEGORY REPORT V8: pre-start render deferred until collectstatic creates manifest")
         self.stdout.write("CATEGORY REPORT V8: Mellat/Mofid unchanged")
         self.stdout.write(self.style.SUCCESS("SUCCESS: EXPENSE CATEGORY REPORT V8 REGRESSION PASSED"))
