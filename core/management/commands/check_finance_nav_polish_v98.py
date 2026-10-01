@@ -1,15 +1,23 @@
-"""Read-only regression for V98 finance navigation + presentation polish."""
+"""Read-only regression for V98/V99 finance navigation + presentation polish."""
 from hashlib import sha256
 from pathlib import Path
+from types import SimpleNamespace
 
 from django.conf import settings
 from django.core.management.base import BaseCommand
-from django.http import HttpResponse
-from django.test import RequestFactory
+from django.test import RequestFactory, override_settings
 from django.urls import resolve
 
 from core import business_tools_v91, calculator_v37, finance_center_v97
-from core.models import AppSetting, ExcelManualRow, ExcelManualSetting, InventoryMovement, RawMaterialStock, SaleLine, StockBalance
+from core.models import (
+    AppSetting,
+    ExcelManualRow,
+    ExcelManualSetting,
+    InventoryMovement,
+    RawMaterialStock,
+    SaleLine,
+    StockBalance,
+)
 from core.ui_polish_v98 import V98PresentationMiddleware
 
 
@@ -34,7 +42,7 @@ def _state():
 
 
 class Command(BaseCommand):
-    help = "Read-only: validate V98 direct finance nav, no underline, and material KPI polish."
+    help = "Read-only: validate final server-rendered finance nav and UI polish."
 
     def handle(self, *args, **kwargs):
         before = _state()
@@ -49,41 +57,58 @@ class Command(BaseCommand):
             raise RuntimeError("Calculator route changed")
 
         js = (Path(settings.BASE_DIR) / "static/core/number_format.js").read_text(encoding="utf-8")
-        markers = (
+        for marker in (
             "normalizeFinanceNav",
             "financeLink.href = '/finance/'",
             "oldFinanceGroup.remove()",
             "text-decoration:none!important",
             ".rm97-kpi strong",
             "font-size:1.35rem!important",
-        )
-        for marker in markers:
+        ):
             if marker not in js:
-                raise RuntimeError(f"V98 presentation marker missing: {marker}")
+                raise RuntimeError(f"Presentation marker missing: {marker}")
 
         middleware_path = "core.ui_polish_v98.V98PresentationMiddleware"
         if middleware_path not in settings.MIDDLEWARE:
-            raise RuntimeError("V98 cache-busting middleware is not enabled")
+            raise RuntimeError("Presentation middleware is not enabled")
+
         request = RequestFactory().get("/finance/")
-        response = V98PresentationMiddleware(
-            lambda _request: HttpResponse(
-                '<html><body><script src="/static/core/number_format.js"></script></body></html>',
-                content_type="text/html",
-            )
-        )(request)
-        rendered = response.content.decode("utf-8")
-        if '/static/core/number_format.js?v=98' not in rendered:
-            raise RuntimeError("V98 cache-busted helper was not injected")
+        request.user = SimpleNamespace(is_authenticated=True)
+        static_override = {
+            **settings.STORAGES,
+            "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+        }
+        with override_settings(STORAGES=static_override):
+            response = V98PresentationMiddleware(finance_center_v97.finance_home)(request)
+
+        if response.status_code != 200:
+            raise RuntimeError(f"Finance hub render HTTP {response.status_code}")
+        rendered = response.content.decode("utf-8", errors="replace")
+
+        if response.get("X-Darma-Finance-Nav-V99") != "server":
+            raise RuntimeError("Server-side finance submenu replacement did not run")
+        if 'data-finance-root-nav="server-v99"' not in rendered:
+            raise RuntimeError("Direct server-rendered finance link missing")
+        if 'erp-nav-group-title">مالی و ابزار' in rendered:
+            raise RuntimeError("Legacy Finance & Tools submenu still exists in final HTML")
+        if 'href="/finance/"' not in rendered:
+            raise RuntimeError("Direct /finance/ href missing from final HTML")
+        for marker in ("دریافتی‌ها و پرداختی‌ها", "حساب‌ها", "محاسبه‌گر"):
+            if marker not in rendered:
+                raise RuntimeError(f"Finance hub card missing: {marker}")
+        if '/static/core/number_format.js?v=99' not in rendered:
+            raise RuntimeError("V99 cache-busted UI helper missing")
 
         after = _state()
         if before != after:
-            raise RuntimeError("V98 read-only regression changed business state")
+            raise RuntimeError("Read-only finance-nav regression changed business state")
 
-        self.stdout.write("FINANCE NAV SINGLE DIRECT LINK = OK")
-        self.stdout.write("FINANCE HUB / ACCOUNTS ROUTES = OK")
+        self.stdout.write("SERVER-SIDE FINANCE NAV REPLACEMENT = OK")
+        self.stdout.write("LEGACY FINANCE SUBMENU ABSENT = OK")
+        self.stdout.write("FINANCE HUB 3 CARDS = OK")
         self.stdout.write("GLOBAL LINK UNDERLINES REMOVED = OK")
         self.stdout.write("RAW MATERIAL KPI NUMBER SIZE = OK")
-        self.stdout.write("CACHE-BUSTED V98 HELPER = OK")
+        self.stdout.write("V99 CACHE-BUSTED UI HELPER = OK")
         self.stdout.write("PAYMENTS / CALCULATOR ROUTES = UNCHANGED")
         self.stdout.write("NO BUSINESS STATE WRITE = OK")
-        self.stdout.write(self.style.SUCCESS("SUCCESS: FINANCE NAV + UI POLISH V98 CHECK PASSED"))
+        self.stdout.write(self.style.SUCCESS("SUCCESS: FINANCE NAV + UI POLISH V98/V99 CHECK PASSED"))
