@@ -4,10 +4,13 @@ from pathlib import Path
 
 from django.conf import settings
 from django.core.management.base import BaseCommand
+from django.http import HttpResponse
+from django.test import RequestFactory
 from django.urls import resolve
 
 from core import business_tools_v91, calculator_v37, finance_center_v97
 from core.models import AppSetting, ExcelManualRow, ExcelManualSetting, InventoryMovement, RawMaterialStock, SaleLine, StockBalance
+from core.ui_polish_v98 import V98PresentationMiddleware
 
 
 def _digest(model):
@@ -58,6 +61,20 @@ class Command(BaseCommand):
             if marker not in js:
                 raise RuntimeError(f"V98 presentation marker missing: {marker}")
 
+        middleware_path = "core.ui_polish_v98.V98PresentationMiddleware"
+        if middleware_path not in settings.MIDDLEWARE:
+            raise RuntimeError("V98 cache-busting middleware is not enabled")
+        request = RequestFactory().get("/finance/")
+        response = V98PresentationMiddleware(
+            lambda _request: HttpResponse(
+                '<html><body><script src="/static/core/number_format.js"></script></body></html>',
+                content_type="text/html",
+            )
+        )(request)
+        rendered = response.content.decode("utf-8")
+        if '/static/core/number_format.js?v=98' not in rendered:
+            raise RuntimeError("V98 cache-busted helper was not injected")
+
         after = _state()
         if before != after:
             raise RuntimeError("V98 read-only regression changed business state")
@@ -66,6 +83,7 @@ class Command(BaseCommand):
         self.stdout.write("FINANCE HUB / ACCOUNTS ROUTES = OK")
         self.stdout.write("GLOBAL LINK UNDERLINES REMOVED = OK")
         self.stdout.write("RAW MATERIAL KPI NUMBER SIZE = OK")
+        self.stdout.write("CACHE-BUSTED V98 HELPER = OK")
         self.stdout.write("PAYMENTS / CALCULATOR ROUTES = UNCHANGED")
         self.stdout.write("NO BUSINESS STATE WRITE = OK")
         self.stdout.write(self.style.SUCCESS("SUCCESS: FINANCE NAV + UI POLISH V98 CHECK PASSED"))
