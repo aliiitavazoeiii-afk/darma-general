@@ -19,11 +19,12 @@ in numeric order, including the newest continuation records:
 - `docs/PROJECT_CONTEXT/47_MULTI_DELIVERY_MEHR8_ZERO_COMMISSION_V95.md`
 - `docs/PROJECT_CONTEXT/48_INVENTORY_MATERIAL_CENTER_V96.md`
 - `docs/PROJECT_CONTEXT/49_MATERIAL_FINANCE_CENTER_V97.md`
+- `docs/PROJECT_CONTEXT/50_FINANCE_NAV_POLISH_V98.md`
 
 `PROJECT_HANDOFF.md` is preserved as an older historical/forensic record and contains assumptions superseded by later work. Do not use it as the sole current source.
 
-Current GitHub development line at this pointer: `v97-material-ui-finance-center`.
+Current GitHub development line at this pointer: `v98-finance-nav-ui-polish`.
 
-Important: GitHub branch state is not proof of production deployment. V97 is production-confirmed only after the actual VPS deploy finishes with:
+Important: GitHub branch state is not proof of production deployment. V98 is production-confirmed only after the actual VPS deploy finishes with:
 
-`SUCCESS: MATERIAL + FINANCE CENTER V97 DEPLOYED`
+`SUCCESS: FINANCE NAV + UI POLISH V98 DEPLOYED`
