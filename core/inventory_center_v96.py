@@ -93,9 +93,48 @@ def inventory_home(request):
 @login_required
 def raw_materials(request):
     raw = _raw_material_context()
-    raw["fabric_warehouse_groups"] = _fabric_location_groups(raw["fabric_warehouse"])
-    raw["fabric_tailor_groups_v96"] = _fabric_location_groups(raw["fabric_tailor"])
-    raw["fabric_depot_groups"] = _fabric_location_groups(raw["fabric_depot"])
+    raw["fabric_locations_v96"] = [
+        {
+            "key": RawMaterialStock.WAREHOUSE,
+            "title": "انبار",
+            "total": raw["fabric_warehouse_total"],
+            "groups": _fabric_location_groups(raw["fabric_warehouse"]),
+            "can_transfer": True,
+            "delete_warning": "این ردیف پارچه حذف شود؟",
+        },
+        {
+            "key": RawMaterialStock.TAILOR,
+            "title": "نزد خیاط",
+            "total": raw["fabric_tailor_total"],
+            "groups": _fabric_location_groups(raw["fabric_tailor"]),
+            "can_transfer": False,
+            "delete_warning": "این ردیف نزد خیاط حذف شود؟ موجودی آن به انبار برمی‌گردد.",
+        },
+        {
+            "key": RawMaterialStock.DEPOT,
+            "title": "دپو",
+            "total": raw["fabric_depot_total"],
+            "groups": _fabric_location_groups(raw["fabric_depot"]),
+            "can_transfer": False,
+            "delete_warning": "این ردیف دپو حذف شود؟",
+        },
+    ]
+    raw["elastic_locations_v96"] = [
+        {
+            "key": RawMaterialStock.WAREHOUSE,
+            "title": "کش انبار",
+            "total": raw["elastic_warehouse_total"],
+            "groups": raw["elastic_warehouse"],
+            "delete_warning": "این رنگ کش از انبار حذف شود؟",
+        },
+        {
+            "key": RawMaterialStock.TAILOR,
+            "title": "کش نزد خیاط",
+            "total": raw["elastic_tailor_total"],
+            "groups": raw["elastic_tailor"],
+            "delete_warning": "این موجودی نزد خیاط حذف شود؟ مقدار آن به انبار برمی‌گردد.",
+        },
+    ]
     return render(request, "core/raw_material_inventory_v96.html", raw)
 
 
