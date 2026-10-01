@@ -4,6 +4,7 @@ from django.views.decorators.http import require_POST
 
 from .capital_history_v87 import current_account_breakdown
 from .finance_excel_v9 import digikala_ledger_total, digikala_receivable_total
+from .finance_overview_v104 import finance_kpis
 from .models import ExcelManualRow, ExcelManualSetting
 from .report_v10 import manual_report_action as report_manual_report_action
 
@@ -49,9 +50,9 @@ def _finance_account_context():
 
 @login_required
 def finance_home(request):
-    # V102: Finance & Tools is a pure three-card hub. Account balances live only
-    # inside the Accounts card/page; no account data is duplicated on the hub.
-    return render(request, "core/finance_center_v97.html")
+    # V104: the hub keeps exactly three navigation cards and shows the same six
+    # read-only balances as Payments above them, from one shared source.
+    return render(request, "core/finance_center_v97.html", finance_kpis())
 
 
 @login_required
