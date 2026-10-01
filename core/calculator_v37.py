@@ -1,68 +1,58 @@
 from datetime import date
+from decimal import Decimal, InvalidOperation
 
-import jdatetime
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 
+from .darma_cost_v55 import darma_cost_for
 from .excel_views import _int
-from .finance import digikala_fee_for_unit, sale_line_metrics
-from .models import SaleLine
+from .finance import digikala_fee_for_unit
+from .models import ProductSize
+from .sale_price_v60 import sale_price_for
+from .takvin_pricing_v17 import takvin_cost_for
+
 
 TARGET_BRANDS = ("دارما", "تکوین")
 
 
-def _current_month_range():
-    today_j = jdatetime.date.fromgregorian(date=date.today())
-    start = jdatetime.date(today_j.year, today_j.month, 1).togregorian()
-    if today_j.month == 12:
-        end = jdatetime.date(today_j.year + 1, 1, 1).togregorian()
-    else:
-        end = jdatetime.date(today_j.year, today_j.month + 1, 1).togregorian()
-    return start, end, f"{today_j.year}/{today_j.month:02d}"
-
-
-def _brand_current_metrics(brand_name):
-    start, end, month_label = _current_month_range()
-    rows = SaleLine.objects.filter(
-        day__date__gte=start,
-        day__date__lt=end,
-        quantity__gt=0,
-        product_size__product__brand__name=brand_name,
-    ).select_related("day", "product_size__product", "product_size__size", "snapshot")
-    gross = fee = cogs = profit = packs = shorts = 0
-    for line in rows:
-        m = sale_line_metrics(line)
-        gross += int(m["gross"])
-        fee += int(m["digikala_fee"])
-        cogs += int(m["cogs"])
-        profit += int(m["profit"])
-        packs += int(m["packs"])
-        shorts += int(m["shorts"])
-    return {
-        "brand": brand_name,
-        "month": month_label,
-        "gross": gross,
-        "fee": fee,
-        "cogs": cogs,
-        "profit": profit,
-        "packs": packs,
-        "shorts": shorts,
-        "profit_on_cost": (profit * 100 / cogs) if cogs else None,
-        "profit_on_sale": (profit * 100 / gross) if gross else None,
-    }
+def _percent(value):
+    text = str(value or "").strip()
+    if not text:
+        return None
+    text = (
+        text.replace("٪", "")
+        .replace("٫", ".")
+        .replace(",", ".")
+        .replace(" ", "")
+    )
+    try:
+        value = Decimal(text)
+    except (InvalidOperation, ValueError):
+        return None
+    if value < 0:
+        return None
+    return value
 
 
 def _solve_sale_price(cost, target_profit_on_cost):
+    """Minimum whole-toman sale price that reaches the requested net markup.
+
+    Target percentage means:
+        net profit / finished cost * 100
+
+    Digikala fee is always calculated by the canonical live fee engine.
+    """
     cost = max(0, int(cost or 0))
     if cost <= 0:
         return 0
-    target_profit = cost * float(target_profit_on_cost) / 100.0
+    ratio = Decimal(target_profit_on_cost)
+    target_profit = Decimal(cost) * ratio / Decimal(100)
 
     def achieved(price):
-        return int(price) - int(digikala_fee_for_unit(int(price))) - cost
+        return Decimal(int(price) - int(digikala_fee_for_unit(int(price), date.today())) - cost)
 
     lo = 0
-    hi = max(100000, cost * 2)
+    hi = max(100_000, cost * 2)
     while achieved(hi) < target_profit:
         hi *= 2
         if hi > 100_000_000_000:
@@ -74,7 +64,7 @@ def _solve_sale_price(cost, target_profit_on_cost):
             hi = mid
         else:
             lo = mid
-    return hi
+    return int(hi)
 
 
 def _rounded_up(value, step=1000):
@@ -82,21 +72,81 @@ def _rounded_up(value, step=1000):
     return ((value + step - 1) // step) * step if value > 0 else 0
 
 
+def _profitability_rows():
+    today = date.today()
+    rows = list(
+        ProductSize.objects.filter(
+            product__brand__name__in=TARGET_BRANDS,
+            product__active=True,
+            active=True,
+        )
+        .select_related("product__brand", "product", "size")
+        .order_by("product__brand__name", "product__code", "size__sort_order", "id")
+    )
+
+    sections = {brand: [] for brand in TARGET_BRANDS}
+    for ps in rows:
+        brand = ps.product.brand.name
+        pack_qty = int(ps.product.pack_qty or 0)
+        sale_price = int(sale_price_for(ps, today) or 0)
+
+        if brand == "دارما":
+            unit_cost = int(darma_cost_for(today) or 0)
+        else:
+            unit_cost = int(takvin_cost_for(ps.size.name, today) or 0)
+
+        finished_cost = pack_qty * unit_cost
+        fee = int(digikala_fee_for_unit(sale_price, today)) if sale_price > 0 else 0
+        profit = sale_price - fee - finished_cost if sale_price > 0 else 0
+        profit_on_cost = (profit * 100 / finished_cost) if finished_cost else 0
+        profit_on_sale = (profit * 100 / sale_price) if sale_price else 0
+
+        sections[brand].append({
+            "ps_id": ps.id,
+            "brand": brand,
+            "code": ps.product.code,
+            "size": ps.size.name,
+            "pack_qty": pack_qty,
+            "sale_price": sale_price,
+            "unit_cost": unit_cost,
+            "finished_cost": finished_cost,
+            "fee": fee,
+            "profit": profit,
+            "profit_on_cost": profit_on_cost,
+            "profit_on_sale": profit_on_sale,
+        })
+
+    return [
+        {"brand": brand, "rows": sections[brand], "count": len(sections[brand])}
+        for brand in TARGET_BRANDS
+    ]
+
+
 @login_required
 def calculator(request):
-    metrics = [_brand_current_metrics(name) for name in TARGET_BRANDS]
-    return render(request, "core/calculator_v37.html", {
-        "brand_metrics": metrics,
-    })
+    return render(
+        request,
+        "core/calculator_v37.html",
+        {
+            "profitability_sections": _profitability_rows(),
+        },
+    )
 
 
 @login_required
 def calculator_quote(request):
     sale_price = _int(request.GET.get("sale_price"))
     cost = _int(request.GET.get("cost"))
-    fee = digikala_fee_for_unit(sale_price) if sale_price > 0 else 0
+    if sale_price <= 0 or cost <= 0:
+        return render(
+            request,
+            "core/_calculator_result_v104.html",
+            {"error": "قیمت فروش و قیمت تمام‌شده را کامل وارد کن."},
+        )
+
+    fee = int(digikala_fee_for_unit(sale_price, date.today()))
     profit = sale_price - fee - cost
-    return render(request, "core/_calculator_result.html", {
+    return render(request, "core/_calculator_result_v104.html", {
         "sale_price": sale_price,
         "cost": cost,
         "fee": fee,
@@ -108,32 +158,28 @@ def calculator_quote(request):
 
 @login_required
 def calculator_target_quote(request):
-    brand_name = (request.GET.get("brand") or "").strip()
-    cost = _int(request.GET.get("new_cost"))
-    if brand_name not in TARGET_BRANDS:
-        return render(request, "core/_calculator_target_result_v37.html", {"error": "برند را انتخاب کن."})
+    cost = _int(request.GET.get("cost"))
+    target_percent = _percent(request.GET.get("target_profit_percent"))
     if cost <= 0:
-        return render(request, "core/_calculator_target_result_v37.html", {"error": "قیمت تمام‌شده جدید را وارد کن."})
+        return render(
+            request,
+            "core/_calculator_target_result_v104.html",
+            {"error": "قیمت تمام‌شده کالا را وارد کن."},
+        )
+    if target_percent is None:
+        return render(
+            request,
+            "core/_calculator_target_result_v104.html",
+            {"error": "درصد سود هدف را به‌صورت عدد صفر یا بیشتر وارد کن."},
+        )
 
-    current = _brand_current_metrics(brand_name)
-    ratio = current["profit_on_cost"]
-    if ratio is None:
-        return render(request, "core/_calculator_target_result_v37.html", {
-            "error": f"برای {brand_name} در ماه جاری فروش دارای بهای تمام‌شده پیدا نشد؛ مبنای درصد سود نداریم."
-        })
-
-    exact_price = _solve_sale_price(cost, ratio)
+    exact_price = _solve_sale_price(cost, target_percent)
     suggested_price = _rounded_up(exact_price, 1000)
-    fee = int(digikala_fee_for_unit(suggested_price))
+    fee = int(digikala_fee_for_unit(suggested_price, date.today()))
     profit = suggested_price - fee - cost
-    return render(request, "core/_calculator_target_result_v37.html", {
-        "brand": brand_name,
-        "month": current["month"],
-        "current_profit_on_cost": ratio,
-        "current_profit_on_sale": current["profit_on_sale"] or 0,
-        "current_profit": current["profit"],
-        "current_cogs": current["cogs"],
-        "new_cost": cost,
+    return render(request, "core/_calculator_target_result_v104.html", {
+        "cost": cost,
+        "target_profit_percent": float(target_percent),
         "exact_price": exact_price,
         "suggested_price": suggested_price,
         "fee": fee,
