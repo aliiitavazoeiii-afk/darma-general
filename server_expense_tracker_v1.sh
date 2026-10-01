@@ -139,6 +139,7 @@ POST_MIGRATE=$(snapshot_main) || fail "could not capture post-migration main sta
 step "5) ROLLBACK-ONLY EXPENSE REGRESSIONS"
 expense_dc run --rm --entrypoint python expense-web manage.py check_expense_tracker_v1 --settings=expense_site.settings || fail "expense base regression failed"
 expense_dc run --rm --entrypoint python expense-web manage.py check_expense_v7 --settings=expense_site.settings || fail "expense V7 regression failed"
+expense_dc run --rm --entrypoint python expense-web manage.py check_expense_category_report_v8 --settings=expense_site.settings || fail "expense category report V8 regression failed"
 expense_dc run --rm --entrypoint python expense-web manage.py check_expense_export_v6 --settings=expense_site.settings || fail "expense export regression failed"
 POST_TEST=$(snapshot_main) || fail "could not capture post-test main state"
 [ "$PRE" = "$POST_TEST" ] || {
@@ -153,6 +154,7 @@ sleep 6
 expense_dc exec -T expense-web python manage.py check --settings=expense_site.settings || fail "live expense Django check failed"
 expense_dc exec -T expense-web python manage.py check_expense_tracker_v1 --settings=expense_site.settings || fail "live expense base regression failed"
 expense_dc exec -T expense-web python manage.py check_expense_v7 --settings=expense_site.settings || fail "live expense V7 regression failed"
+expense_dc exec -T expense-web python manage.py check_expense_category_report_v8 --settings=expense_site.settings || fail "live expense category report V8 regression failed"
 expense_dc exec -T expense-web python manage.py check_expense_export_v6 --settings=expense_site.settings || fail "live expense export regression failed"
 
 step "7) FINAL ERP INVARIANTS"
@@ -165,7 +167,7 @@ echo "$FINAL"
 }
 
 step "8) SUCCESS"
-echo "SUCCESS: EXPENSE TRACKER DUAL ACCOUNT V7 DEPLOYED"
+echo "SUCCESS: EXPENSE TRACKER CATEGORY REPORT V8 DEPLOYED"
 echo "Expense service: darma-expense / expense-web"
 echo "Expense port: $EXPENSE_PORT"
 echo "ERP web container: NOT RECREATED"
