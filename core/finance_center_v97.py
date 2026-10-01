@@ -57,10 +57,9 @@ def _finance_account_context():
 
 @login_required
 def finance_home(request):
-    # V100: show the actual current account rows on the Finance & Tools landing
-    # page as well as the three navigation cards. This makes the migration from
-    # Comprehensive Report explicit and prevents accounts from becoming hidden.
-    return render(request, "core/finance_center_v97.html", _finance_account_context())
+    # V102: Finance & Tools is a pure three-card hub. Account balances live only
+    # inside the Accounts card/page; no account data is duplicated on the hub.
+    return render(request, "core/finance_center_v97.html")
 
 
 @login_required
