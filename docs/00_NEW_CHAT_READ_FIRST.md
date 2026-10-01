@@ -2,7 +2,7 @@
 
 **AUTHORITATIVE CONTINUATION ENTRYPOINT — READ THIS FILE COMPLETELY BEFORE TOUCHING CODE OR DATA**
 
-Last synchronized with the project conversation: **2026-09-03, through V50 inventory-operations work and the full current-chat handoff**.
+Last continuation synchronization: **2026-10-01 through V102 Finance hub consolidation**.
 
 Repository: `aliiitavazoeiii-afk/darma-general`
 
@@ -13,6 +13,16 @@ Production server path: `/opt/darma-general`
 Default branch: `main`
 
 Functional-code head immediately before this handoff-document synchronization: `226c300ee0fe74999a409847537fbc8d1ed4c163`.
+
+## V102 CURRENT CONTINUATION
+
+After this entrypoint, read **every numbered file** in `docs/PROJECT_CONTEXT/` through `52_FINANCE_HUB_CAPITAL_V102.md`.
+
+Current GitHub development line: `v102-finance-hub-consolidated`.
+
+For Finance, V102 supersedes the sibling V101 branch: the sidebar has one direct `مالی و ابزار` root, and `/finance/` contains exactly three cards (Payments, Accounts, Calculator). Do not restore an expandable Finance submenu unless the user explicitly changes this rule.
+
+V102 also makes `current_capital_breakdown()` the single current-capital calculator consumed by Comprehensive Report. The capital equation itself is unchanged.
 
 This application is a live business system replacing the user's Excel workflow. It contains real sales, finished inventory, raw material, receivables, accounts, production, payment, cost and capital data. A cosmetic-looking mistake can corrupt accounting or physical stock if an AI changes the wrong layer. Do not improvise.
 
