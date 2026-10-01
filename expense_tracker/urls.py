@@ -21,5 +21,6 @@ urlpatterns = [
     path("categories/<int:category_id>/delete/", views.category_delete, name="category_delete"),
     path("reports/", views.reports, name="reports"),
     path("reports/category/<int:category_id>/", category_report_v8.category_report, name="category_report"),
+    path("reports/category-name/<str:category_name>/", category_report_v8.category_report_by_name, name="category_report_by_name"),
     path("reports/export.xlsx", export_xlsx.financial_export_xlsx, name="financial_export_xlsx"),
 ]
