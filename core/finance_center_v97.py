@@ -2,11 +2,11 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_POST
 
+from .capital_history_v87 import current_account_breakdown
 from .dia_gallery_v45 import dia_gallery_receivable_total
 from .finance_excel_v9 import digikala_ledger_total, digikala_receivable_total
 from .models import ExcelManualRow, ExcelManualSetting
 from .report_v10 import manual_report_action as report_manual_report_action
-from .self_spend_v62 import capital_accounts_queryset
 
 
 def _finance_account_context():
