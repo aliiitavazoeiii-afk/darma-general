@@ -118,7 +118,6 @@ def report(request):
     historical_capital = capital_as_of(end)
     capital_total = int(historical_capital["capital_total"])
 
-
     context = {
         "period": period,
         "start": format_jalali(start),
@@ -149,7 +148,7 @@ def report(request):
         "dia_gallery": dia_gallery,
     }
     context.update(raw)
-    return render(request, "core/report_excel_v45.html", context)
+    return render(request, "core/report_excel_v96.html", context)
 
 
 @login_required
