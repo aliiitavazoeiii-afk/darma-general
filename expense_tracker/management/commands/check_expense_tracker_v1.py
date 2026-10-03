@@ -72,6 +72,11 @@ class Command(BaseCommand):
         worker_response = worker_match.func(worker_request)
         if worker_response.status_code != 200 or worker_response.get("Service-Worker-Allowed") != "/":
             raise CommandError("expense service worker route/scope is invalid")
+        worker_text = worker_response.content.decode("utf-8")
+        if "kharj-man-shell-v9" not in worker_text:
+            raise CommandError("expense service worker cache version is not V9")
+        if '"/static/expense_tracker/app.js"' in worker_text or '"/static/expense_tracker/app.css"' in worker_text:
+            raise CommandError("expense service worker must not precache JS/CSS")
 
         sample_groups = expense_views._group_expenses_by_day(
             [
@@ -213,7 +218,7 @@ class Command(BaseCommand):
             raise CommandError(f"rollback regression leaked persistent data: before={before} after={after}")
 
         self.stdout.write("EXPENSE DASHBOARD V5: elapsed-month daily-average KPI present")
-        self.stdout.write("EXPENSE PWA V3: manifest + service worker routes passed")
+        self.stdout.write("EXPENSE PWA V9: service worker avoids stale JS/CSS cache")
         self.stdout.write("EXPENSE PWA V3: daily transaction grouping passed")
         self.stdout.write("EXPENSE UI V2: Jalali calendar route rendered HTTP 200")
         self.stdout.write("EXPENSE UI V2: AJAX save returned JSON and debited Mellat exactly")
