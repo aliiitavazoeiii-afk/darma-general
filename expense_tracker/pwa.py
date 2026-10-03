@@ -67,11 +67,8 @@ def manifest(request):
 
 def service_worker(request):
     script = r'''
-const CACHE_NAME = "kharj-man-shell-v8";
+const CACHE_NAME = "kharj-man-shell-v9";
 const STATIC_ASSETS = [
-  "/static/expense_tracker/app.css",
-  "/static/expense_tracker/v7.css",
-  "/static/expense_tracker/app.js",
   "/static/expense_tracker/icons/icon-192.png",
   "/static/expense_tracker/icons/icon-512.png"
 ];
@@ -99,9 +96,10 @@ self.addEventListener("fetch", event => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
 
-  // Never cache authenticated HTML or financial API responses.
-  // Only the expense app's static shell is cached.
-  if (!url.pathname.startsWith("/static/expense_tracker/")) return;
+  // Never cache authenticated HTML, financial API responses, JS or CSS.
+  // WhiteNoise already serves fingerprinted static assets safely. Keeping JS/CSS
+  // out of the service-worker cache prevents stale frontend code after deploys.
+  if (!url.pathname.startsWith("/static/expense_tracker/icons/")) return;
 
   event.respondWith(
     caches.match(request).then(cached => {
