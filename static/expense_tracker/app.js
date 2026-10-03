@@ -155,7 +155,11 @@
         setSaveStatus(payload.message || "ثبت شد ✓","success");
         if(amount) amount.focus({preventScroll:true});
       }catch(err){
-        setSaveStatus(err && err.message ? err.message : "ثبت خرج انجام نشد","error");
+        if(err && err.name==="TypeError"){
+          setSaveStatus("ارتباط با سرور برقرار نشد؛ صفحه را یک‌بار رفرش کن و قبل از ثبت دوباره، آخرین تراکنش‌ها را چک کن","error");
+        }else{
+          setSaveStatus(err && err.message ? err.message : "ثبت خرج انجام نشد","error");
+        }
       }finally{
         if(submit){
           submit.disabled=false;
@@ -223,7 +227,9 @@
 
     if("serviceWorker" in navigator && window.isSecureContext){
       window.addEventListener("load",function(){
-        navigator.serviceWorker.register("/sw.js",{scope:"/"}).catch(function(){});
+        navigator.serviceWorker.register("/sw.js",{scope:"/",updateViaCache:"none"})
+          .then(function(registration){return registration.update();})
+          .catch(function(){});
       });
     }
 
