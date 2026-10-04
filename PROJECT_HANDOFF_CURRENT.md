@@ -21,11 +21,12 @@ in numeric order, including the newest continuation records:
 - `docs/PROJECT_CONTEXT/49_MATERIAL_FINANCE_CENTER_V97.md`
 - `docs/PROJECT_CONTEXT/50_FINANCE_NAV_POLISH_V98.md`
 - `docs/PROJECT_CONTEXT/51_PERSON_PAYMENTS_SPLIT_DELIVERY_V102.md`
+- `docs/PROJECT_CONTEXT/52_RESTORE_FINANCE_CALCULATOR_V107.md`
 
 `PROJECT_HANDOFF.md` is preserved as an older historical/forensic record and contains assumptions superseded by later work. Do not use it as the sole current source.
 
-Current GitHub development line at this pointer: `v102-person-payments-split-delivery-color-progress`.
+Current GitHub development line at this pointer: `v107-restore-finance-calculator`.
 
-Important: GitHub branch state is not proof of production deployment. V102 is production-confirmed only after the actual VPS deploy finishes with:
+Important: GitHub branch state is not proof of production deployment. V107 is production-confirmed only after the actual VPS deploy finishes with:
 
-`SUCCESS: PERSON PAYMENTS + SPLIT DELIVERY + COLOR PROGRESS V102 DEPLOYED`
+`SUCCESS: RESTORED FINANCE + CALCULATOR V107 DEPLOYED`
