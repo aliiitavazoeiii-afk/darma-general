@@ -46,13 +46,7 @@ body:after{content:"";position:fixed;inset:0;pointer-events:none;opacity:.26;bac
 </div>
 </section>
 
-<section class="erp-nav-group {% if '/payments/' in request.path or '/calculator/' in request.path %}current open{% endif %}">
-<button class="erp-nav-group-toggle" type="button" aria-expanded="false"><span class="erp-nav-group-title">مالی و ابزار</span><span class="erp-nav-chevron">⌄</span></button>
-<div class="erp-nav-group-items">
-<a class="{% if '/payments/' in request.path %}active{% endif %}" href="{% url 'payments' %}"><span class="erp-dot"></span>پرداخت‌ها</a>
-<a class="{% if '/calculator/' in request.path %}active{% endif %}" href="{% url 'calculator' %}"><span class="erp-dot"></span>محاسبه‌گر</a>
-</div>
-</section>
+<a class="{% if '/finance/' in request.path or '/payments/' in request.path or '/calculator/' in request.path %}active{% endif %}" href="{% url 'finance_home' %}"><span class="erp-dot"></span>مالی و ابزار</a>
 
 <section class="erp-nav-group {% if '/settings/' in request.path %}current open{% endif %}">
 <button class="erp-nav-group-toggle" type="button" aria-expanded="false"><span class="erp-nav-group-title">تعاریف</span><span class="erp-nav-chevron">⌄</span></button>
