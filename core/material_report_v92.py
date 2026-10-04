@@ -106,6 +106,45 @@ def _summarize_month_blocks(blocks):
     }
 
 
+BASE_COLOR_PROGRESS = tuple(v23.BASE_MODELS)
+
+
+def _summarize_open_base_colors(blocks):
+    """Outstanding Darma work for the five canonical colors.
+
+    Only open work is included: saved cut > actually applied finished output.
+    Completed historical sheets are excluded so old production does not inflate
+    the operational pending numbers.
+    """
+    rows = []
+    for key, label in BASE_COLOR_PROGRESS:
+        expected = delivered = pending = open_blocks = 0
+        for block in blocks:
+            if getattr(block.brand, "name", "") != "دارما":
+                continue
+            cut = max(0, v23.v20._int(((block.input_data or {}).get(key) or {}).get("cut")))
+            applied = sum(
+                max(0, int(item.quantity or 0))
+                for item in block.output_applications.all()
+                if item.model_key == key
+            )
+            if cut <= applied:
+                continue
+            expected += cut
+            delivered += applied
+            pending += cut - applied
+            open_blocks += 1
+        rows.append({
+            "key": key,
+            "label": label,
+            "expected": int(expected),
+            "delivered": int(delivered),
+            "pending": int(pending),
+            "open_blocks": int(open_blocks),
+        })
+    return rows
+
+
 def _all_time_cut_summary(blocks):
     """Average saved cut quantity across the five canonical Darma colors.
 
@@ -178,6 +217,7 @@ def material_report(request):
     summary = _summarize_month_blocks(current_month_objects)
     summary["month_label"] = month["label"]
     cut_summary = _all_time_cut_summary(objects)
+    base_color_progress = _summarize_open_base_colors(objects)
 
     return render(
         request,
@@ -189,6 +229,7 @@ def material_report(request):
             "sewing_wage_rate": v23.v20._dozen_wage(),
             "material_month_summary": summary,
             "material_cut_summary": cut_summary,
+            "material_base_color_progress": base_color_progress,
             "material_current_month_key": month["key"],
             "material_current_month_label": month["label"],
         },
