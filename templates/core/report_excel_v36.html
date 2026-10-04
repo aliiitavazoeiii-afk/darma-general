@@ -148,6 +148,7 @@
 </style>
 <script>
 document.addEventListener('DOMContentLoaded',function(){
+  const accountManagementMoved=Boolean(document.querySelector('[data-report-finance-moved-server="1"]'));
   const salesCard=document.querySelector('.excel-section');
   const capitalHero=document.querySelector('.capital-hero');
   const raw=document.querySelector('.raw-materials-wrap');
@@ -247,7 +248,7 @@ document.addEventListener('DOMContentLoaded',function(){
 
   const stack=document.createElement('div');
   stack.className='v76-domain-stack';
-  stack.appendChild(accounts.section);
+  if(!accountManagementMoved) stack.appendChild(accounts.section);
   stack.appendChild(inventory.section);
   stack.appendChild(secondary);
 
