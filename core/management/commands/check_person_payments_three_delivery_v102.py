@@ -89,6 +89,24 @@ class Command(BaseCommand):
             if int(v62.source_balance(v62.SOURCE_MELAT)) != source_before - 40_000:
                 raise RuntimeError("Payment source was not reduced by person payment")
 
+            # Editing must validate AFTER the old payment is reversed. This catches
+            # the important 40 -> 70 case where the current visible balance is only 60.
+            parsed_edit = v62._parse_payment_post(
+                {
+                    "date": format_jalali(date.today()),
+                    "payee": payee,
+                    "amount": "70000",
+                    "note": "V102 rollback edited payment",
+                    "source_account": v62.SOURCE_MELAT,
+                }
+            )
+            v62._reverse_full(payment)
+            v62._save_payment_fields(payment, parsed_edit)
+            v62._apply_full(payment, parsed_edit)
+            person.refresh_from_db()
+            if int(person.amount or 0) != 30_000:
+                raise RuntimeError("Edited person payment did not reapply against restored balance")
+
             v62._reverse_full(payment)
             person.refresh_from_db()
             if int(person.amount or 0) != 100_000:
@@ -163,6 +181,7 @@ class Command(BaseCommand):
 
         self.stdout.write("PERSON ACCOUNTS IN PAYMENT CHOICES = OK")
         self.stdout.write("PERSON PAYMENT DECREASES PERSON BALANCE = OK")
+        self.stdout.write("PERSON PAYMENT EDIT REVERSE/REAPPLY = OK")
         self.stdout.write("PERSON PAYMENT REVERSE RESTORES BALANCE = OK")
         self.stdout.write("THREE DELIVERY BOXES 50+70+50 = 170 = OK")
         self.stdout.write("LEGACY SINGLE DELIVERY -> BOX 1 = OK")
