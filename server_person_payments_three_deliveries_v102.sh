@@ -82,7 +82,7 @@ CHANGED=$(git diff --name-only "$BASE"..HEAD)
 echo "$CHANGED"
 for f in $CHANGED; do
   case "$f" in
-    PROJECT_HANDOFF_CURRENT.md|core/business_tools_v62.py|core/business_tools_v91.py|core/finance_center_v97.py|core/material_report_v23.py|templates/core/material_report_v36.html|core/management/commands/check_person_payments_three_delivery_v102.py|docs/PROJECT_CONTEXT/52_PERSON_PAYMENTS_THREE_DELIVERIES_V102.md|server_person_payments_three_deliveries_v102.sh) ;;
+    PROJECT_HANDOFF_CURRENT.md|core/business_tools_v62.py|core/business_tools_v91.py|core/finance_center_v97.py|core/material_report_v23.py|templates/core/material_report_v36.html|core/management/commands/check_person_payments_three_delivery_v102.py|docs/PROJECT_CONTEXT/51_FINANCE_ACCOUNTS_SUBMENU_V101.md|docs/PROJECT_CONTEXT/52_PERSON_PAYMENTS_THREE_DELIVERIES_V102.md|server_person_payments_three_deliveries_v102.sh) ;;
     *) fail "unexpected V102 file changed: $f" ;;
   esac
 done
