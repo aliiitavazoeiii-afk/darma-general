@@ -26,10 +26,11 @@ in numeric order through:
 - `docs/PROJECT_CONTEXT/54_FINANCE_KPIS_CALCULATOR_V104.md`
 - `docs/PROJECT_CONTEXT/55_MARGIN_CODE_SUMMARY_MATERIAL_KPIS_V105.md`
 - `docs/PROJECT_CONTEXT/56_PERSON_PAYMENTS_THREE_DELIVERIES_V106.md`
+- `docs/PROJECT_CONTEXT/57_FINAL_STABLE_BASELINE_V108.md`
 
 ## Current authoritative development line
 
-`v106-person-payments-three-deliveries`
+`stable-final-2026-10-04`
 
 V100 and V101 diverged from V99. V101 is **not** a superset of V100 and its restored Finance submenu conflicts with the user's final requirement.
 
@@ -102,3 +103,22 @@ V106 preserves the V103 native direct Finance link, the V104 Finance KPIs/calcul
 V106 is production-confirmed only after:
 
 `SUCCESS: V105 RESTORED + PERSON PAYMENTS + THREE DELIVERIES V106 DEPLOYED`
+
+
+## V108 FINAL STABLE BASELINE
+
+V108 is the only branch new work should continue from after production confirmation.
+
+It starts from V106 (therefore preserving the full V104/V105 Finance/Calculator/report lineage), then locks:
+- Comprehensive Report account-management boxes out of server-rendered HTML;
+- native direct Finance navigation + exactly three cards;
+- six Finance KPI balances;
+- final V105 calculator semantics and grouped profitability;
+- V106 person-account payments and three delivery inputs;
+- V105 six material KPIs plus five open-work base-color cards.
+
+Required final marker:
+
+`SUCCESS: FINAL STABLE BASELINE V108 DEPLOYED`
+
+After that marker, do not start future work from older V97-V107 branches.
