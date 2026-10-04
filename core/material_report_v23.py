@@ -261,13 +261,44 @@ def _parse_input(request, keys, dozen_wage):
     return data
 
 
+DELIVERY_PART_COUNT = 3
+
+
+def _delivery_parts(values, size_key):
+    values = values or {}
+    parts_map = values.get("_delivery_parts") or {}
+    raw = parts_map.get(size_key)
+    if isinstance(raw, (list, tuple)):
+        parts = [str(raw[index] or "").strip() if index < len(raw) else "" for index in range(DELIVERY_PART_COUNT)]
+        return parts
+    # Backward compatibility: every historical single delivery stays numerically
+    # identical and appears in the first box; boxes 2/3 start empty.
+    return [str(values.get(size_key) or "").strip(), "", ""]
+
+
 def _parse_output(request, brand, keys):
     data = {}
     sizes = _output_sizes_for_brand(brand)
     for key in keys:
         row = {}
+        parts_map = {}
         for size_key, _size_name in sizes:
-            row[size_key] = (request.POST.get(f"out_{key}_{size_key}") or "").strip()
+            raw_parts = [
+                request.POST.get(f"out_{key}_{size_key}_{index}")
+                for index in range(1, DELIVERY_PART_COUNT + 1)
+            ]
+            if any(value is not None for value in raw_parts):
+                parts = [str(value or "").strip() for value in raw_parts]
+            else:
+                # Compatibility for an older cached form posting the old single field.
+                legacy = (request.POST.get(f"out_{key}_{size_key}") or "").strip()
+                parts = [legacy, "", ""]
+
+            total = sum(max(0, v20._int(value)) for value in parts)
+            row[size_key] = str(total) if any(parts) else ""
+            parts_map[size_key] = parts
+
+        row["_delivery_parts"] = parts_map
         row["delivery_date"] = (request.POST.get(f"delivery_{key}") or "").strip()
         data[key] = row
     return data
@@ -395,10 +426,21 @@ def _view_block(block):
     output_data = block.output_data or {}
     for key in keys:
         values = output_data.get(key, {}) or {}
-        cells = [
-            {"name": f"out_{key}_{size_key}", "value": values.get(size_key, "")}
-            for size_key, _label in sizes
-        ]
+        cells = []
+        for size_key, _label in sizes:
+            parts = _delivery_parts(values, size_key)
+            cells.append({
+                "name": f"out_{key}_{size_key}",
+                "value": values.get(size_key, ""),
+                "parts": [
+                    {
+                        "name": f"out_{key}_{size_key}_{index}",
+                        "value": parts[index - 1],
+                        "index": index,
+                    }
+                    for index in range(1, DELIVERY_PART_COUNT + 1)
+                ],
+            })
         row_total = sum(max(0, v20._int(values.get(size_key))) for size_key, _label in sizes)
         cut_source = key
         legacy_source = v22.CUT_SOURCE.get(key, key)
