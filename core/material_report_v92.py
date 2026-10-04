@@ -59,6 +59,48 @@ def _format_weight(value):
     return text or "0"
 
 
+BASE_COLOR_PROGRESS = tuple(v23.BASE_MODELS)
+
+
+def _summarize_open_base_colors(blocks):
+    """Outstanding Darma work for the five main colors.
+
+    Completed sheets are intentionally excluded so old production does not inflate
+    the operational numbers. For each color we show only blocks where cut >
+    actually-applied finished output.
+    """
+    rows = []
+    for key, label in BASE_COLOR_PROGRESS:
+        expected = 0
+        delivered = 0
+        pending = 0
+        open_blocks = 0
+        for block in blocks:
+            if block.brand.name != "دارما":
+                continue
+            cut = max(0, v23.v20._int(((block.input_data or {}).get(key) or {}).get("cut")))
+            applied = sum(
+                max(0, int(item.quantity or 0))
+                for item in block.output_applications.all()
+                if item.model_key == key
+            )
+            if cut <= applied:
+                continue
+            expected += cut
+            delivered += applied
+            pending += cut - applied
+            open_blocks += 1
+        rows.append({
+            "key": key,
+            "label": label,
+            "expected": int(expected),
+            "delivered": int(delivered),
+            "pending": int(pending),
+            "open_blocks": int(open_blocks),
+        })
+    return rows
+
+
 def _summarize_month_blocks(blocks):
     fabric_codes = set()
     uncoded_rolls = 0
@@ -142,6 +184,7 @@ def material_report(request):
     ]
     summary = _summarize_month_blocks(current_month_objects)
     summary["month_label"] = month["label"]
+    base_color_progress = _summarize_open_base_colors(objects)
 
     return render(
         request,
@@ -154,5 +197,6 @@ def material_report(request):
             "material_month_summary": summary,
             "material_current_month_key": month["key"],
             "material_current_month_label": month["label"],
+            "material_base_color_progress": base_color_progress,
         },
     )
