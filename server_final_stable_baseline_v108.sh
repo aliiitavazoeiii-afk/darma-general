@@ -100,7 +100,7 @@ CHANGED=$(git diff --name-only "$BASE"..HEAD)
 echo "$CHANGED"
 for f in $CHANGED; do
   case "$f" in
-    PROJECT_HANDOFF_CURRENT.md|    STABLE_BASELINE.md|    docs/00_NEW_CHAT_READ_FIRST.md|    docs/PROJECT_CONTEXT/57_FINAL_STABLE_BASELINE_V108.md|    core/management/commands/check_final_baseline_v108.py|    core/material_report_v92.py|    templates/core/finance_center_v97.html|    templates/core/material_report_v92.html|    templates/core/report_excel_v3.html|    templates/core/report_excel_v36.html|    server_final_stable_baseline_v108.sh) ;;
+    PROJECT_HANDOFF_CURRENT.md|    STABLE_BASELINE.md|    docs/00_NEW_CHAT_READ_FIRST.md|    docs/PROJECT_CONTEXT/README.md|    docs/PROJECT_CONTEXT/57_FINAL_STABLE_BASELINE_V108.md|    core/management/commands/check_final_baseline_v108.py|    core/material_report_v92.py|    templates/core/finance_center_v97.html|    templates/core/material_report_v92.html|    templates/core/report_excel_v3.html|    templates/core/report_excel_v36.html|    server_final_stable_baseline_v108.sh) ;;
     *) fail "unexpected final-baseline file changed: $f" ;;
   esac
 done
