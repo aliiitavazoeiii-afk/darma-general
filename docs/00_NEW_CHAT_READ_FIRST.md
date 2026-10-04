@@ -2,7 +2,7 @@
 
 **AUTHORITATIVE CONTINUATION ENTRYPOINT — READ THIS FILE COMPLETELY BEFORE TOUCHING CODE OR DATA**
 
-Last continuation synchronization: **2026-10-01 through V105 margin/code summary/material KPI corrections**.
+Last continuation synchronization: **2026-10-04 through corrected V106 person-payments/three-delivery continuation on V105**.
 
 Repository: `aliiitavazoeiii-afk/darma-general`
 
@@ -16,11 +16,11 @@ Functional-code head immediately before this handoff-document synchronization: `
 
 ## V102 CURRENT CONTINUATION
 
-After this entrypoint, read **every numbered file** in `docs/PROJECT_CONTEXT/` through `55_MARGIN_CODE_SUMMARY_MATERIAL_KPIS_V105.md`.
+After this entrypoint, read **every numbered file** in `docs/PROJECT_CONTEXT/` through `56_PERSON_PAYMENTS_THREE_DELIVERIES_V106.md`.
 
-Current GitHub development line: `v105-margin-code-summary-material-kpis`.
+Current GitHub development line: `v106-person-payments-three-deliveries`.
 
-For Finance, V102 supersedes the sibling V101 branch: the sidebar has one direct `مالی و ابزار` root, and `/finance/` contains exactly three cards (Payments, Accounts, Calculator). Do not restore an expandable Finance submenu unless the user explicitly changes this rule.
+For Finance, V102 supersedes the sibling V101 branch: the sidebar has one direct `مالی و ابزار` root, and `/finance/` contains exactly three cards (Payments, Accounts, Calculator). V103 makes that link native in `base.html`. Do not restore an expandable Finance submenu unless the user explicitly changes this rule. The accidental sibling `v102-person-payments-three-deliveries` was based on obsolete V101 and must never be used as the continuation base.
 
 V102 also makes `current_capital_breakdown()` the single current-capital calculator consumed by Comprehensive Report. The capital equation itself is unchanged.
 
