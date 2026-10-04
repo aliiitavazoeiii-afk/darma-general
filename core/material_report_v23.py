@@ -261,13 +261,34 @@ def _parse_input(request, keys, dozen_wage):
     return data
 
 
+def _delivery_parts_for_values(values, size_key):
+    values = values or {}
+    stored = (values.get("_delivery_parts") or {}).get(size_key)
+    if isinstance(stored, (list, tuple)):
+        parts = [str(value or "").strip() for value in list(stored)[:3]]
+        return (parts + ["", "", ""])[:3]
+    legacy = str(values.get(size_key) or "").strip()
+    return [legacy, "", ""]
+
+
 def _parse_output(request, brand, keys):
     data = {}
     sizes = _output_sizes_for_brand(brand)
     for key in keys:
         row = {}
+        delivery_parts = {}
         for size_key, _size_name in sizes:
-            row[size_key] = (request.POST.get(f"out_{key}_{size_key}") or "").strip()
+            part_names = [f"out_{key}_{size_key}_{index}" for index in (1, 2, 3)]
+            has_split_fields = any(name in request.POST for name in part_names)
+            if has_split_fields:
+                parts = [(request.POST.get(name) or "").strip() for name in part_names]
+            else:
+                legacy = (request.POST.get(f"out_{key}_{size_key}") or "").strip()
+                parts = [legacy, "", ""]
+            total = sum(max(0, v20._int(value)) for value in parts)
+            row[size_key] = str(total) if any(str(value).strip() for value in parts) else ""
+            delivery_parts[size_key] = parts
+        row["_delivery_parts"] = delivery_parts
         row["delivery_date"] = (request.POST.get(f"delivery_{key}") or "").strip()
         data[key] = row
     return data
@@ -395,10 +416,17 @@ def _view_block(block):
     output_data = block.output_data or {}
     for key in keys:
         values = output_data.get(key, {}) or {}
-        cells = [
-            {"name": f"out_{key}_{size_key}", "value": values.get(size_key, "")}
-            for size_key, _label in sizes
-        ]
+        cells = []
+        for size_key, _label in sizes:
+            parts = _delivery_parts_for_values(values, size_key)
+            cells.append({
+                "name": f"out_{key}_{size_key}",
+                "value": values.get(size_key, ""),
+                "parts": [
+                    {"name": f"out_{key}_{size_key}_{index}", "value": parts[index - 1]}
+                    for index in (1, 2, 3)
+                ],
+            })
         row_total = sum(max(0, v20._int(values.get(size_key))) for size_key, _label in sizes)
         cut_source = key
         legacy_source = v22.CUT_SOURCE.get(key, key)
