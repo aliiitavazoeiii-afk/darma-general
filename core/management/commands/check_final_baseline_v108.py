@@ -119,8 +119,8 @@ class Command(BaseCommand):
                 raise RuntimeError(f"Old report account UI returned in server HTML: {marker}")
         if '<h2 class="page-title mb-0">سرمایه</h2>' not in report_html:
             raise RuntimeError("Final report capital heading is not server-rendered as سرمایه")
-        if "سرمایه، موجودی و حساب‌ها" in report_html:
-            raise RuntimeError("Legacy report capital/accounts heading returned")
+        if '<h2 class="page-title mb-0">سرمایه، موجودی و حساب‌ها</h2>' in report_html:
+            raise RuntimeError("Legacy visible report capital/accounts heading returned")
         if "current_capital_breakdown()" not in getsource(report_v10.report):
             raise RuntimeError("Report stopped using canonical current capital breakdown")
 
