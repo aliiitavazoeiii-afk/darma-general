@@ -5,7 +5,7 @@ from types import SimpleNamespace
 from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.test import RequestFactory, override_settings
-from django.urls import resolve
+from django.urls import resolve, reverse
 
 from core import finance_center_v97
 from core.models import (
@@ -47,8 +47,11 @@ class Command(BaseCommand):
     def handle(self, *args, **kwargs):
         before = _state()
 
-        if resolve("/finance/").func is not finance_center_v97.finance_home:
-            raise RuntimeError("/finance/ does not resolve to finance_home")
+        if reverse("finance") != "/finance/":
+            raise RuntimeError(f"Named finance route changed unexpectedly: {reverse('finance')}")
+        finance_match = resolve("/finance/")
+        if finance_match.func is not finance_center_v97.finance_home or finance_match.url_name != "finance":
+            raise RuntimeError("/finance/ does not resolve to named route 'finance'")
         if resolve("/finance/accounts/").func is not finance_center_v97.accounts:
             raise RuntimeError("/finance/accounts/ route changed")
 
@@ -88,6 +91,7 @@ class Command(BaseCommand):
         if before != after:
             raise RuntimeError("V103 read-only regression changed business state")
 
+        self.stdout.write("FINANCE NAMED ROUTE = finance -> /finance/")
         self.stdout.write("FINANCE & TOOLS SIDEBAR = DIRECT LINK")
         self.stdout.write("LEGACY FINANCE SUBMENU = ABSENT")
         self.stdout.write("FINANCE HUB 3 CARDS = OK")
