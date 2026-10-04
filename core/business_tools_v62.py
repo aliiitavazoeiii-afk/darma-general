@@ -16,7 +16,7 @@ from .dia_gallery_v45 import dia_gallery_receivable_total
 from .finance_excel_v9 import digikala_receivable_total
 from .material_flow import COLOR_LABELS
 from .material_purchase_v14 import purchase_data_for_payment
-from .models import BusinessPayment, DigikalaSettlement
+from .models import BusinessPayment, DigikalaSettlement, ExcelManualRow
 from .payment_source_v63 import (
     SOURCE_CHOICES,
     SOURCE_LABELS,
@@ -38,6 +38,59 @@ PAYEE_LABELS = dict(v60.PAYEE_LABELS)
 PAYEE_LABELS["pedram"] = "خیاط"
 PAYEE_LABELS[SELF_PAYEE] = "خودم"
 MATERIAL_PAYEES = v60.MATERIAL_PAYEES
+PERSON_PAYEE_PREFIX = "person:"
+
+
+def person_payee_key(row_id):
+    return f"{PERSON_PAYEE_PREFIX}{int(row_id)}"
+
+
+def person_id_from_payee(payee):
+    raw = str(payee or "").strip()
+    if not raw.startswith(PERSON_PAYEE_PREFIX):
+        return None
+    try:
+        return int(raw[len(PERSON_PAYEE_PREFIX):])
+    except (TypeError, ValueError):
+        return None
+
+
+def _person_row_for_payee(payee, *, lock=False, active_only=False):
+    row_id = person_id_from_payee(payee)
+    if row_id is None:
+        return None
+    qs = ExcelManualRow.objects
+    if lock:
+        qs = qs.select_for_update()
+    qs = qs.filter(id=row_id, section=ExcelManualRow.PERSONS)
+    if active_only:
+        qs = qs.filter(active=True)
+    row = qs.first()
+    if row is None:
+        raise ValueError("حساب شخص انتخاب‌شده پیدا نشد یا دیگر فعال نیست.")
+    return row
+
+
+def person_payee_choices():
+    rows = ExcelManualRow.objects.filter(
+        active=True,
+        section=ExcelManualRow.PERSONS,
+    ).order_by("sort_order", "id")
+    return [
+        *PAYEE_CHOICES,
+        *((person_payee_key(row.id), row.title) for row in rows),
+    ]
+
+
+def _payee_label(payee):
+    row_id = person_id_from_payee(payee)
+    if row_id is not None:
+        row = ExcelManualRow.objects.filter(
+            id=row_id,
+            section=ExcelManualRow.PERSONS,
+        ).only("title").first()
+        return row.title if row else f"حساب شخص #{row_id}"
+    return PAYEE_LABELS.get(payee, payee)
 
 
 def _parse_payment_post(post, default_source=SOURCE_MELAT):
@@ -49,6 +102,29 @@ def _parse_payment_post(post, default_source=SOURCE_MELAT):
         post = post.copy()
         post["payee"] = "tailor"
         payee = "tailor"
+
+    person_row = _person_row_for_payee(payee, active_only=True)
+    if person_row is not None:
+        payment_date = parse_jalali_date(post.get("date") or format_jalali(date.today()))
+        note = (post.get("note") or "").strip()[:250]
+        paid_amount = _int(post.get("amount"))
+        if paid_amount <= 0:
+            raise ValueError("مبلغ پرداخت به حساب شخص باید بیشتر از صفر باشد.")
+        if paid_amount > int(person_row.amount or 0):
+            raise ValueError(
+                f"مبلغ پرداخت از مانده حساب «{person_row.title}» بیشتر است. "
+                f"مانده فعلی: {int(person_row.amount or 0):,} تومان."
+            )
+        return {
+            "date": payment_date,
+            "payee": payee,
+            "paid": int(paid_amount),
+            "note": note,
+            "purchase": None,
+            "invoice": 0,
+            "prepayment_title": None,
+            "source_account": source,
+        }
 
     if payee == SELF_PAYEE:
         payment_date = parse_jalali_date(post.get("date") or format_jalali(date.today()))
@@ -101,11 +177,28 @@ def _reroute_legacy_reverse_from_mellat(payment):
 def _apply_full(payment, parsed):
     v60._apply_full(payment, parsed)
     _reroute_legacy_apply_from_mellat(payment)
+
+    person = _person_row_for_payee(payment.payee, lock=True)
+    if person is not None:
+        amount = int(payment.amount or 0)
+        if amount > int(person.amount or 0):
+            raise ValueError(
+                f"مانده حساب «{person.title}» برای این پرداخت کافی نیست؛ "
+                "کل عملیات برگشت داده شد."
+            )
+        person.amount = int(person.amount or 0) - amount
+        person.save(update_fields=["amount", "updated_at"])
+
     if payment.payee == SELF_PAYEE:
         adjust_self_tracking(int(payment.amount or 0))
 
 
 def _reverse_full(payment):
+    person = _person_row_for_payee(payment.payee, lock=True)
+    if person is not None:
+        person.amount = int(person.amount or 0) + int(payment.amount or 0)
+        person.save(update_fields=["amount", "updated_at"])
+
     if payment.payee == SELF_PAYEE:
         adjust_self_tracking(-int(payment.amount or 0))
     v60._reverse_full(payment)
@@ -131,7 +224,7 @@ def _save_payment_fields(payment, parsed):
 def _payment_rows():
     rows = v60._payment_rows()
     for row in rows:
-        row.payee_label = PAYEE_LABELS.get(row.payee, row.payee)
+        row.payee_label = _payee_label(row.payee)
         row.source_account_label = SOURCE_LABELS.get(_payment_source(row), "ملت")
     return rows
 
@@ -177,7 +270,7 @@ def payments(request):
             "digikala_receivable": digikala_receivable_total(),
             "dia_gallery_receivable": dia_gallery_receivable_total(),
             "receipt_source_choices": receipts_v64.SOURCE_CHOICES,
-            "payees": PAYEE_CHOICES,
+            "payees": person_payee_choices(),
             "payment_source_choices": SOURCE_CHOICES,
             "material_colors": list(COLOR_LABELS.items()),
             "payment_month_total": payment_month_total,
