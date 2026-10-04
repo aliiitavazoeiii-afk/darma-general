@@ -2,7 +2,7 @@
 
 **AUTHORITATIVE CONTINUATION ENTRYPOINT — READ THIS FILE COMPLETELY BEFORE TOUCHING CODE OR DATA**
 
-Last continuation synchronization: **2026-10-04 through corrected V106 person-payments/three-delivery continuation on V105**.
+Last continuation synchronization: **2026-10-04 through V108 final stable baseline built on the complete V106/V105 lineage**.
 
 Repository: `aliiitavazoeiii-afk/darma-general`
 
@@ -16,9 +16,11 @@ Functional-code head immediately before this handoff-document synchronization: `
 
 ## V102 CURRENT CONTINUATION
 
-After this entrypoint, read **every numbered file** in `docs/PROJECT_CONTEXT/` through `56_PERSON_PAYMENTS_THREE_DELIVERIES_V106.md`.
+After this entrypoint, read **every numbered file** in `docs/PROJECT_CONTEXT/` through `57_FINAL_STABLE_BASELINE_V108.md`.
 
-Current GitHub development line: `v106-person-payments-three-deliveries`.
+Current GitHub development line: `stable-final-2026-10-04`.
+
+V108 final-baseline rule: after `SUCCESS: FINAL STABLE BASELINE V108 DEPLOYED`, every new feature branch must start from `stable-final-2026-10-04`; never resume work from an older V97-V107 branch.
 
 For Finance, V102 supersedes the sibling V101 branch: the sidebar has one direct `مالی و ابزار` root, and `/finance/` contains exactly three cards (Payments, Accounts, Calculator). V103 makes that link native in `base.html`. Do not restore an expandable Finance submenu unless the user explicitly changes this rule. The accidental sibling `v102-person-payments-three-deliveries` was based on obsolete V101 and must never be used as the continuation base.
 
