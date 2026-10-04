@@ -134,7 +134,7 @@
             {% for row in block.output_rows %}
               <tr class="output-data-row" data-model-key="{{ row.model_key }}" data-cut-source="{{ row.cut_source }}">
                 <th class="sticky-col">{{ row.label }}<span class="output-status">اعمال‌شده: <b>{{ row.applied_total|groupnum }}</b>{% if row.pending_total %} · جدید: {{ row.pending_total|groupnum }}{% endif %}{% if row.reduction_total %} · <span class="reduce">کاهش لازم: {{ row.reduction_total|groupnum }}</span>{% endif %}</span></th>
-                {% for cell in row.cells %}<td class="delivery-cell"><div class="delivery-split">{% for part in cell.parts %}<input class="grid-input ltr" name="{{ part.name }}" value="{{ part.value }}" inputmode="numeric" placeholder="{{ part.index }}" aria-label="تحویل نوبت {{ part.index }}">{% endfor %}</div></td>{% endfor %}
+                {% for cell in row.cells %}<td class="delivery-cell"><div class="delivery-split">{% for part in cell.parts %}<input class="grid-input ltr" name="{{ part.name }}" value="{{ part.value }}" inputmode="numeric" aria-label="تحویل نوبت {{ part.index }}">{% endfor %}</div></td>{% endfor %}
                 <td class="num-center fw-bold output-row-total">{{ row.total|groupnum }}</td>
                 <td class="cut-cell output-cut-total">{{ row.cut_total|groupnum }}</td>
                 <td class="diff-cell output-row-diff {% if row.cut_diff < 0 %}shortage{% elif row.cut_diff > 0 %}surplus{% else %}exact{% endif %}" data-diff="{{ row.cut_diff }}">{% if row.cut_diff < 0 %}کسری {{ row.cut_diff_abs|groupnum }}{% elif row.cut_diff > 0 %}مازاد {{ row.cut_diff_abs|groupnum }}{% else %}۰{% endif %}</td>
