@@ -110,11 +110,6 @@ def _parse_payment_post(post, default_source=SOURCE_MELAT):
         paid_amount = _int(post.get("amount"))
         if paid_amount <= 0:
             raise ValueError("مبلغ پرداخت به حساب شخص باید بیشتر از صفر باشد.")
-        if paid_amount > int(person_row.amount or 0):
-            raise ValueError(
-                f"مبلغ پرداخت از مانده حساب «{person_row.title}» بیشتر است. "
-                f"مانده فعلی: {int(person_row.amount or 0):,} تومان."
-            )
         return {
             "date": payment_date,
             "payee": payee,
