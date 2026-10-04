@@ -1,3 +1,4 @@
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_POST
@@ -5,8 +6,9 @@ from django.views.decorators.http import require_POST
 from .capital_history_v87 import current_account_breakdown
 from .finance_excel_v9 import digikala_ledger_total, digikala_receivable_total
 from .finance_overview_v104 import finance_kpis
-from .models import ExcelManualRow, ExcelManualSetting
+from .models import BusinessPayment, ExcelManualRow, ExcelManualSetting
 from .report_v10 import manual_report_action as report_manual_report_action
+from .business_tools_v62 import person_payee_key
 
 
 def _finance_account_context():
@@ -63,6 +65,19 @@ def accounts(request):
 @login_required
 @require_POST
 def accounts_action(request):
+    if request.POST.get("action") == "delete_row":
+        row = ExcelManualRow.objects.filter(id=request.POST.get("id")).first()
+        if (
+            row
+            and row.section == ExcelManualRow.PERSONS
+            and BusinessPayment.objects.filter(payee=person_payee_key(row.id)).exists()
+        ):
+            messages.error(
+                request,
+                "این حساب شخص در سابقه پرداخت‌ها استفاده شده و برای حفظ امکان ویرایش/حذف پرداخت قابل حذف نیست.",
+            )
+            return redirect("finance_accounts")
+
     # Reuse the exact report-side account mutation semantics, including:
     # - Digikala desired-total -> base conversion
     # - protected system-managed «خودم» row
