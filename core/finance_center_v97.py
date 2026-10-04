@@ -5,6 +5,7 @@ from django.views.decorators.http import require_POST
 
 from .dia_gallery_v45 import dia_gallery_receivable_total
 from .finance_excel_v9 import digikala_ledger_total, digikala_receivable_total
+from .finance_overview_v104 import finance_kpis
 from .models import BusinessPayment, ExcelManualRow, ExcelManualSetting
 from .report_v10 import manual_report_action as report_manual_report_action
 from .self_spend_v62 import capital_accounts_queryset
@@ -12,7 +13,7 @@ from .self_spend_v62 import capital_accounts_queryset
 
 @login_required
 def finance_home(request):
-    return render(request, "core/finance_center_v97.html")
+    return render(request, "core/finance_center_v97.html", finance_kpis())
 
 
 @login_required
