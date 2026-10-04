@@ -20,11 +20,13 @@ in numeric order, including the newest continuation records:
 - `docs/PROJECT_CONTEXT/48_INVENTORY_MATERIAL_CENTER_V96.md`
 - `docs/PROJECT_CONTEXT/49_MATERIAL_FINANCE_CENTER_V97.md`
 - `docs/PROJECT_CONTEXT/50_FINANCE_NAV_POLISH_V98.md`
+- `docs/PROJECT_CONTEXT/51_FINANCE_ACCOUNTS_SUBMENU_V101.md`
+- `docs/PROJECT_CONTEXT/52_PERSON_PAYMENTS_THREE_DELIVERIES_V102.md`
 
 `PROJECT_HANDOFF.md` is preserved as an older historical/forensic record and contains assumptions superseded by later work. Do not use it as the sole current source.
 
-Current GitHub development line at this pointer: `v98-finance-nav-ui-polish`.
+Current GitHub development line at this pointer: `v102-person-payments-three-deliveries`.
 
-Important: GitHub branch state is not proof of production deployment. V98 is production-confirmed only after the actual VPS deploy finishes with:
+Important: GitHub branch state is not proof of production deployment. V102 is production-confirmed only after the actual VPS deploy finishes with:
 
-`SUCCESS: FINANCE NAV + UI POLISH V98 DEPLOYED`
+`SUCCESS: PERSON PAYMENTS + THREE DELIVERIES V102 DEPLOYED`
