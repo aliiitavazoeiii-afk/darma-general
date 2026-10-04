@@ -133,3 +133,12 @@ V101's expandable Finance submenu is superseded by V102 and must not be reintrod
 **Current GitHub continuation line:** `v106-person-payments-three-deliveries`.
 
 **Do not use:** `v102-person-payments-three-deliveries`. It was accidentally based on obsolete V101 and reintroduced the Finance submenu superseded by V102/V103.
+
+
+## V108 FINAL STABLE BASELINE
+
+57. `57_FINAL_STABLE_BASELINE_V108.md` — canonical continuation baseline built from the complete V106/V105 lineage. It server-side removes the obsolete Comprehensive Report finance/account boxes, preserves native direct Finance navigation + exactly three Finance cards + six KPI balances, preserves final V105 Calculator semantics, V106 person-account payments and three delivery boxes, and adds five open-work base-color cards below the existing six material KPIs.
+
+**Canonical future development line after production confirmation:** `stable-final-2026-10-04`.
+
+After `SUCCESS: FINAL STABLE BASELINE V108 DEPLOYED`, do not start new work from older V97-V107 branches.
