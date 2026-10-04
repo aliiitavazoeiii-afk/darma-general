@@ -124,3 +124,12 @@ V101's expandable Finance submenu is superseded by V102 and must not be reintrod
 55. `55_MARGIN_CODE_SUMMARY_MATERIAL_KPIS_V105.md` — changes calculator target percentage to sale-margin semantics, collapses profitability to one summary row per code with expandable size details, moves material-report KPI cards below the title, improves number/unit typography, and adds all-history Darma average cut for the five base colors.
 
 **Current GitHub continuation line:** `v105-margin-code-summary-material-kpis`.
+
+
+## V106 corrected continuation
+
+56. `56_PERSON_PAYMENTS_THREE_DELIVERIES_V106.md` — continues V105 directly, preserves native direct Finance navigation + V104/V105 Finance/calculator/material work, adds person-account payees with atomic reverse semantics, and splits each tailor-delivery output cell into three cumulative internal inputs.
+
+**Current GitHub continuation line:** `v106-person-payments-three-deliveries`.
+
+**Do not use:** `v102-person-payments-three-deliveries`. It was accidentally based on obsolete V101 and reintroduced the Finance submenu superseded by V102/V103.
