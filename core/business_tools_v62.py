@@ -16,7 +16,7 @@ from .dia_gallery_v45 import dia_gallery_receivable_total
 from .finance_excel_v9 import digikala_receivable_total
 from .material_flow import COLOR_LABELS
 from .material_purchase_v14 import purchase_data_for_payment
-from .models import BusinessPayment, DigikalaSettlement
+from .models import BusinessPayment, DigikalaSettlement, ExcelManualRow
 from .payment_source_v63 import (
     SOURCE_CHOICES,
     SOURCE_LABELS,
@@ -38,6 +38,49 @@ PAYEE_LABELS = dict(v60.PAYEE_LABELS)
 PAYEE_LABELS["pedram"] = "خیاط"
 PAYEE_LABELS[SELF_PAYEE] = "خودم"
 MATERIAL_PAYEES = v60.MATERIAL_PAYEES
+PERSON_PAYEE_PREFIX = "person:"
+
+
+def _person_payee_key(row_id):
+    return f"{PERSON_PAYEE_PREFIX}{int(row_id)}"
+
+
+def _person_row_for_payee(payee, for_update=False, active_only=False):
+    payee = str(payee or "").strip()
+    if not payee.startswith(PERSON_PAYEE_PREFIX):
+        return None
+    try:
+        row_id = int(payee[len(PERSON_PAYEE_PREFIX):])
+    except (TypeError, ValueError):
+        return None
+    qs = ExcelManualRow.objects
+    if for_update:
+        qs = qs.select_for_update()
+    qs = qs.filter(id=row_id, section=ExcelManualRow.PERSONS)
+    if active_only:
+        qs = qs.filter(active=True)
+    return qs.first()
+
+
+def person_payee_choices():
+    rows = ExcelManualRow.objects.filter(
+        section=ExcelManualRow.PERSONS,
+        active=True,
+    ).order_by("sort_order", "id")
+    return [(_person_payee_key(row.id), f"شخص — {row.title}") for row in rows]
+
+
+def payment_payee_choices():
+    return list(PAYEE_CHOICES) + person_payee_choices()
+
+
+def _adjust_person_payment(payee, delta):
+    row = _person_row_for_payee(payee, for_update=True)
+    if row is None:
+        raise ValueError("حساب شخص مربوط به این پرداخت پیدا نشد؛ عملیات متوقف شد.")
+    row.amount = int(row.amount or 0) + int(delta or 0)
+    row.save(update_fields=["amount", "updated_at"])
+    return row
 
 
 def _parse_payment_post(post, default_source=SOURCE_MELAT):
@@ -49,6 +92,26 @@ def _parse_payment_post(post, default_source=SOURCE_MELAT):
         post = post.copy()
         post["payee"] = "tailor"
         payee = "tailor"
+
+    person_row = _person_row_for_payee(payee, active_only=True)
+    if payee.startswith(PERSON_PAYEE_PREFIX):
+        if person_row is None:
+            raise ValueError("حساب شخص انتخاب‌شده فعال یا معتبر نیست.")
+        payment_date = parse_jalali_date(post.get("date") or format_jalali(date.today()))
+        note = (post.get("note") or "").strip()[:250]
+        paid_amount = _int(post.get("amount"))
+        if paid_amount <= 0:
+            raise ValueError("مبلغ پرداخت به شخص باید بیشتر از صفر باشد.")
+        return {
+            "date": payment_date,
+            "payee": payee,
+            "paid": int(paid_amount),
+            "note": note or f"پرداخت به {person_row.title}",
+            "purchase": None,
+            "invoice": 0,
+            "prepayment_title": None,
+            "source_account": source,
+        }
 
     if payee == SELF_PAYEE:
         payment_date = parse_jalali_date(post.get("date") or format_jalali(date.today()))
@@ -101,11 +164,15 @@ def _reroute_legacy_reverse_from_mellat(payment):
 def _apply_full(payment, parsed):
     v60._apply_full(payment, parsed)
     _reroute_legacy_apply_from_mellat(payment)
+    if payment.payee.startswith(PERSON_PAYEE_PREFIX):
+        _adjust_person_payment(payment.payee, -int(payment.amount or 0))
     if payment.payee == SELF_PAYEE:
         adjust_self_tracking(int(payment.amount or 0))
 
 
 def _reverse_full(payment):
+    if payment.payee.startswith(PERSON_PAYEE_PREFIX):
+        _adjust_person_payment(payment.payee, int(payment.amount or 0))
     if payment.payee == SELF_PAYEE:
         adjust_self_tracking(-int(payment.amount or 0))
     v60._reverse_full(payment)
@@ -131,7 +198,8 @@ def _save_payment_fields(payment, parsed):
 def _payment_rows():
     rows = v60._payment_rows()
     for row in rows:
-        row.payee_label = PAYEE_LABELS.get(row.payee, row.payee)
+        person_row = _person_row_for_payee(row.payee)
+        row.payee_label = f"شخص — {person_row.title}" if person_row else PAYEE_LABELS.get(row.payee, row.payee)
         row.source_account_label = SOURCE_LABELS.get(_payment_source(row), "ملت")
     return rows
 
