@@ -295,6 +295,12 @@ def payment_add(request):
                 request,
                 f"پرداخت به خودم {parsed['paid']:,} تومان از حساب {source_label} ثبت شد؛ سرمایه به همین مقدار کم شد و حساب «خودم» به همین مقدار زیاد شد.",
             )
+        elif person_id_from_payee(parsed["payee"]) is not None:
+            messages.success(
+                request,
+                f"پرداخت به «{_payee_label(parsed['payee'])}» از حساب {source_label} ثبت شد؛ "
+                f"{parsed['paid']:,} تومان از مانده حساب شخص کم شد.",
+            )
         elif parsed["purchase"]:
             messages.success(
                 request,
@@ -344,6 +350,7 @@ def payment_delete(request, payment_id):
         with transaction.atomic():
             payment = get_object_or_404(BusinessPayment.objects.select_for_update(), id=payment_id)
             was_self = payment.payee == SELF_PAYEE
+            person_label = _payee_label(payment.payee) if person_id_from_payee(payment.payee) is not None else ""
             amount = int(payment.amount or 0)
             source_label = SOURCE_LABELS.get(_payment_source(payment), "ملت")
             _reverse_full(payment)
@@ -352,6 +359,11 @@ def payment_delete(request, payment_id):
             messages.success(
                 request,
                 f"پرداخت به خودم {amount:,} تومان حذف شد؛ مبلغ به حساب {source_label} برگشت و از حساب «خودم» کم شد.",
+            )
+        elif person_label:
+            messages.success(
+                request,
+                f"پرداخت «{person_label}» حذف شد؛ مبلغ به حساب {source_label} و مانده حساب شخص برگشت.",
             )
         else:
             messages.success(request, f"پرداخت حذف شد و اثر مالی/موجودی خودش به حساب {source_label} برگشت.")
