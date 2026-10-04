@@ -142,7 +142,7 @@ def payments(request):
             "today_j": format_jalali(date.today()),
             **finance_kpis(),
             "receipt_source_choices": receipts_v64.SOURCE_CHOICES,
-            "payees": v62.PAYEE_CHOICES,
+            "payees": v62.person_payee_choices(),
             "payment_source_choices": SOURCE_CHOICES,
             "material_colors": list(COLOR_LABELS.items()),
             "payment_month_total": payment_month_total,
