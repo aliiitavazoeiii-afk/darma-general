@@ -25,10 +25,11 @@ in numeric order through:
 - `docs/PROJECT_CONTEXT/53_NATIVE_FINANCE_NAV_V103.md`
 - `docs/PROJECT_CONTEXT/54_FINANCE_KPIS_CALCULATOR_V104.md`
 - `docs/PROJECT_CONTEXT/55_MARGIN_CODE_SUMMARY_MATERIAL_KPIS_V105.md`
+- `docs/PROJECT_CONTEXT/56_PERSON_PAYMENTS_THREE_DELIVERIES_V106.md`
 
 ## Current authoritative development line
 
-`v105-margin-code-summary-material-kpis`
+`v106-person-payments-three-deliveries`
 
 V100 and V101 diverged from V99. V101 is **not** a superset of V100 and its restored Finance submenu conflicts with the user's final requirement.
 
@@ -88,3 +89,16 @@ The requested all-page average finished-cost KPI is intentionally deferred becau
 V105 is production-confirmed only after:
 
 `SUCCESS: MARGIN + MATERIAL KPI V105 DEPLOYED`
+
+
+## V106 corrected continuation after lineage mistake
+
+V106 continues **V105 directly**. The sibling branch `v102-person-payments-three-deliveries` was mistakenly based on obsolete V101 and must never be used as an authoritative base.
+
+V106 preserves the V103 native direct Finance link, the V104 Finance KPIs/calculator, and the V105 calculator/material KPI corrections, then adds only:
+- dynamic person-account payees with atomic balance/source-account reverse semantics;
+- three internal tailor-delivery boxes per existing output cell, with the existing summed target remaining authoritative.
+
+V106 is production-confirmed only after:
+
+`SUCCESS: V105 RESTORED + PERSON PAYMENTS + THREE DELIVERIES V106 DEPLOYED`
