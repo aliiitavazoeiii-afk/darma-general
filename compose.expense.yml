@@ -14,7 +14,7 @@ services:
       EXPENSE_USE_HTTPS: "1"
     entrypoint: ["/bin/sh", "/app/expense_entrypoint.sh"]
     ports:
-      - "${EXPENSE_BIND:-0.0.0.0}:${EXPENSE_PORT:-8011}:8000"
+      - "${EXPENSE_BIND:-127.0.0.1}:${EXPENSE_PORT:-8011}:8000"
     networks:
       - darma_main
 
