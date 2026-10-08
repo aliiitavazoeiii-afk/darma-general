@@ -119,10 +119,13 @@ def _summarize_open_base_colors(blocks):
     rows = []
     for key, label in BASE_COLOR_PROGRESS:
         expected = delivered = pending = open_blocks = 0
+        fabric_codes = set()
+        uncoded_rolls = 0
         for block in blocks:
             if getattr(block.brand, "name", "") != "دارما":
                 continue
-            cut = max(0, v23.v20._int(((block.input_data or {}).get(key) or {}).get("cut")))
+            values = ((block.input_data or {}).get(key) or {})
+            cut = max(0, v23.v20._int(values.get("cut")))
             applied = sum(
                 max(0, int(item.quantity or 0))
                 for item in block.output_applications.all()
@@ -134,9 +137,21 @@ def _summarize_open_base_colors(blocks):
             delivered += applied
             pending += cut - applied
             open_blocks += 1
+
+            # Keep roll counting aligned with the existing monthly KPI semantics:
+            # one unique fabric code = one roll; uncoded positive-weight rows count
+            # as one roll each. Scope is the same OPEN work used by this color card.
+            code = str(values.get("fabric_code") or "").strip()
+            weight = max(_decimal(values.get("weight")), Decimal("0"))
+            if code:
+                fabric_codes.add(code)
+            elif weight > 0:
+                uncoded_rolls += 1
+
         rows.append({
             "key": key,
             "label": label,
+            "roll_count": len(fabric_codes) + uncoded_rolls,
             "expected": int(expected),
             "delivered": int(delivered),
             "pending": int(pending),
