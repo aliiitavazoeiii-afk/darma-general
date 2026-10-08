@@ -142,3 +142,10 @@ V101's expandable Finance submenu is superseded by V102 and must not be reintrod
 **Canonical future development line after production confirmation:** `stable-final-2026-10-04`.
 
 After `SUCCESS: FINAL STABLE BASELINE V108 DEPLOYED`, do not start new work from older V97-V107 branches.
+
+
+## V109 material color rolls + collapsed-summary UI
+
+58. `58_MATERIAL_COLOR_ROLLS_SUMMARY_UI_V109.md` — based directly on the V108 stable baseline; adds per-color open-work fabric-roll counts to the five base-color cards and stacks/enlarges the collapsed material-sheet summary labels without changing business logic.
+
+**Current feature line:** `v109-material-color-rolls-summary-ui`.
