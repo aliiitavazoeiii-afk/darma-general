@@ -20,7 +20,7 @@
     <div class="material-color-progress-title">کار باز پنج رنگ اصلی — برش ثبت‌شده در برابر تحویل واقعاً اعمال‌شده</div>
     <div class="material-color-progress-grid">
       {% for item in material_base_color_progress %}
-      <div class="material-color-progress-card {% if not item.pending %}is-done{% endif %}" data-base-color="{{ item.key }}">
+      <div class="material-color-progress-card {% if not item.pending %}is-done{% endif %}" data-base-color="{{ item.key }}" data-roll-count="{{ item.roll_count }}">
         <h4>{{ item.label }}</h4>
         <div class="material-color-progress-rolls"><span>تعداد طاقه تحویلی</span><b>{{ item.roll_count|groupnum }}</b></div>
         <div class="material-color-progress-row"><span>باید تحویل شود</span><b>{{ item.expected|groupnum }}</b></div>
