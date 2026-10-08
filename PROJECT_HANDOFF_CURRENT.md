@@ -27,6 +27,7 @@ in numeric order through:
 - `docs/PROJECT_CONTEXT/55_MARGIN_CODE_SUMMARY_MATERIAL_KPIS_V105.md`
 - `docs/PROJECT_CONTEXT/56_PERSON_PAYMENTS_THREE_DELIVERIES_V106.md`
 - `docs/PROJECT_CONTEXT/57_FINAL_STABLE_BASELINE_V108.md`
+- `docs/PROJECT_CONTEXT/58_MATERIAL_COLOR_ROLLS_SUMMARY_UI_V109.md`
 
 ## Current authoritative development line
 
@@ -122,3 +123,18 @@ Required final marker:
 `SUCCESS: FINAL STABLE BASELINE V108 DEPLOYED`
 
 After that marker, do not start future work from older V97-V107 branches.
+
+
+## V109 material-report presentation continuation
+
+Development branch: `v109-material-color-rolls-summary-ui`.
+
+V109 is based directly on `stable-final-2026-10-04` and changes only material-report read-only summary/presentation:
+- per-color open-work roll count;
+- vertically stacked, larger collapsed-sheet summary text.
+
+V108 remains the locked baseline regression and must pass during V109 deployment.
+
+V109 is production-confirmed only after:
+
+`SUCCESS: MATERIAL COLOR ROLLS + SUMMARY UI V109 DEPLOYED`
