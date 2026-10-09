@@ -149,3 +149,10 @@ After `SUCCESS: FINAL STABLE BASELINE V108 DEPLOYED`, do not start new work from
 58. `58_MATERIAL_COLOR_ROLLS_SUMMARY_UI_V109.md` — based directly on the V108 stable baseline; adds per-color open-work fabric-roll counts to the five base-color cards and stacks/enlarges the collapsed material-sheet summary labels without changing business logic.
 
 **Current feature line:** `v109-material-color-rolls-summary-ui`.
+
+
+## V110 compact material summary box grid
+
+59. `59_COMPACT_MATERIAL_SUMMARY_BOX_GRID_V110.md` — continues V109 and restores the saved material-sheet collapsed header to a compact horizontal five-box desktop layout while preserving V109 color-roll cards, V106 three-delivery semantics, and the V108 stable baseline.
+
+**Current feature line:** `v110-material-summary-box-grid`.
