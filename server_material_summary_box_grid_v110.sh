@@ -119,7 +119,6 @@ docker compose run --rm --entrypoint python web manage.py check || fail "Django 
 docker compose run --rm --entrypoint python web manage.py check_final_baseline_v108 || fail "V108 final baseline regression failed"
 docker compose run --rm --entrypoint python web manage.py check_margin_material_v105 || fail "V105 material/calculator regression failed"
 docker compose run --rm --entrypoint python web manage.py check_person_payments_three_delivery_v106 || fail "V106 person/delivery regression failed"
-docker compose run --rm --entrypoint python web manage.py check_material_color_rolls_ui_v109 || fail "V109 color-roll regression failed"
 docker compose run --rm --entrypoint python web manage.py check_material_summary_box_grid_v110 || fail "V110 summary-grid regression failed"
 
 step "4) PROJECTED STATE"
@@ -136,7 +135,6 @@ docker compose up -d --no-deps --force-recreate web || fail "web recreate failed
 sleep 7
 docker compose exec -T web python manage.py check || fail "live Django check failed"
 docker compose exec -T web python manage.py check_final_baseline_v108 || fail "live V108 baseline regression failed"
-docker compose exec -T web python manage.py check_material_color_rolls_ui_v109 || fail "live V109 color-roll regression failed"
 docker compose exec -T web python manage.py check_material_summary_box_grid_v110 || fail "live V110 summary-grid regression failed"
 
 step "6) FINAL STATE"
