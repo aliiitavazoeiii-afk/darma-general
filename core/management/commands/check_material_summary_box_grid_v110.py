@@ -6,6 +6,7 @@ from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.template.loader import get_template
 
+from core import material_report_v92
 from core.models import (
     AccountEntry,
     AppSetting,
@@ -115,6 +116,63 @@ class Command(BaseCommand):
                     f"Pending delivery status escaped the compact output box: {marker}"
                 )
 
+        # V109 preservation: verify the five color cards still expose the
+        # per-color OPEN-work roll count using the existing V109 rule.
+        objects = list(
+            MaterialReportBlock.objects.select_related("brand")
+            .prefetch_related("output_applications")
+            .all()
+        )
+        rows = material_report_v92._summarize_open_base_colors(objects)
+        expected_keys = list(material_report_v92.v23.BASE_KEYS)
+        if [row["key"] for row in rows] != expected_keys:
+            raise RuntimeError("V109 base-color coverage/order drift under V110")
+
+        for row in rows:
+            codes = set()
+            uncoded = 0
+            for block in objects:
+                if getattr(block.brand, "name", "") != "دارما":
+                    continue
+                values = ((block.input_data or {}).get(row["key"]) or {})
+                cut = max(
+                    0,
+                    material_report_v92.v23.v20._int(values.get("cut")),
+                )
+                applied = sum(
+                    max(0, int(item.quantity or 0))
+                    for item in block.output_applications.all()
+                    if item.model_key == row["key"]
+                )
+                if cut <= applied:
+                    continue
+
+                code = str(values.get("fabric_code") or "").strip()
+                weight = max(
+                    material_report_v92._decimal(values.get("weight")),
+                    material_report_v92.Decimal("0"),
+                )
+                if code:
+                    codes.add(code)
+                elif weight > 0:
+                    uncoded += 1
+
+            manual_rolls = len(codes) + uncoded
+            if int(row["roll_count"]) != manual_rolls:
+                raise RuntimeError(
+                    f"V109 roll count mismatch {row['key']}: "
+                    f"{row['roll_count']} != {manual_rolls}"
+                )
+
+        v92_source = (
+            Path(settings.BASE_DIR) / "templates/core/material_report_v92.html"
+        ).read_text(encoding="utf-8")
+        if v92_source.count('data-base-color="{{ item.key }}"') != 1:
+            raise RuntimeError("V109 base-color card template marker drifted")
+        for marker in ("طاقه تحویلی", "item.roll_count", "باید تحویل شود", "تحویل‌شده", "مانده"):
+            if marker not in v92_source:
+                raise RuntimeError(f"V109 color-roll card marker missing: {marker}")
+
         # Existing V106 three-delivery UI is still present.
         if "delivery-split" not in source or "part.name" not in source:
             raise RuntimeError("Three-delivery UI disappeared from material report")
@@ -127,7 +185,7 @@ class Command(BaseCommand):
         self.stdout.write("COLLAPSED HEIGHT = COMPACT HORIZONTAL LAYOUT")
         self.stdout.write("MODEL / FABRIC / MATERIAL / DELIVERY = SEPARATE BOXES")
         self.stdout.write("PENDING OUTPUT STATUS = KEPT INSIDE DELIVERY BOX")
-        self.stdout.write("V109 COLOR ROLL CARDS = UNTOUCHED")
+        self.stdout.write("V109 COLOR ROLL CARDS + ROLL COUNTS = VERIFIED")
         self.stdout.write("THREE DELIVERY INPUTS = PRESERVED")
         self.stdout.write("NO BUSINESS STATE WRITE = OK")
         self.stdout.write(self.style.SUCCESS(
