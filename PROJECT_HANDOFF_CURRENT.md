@@ -28,6 +28,7 @@ in numeric order through:
 - `docs/PROJECT_CONTEXT/56_PERSON_PAYMENTS_THREE_DELIVERIES_V106.md`
 - `docs/PROJECT_CONTEXT/57_FINAL_STABLE_BASELINE_V108.md`
 - `docs/PROJECT_CONTEXT/58_MATERIAL_COLOR_ROLLS_SUMMARY_UI_V109.md`
+- `docs/PROJECT_CONTEXT/59_COMPACT_MATERIAL_SUMMARY_BOX_GRID_V110.md`
 
 ## Current authoritative development line
 
@@ -138,3 +139,18 @@ V108 remains the locked baseline regression and must pass during V109 deployment
 V109 is production-confirmed only after:
 
 `SUCCESS: MATERIAL COLOR ROLLS + SUMMARY UI V109 DEPLOYED`
+
+
+## V110 compact material-sheet summary
+
+Development branch: `v110-material-summary-box-grid`.
+
+V110 continues V109 and changes only the collapsed material-sheet summary layout:
+- five horizontal desktop boxes;
+- compact height close to the old layout;
+- pending output status stays inside the delivery box;
+- all V109 color-roll cards and V108/V106 logic are preserved.
+
+Production confirmation marker:
+
+`SUCCESS: COMPACT MATERIAL SUMMARY BOX GRID V110 DEPLOYED`
