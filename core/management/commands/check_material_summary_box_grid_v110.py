@@ -92,17 +92,30 @@ class Command(BaseCommand):
             if marker in source:
                 raise RuntimeError(f"V109 tall vertical summary returned: {marker}")
 
-        # The desktop summary has exactly five semantic boxes in the template.
-        for class_name in (
-            "summary-brand-box",
-            "summary-models-box",
-            "summary-codes-box",
-            "summary-material-box",
-            "summary-output-box",
-        ):
-            if source.count(class_name) != 1:
+        # Five boxes render per sheet. The material-status box has TWO
+        # mutually exclusive Django-template branches (applied / pending), so
+        # its class occurs twice in source but only once in rendered HTML.
+        expected_template_counts = {
+            "summary-brand-box": 1,
+            "summary-models-box": 1,
+            "summary-codes-box": 1,
+            "summary-material-box": 2,
+            "summary-output-box": 1,
+        }
+        for class_name, expected_count in expected_template_counts.items():
+            actual_count = source.count(class_name)
+            if actual_count != expected_count:
                 raise RuntimeError(
-                    f"Expected exactly one {class_name} marker, got {source.count(class_name)}"
+                    f"Expected {expected_count} {class_name} template markers, "
+                    f"got {actual_count}"
+                )
+        for status_marker in (
+            'class="apply-state applied summary-material-box"',
+            'class="apply-state pending summary-material-box"',
+        ):
+            if status_marker not in source:
+                raise RuntimeError(
+                    f"One of the two material-status template branches is missing: {status_marker}"
                 )
 
         # Pending increase/reduction must stay INSIDE output box rather than
