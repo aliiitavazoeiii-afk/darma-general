@@ -95,7 +95,7 @@ PRE=$(snapshot_exec) || fail "pre snapshot failed"
 echo "$PRE"
 
 step "2) VERIFY V110 SCOPE"
-git cat-file -e "$BASE^{commit}" || fail "V108 stable base missing"
+git cat-file -e "$BASE^{commit}" || fail "V109 base commit missing"
 CHANGED=$(git diff --name-only "$BASE"..HEAD)
 echo "$CHANGED"
 for f in $CHANGED; do
@@ -110,7 +110,7 @@ for f in $CHANGED; do
   esac
 done
 
-git diff --quiet "$BASE"..HEAD --   core/models.py core/models_final.py core/finance.py   core/report_v10.py core/capital_history_v87.py   core/business_tools_v62.py core/business_tools_v91.py   core/business_receipts_v64.py core/payment_source_v63.py   core/finance_center_v97.py core/calculator_v37.py   core/material_report_v23.py core/material_flow.py   core/inventory_v20.py core/inventory_operations_v15.py   core/inventory_operations_v16.py core/inventory_operations_v17.py   core/darma_cost_v55.py core/novani_cost_v59.py   core/takvin_pricing_v17.py core/sale_price_v60.py   || fail "protected business/accounting/material source changed"
+git diff --quiet "$BASE"..HEAD --   core/models.py core/models_final.py core/finance.py   core/report_v10.py core/capital_history_v87.py   core/business_tools_v62.py core/business_tools_v91.py   core/business_receipts_v64.py core/payment_source_v63.py   core/finance_center_v97.py core/calculator_v37.py   core/material_report_v23.py core/material_report_v92.py core/material_flow.py   core/inventory_v20.py core/inventory_operations_v15.py   core/inventory_operations_v16.py core/inventory_operations_v17.py   core/darma_cost_v55.py core/novani_cost_v59.py   core/takvin_pricing_v17.py core/sale_price_v60.py   || fail "protected business/accounting/material source changed"
 
 step "3) BUILD + REGRESSIONS"
 build_web || fail "web build failed"
