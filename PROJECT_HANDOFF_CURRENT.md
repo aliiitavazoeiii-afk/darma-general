@@ -193,3 +193,5 @@ Newest line: `v113-unit-production-cost-calculator` based on V112. Adds third re
 
 ## V114 CLEAN SIDEBAR — PARALLEL UI BRANCH
 Branch `v114-clean-icon-sidebar-navigation` based on V113. Nine direct icon nav links; production renamed in nav only; Returns now in Inventory; Digikala is a single header; Finance is called حسابداری; Definitions opens two-card landing with original setup under /settings/initial/. No DB/schema/business logic edits. Other-chat UI branches should merge carefully (especially templates/base.html). Confirm only with `SUCCESS: CLEAN ICON SIDEBAR V114 DEPLOYED`.
+
+V115 sidebar polish branch: `v115-sidebar-smooth-lucide-icons` from V114. SVG icons, non-jittering pointer hysteresis, «خرید تکوین» label. Parallel UI branch: merge deliberately. Check `check_smooth_sidebar_v115`.
