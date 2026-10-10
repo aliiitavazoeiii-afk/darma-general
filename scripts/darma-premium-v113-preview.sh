@@ -5,7 +5,6 @@ set -Eeuo pipefail
 # All source downloads are pinned to reviewed immutable Git commit IDs.
 cd /opt/darma-general
 umask 077
-REPO="https://raw.githubusercontent.com/aliiitavazoeiii-afk/darma-general"
 BASE_REF="0f2be2cc6bcd7e6753dcf9bbdbf89f4e74a98e67"
 PREVIEW_REF="848d77da744e7bbcf395176b0ea8e6faa7636786"
 STATE=/root/darma-premium-preview-v113
@@ -34,10 +33,14 @@ if ! docker exec "$CID" sh -c 'tr "\000" " " </proc/1/cmdline | grep -q gunicorn
 fi
 
 mkdir -p "$STATE"
-echo "Downloading pinned baseline and visual-only theme..."
-curl -fsSL --retry 3 "$REPO/$BASE_REF/templates/base.html" -o "$STATE/base-from-v113.html"
-curl -fsSL --retry 3 "$REPO/$PREVIEW_REF/templates/base.html" -o "$STATE/preview-base.html"
-curl -fsSL --retry 3 "$REPO/$PREVIEW_REF/static/core/darma-premium-theme.css" -o "$STATE/theme.css"
+echo "Loading reviewed UI files from Git objects; no source checkout..."
+if ! git cat-file -e "$PREVIEW_REF^{commit}" 2>/dev/null; then
+  echo "STOP: Preview commit not fetched. Run the provided git fetch command first." >&2
+  exit 1
+fi
+git show "$BASE_REF:templates/base.html" > "$STATE/base-from-v113.html"
+git show "$PREVIEW_REF:templates/base.html" > "$STATE/preview-base.html"
+git show "$PREVIEW_REF:static/core/darma-premium-theme.css" > "$STATE/theme.css"
 
 echo "Saving current running template for exact rollback..."
 docker cp "$CID:/app/templates/base.html" "$STATE/original-base.html"
