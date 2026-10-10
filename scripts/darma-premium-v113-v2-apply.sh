@@ -8,7 +8,7 @@ cd /opt/darma-general
 umask 077
 BASE="0f2be2cc6bcd7e6753dcf9bbdbf89f4e74a98e67"
 V1="848d77da744e7bbcf395176b0ea8e6faa7636786"
-V2="0464b44b66e3f93297ee5509c2e037e317ad75ca"
+V2="5ac356651ae97ff1f2bdd8024d3eadffe8431870"
 STATE="/root/darma-premium-preview-v113"
 ROLLBACK="/root/darma-premium-v113-rollback.sh"
 
