@@ -33,4 +33,6 @@ if ! docker exec "$current_cid" sh -c '! grep -q "darma-premium-theme.css" /app/
   echo "ERROR: Preview stylesheet link is still present." >&2
   exit 1
 fi
+rm -f "$STATE/container-id"
 echo "SUCCESS: Original V113 appearance restored; business files and database untouched."
+echo "Preview may be run again after the next approved styling revision."
