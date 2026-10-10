@@ -128,7 +128,7 @@ step "3) BUILD + ADDITIVE MIGRATION"
 build_web || fail "web build failed"
 docker compose run --rm --entrypoint python web manage.py makemigrations --check --dry-run || fail "migration drift"
 docker compose run --rm --entrypoint python web manage.py check || fail "Django check failed"
-docker compose exec -T web python manage.py showmigrations core | grep -Eq '^[[:space:]]*\\[X\\] 0014_novani_s_size' || fail "core migration 0014 is not yet applied; stop for manual audit"
+docker compose exec -T web python manage.py showmigrations core | grep -Fq "[X] 0014_novani_s_size" || fail "core migration 0014 is not yet applied; stop for manual audit"
 docker compose run --rm --entrypoint python web manage.py migrate core 0015_productcode_title --noinput || fail "additive ProductCode title migration failed"
 
 step "3B) FULL REGRESSIONS BEFORE LIVE SWITCH"
