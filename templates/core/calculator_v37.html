@@ -3,8 +3,8 @@
 {% block content %}
 {% include 'core/_mobile_shell.html' %}
 <style>
-.calc104-tools{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px}
-.calc104-card{overflow:hidden}
+.calc104-tools{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-bottom:24px}
+.calc104-card{overflow:hidden}.calc113-inputs{display:grid;grid-template-columns:1fr 1fr;gap:10px}.calc113-inputs label{font-size:.77rem}.calc113-inputs .form-control{min-width:0}.calc113-kpi{border:1px solid rgba(18,183,106,.3);background:rgba(18,183,106,.055);border-radius:12px;padding:13px;margin-top:14px}.calc113-kpi strong{font-size:1.5rem;display:block}.calc113-breakdown{display:grid;grid-template-columns:1fr;gap:7px;margin-top:11px}.calc113-breakdown>div{display:flex;align-items:center;justify-content:space-between;gap:8px;border-bottom:1px solid rgba(255,255,255,.08);padding-bottom:6px;font-size:.8rem}.calc113-breakdown b{white-space:nowrap}.calc113-help{font-size:.75rem;color:#9fb0c4;margin-top:10px;line-height:1.8}
 .calc104-card .card-header{align-items:flex-start}
 .calc104-card .card-body{padding:20px}
 .calc104-form-grid{display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end}
@@ -41,7 +41,7 @@
   <div>
     <div class="page-kicker">قیمت و سود</div>
     <h1 class="page-title mb-1">محاسبه‌گر</h1>
-    <div class="page-muted">محاسبه قیمت فروش با حاشیه سود هدف، محاسبه سود یک قیمت، و خلاصه سوددهی کدهای دارما و تکوین.</div>
+    <div class="page-muted">محاسبه قیمت فروش، سود خالص و بهای تولید هر عدد کالا؛ به‌همراه خلاصه سوددهی دارما و تکوین.</div>
   </div>
   <a class="btn btn-outline-light" href="{% url 'finance' %}">مالی و ابزار</a>
 </div>
@@ -68,6 +68,28 @@
         <button class="btn btn-primary" type="submit">محاسبه سود</button>
       </form>
       <div id="calcResult" class="mt-4"><div class="empty-state py-4">قیمت فروش و قیمت تمام‌شده را وارد کن.</div></div>
+    </div>
+  </div>
+  <div class="card glass-strong calc104-card" data-calculator-box="production-cost">
+    <div class="card-header"><div><h3 class="card-title mb-1">محاسبه قیمت تمام‌شده</h3><div class="text-secondary small">هزینه تولید یک عدد شورت از روی مصرف یک طاقه پارچه و کش و مزد هر جین.</div></div></div>
+    <div class="card-body">
+      <div class="calc113-inputs" id="productionCostInputs">
+        <div><label class="form-label" for="pcFabricPrice">قیمت هر کیلو پارچه</label><div class="input-group"><input id="pcFabricPrice" class="form-control" type="number" min="0" step="any" inputmode="decimal" placeholder="مثلاً ۲۵۰۰۰۰"><span class="input-group-text">تومان</span></div></div>
+        <div><label class="form-label" for="pcFabricWeight">وزن هر طاقه پارچه</label><div class="input-group"><input id="pcFabricWeight" class="form-control" type="number" min="0.001" step="any" inputmode="decimal" value="20"><span class="input-group-text">کیلو</span></div></div>
+        <div><label class="form-label" for="pcCutCount">تعداد برش هر طاقه</label><div class="input-group"><input id="pcCutCount" class="form-control" type="number" min="1" step="1" inputmode="numeric" value="750"><span class="input-group-text">عدد</span></div></div>
+        <div><label class="form-label" for="pcElasticWeight">کش مصرفی برای هر طاقه</label><div class="input-group"><input id="pcElasticWeight" class="form-control" type="number" min="0" step="any" inputmode="decimal" value="5"><span class="input-group-text">کیلو</span></div></div>
+        <div><label class="form-label" for="pcElasticPrice">قیمت هر کیلو کش</label><div class="input-group"><input id="pcElasticPrice" class="form-control" type="number" min="0" step="any" inputmode="decimal" placeholder="مثلاً ۱۵۰۰۰۰"><span class="input-group-text">تومان</span></div></div>
+        <div><label class="form-label" for="pcDozenWage">مزد دوخت هر جین (۱۲ عدد)</label><div class="input-group"><input id="pcDozenWage" class="form-control" type="number" min="0" step="any" inputmode="decimal" value="110000"><span class="input-group-text">تومان</span></div></div>
+      </div>
+      <div class="calc113-kpi" aria-live="polite"><div class="text-secondary small">قیمت تمام‌شده هر عدد کالا</div><strong id="pcUnitTotal">—</strong><div class="small text-secondary">تومان</div></div>
+      <div class="calc113-breakdown" aria-live="polite">
+        <div><span>سهم پارچه در هر عدد</span><b id="pcUnitFabric">—</b></div>
+        <div><span>سهم کش در هر عدد</span><b id="pcUnitElastic">—</b></div>
+        <div><span>مزد دوخت هر عدد</span><b id="pcUnitWage">—</b></div>
+        <div><span>هزینه کل یک طاقه (پارچه + کش + دوخت)</span><b id="pcRollTotal">—</b></div>
+      </div>
+      <div id="pcUnitError" class="text-warning small mt-2" role="status"></div>
+      <div class="calc113-help">فرمول: (وزن پارچه × قیمت هر کیلو پارچه + وزن کش × قیمت هر کیلو کش) ÷ تعداد برش + مزد هر جین ÷ ۱۲. این محاسبه فقط نمایشی است و قیمت واقعی کالا، موجودی، حسابداری یا قوانین تولید را تغییر نمی‌دهد.</div>
     </div>
   </div>
 </div>
@@ -153,6 +175,36 @@
 {% endfor %}
 
 <script>
+(function(){
+  const fields=['pcFabricPrice','pcFabricWeight','pcCutCount','pcElasticWeight','pcElasticPrice','pcDozenWage'];
+  const byId=id=>document.getElementById(id);
+  const money=value=>Math.round(value).toLocaleString('en-US');
+  function render(){
+    const values=fields.map(id=>byId(id).value.trim());
+    const out=['pcUnitTotal','pcUnitFabric','pcUnitElastic','pcUnitWage','pcRollTotal'];
+    const invalid=values.some((v,i)=>!v || !Number.isFinite(Number(v)) || Number(v)<0 || ((i===1||i===2)&&Number(v)<=0));
+    if(invalid){
+      out.forEach(id=>byId(id).textContent='—');
+      byId('pcUnitError').textContent='برای محاسبه، قیمت پارچه و کش را وارد کن؛ وزن طاقه و تعداد برش باید بیشتر از صفر باشند.';
+      return;
+    }
+    const [fabricPrice,fabricWeight,cutCount,elasticWeight,elasticPrice,dozenWage]=values.map(Number);
+    const fabricTotal=fabricPrice*fabricWeight;
+    const elasticTotal=elasticPrice*elasticWeight;
+    const wageUnit=dozenWage/12;
+    const rollCost=fabricTotal+elasticTotal+wageUnit*cutCount;
+    const results=[rollCost/cutCount,fabricTotal/cutCount,elasticTotal/cutCount,wageUnit,rollCost];
+    if(results.some(x=>!Number.isFinite(x))){
+      out.forEach(id=>byId(id).textContent='—');
+      byId('pcUnitError').textContent='اعداد واردشده خارج از محدوده محاسبه هستند.';
+      return;
+    }
+    out.forEach((id,i)=>byId(id).textContent=money(results[i]));
+    byId('pcUnitError').textContent='';
+  }
+  fields.forEach(id=>byId(id).addEventListener('input',render));
+  render();
+})();
 document.querySelectorAll('.calc105-code-toggle').forEach(function(btn){
   btn.addEventListener('click',function(){
     var row=document.getElementById(btn.dataset.target);
