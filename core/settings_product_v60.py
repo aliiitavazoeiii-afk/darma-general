@@ -55,6 +55,7 @@ def settings_product_form(request, product_id=None):
 
     form_brand_id = product.brand_id if product else (brands.first().id if brands.exists() else None)
     form_code = product.code if product else ""
+    form_title = product.title if product else ""
     form_pack_qty = product.pack_qty if product else 1
     form_note = product.note if product else ""
     form_active = product.active if product else True
@@ -70,6 +71,7 @@ def settings_product_form(request, product_id=None):
     if request.method == "POST":
         form_brand_id = _to_int(request.POST.get("brand"))
         form_code = (request.POST.get("code") or "").strip()
+        form_title = (request.POST.get("title") or "").strip()
         form_pack_qty = max(1, _to_int(request.POST.get("pack_qty"), 1))
         form_note = (request.POST.get("note") or "").strip()
         form_active = bool(request.POST.get("active"))
@@ -114,6 +116,10 @@ def settings_product_form(request, product_id=None):
 
         if not form_code:
             errors.append("کد محصول را وارد کن.")
+        if not form_title:
+            errors.append("عنوان محصول را وارد کن.")
+        if len(form_title) > 160:
+            errors.append("عنوان محصول نباید بیشتر از ۱۶۰ کاراکتر باشد.")
         variable_color = brand.name == "دارما" and is_variable_color_product_code(form_code)
         if variable_color:
             expected_pack = int(variable_color_pack_qty(form_code) or 1)
@@ -152,6 +158,7 @@ def settings_product_form(request, product_id=None):
                 product = ProductCode()
             product.brand = brand
             product.code = form_code
+            product.title = form_title
             product.pack_qty = form_pack_qty
             product.note = form_note
             product.active = form_active
@@ -211,7 +218,7 @@ def settings_product_form(request, product_id=None):
                 )
             else:
                 messages.success(request, f"کد {product.code} ذخیره شد.")
-            return redirect("settings_products")
+            return redirect("/settings/products/?section=colors")
 
         for err in errors:
             messages.error(request, err)
@@ -288,6 +295,7 @@ def settings_product_form(request, product_id=None):
             "size_rows": size_rows,
             "form_brand_id": form_brand_id,
             "form_code": form_code,
+            "form_title": form_title,
             "form_pack_qty": form_pack_qty,
             "form_note": form_note,
             "form_active": form_active,
