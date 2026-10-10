@@ -26,6 +26,7 @@ from .models import (
     MaterialReportBlock,
     MaterialReportConsumption,
     MaterialReportOutputApplied,
+    MaterialReportOutputLocation,
     RawMaterialStock,
     Size,
     StockBalance,
@@ -560,13 +561,14 @@ def _model_unit_cost(block, model_key, current_cost):
     return value if value > 0 else int(current_cost or 61000)
 
 
-def _sync_darma_stock_costed(block, model_key, size_key, delta):
+def _sync_darma_stock_costed(block, model_key, size_key, delta, destination=None):
     if delta == 0:
         return
-    brand, color, size, destination, _destination_label, label, size_name = _production_objects(
+    brand, color, size, default_destination, _destination_label, label, size_name = _production_objects(
         block, model_key, size_key
     )
-    if brand.name != "دارما" or destination.key != StockLocation.KHORSHID:
+    destination = destination or default_destination
+    if brand.name != "دارما" or destination.key not in {StockLocation.KHORSHID, StockLocation.HOME}:
         raise ValueError("مسیر موجودی تولید دارما معتبر نیست.")
 
     stock, _ = StockBalance.objects.get_or_create(
@@ -598,7 +600,7 @@ def _sync_darma_stock_costed(block, model_key, size_key, delta):
 
     if int(stock.qty or 0) < qty:
         raise ValueError(
-            f"برای کاهش تحویل، موجودی {label} / {size_name} در خورشید کافی نیست. "
+            f"برای کاهش تحویل، موجودی {label} / {size_name} در {destination.title} کافی نیست. "
             "هیچ تغییری اعمال نشد."
         )
     remaining_total = total_before - qty
@@ -673,10 +675,56 @@ def sync_report_consumption(block):
             )
 
 
-def _sync_output(block):
+def _output_destination(brand, destination_key=None):
+    """Choose one warehouse for NEW output only; older applied pieces do not move."""
+    default, default_title = v20._destination_for_brand(brand)
+    if not destination_key:
+        # Compatibility for existing internal calls and legacy tests.
+        return default, default_title
+    key = str(destination_key).strip()
+    allowed = {StockLocation.HOME, StockLocation.KHORSHID} if brand.name == "دارما" else {StockLocation.HOME}
+    if key not in allowed:
+        raise ValueError("انبار مقصد مجاز نیست؛ برای دارما «خانه» یا «خورشید» را انتخاب کن.")
+    location = StockLocation.objects.filter(key=key).first()
+    if location is None:
+        raise ValueError("انبار مقصد در سیستم موجودی تعریف نشده است.")
+    if brand.name == "دارما":
+        return location, "خانه دارما" if key == StockLocation.HOME else "خورشید دارما"
+    return location, default_title
+
+
+def _output_location_rows(applied, brand):
+    """Initialize historical allocations only in the old fixed destination.
+
+    The existing MaterialReportOutputApplied.quantity remains the single
+    authoritative per-model/size applied total. Allocation rows are a breakdown
+    of that same total, NEVER additional inventory.
+    """
+    existing = list(
+        MaterialReportOutputLocation.objects.select_for_update()
+        .filter(applied=applied).select_related("location").order_by("location_id")
+    )
+    done = int(applied.quantity or 0)
+    if not existing and done > 0:
+        legacy_destination, _ = v20._destination_for_brand(brand)
+        existing = [
+            MaterialReportOutputLocation.objects.create(
+                applied=applied, location=legacy_destination, quantity=done
+            )
+        ]
+    if sum(int(row.quantity or 0) for row in existing) != done:
+        raise ValueError(
+            "ریز انبارهای این تحویل با تعداد اعمال‌شده سازگار نیست. "
+            "برای جلوگیری از جابه‌جایی یا ثبت دوباره، همگام‌سازی متوقف شد."
+        )
+    return existing
+
+
+def _sync_output(block, destination_key=None):
     if block.brand.name not in {"دارما", "Novani"}:
         raise ValueError("برند صورت مواد معتبر نیست.")
 
+    selected_destination, selected_label = _output_destination(block.brand, destination_key)
     _validate_output_editable(block)
     keys = _active_model_keys(block)
     operations = []
@@ -693,28 +741,54 @@ def _sync_output(block):
                 defaults={"quantity": 0},
             )
             done = int(applied.quantity or 0)
+            location_rows = _output_location_rows(applied, block.brand)
             delta = target - done
             applied_total_before += done
             target_total += target
             if delta == 0:
                 continue
 
-            brand, color, size, destination, destination_label, label, size_name = _production_objects(
+            brand, color, size, _legacy_location, _old_label, label, size_name = _production_objects(
                 block, model_key, size_key
             )
-            stock = StockBalance.objects.select_for_update().filter(
-                brand=brand, color=color, size=size, location=destination
-            ).first()
-            available = int(stock.qty or 0) if stock else 0
-            if delta < 0 and available < abs(delta):
-                raise ValueError(
-                    f"برای حذف {abs(delta)} عدد از {label} / {size_name} موجودی {destination_label} کافی نیست؛ "
-                    f"موجودی فعلی {available} عدد است. هیچ تغییری اعمال نشد."
+            moves = []
+            if delta > 0:
+                # Exactly one destination for every NEW color/size in this click.
+                moves.append((selected_destination, delta))
+            else:
+                # Reverse only quantities attributable to their ACTUAL stock
+                # locations. Prefer the selected destination when it holds any
+                # of this sheet's already-applied pieces; never move old stock.
+                remaining = abs(delta)
+                ordered = sorted(
+                    location_rows,
+                    key=lambda row: (row.location_id != selected_destination.id, row.location_id),
                 )
-            operations.append(
-                (applied, target, delta, brand, color, size, destination, destination_label, label, size_name,
-                 model_key, size_key)
-            )
+                for row in ordered:
+                    removable = min(remaining, int(row.quantity or 0))
+                    if removable:
+                        moves.append((row.location, -removable))
+                        remaining -= removable
+                    if not remaining:
+                        break
+                if remaining:
+                    raise ValueError("مقدار اصلاح از تحویل‌های قبلاً اعمال‌شده بیشتر است.")
+
+            # Validate reduction availability before applying any of the batch.
+            for location, change in moves:
+                if change < 0:
+                    available = int(
+                        StockBalance.objects.select_for_update().filter(
+                            brand=brand, color=color, size=size, location=location
+                        ).values_list("qty", flat=True).first() or 0
+                    )
+                    if available < abs(change):
+                        raise ValueError(
+                            f"برای کاهش {abs(change)} عدد از {label}/{size_name} "
+                            f"موجودی {location.title} کافی نیست (موجودی: {available}). "
+                            "هیچ تغییری اعمال نشد."
+                        )
+            operations.append((applied, target, brand, color, size, label, size_name, model_key, size_key, moves))
 
     wage_ledger = v22._lock_or_initialize_wage_ledger(block, applied_total_before)
     rate = int(v20._dozen_wage())
@@ -723,29 +797,40 @@ def _sync_output(block):
     wage_change = wage_after - wage_before
     details = []
 
-    for (
-        applied, target, delta, brand, color, size, destination, _destination_label, label, size_name,
-        model_key, size_key,
-    ) in operations:
-        if brand.name == "Novani":
-            v20._apply_novani_stock(brand, color, size, destination, delta)
-        elif brand.name == "دارما":
-            _sync_darma_stock_costed(block, model_key, size_key, delta)
-        else:
-            raise ValueError("برند صورت مواد معتبر نیست.")
+    for applied, target, brand, color, size, label, size_name, model_key, size_key, moves in operations:
+        for location, change in moves:
+            if brand.name == "Novani":
+                v20._apply_novani_stock(brand, color, size, location, change)
+            elif brand.name == "دارما":
+                _sync_darma_stock_costed(block, model_key, size_key, change, destination=location)
+            else:
+                raise ValueError("برند صورت مواد معتبر نیست.")
 
-        InventoryMovement.objects.create(
-            movement_type=InventoryMovement.PRODUCTION,
-            brand=brand,
-            color=color,
-            size=size,
-            location=destination,
-            delta=delta,
-            reference=f"material-report:{block.id}:output-sync-v77",
-        )
+            InventoryMovement.objects.create(
+                movement_type=InventoryMovement.PRODUCTION,
+                brand=brand,
+                color=color,
+                size=size,
+                location=location,
+                delta=change,
+                reference=f"material-report:{block.id}:output-sync-v112",
+            )
+            allocated, _ = MaterialReportOutputLocation.objects.select_for_update().get_or_create(
+                applied=applied,
+                location=location,
+                defaults={"quantity": 0},
+            )
+            allocated.quantity = int(allocated.quantity or 0) + change
+            if allocated.quantity < 0:
+                raise ValueError("ریز تحویل انبار نمی‌تواند منفی شود.")
+            if allocated.quantity == 0:
+                allocated.delete()
+            else:
+                allocated.save(update_fields=["quantity"])
+            details.append(f"{label}/{size_name} / {location.title}: {change:+d}")
+
         applied.quantity = target
         applied.save(update_fields=["quantity", "updated_at"])
-        details.append(f"{label}/{size_name}: {delta:+d}")
 
     if wage_change:
         v20._adjust_tailor_balance(-wage_change)
@@ -757,7 +842,7 @@ def _sync_output(block):
 
     return {
         "brand": block.brand.name,
-        "destination": v20._destination_for_brand(block.brand)[1],
+        "destination": selected_label,
         "before_total": applied_total_before,
         "after_total": target_total,
         "piece_delta": target_total - applied_total_before,
@@ -876,7 +961,12 @@ def material_block_apply_output(request, block_id):
         with transaction.atomic():
             block = MaterialReportBlock.objects.select_for_update().select_related("brand").get(id=block_id)
             _save_block_data(block, request)
-            result = _sync_output(block)
+            selected_key = (request.POST.get("delivery_destination") or "").strip()
+            if block.brand.name == "دارما" and selected_key not in {StockLocation.HOME, StockLocation.KHORSHID}:
+                raise ValueError("برای همگام‌سازی تحویل دارما ابتدا انبار خانه یا خورشید را انتخاب کن.")
+            if block.brand.name == "Novani" and selected_key != StockLocation.HOME:
+                raise ValueError("تحویل Novani فقط به موجودی خودش در انبار خانه افزوده می‌شود.")
+            result = _sync_output(block, destination_key=selected_key)
         messages.success(
             request,
             f"تحویل {result['brand']} همگام شد: {result['piece_delta']:+d} عدد؛ "
