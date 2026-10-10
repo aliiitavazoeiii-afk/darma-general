@@ -169,3 +169,19 @@ Additive migration: `0018_productcode_title`. Darma->Anbaresh title mirror prese
 Requires `check_product_definition_v111` and the prior V108/V110 regressions.
 Live deployment marker:
 `SUCCESS: PRODUCT DEFINITION + COLORS + DAILY SALES V111 DEPLOYED`
+
+
+## V112 — Tailor output destination picker
+
+Current feature line: `v112-tailor-delivery-destination`; based directly on V111.
+
+The material-sheet output sync now opens one Home/Khorshid choice for Darma.
+All new output differences go to that warehouse; re-syncing an already applied
+number does nothing; historical applied pieces stay in their old location.
+Per-location quantities are recorded separately from the authoritative
+`MaterialReportOutputApplied.quantity` total. Migration: `0019_material_output_location`.
+Novani remains Home only; tailor wages continue automatically.
+
+Regression: `check_material_output_destination_v112`.
+Production marker: `SUCCESS: TAILOR DELIVERY WAREHOUSE V112 DEPLOYED`.
+Detailed contract: `docs/PROJECT_CONTEXT/61_TAILOR_DELIVERY_DESTINATION_V112.md`.
