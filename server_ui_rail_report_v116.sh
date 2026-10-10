@@ -13,7 +13,7 @@ CHANGED=$(git diff --name-only "$BASE"..HEAD)
 echo "$CHANGED"
 for f in $CHANGED; do
  case "$f" in
-  templates/base.html|static/core/sidebar-v116.css|templates/core/report_excel_v3.html|templates/core/report_excel_v36.html|templates/core/dashboard_excel_v89.html|templates/core/settings_home.html|templates/core/inventory_center_v96.html|core/report_v10.py|core/management/commands/check_ui_rail_report_v116.py|docs/PROJECT_CONTEXT/65_SMOOTH_RAIL_REPORT_PRIORITY_V116.md|docs/PROJECT_CONTEXT/README.md|PROJECT_HANDOFF_CURRENT.md|server_ui_rail_report_v116.sh) ;;
+  templates/base.html|static/core/sidebar-v116.css|templates/core/report_excel_v3.html|templates/core/report_excel_v36.html|templates/core/dashboard_excel_v89.html|templates/core/settings_home.html|templates/core/inventory_center_v96.html|templates/core/finance_center_v97.html|templates/core/digikala_center_v43.html|templates/core/pricing_monitor_v89.html|core/report_v10.py|core/management/commands/check_ui_rail_report_v116.py|docs/PROJECT_CONTEXT/65_SMOOTH_RAIL_REPORT_PRIORITY_V116.md|docs/PROJECT_CONTEXT/README.md|PROJECT_HANDOFF_CURRENT.md|server_ui_rail_report_v116.sh) ;;
   *) fail "unexpected V116 change $f" ;;
  esac
 done
