@@ -156,6 +156,13 @@ def settings_home(request):
 
 
 @login_required
+def settings_initial_v114(request):
+    counts = {"brands": Brand.objects.filter(active=True).count(), "sizes": Size.objects.count(), "colors": Color.objects.filter(active=True).count(), "products": ProductCode.objects.filter(active=True).count(), "stock_rows": StockBalance.objects.exclude(qty=0).count()}
+    accounts = Account.objects.all().order_by("id")
+    return render(request, "core/settings_initial_v114.html", {"counts": counts, "accounts": accounts})
+
+
+@login_required
 def settings_catalog(request):
     if request.method == "POST":
         entity = request.POST.get("entity")
