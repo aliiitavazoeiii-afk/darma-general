@@ -181,3 +181,7 @@ reconciles tailor wages automatically. Uses additive migration 0019.
 
 ## V114 — clean icon navigation
 63. `63_CLEAN_ICON_SIDEBAR_V114.md` — nine direct sidebar links; 72px icon-only desktop rail on main-content hover; inventory Returns; two-card Definitions landing; no backend business changes. Branch: `v114-clean-icon-sidebar-navigation` (parallel UI work should merge, never overwrite).
+
+
+## V115 stable sidebar and comprehensive report
+64. `64_STABLE_SIDEBAR_REPORT_V115.md` — fixes sidebar reload bounce, compact logout, sales metrics layout, six shared finance KPIs and relocates Darma pricing monitoring into Comprehensive Report. New branch: `v115-stable-sidebar-report-dashboard`.
