@@ -193,3 +193,7 @@ Newest line: `v113-unit-production-cost-calculator` based on V112. Adds third re
 
 ## V114 CLEAN SIDEBAR — PARALLEL UI BRANCH
 Branch `v114-clean-icon-sidebar-navigation` based on V113. Nine direct icon nav links; production renamed in nav only; Returns now in Inventory; Digikala is a single header; Finance is called حسابداری; Definitions opens two-card landing with original setup under /settings/initial/. No DB/schema/business logic edits. Other-chat UI branches should merge carefully (especially templates/base.html). Confirm only with `SUCCESS: CLEAN ICON SIDEBAR V114 DEPLOYED`.
+
+
+## V115 STABLE SIDEBAR + REPORT
+Branch `v115-stable-sidebar-report-dashboard` based on V114. Starts collapsed with no full-page toggle flash; power-only collapsed logout; centered 4-column sales cards; shared six Finance KPIs and Darma pricing now in Comprehensive Report instead of Dashboard. Read-only except presentation and view context; no schema/data mutations. Parallel UI work needs deliberate merge. Deployment marker: `SUCCESS: STABLE SIDEBAR + COMPREHENSIVE REPORT V115 DEPLOYED`.
