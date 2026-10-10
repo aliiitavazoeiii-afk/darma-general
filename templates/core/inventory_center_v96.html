@@ -21,5 +21,11 @@
     <div class="inventory-center-value">ارزش پارچه و کش<strong class="money">{{ materials_total|groupnum }} تومان</strong></div>
     <div class="inventory-center-arrow">مدیریت مواد اولیه ←</div>
   </a>
+  <a class="inventory-center-card" href="{% url 'returns' %}" data-inventory-returns="v114">
+    <div class="inventory-center-icon">↩</div>
+    <h2>مرجوعی</h2>
+    <div class="inventory-center-value">ثبت و بررسی مرجوعی کالا بدون مراجعه به منوی جداگانه</div>
+    <div class="inventory-center-arrow">ورود به مرجوعی ←</div>
+  </a>
 </div>
 {% endblock %}
