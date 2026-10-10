@@ -156,3 +156,10 @@ After `SUCCESS: FINAL STABLE BASELINE V108 DEPLOYED`, do not start new work from
 59. `59_COMPACT_MATERIAL_SUMMARY_BOX_GRID_V110.md` — continues V109 and restores the saved material-sheet collapsed header to a compact horizontal five-box desktop layout while preserving V109 color-roll cards, V106 three-delivery semantics, and the V108 stable baseline.
 
 **Current feature line:** `v110-material-summary-box-grid`.
+
+
+## V111 canonical product definition
+
+60. `60_PRODUCT_DEFINITION_V111.md` — fourth product-definition card; independent title field via additive migration 0015; direct use of existing ProductCode/ProductComposition/ProductSize in color catalog and manual daily orders; Darma-to-Anbaresh title mirror.
+
+**Current feature line:** `v111-product-definition-catalog-sales`.
