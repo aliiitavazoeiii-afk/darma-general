@@ -125,6 +125,7 @@ urlpatterns = [
     path("assets/", final_views.assets, name="assets"),
 
     path("settings/", views.settings_home, name="settings_home"),
+    path("settings/initial/", views.settings_initial_v114, name="settings_initial"),
     path("settings/catalog/", catalog_v5.settings_catalog, name="settings_catalog"),
     path("settings/products/", product_center_v93.settings_products, name="settings_products"),
     path("settings/products/new/", settings_product_v60.settings_product_form, name="settings_product_new"),
