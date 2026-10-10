@@ -27,6 +27,7 @@ class Color(models.Model):
 
 class ProductCode(models.Model):
     code = models.CharField(max_length=50)
+    title = models.CharField(max_length=160, blank=True, default="")
     brand = models.ForeignKey(Brand, on_delete=models.PROTECT, related_name="products")
     pack_qty = models.PositiveIntegerField(default=1)
     active = models.BooleanField(default=True)
