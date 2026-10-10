@@ -97,7 +97,7 @@ class Command(BaseCommand):
             # JavaScript string; counting raw attribute text incorrectly
             # reports two references although only one anchor is rendered.
             pricing_cards = re.findall(
-                r'<a\\b[^>]*\\bdata-report-pricing-link="v116"[^>]*>',
+                r'<a\b[^>]*\bdata-report-pricing-link="v116"[^>]*>',
                 html,
             )
             if len(pricing_cards) != 1:
