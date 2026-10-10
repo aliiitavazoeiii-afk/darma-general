@@ -245,6 +245,8 @@ document.addEventListener('DOMContentLoaded',function(){
   secondary.className='v76-secondary-grid';
   secondary.appendChild(report.details);
   secondary.appendChild(assets.details);
+  const pricingLink=document.querySelector('[data-report-pricing-link="v116"]');
+  if(pricingLink) secondary.appendChild(pricingLink);
 
   const stack=document.createElement('div');
   stack.className='v76-domain-stack';
