@@ -50,8 +50,7 @@ class Command(BaseCommand):
             "{% include 'core/_pricing_monitor_dashboard_v89.html' %}",
             'grid-template-columns:repeat(4,minmax(0,1fr))',
             'text-align:center!important',
-            'فر وش',  # replaced below: no bogus phantom marker
-        )[:-1]:
+        ):
             if marker not in report:
                 raise RuntimeError(f"Comprehensive report layout marker missing: {marker}")
         if "{% include 'core/_pricing_monitor_dashboard_v89.html' %}" in dashboard:
