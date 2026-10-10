@@ -185,3 +185,7 @@ Novani remains Home only; tailor wages continue automatically.
 Regression: `check_material_output_destination_v112`.
 Production marker: `SUCCESS: TAILOR DELIVERY WAREHOUSE V112 DEPLOYED`.
 Detailed contract: `docs/PROJECT_CONTEXT/61_TAILOR_DELIVERY_DESTINATION_V112.md`.
+
+
+## V113 production unit-cost calculator
+Newest line: `v113-unit-production-cost-calculator` based on V112. Adds third read-only calculator box (fabric/elastic/12-piece sewing wage). No business model or formula changes. Deploy marker: `SUCCESS: PRODUCTION UNIT COST CALCULATOR V113 DEPLOYED`. See `docs/PROJECT_CONTEXT/62_PRODUCTION_COST_V113.md`.
