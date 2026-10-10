@@ -197,3 +197,11 @@ Branch `v114-clean-icon-sidebar-navigation` based on V113. Nine direct icon nav 
 
 ## V115 STABLE SIDEBAR + REPORT
 Branch `v115-stable-sidebar-report-dashboard` based on V114. Starts collapsed with no full-page toggle flash; power-only collapsed logout; centered 4-column sales cards; shared six Finance KPIs and Darma pricing now in Comprehensive Report instead of Dashboard. Read-only except presentation and view context; no schema/data mutations. Parallel UI work needs deliberate merge. Deployment marker: `SUCCESS: STABLE SIDEBAR + COMPREHENSIVE REPORT V115 DEPLOYED`.
+
+
+## V116 current UI continuation
+
+Development branch: `v116-smooth-rail-report-priority` based directly on V115 stable report branch.
+Nine SVG sidebar icons, fixed-width main content + hover-overlay sidebar, six account balances, five sales KPIs, capital at the top, pricing linked from secondary cards rather than a heavy embedded table; redundant descriptors removed. Business formulas, inventory, material production, payments, sale snapshots and ledger behavior untouched.
+
+Regression: `check_ui_rail_report_v116`. Production marker: `SUCCESS: V116 SMOOTH RAIL + REPORT PRIORITY DEPLOYED` (must be confirmed from VPS).
