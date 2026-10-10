@@ -173,3 +173,7 @@ to that stock location, keeps historical quantities where they were, and
 reconciles tailor wages automatically. Uses additive migration 0019.
 
 **Current feature line:** `v112-tailor-delivery-destination`.
+
+
+## V113 production unit-cost calculator
+62. `62_PRODUCTION_COST_V113.md` — third read-only calculator beside target-margin and profit calculators. Inputs for per-kg fabric price, roll weight, pieces, elastic weight/price and dozen wage; no persistent state writes. Current feature branch: `v113-unit-production-cost-calculator`.
