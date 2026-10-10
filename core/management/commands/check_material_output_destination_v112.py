@@ -128,16 +128,14 @@ class Command(BaseCommand):
                     raise RuntimeError("Khorshid pink +10 was not applied")
 
                 counts = {
-                    (row.model_key, row.size_key, row.location.key): row.quantity
-                    for row in MaterialReportOutputLocation.objects.filter(
+                    (
+                        allocation.applied.model_key,
+                        allocation.applied.size_key,
+                        allocation.location.key,
+                    ): int(allocation.quantity)
+                    for allocation in MaterialReportOutputLocation.objects.filter(
                         applied__block=block
                     ).select_related("applied", "location")
-                    for row in [type("Allocation", (), {
-                        "model_key": row.applied.model_key,
-                        "size_key": row.applied.size_key,
-                        "location": row.location,
-                        "quantity": row.quantity,
-                    })()]
                 }
                 for key, expected in {
                     ("black", "m", "home"): 50,
