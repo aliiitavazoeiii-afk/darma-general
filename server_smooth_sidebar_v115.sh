@@ -6,8 +6,8 @@ BASE=36af70949a4d3d846fd824ab5d74e1af42597947
 export COMPOSE_IGNORE_ORPHANS=1
 
 echo "=== V115 BRANCH + SCOPE ==="
-test "$(git branch --show-current)" = "v115-clean-icon-sidebar-navigation" || fail "wrong branch"
-git cat-file -e "$BASE^{commit}" || fail "V113 base missing"
+test "$(git branch --show-current)" = "v115-sidebar-smooth-lucide-icons" || fail "wrong branch"
+git cat-file -e "$BASE^{commit}" || fail "V114 base missing"
 git diff --quiet || fail "uncommitted tracked changes; stop to avoid overwriting other-chat UI work"
 CHANGED=$(git diff --name-only "$BASE"..HEAD)
 echo "$CHANGED"
