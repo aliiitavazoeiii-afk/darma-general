@@ -181,3 +181,5 @@ reconciles tailor wages automatically. Uses additive migration 0019.
 
 ## V114 — clean icon navigation
 63. `63_CLEAN_ICON_SIDEBAR_V114.md` — nine direct sidebar links; 72px icon-only desktop rail on main-content hover; inventory Returns; two-card Definitions landing; no backend business changes. Branch: `v114-clean-icon-sidebar-navigation` (parallel UI work should merge, never overwrite).
+
+64. `64_SMOOTH_SIDEBAR_V115.md` — SVG sidebar icons, smooth 180ms desktop rail transitions, hysteresis, and correct Takvin purchase name.
