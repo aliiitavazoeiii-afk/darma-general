@@ -49,7 +49,7 @@
     object-fit:contain!important;
   }
   .erp-sidebar .sidebar-close{display:none!important}
-  .erp-sidebar .erp-nav .nav114-link{
+  .sidebar-collapsed .erp-sidebar .erp-nav .nav114-link,body:not(.sidebar-collapsed) .erp-sidebar .erp-nav .nav114-link{
     display:flex!important;
     align-items:center;
     justify-content:flex-start!important;
@@ -60,13 +60,13 @@
     border-radius:12px;
     overflow:hidden;
   }
-  .erp-sidebar .nav114-icon{
+  .sidebar-collapsed .erp-sidebar .nav114-icon,body:not(.sidebar-collapsed) .erp-sidebar .nav114-icon{
     width:34px!important;
     height:34px!important;
     min-width:34px!important;
     flex:0 0 34px!important;
   }
-  .erp-sidebar .nav114-label{
+  .sidebar-collapsed .erp-sidebar .nav114-label,body:not(.sidebar-collapsed) .erp-sidebar .nav114-label{
     display:block!important;
     flex:0 0 auto;
     max-width:0;
@@ -85,7 +85,7 @@
     transition:opacity 120ms ease 35ms,transform 155ms ease,visibility 0s!important;
   }
   .erp-sidebar .nav114-separator{margin:7px 4px!important}
-  .erp-sidebar .nav115-logout-btn{
+  .sidebar-collapsed .erp-sidebar .nav115-logout-btn,body:not(.sidebar-collapsed) .erp-sidebar .nav115-logout-btn{
     display:flex;
     height:46px;
     min-height:46px;
@@ -95,7 +95,7 @@
     overflow:hidden;
   }
   .erp-sidebar .nav115-power{width:34px;min-width:34px;height:34px;flex:0 0 34px}
-  .erp-sidebar .nav115-logout-label{
+  .sidebar-collapsed .erp-sidebar .nav115-logout-label,body:not(.sidebar-collapsed) .erp-sidebar .nav115-logout-label{
     display:block!important;
     max-width:0;
     opacity:0;
