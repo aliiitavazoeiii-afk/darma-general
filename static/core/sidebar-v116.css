@@ -121,7 +121,7 @@
   .erp-sidebar .nav115-logout-btn{justify-content:flex-start!important}
 }
 /* V116: only presentation-only explanations, not form hints, money, warnings or data. */
-.page-kicker,.page-muted,.chart-summary-note,
+.page-kicker,.page-muted:not([data-ui-keep]),.chart-summary-note,
 .v76-domain-sub,.v76-fold-sub{display:none!important}
 /* Summary and capital are visible on first paint, before the legacy folding JS. */
 .excel-section .brand-report{display:none!important}
@@ -144,7 +144,7 @@
 .erp-content .excel-section .summary-cell>strong{
   font-size:clamp(.93rem,1.35vw,1.30rem)!important;
 }
-.erp-content .capital-hero{margin-bottom:14px!important}
+.erp-content .capital-hero{margin-bottom:14px!important}\n.v116-capital-head{margin-top:14px!important;margin-bottom:8px!important}
 .v76-secondary-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}
 .v116-pricing-card{
   display:flex;align-items:center;justify-content:space-between;gap:12px;
