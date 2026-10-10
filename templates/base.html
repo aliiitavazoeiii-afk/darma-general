@@ -18,7 +18,7 @@ body:after{content:"";position:fixed;inset:0;pointer-events:none;opacity:.26;bac
 .mobile-menu{display:none}.mobile-close{display:none}.sidebar-backdrop{display:none}
 @media(max-width:991.98px){.erp-sidebar{transform:translateX(110%);transition:.2s;width:270px}.erp-sidebar.open{transform:none}.erp-main{margin-right:0}.erp-content{padding:18px 12px}.erp-topbar{padding:0 14px}.mobile-menu,.mobile-close{display:inline-flex}.sidebar-backdrop.show{display:block;position:fixed;inset:0;background:rgba(0,8,20,.65);z-index:1025}.capital-hero .card-body{display:block}.capital-side{min-width:0;margin-top:18px}.chart-wrap{height:270px}}
 @media(max-width:575px){.kpi{font-size:1.45rem}.card{border-radius:13px}.capital-number{font-size:1.8rem}.capital-side{grid-template-columns:1fr}.report-filter{width:100%}.report-filter>div{flex:1 1 130px}.report-filter .form-control,.report-filter .form-select{width:100%}.chart-wrap{height:235px}}
-</style><link rel="stylesheet" href="{% static 'core/sidebar-v72.css' %}"><link rel="stylesheet" href="{% static 'core/sidebar-v114.css' %}"></head><body><div class="sidebar-backdrop" id="sidebarBackdrop"></div><div class="sidebar-edge-trigger" id="sidebarEdgeTrigger" aria-hidden="true"></div><aside class="erp-sidebar" id="sidebar"><div class="erp-sidebar-head"><div class="darma-logo-wrap-v74" style="flex:1 1 auto;min-width:0;height:116px;display:flex;align-items:center;justify-content:center;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;outline:0!important;overflow:visible!important;"><img src="{% static 'core/darma-logo-v73.png' %}" alt="DARMA" style="display:block;width:auto;height:auto;max-width:176px;max-height:104px;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;outline:0!important;"></div><button class="btn btn-sm btn-ghost-light sidebar-close" id="closeSidebar" type="button" aria-label="بستن منو">✕</button></div><nav class="erp-nav" aria-label="منوی اصلی">
+</style><link rel="stylesheet" href="{% static 'core/sidebar-v72.css' %}"><link rel="stylesheet" href="{% static 'core/sidebar-v114.css' %}"><link rel="stylesheet" href="{% static 'core/sidebar-v115.css' %}"></head><body class="sidebar-collapsed"><div class="sidebar-backdrop" id="sidebarBackdrop"></div><div class="sidebar-edge-trigger" id="sidebarEdgeTrigger" aria-hidden="true"></div><aside class="erp-sidebar" id="sidebar"><div class="erp-sidebar-head"><div class="darma-logo-wrap-v74" style="flex:1 1 auto;min-width:0;height:116px;display:flex;align-items:center;justify-content:center;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;outline:0!important;overflow:visible!important;"><img src="{% static 'core/darma-logo-v73.png' %}" alt="DARMA" style="display:block;width:auto;height:auto;max-width:176px;max-height:104px;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;outline:0!important;"></div><button class="btn btn-sm btn-ghost-light sidebar-close" id="closeSidebar" type="button" aria-label="بستن منو">✕</button></div><nav class="erp-nav" aria-label="منوی اصلی">
 
 
 <a class="nav114-link {% if request.path == '/' %}active{% endif %}" href="{% url 'dashboard' %}" title="داشبورد" aria-label="داشبورد"><span class="nav114-icon" aria-hidden="true">⌂</span><span class="nav114-label">داشبورد</span></a>
@@ -31,85 +31,31 @@ body:after{content:"";position:fixed;inset:0;pointer-events:none;opacity:.26;bac
 <a class="nav114-link nav114-head {% if '/digikala/' in request.path %}active{% endif %}" href="{% url 'digikala' %}" title="دیجی‌کالا" aria-label="دیجی‌کالا"><span class="nav114-icon" aria-hidden="true">◉</span><span class="nav114-label">دیجی‌کالا</span></a>
 <a data-finance-root-nav="base-v103" class="nav114-link nav114-head {% if '/finance/' in request.path or '/payments/' in request.path or '/calculator/' in request.path %}active{% endif %}" href="{% url 'finance' %}" title="حسابداری" aria-label="حسابداری"><span class="nav114-icon" aria-hidden="true">▦</span><span class="nav114-label">حسابداری</span></a>
 <a class="nav114-link nav114-head {% if '/settings/' in request.path %}active{% endif %}" href="{% url 'settings_home' %}" title="تعاریف" aria-label="تعاریف"><span class="nav114-icon" aria-hidden="true">◇</span><span class="nav114-label">تعاریف</span></a>
-</nav><form method="post" action="/logout/" class="mt-4 px-2">{% csrf_token %}<button class="btn btn-outline-light w-100" type="submit">خروج از پنل</button></form></aside><main class="erp-main"><header class="erp-topbar"><div class="d-flex align-items-center gap-2"><button class="btn btn-ghost-light mobile-menu" id="openSidebar">☰</button><div><strong>DARMA General</strong><div class="small" style="color:#8196ad">نسخه وب اکسل</div></div></div><div class="d-flex align-items-center gap-2"><a class="btn btn-sm btn-outline-light" href="{% url 'report' %}">گزارش جامع</a><a class="btn btn-sm btn-primary" href="{% url 'sale_start' %}">+ ثبت فروش</a></div></header><div class="erp-content">{% if messages %}<div class="mb-3">{% for message in messages %}<div class="alert {% if message.tags == 'error' %}alert-danger{% else %}alert-success{% endif %} mb-2">{{ message }}</div>{% endfor %}</div>{% endif %}{% block content %}{% endblock %}</div></main><script src="https://cdn.jsdelivr.net/npm/@tabler/core@1.4.0/dist/js/tabler.min.js"></script><script src="{% static 'core/number_format.js' %}?v=103"></script><script>(function(){
+</nav><form method="post" action="/logout/" class="nav115-logout">{% csrf_token %}<button class="nav115-logout-btn" type="submit" aria-label="خروج از پنل" title="خروج از پنل"><span class="nav115-power" aria-hidden="true">⏻</span><span class="nav115-logout-label">خروج از پنل</span></button></form></aside><main class="erp-main"><header class="erp-topbar"><div class="d-flex align-items-center gap-2"><button class="btn btn-ghost-light mobile-menu" id="openSidebar">☰</button><div><strong>DARMA General</strong><div class="small" style="color:#8196ad">نسخه وب اکسل</div></div></div><div class="d-flex align-items-center gap-2"><a class="btn btn-sm btn-outline-light" href="{% url 'report' %}">گزارش جامع</a><a class="btn btn-sm btn-primary" href="{% url 'sale_start' %}">+ ثبت فروش</a></div></header><div class="erp-content">{% if messages %}<div class="mb-3">{% for message in messages %}<div class="alert {% if message.tags == 'error' %}alert-danger{% else %}alert-success{% endif %} mb-2">{{ message }}</div>{% endfor %}</div>{% endif %}{% block content %}{% endblock %}</div></main><script src="https://cdn.jsdelivr.net/npm/@tabler/core@1.4.0/dist/js/tabler.min.js"></script><script src="{% static 'core/number_format.js' %}?v=103"></script><script>(function(){
 const s=document.getElementById('sidebar');
 const b=document.getElementById('sidebarBackdrop');
-const edge=document.getElementById('sidebarEdgeTrigger');
 const closeBtn=document.getElementById('closeSidebar');
 const openBtn=document.getElementById('openSidebar');
 const main=document.querySelector('.erp-main');
 const desktop=window.matchMedia('(min-width: 992px)');
-let hideTimer=null;
-
-function syncGroups(){
-  document.querySelectorAll('.erp-nav-group').forEach(group=>{
-    const btn=group.querySelector('.erp-nav-group-toggle');
-    if(btn) btn.setAttribute('aria-expanded',group.classList.contains('open')?'true':'false');
-  });
-}
-function openMobile(){
-  if(!s) return;
-  s.classList.add('open');
-  b?.classList.add('show');
-}
-function closeMobile(){
-  s?.classList.remove('open');
-  b?.classList.remove('show');
-}
-function collapseDesktop(){
-  document.body.classList.add('sidebar-collapsed');
+const expanded='nav115-expanded';
+function setExpanded(value){
+  if(!desktop.matches)return;
+  document.body.classList.toggle('sidebar-collapsed',!value);
   document.body.classList.remove('sidebar-peek');
 }
-function showPeek(){
-  if(desktop.matches && document.body.classList.contains('sidebar-collapsed')){
-    if(hideTimer){clearTimeout(hideTimer);hideTimer=null;}
-    document.body.classList.add('sidebar-peek');
-  }
-}
-function scheduleHidePeek(){
-  if(!desktop.matches) return;
-  if(hideTimer) clearTimeout(hideTimer);
-  hideTimer=setTimeout(()=>document.body.classList.remove('sidebar-peek'),120);
-}
-
-document.querySelectorAll('.erp-nav-group-toggle').forEach(btn=>{
-  btn.addEventListener('click',()=>{
-    const group=btn.closest('.erp-nav-group');
-    const willOpen=!group.classList.contains('open');
-    document.querySelectorAll('.erp-nav-group.open').forEach(other=>{
-      if(other!==group) other.classList.remove('open');
-    });
-    group.classList.toggle('open',willOpen);
-    syncGroups();
-  });
-});
-
-closeBtn?.addEventListener('click',()=>{
-  if(desktop.matches) collapseDesktop();
-  else closeMobile();
-});
+function openMobile(){s?.classList.add('open');b?.classList.add('show');}
+function closeMobile(){s?.classList.remove('open');b?.classList.remove('show');}
+closeBtn?.addEventListener('click',()=>desktop.matches?setExpanded(false):closeMobile());
 openBtn?.addEventListener('click',openMobile);
 b?.addEventListener('click',closeMobile);
-
-main?.addEventListener('mouseenter',()=>{if(desktop.matches) collapseDesktop();});
-s?.addEventListener('mouseenter',()=>{if(desktop.matches) document.body.classList.remove('sidebar-collapsed','sidebar-peek');});
-edge?.addEventListener('mouseenter',showPeek);
-edge?.addEventListener('mouseleave',scheduleHidePeek);
-s?.addEventListener('mouseenter',()=>{
-  if(hideTimer){clearTimeout(hideTimer);hideTimer=null;}
-});
-s?.addEventListener('mouseleave',()=>{
-  if(document.body.classList.contains('sidebar-collapsed')) scheduleHidePeek();
-});
-
-desktop.addEventListener?.('change',()=>{
-  document.body.classList.remove('sidebar-peek');
-  if(!desktop.matches) document.body.classList.remove('sidebar-collapsed');
-  closeMobile();
-});
-
-syncGroups();
-
+s?.addEventListener('mouseenter',()=>setExpanded(true));
+main?.addEventListener('pointerenter',()=>setExpanded(false));
+desktop.addEventListener?.('change',()=>{document.body.classList.remove('sidebar-peek');closeMobile();if(desktop.matches)setExpanded(false);else document.body.classList.remove('sidebar-collapsed');});
+if(!desktop.matches) document.body.classList.remove('sidebar-collapsed');
+// Links deliberately collapse BEFORE navigating. HTML starts collapsed on
+// each new page, avoiding the expand/collapse flash during full page loads.
+s?.querySelectorAll('.nav114-link').forEach(link=>link.addEventListener('click',()=>setExpanded(false)));
 document.addEventListener('focusin',e=>{
   if((e.target.matches('input[type="number"]')||e.target.classList.contains('money'))&&e.target.value==='0')e.target.value='';
 });
