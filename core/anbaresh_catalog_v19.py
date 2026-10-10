@@ -32,6 +32,9 @@ def sync_anbaresh_catalog():
             },
         )
         changed = []
+        if target.title != source.title:
+            target.title = source.title
+            changed.append("title")
         if target.pack_qty != source.pack_qty:
             target.pack_qty = source.pack_qty
             changed.append("pack_qty")
