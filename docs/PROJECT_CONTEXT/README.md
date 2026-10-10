@@ -185,3 +185,8 @@ reconciles tailor wages automatically. Uses additive migration 0019.
 
 ## V115 stable sidebar and comprehensive report
 64. `64_STABLE_SIDEBAR_REPORT_V115.md` — fixes sidebar reload bounce, compact logout, sales metrics layout, six shared finance KPIs and relocates Darma pricing monitoring into Comprehensive Report. New branch: `v115-stable-sidebar-report-dashboard`.
+
+
+## V116 smooth rail and report priority
+
+65. `65_SMOOTH_RAIL_REPORT_PRIORITY_V116.md` — continuation from V115; inline SVG icon rail opens as a hover overlay without shifting page content, five-metric sales then capital directly below six shared Finance KPI cards, and pricing monitoring moved to a link card with the full XLSX page preserved. UI-only; regression `check_ui_rail_report_v116`.
