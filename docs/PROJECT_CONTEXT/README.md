@@ -177,3 +177,7 @@ reconciles tailor wages automatically. Uses additive migration 0019.
 
 ## V113 production unit-cost calculator
 62. `62_PRODUCTION_COST_V113.md` — third read-only calculator beside target-margin and profit calculators. Inputs for per-kg fabric price, roll weight, pieces, elastic weight/price and dozen wage; no persistent state writes. Current feature branch: `v113-unit-production-cost-calculator`.
+
+
+## V114 — clean icon navigation
+63. `63_CLEAN_ICON_SIDEBAR_V114.md` — nine direct sidebar links; 72px icon-only desktop rail on main-content hover; inventory Returns; two-card Definitions landing; no backend business changes. Branch: `v114-clean-icon-sidebar-navigation` (parallel UI work should merge, never overwrite).
