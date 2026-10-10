@@ -54,6 +54,7 @@ def sale_size(request, day_id, brand_id, size_id):
             product__active=True,
         )
         .select_related("product__brand", "product", "size")
+        .prefetch_related("product__composition__color")
         .order_by("product__code")
     )
     rows = []
