@@ -160,6 +160,6 @@ After `SUCCESS: FINAL STABLE BASELINE V108 DEPLOYED`, do not start new work from
 
 ## V111 canonical product definition
 
-60. `60_PRODUCT_DEFINITION_V111.md` — fourth product-definition card; independent title field via additive migration 0015; direct use of existing ProductCode/ProductComposition/ProductSize in color catalog and manual daily orders; Darma-to-Anbaresh title mirror.
+60. `60_PRODUCT_DEFINITION_V111.md` — fourth product-definition card; independent title field via additive migration 0018; direct use of existing ProductCode/ProductComposition/ProductSize in color catalog and manual daily orders; Darma-to-Anbaresh title mirror.
 
 **Current feature line:** `v111-product-definition-catalog-sales`.
