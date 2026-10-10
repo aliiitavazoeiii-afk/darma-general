@@ -164,7 +164,7 @@ A fourth "تعریف محصول" card opens the canonical product definition edi
 Code, independent title, brand, pack count, selected color quantities and sizes
 are stored in ProductCode/ProductComposition/ProductSize and appear immediately
 in Colors and manual Daily Sales. Existing note/sale history/stock are preserved.
-Additive migration: `0015_productcode_title`. Darma->Anbaresh title mirror preserved.
+Additive migration: `0018_productcode_title`. Darma->Anbaresh title mirror preserved.
 
 Requires `check_product_definition_v111` and the prior V108/V110 regressions.
 Live deployment marker:
