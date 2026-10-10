@@ -402,3 +402,11 @@ body.darma-premium-theme :is(input,select,textarea):focus-visible{
   scroll-behavior:auto !important;
  }
 }
+
+/* Semantic text inside cards/tables must win over generic strong text styles. */
+body.darma-premium-theme :is(.card,.glass-card,.table) .text-success,
+body.darma-premium-theme :is(.card,.glass-card,.table) .text-success strong{color:#61e0a1 !important}
+body.darma-premium-theme :is(.card,.glass-card,.table) .text-danger,
+body.darma-premium-theme :is(.card,.glass-card,.table) .text-danger strong{color:#ff8c9e !important}
+body.darma-premium-theme :is(.card,.glass-card,.table) .text-warning,
+body.darma-premium-theme :is(.card,.glass-card,.table) .text-warning strong{color:#f2bd67 !important}
