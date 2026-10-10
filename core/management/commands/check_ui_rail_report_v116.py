@@ -1,5 +1,6 @@
 """V116 UI-only regression: sidebar SVG overlay, report ordering, pricing navigation."""
 from pathlib import Path
+import re
 from types import SimpleNamespace
 
 from django.conf import settings
@@ -92,8 +93,17 @@ class Command(BaseCommand):
                 < html.index('class="capital-hero card')
             ):
                 raise RuntimeError("Rendered report ordering is incorrect")
-            if html.count('data-report-pricing-link="v116"') != 1:
-                raise RuntimeError("Pricing navigation card must appear once")
+            # The V76 enhancement script also mentions the selector in a
+            # JavaScript string; counting raw attribute text incorrectly
+            # reports two references although only one anchor is rendered.
+            pricing_cards = re.findall(
+                r'<a\\b[^>]*\\bdata-report-pricing-link="v116"[^>]*>',
+                html,
+            )
+            if len(pricing_cards) != 1:
+                raise RuntimeError(
+                    f"Expected one rendered pricing link, got {len(pricing_cards)}"
+                )
             if 'data-report-finance-moved-server="1"' not in html:
                 raise RuntimeError("Obsolete account-editing controls were reintroduced")
 
