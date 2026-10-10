@@ -287,6 +287,25 @@ class MaterialReportOutputApplied(models.Model):
         ordering = ["block_id", "model_key", "size_key"]
 
 
+class MaterialReportOutputLocation(models.Model):
+    """Applied pieces of one model/size by destination; legacy totals remain authoritative."""
+    applied = models.ForeignKey(
+        MaterialReportOutputApplied,
+        on_delete=models.CASCADE,
+        related_name="location_allocations",
+    )
+    location = models.ForeignKey(StockLocation, on_delete=models.PROTECT)
+    quantity = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["applied", "location"],
+                name="uniq_material_output_location",
+            )
+        ]
+
+
 class TakvinCostRule(models.Model):
     size = models.ForeignKey(Size, on_delete=models.PROTECT, related_name="takvin_cost_rules")
     effective_from = models.DateField(db_index=True)
