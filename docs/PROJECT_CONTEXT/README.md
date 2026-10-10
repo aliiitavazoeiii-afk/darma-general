@@ -163,3 +163,13 @@ After `SUCCESS: FINAL STABLE BASELINE V108 DEPLOYED`, do not start new work from
 60. `60_PRODUCT_DEFINITION_V111.md` — fourth product-definition card; independent title field via additive migration 0018; direct use of existing ProductCode/ProductComposition/ProductSize in color catalog and manual daily orders; Darma-to-Anbaresh title mirror.
 
 **Current feature line:** `v111-product-definition-catalog-sales`.
+
+
+## V112 — Selected destination on tailor delivery sync
+
+61. `61_TAILOR_DELIVERY_DESTINATION_V112.md` — replaces generic confirm with
+one Home/Khorshid picker per material sheet, writes only new delivered output
+to that stock location, keeps historical quantities where they were, and
+reconciles tailor wages automatically. Uses additive migration 0019.
+
+**Current feature line:** `v112-tailor-delivery-destination`.
