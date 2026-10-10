@@ -21,7 +21,7 @@ Saving uses the existing transactional `settings_product_v60.settings_product_fo
 ## Title schema
 
 New additive database migration:
-`core/migrations/0015_productcode_title.py`
+`core/migrations/0018_productcode_title.py`
 
 Adds only:
 `ProductCode.title = CharField(max_length=160, blank=True, default="")`.
@@ -47,7 +47,7 @@ The existing price-validation and date-effective sale-price workflow remains unc
 
 ## Data safety and deployment
 
-Migration 0015 is additive. Before migrating, back up the full database and snapshot business-state fields. The V111 deployment checks the existing V108/V110 and V93 regressions plus `check_product_definition_v111`, which creates and displays a test code/title/composition/size under a rollback transaction and compares database hashes before/after. Only the old ProductCode fields are included in cross-schema hashes; the new column is checked separately.
+Migration 0018 is additive. Before migrating, back up the full database and snapshot business-state fields. The V111 deployment checks the existing V108/V110 and V93 regressions plus `check_product_definition_v111`, which creates and displays a test code/title/composition/size under a rollback transaction and compares database hashes before/after. Only the old ProductCode fields are included in cross-schema hashes; the new column is checked separately.
 
 No data import, broad catalog sync, stock reset, accounting formulas, material sync, inventory valuation, or sale-history rewrite.
 
