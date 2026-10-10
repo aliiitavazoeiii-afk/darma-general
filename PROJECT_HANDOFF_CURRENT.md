@@ -154,3 +154,18 @@ V110 continues V109 and changes only the collapsed material-sheet summary layout
 Production confirmation marker:
 
 `SUCCESS: COMPACT MATERIAL SUMMARY BOX GRID V110 DEPLOYED`
+
+
+## V111 PRODUCT DEFINITION
+
+Branch `v111-product-definition-catalog-sales` continues V110 directly.
+
+A fourth "تعریف محصول" card opens the canonical product definition editor.
+Code, independent title, brand, pack count, selected color quantities and sizes
+are stored in ProductCode/ProductComposition/ProductSize and appear immediately
+in Colors and manual Daily Sales. Existing note/sale history/stock are preserved.
+Additive migration: `0015_productcode_title`. Darma->Anbaresh title mirror preserved.
+
+Requires `check_product_definition_v111` and the prior V108/V110 regressions.
+Live deployment marker:
+`SUCCESS: PRODUCT DEFINITION + COLORS + DAILY SALES V111 DEPLOYED`
