@@ -11,7 +11,6 @@ from .dia_gallery_v45 import dia_gallery_period_metrics
 from .excel_dashboard import EXCEL_TAKVIN_PREFIX, _add_metrics, _empty_metrics, _finish_metrics
 from .finance import sale_line_metrics
 from .models import MaterialReportBlock, SaleDay, SaleLine, TakvinPurchase
-from .pricing_monitor_v89 import dashboard_pricing_context
 
 
 @login_required
@@ -108,5 +107,4 @@ def dashboard(request):
         "chart_avg_shorts": chart_avg_shorts,
         "purchase_month_total": purchase_month_total,
     }
-    context.update(dashboard_pricing_context(today))
     return render(request, "core/dashboard_excel_v89.html", context)
