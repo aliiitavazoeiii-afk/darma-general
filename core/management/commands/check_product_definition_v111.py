@@ -43,7 +43,7 @@ class Command(BaseCommand):
     def handle(self, *args, **kwargs):
         before = state()
         if not hasattr(ProductCode, "title"):
-            raise RuntimeError("V111 product title schema is missing; apply migration 0015")
+            raise RuntimeError("V111 product title schema is missing; apply migration 0018")
 
         for template in (
             "core/settings_products_v93.html",
