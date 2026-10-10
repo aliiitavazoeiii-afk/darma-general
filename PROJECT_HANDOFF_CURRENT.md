@@ -189,3 +189,7 @@ Detailed contract: `docs/PROJECT_CONTEXT/61_TAILOR_DELIVERY_DESTINATION_V112.md`
 
 ## V113 production unit-cost calculator
 Newest line: `v113-unit-production-cost-calculator` based on V112. Adds third read-only calculator box (fabric/elastic/12-piece sewing wage). No business model or formula changes. Deploy marker: `SUCCESS: PRODUCTION UNIT COST CALCULATOR V113 DEPLOYED`. See `docs/PROJECT_CONTEXT/62_PRODUCTION_COST_V113.md`.
+
+
+## V114 CLEAN SIDEBAR — PARALLEL UI BRANCH
+Branch `v114-clean-icon-sidebar-navigation` based on V113. Nine direct icon nav links; production renamed in nav only; Returns now in Inventory; Digikala is a single header; Finance is called حسابداری; Definitions opens two-card landing with original setup under /settings/initial/. No DB/schema/business logic edits. Other-chat UI branches should merge carefully (especially templates/base.html). Confirm only with `SUCCESS: CLEAN ICON SIDEBAR V114 DEPLOYED`.
