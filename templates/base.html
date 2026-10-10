@@ -60,8 +60,15 @@ b?.addEventListener('click',closeMobile);
 // Collapse at once on the main surface; expand as soon as pointer returns to rail.
 document.addEventListener('pointermove',event=>{
   if(!desktop.matches || event.pointerType==='touch')return;
-  if(s?.contains(event.target))setCollapsed(false);
-  else if(event.target.closest?.('.erp-main'))setCollapsed(true);
+  const distanceFromRight=document.documentElement.clientWidth-event.clientX;
+  // Hysteresis: expand only over the 72px rail, collapse only after
+  // leaving the full 246px sidebar. The expanding content cannot retrigger
+  // collapse halfway through the CSS transition.
+  if(desiredCollapsed){
+    if(distanceFromRight<=72)setCollapsed(false);
+  }else if(distanceFromRight>246){
+    setCollapsed(true);
+  }
 },{passive:true});
 desktop.addEventListener?.('change',()=>{
   document.body.classList.remove('sidebar-collapsed','sidebar-peek');
