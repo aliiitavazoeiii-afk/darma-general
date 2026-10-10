@@ -105,7 +105,7 @@ for f in $CHANGED; do
   case "$f" in
     PROJECT_HANDOFF_CURRENT.md|\
     core/models.py|\
-    core/migrations/0015_productcode_title.py|\
+    core/migrations/0018_productcode_title.py|\
     core/settings_product_v60.py|\
     core/anbaresh_catalog_v19.py|\
     core/product_center_v93.py|\
@@ -128,8 +128,8 @@ step "3) BUILD + ADDITIVE MIGRATION"
 build_web || fail "web build failed"
 docker compose run --rm --entrypoint python web manage.py makemigrations --check --dry-run || fail "migration drift"
 docker compose run --rm --entrypoint python web manage.py check || fail "Django check failed"
-docker compose exec -T web python manage.py showmigrations core | grep -Fq "[X] 0014_novani_s_size" || fail "core migration 0014 is not yet applied; stop for manual audit"
-docker compose run --rm --entrypoint python web manage.py migrate core 0015_productcode_title --noinput || fail "additive ProductCode title migration failed"
+docker compose exec -T web python manage.py showmigrations core | grep -Fq "[X] 0017_digikalasettlement_source" || fail "core migration 0017 is not yet applied; stop for manual audit"
+docker compose run --rm --entrypoint python web manage.py migrate core 0018_productcode_title --noinput || fail "additive ProductCode title migration failed"
 
 step "3B) FULL REGRESSIONS BEFORE LIVE SWITCH"
 docker compose run --rm --entrypoint python web manage.py check_final_baseline_v108 || fail "V108 stable baseline regression failed"
@@ -172,7 +172,7 @@ echo "New Product Definition card and independent product title: enabled"
 echo "Canonical ProductCode + ProductComposition + ProductSize: shared by Colors and Daily Sales"
 echo "Anbaresh product title mirror: preserved"
 echo "Historical sale prices, stock, material/accounting formulas: unchanged"
-echo "Additive database migration: core 0015_productcode_title"
+echo "Additive database migration: core 0018_productcode_title"
 echo "V108/V110 baselines and V93 pricing: verified"
 echo "Existing business fields: PRE = PROJECTED = FINAL"
 echo "Backup: $BACKUP"
