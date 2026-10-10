@@ -1,342 +1,404 @@
 /*
- DARMA Premium Skin — Visual-only experimental layer
- Baseline: V113 / 0f2be2cc6bcd7e6753dcf9bbdbf89f4e74a98e67
- Inspired by the user's black/charcoal/crimson UI reference.
- Scope: colors, typography treatments, backgrounds, borders, shadows,
- focus states, restrained transitions.
- Explicitly forbidden: display/visibility changes, layout restructuring,
- chart or data transformations, form behavior, financial logic.
- Remove this stylesheet link and body theme class to roll back.
+DARMA PREMIUM — ART-DIRECTION V2
+Pinned functional baseline: V113 / 0f2be2cc6bcd7e6753dcf9bbdbf89f4e74a98e67
+Visual reference: user's black / charcoal / burgundy / subtle photographic-grain dashboard.
+100% presentation only. No display, visibility, dimensions, positions, DOM, forms,
+charts, requests, calculations, or business-state changes.
+This skin deliberately supersedes V38 navy/orange, page-level inline navy styles,
+and the dynamically loaded V39 typography stylesheet.
 */
 body.darma-premium-theme {
-  --darma-night: #090b12;
-  --darma-panel: #10131d;
-  --darma-panel-deep: #0c0f18;
-  --darma-raised: #151924;
-  --darma-edge: rgba(207, 211, 225, .105);
-  --darma-edge-strong: rgba(232, 237, 255, .18);
-  --darma-text: #f4f4f8;
-  --darma-muted: #969ba9;
-  --darma-crimson: #ed3b57;
-  --darma-crimson-bright: #ff526b;
-  --darma-crimson-faint: rgba(236, 54, 82, .11);
-  --darma-green: #3ccf86;
-  --darma-purple: #ab82f7;
-  --darma-amber: #f0bb58;
-  --darma-shadow: 0 18px 48px rgba(0, 0, 0, .23), inset 0 1px 0 rgba(255, 255, 255, .025);
-  color: var(--darma-text) !important;
-  background:
-    radial-gradient(ellipse 60% 50% at 92% -13%, rgba(148, 24, 57, .085), transparent 65%),
-    linear-gradient(140deg, #0b0d15 0%, #080b13 55%, #090c15 100%) !important;
-  color-scheme: dark;
+ --navy:#090a10 !important;
+ --navy2:#101119 !important;
+ --navy3:#151720 !important;
+ --navy4:#1a1c25 !important;
+ --orange:#c83150 !important;
+ --orange2:#e44461 !important;
+ --red:#e44866 !important;
+ --ink:#f2f1f4 !important;
+ --muted:#999aa4 !important;
+ --line:rgba(228,226,232,.105) !important;
+ --glass:#12141c !important;
+ --glass2:#10121a !important;
+ --v38-bg:#080a10 !important;
+ --v38-bg-2:#0c0e16 !important;
+ --v38-panel:rgba(20,21,29,.96) !important;
+ --v38-panel-soft:rgba(17,19,27,.95) !important;
+ --v38-panel-strong:rgba(24,25,34,.98) !important;
+ --v38-line:rgba(219,218,229,.095) !important;
+ --v38-line-strong:rgba(230,227,239,.16) !important;
+ --v38-text:#f5f4f6 !important;
+ --v38-muted:#9698a5 !important;
+ --v38-muted-2:#b9bac5 !important;
+ --v38-orange:#bd2b4a !important;
+ --v38-orange-2:#e34a68 !important;
+ --v38-green:#36ce86 !important;
+ --v38-danger:#ec647c !important;
+ --d-bg:#090a10;
+ --d-shell:#0b0d14;
+ --d-surface:#13151e;
+ --d-surface-raised:#191b24;
+ --d-surface-sunken:#10121a;
+ --d-text:#f2f1f4;
+ --d-muted:#9295a1;
+ --d-line:rgba(222,218,234,.105);
+ --d-crimson:#d53c58;
+ --d-crimson-glow:rgba(223,53,88,.23);
+ --d-green:#4fd796;
+ --d-amber:#f2bd67;
+ --d-purple:#a889ee;
+ color-scheme:dark;
+ color:var(--d-text) !important;
+ background:#090a10 !important;
 }
-
-/* Atmospheric shell. Keep all sidebar and content dimensions unchanged. */
+html:has(body.darma-premium-theme){background:#090a10 !important}
+body.darma-premium-theme::before{
+ background:
+   radial-gradient(ellipse 58% 35% at 70% -15%,rgba(126,24,48,.11),transparent 76%),
+   radial-gradient(ellipse 44% 35% at 0% 95%,rgba(55,28,47,.065),transparent 72%),
+   linear-gradient(160deg,#080910 0%,#0a0b12 46%,#080910 100%) !important;
+}
+body.darma-premium-theme::after{
+ background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22150%22%20height%3D%22150%22%20viewBox%3D%220%200%20150%20150%22%3E%3Cfilter%20id%3D%22g%22%3E%3CfeTurbulence%20type%3D%22fractalNoise%22%20baseFrequency%3D%22.8%22%20numOctaves%3D%223%22%20seed%3D%2217%22%20stitchTiles%3D%22stitch%22%2F%3E%3CfeColorMatrix%20type%3D%22saturate%22%20values%3D%220%22%2F%3E%3C%2Ffilter%3E%3Crect%20width%3D%22150%22%20height%3D%22150%22%20opacity%3D%22.13%22%20filter%3D%22url(%23g)%22%2F%3E%3C%2Fsvg%3E") !important;
+ background-size:150px 150px !important;
+ background-repeat:repeat !important;
+ opacity:.19 !important;
+}
 body.darma-premium-theme .page,
-body.darma-premium-theme .erp-main {
-  background: transparent !important;
+body.darma-premium-theme .erp-main,
+body.darma-premium-theme .erp-content{
+ background:transparent !important;
 }
-body.darma-premium-theme .erp-sidebar {
-  background:
-    radial-gradient(ellipse 105% 22% at 90% 1%, rgba(224, 40, 71, .115), transparent 74%),
-    linear-gradient(180deg, rgba(17, 17, 28, .98), rgba(10, 12, 21, .98)) !important;
-  border-left: 1px solid rgba(238, 75, 107, .16) !important;
-  box-shadow: -12px 0 48px rgba(0, 0, 0, .20), inset 1px 0 rgba(255, 255, 255, .035) !important;
-}
-body.darma-premium-theme .erp-topbar {
-  background: rgba(12, 15, 24, .88) !important;
-  border-bottom: 1px solid rgba(255, 255, 255, .075) !important;
-  box-shadow: 0 8px 28px rgba(0, 0, 0, .10) !important;
-}
-body.darma-premium-theme .erp-topbar strong,
-body.darma-premium-theme .page-title,
-body.darma-premium-theme h1,
-body.darma-premium-theme h2,
-body.darma-premium-theme h3,
-body.darma-premium-theme h4,
-body.darma-premium-theme h5 {
-  color: #f6f4f6;
-}
-body.darma-premium-theme .page-kicker { color: #fb6b80 !important; }
-body.darma-premium-theme .page-muted,
-body.darma-premium-theme .subheader,
-body.darma-premium-theme .text-secondary,
-body.darma-premium-theme .form-hint,
-body.darma-premium-theme .small.text-secondary {
-  color: #9ca1ae !important;
-}
-body.darma-premium-theme .kpi,
-body.darma-premium-theme .capital-number {
-  color: #faf9fb;
-  text-shadow: 0 1px 12px rgba(255, 255, 255, .025);
+body.darma-premium-theme ::selection{background:rgba(205,44,76,.34);color:#fff}
+body.darma-premium-theme{
+ scrollbar-color:rgba(122,113,129,.45) transparent;
 }
 
-/* Existing Darma logo: preserve asset, scale, box, and routing. */
-body.darma-premium-theme .erp-sidebar-head,
-body.darma-premium-theme .darma-logo-wrap-v74 {
-  background-color: transparent !important;
+/* NAVIGATION / HEADER — same routes, same dimensions and accordion logic. */
+body.darma-premium-theme .erp-sidebar{
+ background:
+  radial-gradient(ellipse 95% 34% at 100% -9%,rgba(173,32,62,.12),transparent 76%),
+  linear-gradient(180deg,#101018 0%,#0b0d14 52%,#0a0b12 100%) !important;
+ border-left-color:rgba(204,60,91,.18) !important;
+ box-shadow:-14px 0 40px rgba(0,0,0,.31),inset 1px 0 rgba(255,255,255,.028) !important;
 }
-body.darma-premium-theme .erp-brand,
-body.darma-premium-theme .erp-brand:hover {
-  background-color: transparent !important;
-  border-color: transparent !important;
+body.darma-premium-theme .erp-topbar{
+ background:rgba(12,13,20,.88) !important;
+ border-bottom-color:rgba(211,211,223,.09) !important;
+ box-shadow:0 8px 23px rgba(0,0,0,.14) !important;
+}
+body.darma-premium-theme .erp-topbar .small{color:#878994 !important}
+body.darma-premium-theme .erp-nav-title{color:#858590 !important}
+body.darma-premium-theme .erp-nav-group-toggle{
+ color:#a2a3ad !important;
+ background:transparent !important;
+ border-color:transparent !important;
+}
+body.darma-premium-theme .erp-nav-group-toggle:hover,
+body.darma-premium-theme .erp-nav-group.current>.erp-nav-group-toggle{
+ color:#f0e8ed !important;
+ background:rgba(205,50,83,.075) !important;
+ border-color:rgba(217,62,91,.11) !important;
+}
+body.darma-premium-theme .erp-nav-group-title::before{
+ background:#686875 !important;
+ box-shadow:0 0 0 4px rgba(128,125,140,.065) !important;
+}
+body.darma-premium-theme .erp-nav-group.current>.erp-nav-group-toggle .erp-nav-group-title::before{
+ background:#e44a65 !important;
+ box-shadow:0 0 0 4px rgba(224,65,94,.11),0 0 12px rgba(219,43,80,.20) !important;
+}
+body.darma-premium-theme .erp-nav a{
+ color:#a4a4ae !important;
+ border-color:transparent !important;
+ background:transparent !important;
+ transition:background-color .18s,color .18s,box-shadow .18s,border-color .18s !important;
+}
+body.darma-premium-theme .erp-nav a:hover{
+ color:#fff7fa !important;
+ background:rgba(207,51,82,.09) !important;
+}
+body.darma-premium-theme .erp-nav a.active{
+ color:#fff9fb !important;
+ border:1px solid rgba(246,74,106,.31) !important;
+ background:linear-gradient(107deg,rgba(214,43,78,.51),rgba(121,34,72,.19) 72%,rgba(42,25,52,.10)) !important;
+ box-shadow:inset 0 1px 0 rgba(255,185,196,.17),0 0 23px rgba(204,30,67,.22),0 6px 20px rgba(7,7,12,.21) !important;
+}
+body.darma-premium-theme .erp-nav a.active .erp-dot{
+ background:#ff627d !important;
+ box-shadow:0 0 13px rgba(248,77,110,.54) !important;
+}
+body.darma-premium-theme .sidebar-backdrop.show{background:rgba(4,4,9,.81) !important}
+
+/* TYPOGRAPHY — clean Persian letterforms, cool neutral gray instead of blue. */
+body.darma-premium-theme,
+body.darma-premium-theme button,
+body.darma-premium-theme input,
+body.darma-premium-theme select{
+ font-family:Vazirmatn,Tahoma,Arial,sans-serif;
+}
+body.darma-premium-theme :is(.page-title,.card-title,h1,h2,h3,h4,h5,.capital-number){
+ color:#f5f3f6 !important;
+ text-shadow:none !important;
+}
+body.darma-premium-theme :is(.subheader,.page-muted,.text-secondary,.filter-label,.chart-summary-label,.chart-summary-note,.v76-domain-sub,.v76-fold-sub,.rm97-empty,.rm97-help,.rm97-kpi span,.rm97-location span,.finance97-card p,.inventory-center-value,.pc-summary){
+ color:#9798a4 !important;
+}
+body.darma-premium-theme .page-kicker{color:#ed7b91 !important}
+body.darma-premium-theme .kpi{color:#f5f3f6 !important}
+body.darma-premium-theme .card a:not(.btn):not(.quick-card){color:#f0a0b0 !important}
+
+/* VELVET CHARCOAL / ANALOG GRAIN — no sky blue, tan, or brown gradients. */
+body.darma-premium-theme :is(
+ .card,.glass-card,.chart-summary-card,.summary-cell,.brand-report,.report-filter,
+ .v76-domain,.v76-fold,.v76-financial-tools,.capital-side>div,
+ .rm97-card,.rm97-location,.rm97-panel,.rm97-kpi,.rm97-edit-card,
+ .finance97-card,.inventory-center-card,.product-center-card,.pc-panel,
+ .inventory-add-box,.raw-materials-wrap,.raw-material-panel,.material-card,
+ .financial-tools-card,.report-section,.compact-form,.assets-card
+){
+ color:#f0eff3 !important;
+ background-color:#13151e !important;
+ background-image:
+  url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22150%22%20height%3D%22150%22%20viewBox%3D%220%200%20150%20150%22%3E%3Cfilter%20id%3D%22g%22%3E%3CfeTurbulence%20type%3D%22fractalNoise%22%20baseFrequency%3D%22.8%22%20numOctaves%3D%223%22%20seed%3D%2217%22%20stitchTiles%3D%22stitch%22%2F%3E%3CfeColorMatrix%20type%3D%22saturate%22%20values%3D%220%22%2F%3E%3C%2Ffilter%3E%3Crect%20width%3D%22150%22%20height%3D%22150%22%20opacity%3D%22.13%22%20filter%3D%22url(%23g)%22%2F%3E%3C%2Fsvg%3E"),
+  radial-gradient(ellipse at 88% 4%,rgba(92,46,66,.095),transparent 52%),
+  linear-gradient(145deg,#181922 0%,#13151e 49%,#11131b 100%) !important;
+ background-size:150px 150px,auto,auto !important;
+ background-repeat:repeat,no-repeat,no-repeat !important;
+ background-blend-mode:soft-light,normal,normal !important;
+ border-color:rgba(210,207,224,.10) !important;
+ box-shadow:0 14px 34px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.028) !important;
+}
+body.darma-premium-theme :is(
+ .card,.glass-card,.rm97-card,.rm97-location,.finance97-card,
+ .inventory-center-card,.product-center-card
+):hover{
+ border-color:rgba(220,78,112,.19) !important;
+ box-shadow:0 17px 41px rgba(0,0,0,.29),inset 0 1px 0 rgba(255,255,255,.035) !important;
+}
+body.darma-premium-theme :is(
+ .card-header,.card-footer,.brand-report-head,.v76-domain-head,.rm97-panel-head,
+ .excel-title,.financial-tools-head,.v76-fold[open]>summary
+){
+ background:rgba(26,27,37,.68) !important;
+ border-color:rgba(217,215,229,.085) !important;
+ color:#f2eff4 !important;
+}
+body.darma-premium-theme :is(.card-title,.card label,.card strong,.rm97-card h2,.finance97-card h2,.product-center-card h3){
+ color:#f3f1f5 !important;
+}
+body.darma-premium-theme :is(.capital-hero,.glass-strong){
+ background-color:#17151e !important;
+ background-image:
+  url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22150%22%20height%3D%22150%22%20viewBox%3D%220%200%20150%20150%22%3E%3Cfilter%20id%3D%22g%22%3E%3CfeTurbulence%20type%3D%22fractalNoise%22%20baseFrequency%3D%22.8%22%20numOctaves%3D%223%22%20seed%3D%2217%22%20stitchTiles%3D%22stitch%22%2F%3E%3CfeColorMatrix%20type%3D%22saturate%22%20values%3D%220%22%2F%3E%3C%2Ffilter%3E%3Crect%20width%3D%22150%22%20height%3D%22150%22%20opacity%3D%22.13%22%20filter%3D%22url(%23g)%22%2F%3E%3C%2Fsvg%3E"),
+  radial-gradient(ellipse at 16% 10%,rgba(161,39,72,.14),transparent 58%),
+  linear-gradient(130deg,#1a1722,#13141c 65%,#10121b) !important;
+ background-blend-mode:soft-light,normal,normal !important;
+ background-size:150px 150px,auto,auto !important;
+ border-color:rgba(224,101,128,.15) !important;
+}
+body.darma-premium-theme .quick-card:hover{
+ background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22150%22%20height%3D%22150%22%20viewBox%3D%220%200%20150%20150%22%3E%3Cfilter%20id%3D%22g%22%3E%3CfeTurbulence%20type%3D%22fractalNoise%22%20baseFrequency%3D%22.8%22%20numOctaves%3D%223%22%20seed%3D%2217%22%20stitchTiles%3D%22stitch%22%2F%3E%3CfeColorMatrix%20type%3D%22saturate%22%20values%3D%220%22%2F%3E%3C%2Ffilter%3E%3Crect%20width%3D%22150%22%20height%3D%22150%22%20opacity%3D%22.13%22%20filter%3D%22url(%23g)%22%2F%3E%3C%2Fsvg%3E"),linear-gradient(130deg,#211923,#141620) !important;
+ border-color:rgba(228,87,118,.30) !important;
+}
+body.darma-premium-theme :is(.quick-icon,.finance97-icon,.inventory-center-icon,.rm97-card .icon,.product-center-card.active,.v76-domain-kicker){
+ background:linear-gradient(145deg,rgba(180,37,68,.23),rgba(117,39,70,.095)) !important;
+ border-color:rgba(216,67,99,.17) !important;
+ color:#fa738e !important;
+ box-shadow:0 0 18px rgba(198,42,73,.11),inset 0 1px 0 rgba(255,255,255,.035) !important;
+}
+body.darma-premium-theme :is(.finance97-arrow,.inventory-center-arrow,.v76-fold-arrow,.material-toggle,.rm97-breadcrumb a){
+ color:#e66d86 !important;
+}
+body.darma-premium-theme :is(.rm97-modal-card,.delivery-destination-dialog,.modal-content,.dropdown-menu,.offcanvas,.popover){
+ color:#f1eff4 !important;
+ background-color:#14151e !important;
+ background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22150%22%20height%3D%22150%22%20viewBox%3D%220%200%20150%20150%22%3E%3Cfilter%20id%3D%22g%22%3E%3CfeTurbulence%20type%3D%22fractalNoise%22%20baseFrequency%3D%22.8%22%20numOctaves%3D%223%22%20seed%3D%2217%22%20stitchTiles%3D%22stitch%22%2F%3E%3CfeColorMatrix%20type%3D%22saturate%22%20values%3D%220%22%2F%3E%3C%2Ffilter%3E%3Crect%20width%3D%22150%22%20height%3D%22150%22%20opacity%3D%22.13%22%20filter%3D%22url(%23g)%22%2F%3E%3C%2Fsvg%3E"),linear-gradient(140deg,#1a1b25,#11121b) !important;
+ background-size:150px 150px,auto !important;
+ background-blend-mode:soft-light,normal !important;
+ border-color:rgba(216,210,226,.14) !important;
+ box-shadow:0 23px 65px rgba(0,0,0,.42) !important;
+}
+body.darma-premium-theme :is(.dropdown-item,.modal-title){color:#e5e3ea !important}
+body.darma-premium-theme .dropdown-item:hover{background:rgba(215,51,85,.11) !important}
+
+/* DATAGRIDS — subtle neutral zebra strips, charcoal sticky columns and headers. */
+body.darma-premium-theme .table{
+ --tblr-table-bg:transparent !important;
+ --tblr-table-color:#e5e3eb !important;
+ --tblr-table-border-color:rgba(216,211,229,.092) !important;
+ --tblr-table-accent-bg:rgba(255,255,255,.014) !important;
+ --tblr-table-hover-bg:rgba(207,61,92,.046) !important;
+ color:#e5e3ea;
+ border-color:rgba(218,214,225,.095) !important;
+}
+body.darma-premium-theme :is(
+ .table>thead>tr>th,.table>thead>tr>td,.pm-table thead th,
+ .material-grid thead th,.takvin-grid thead th,.rm97-table thead th
+){
+ background:#1a1c25 !important;
+ color:#d8d6e0 !important;
+ border-color:rgba(223,218,228,.11) !important;
+}
+body.darma-premium-theme .table>:not(caption)>*>*{
+ --tblr-table-accent-bg:rgba(255,255,255,.013) !important;
+ border-color:rgba(214,213,222,.087) !important;
+}
+body.darma-premium-theme .table>tbody>tr>td,
+body.darma-premium-theme .table>tbody>tr>th{
+ background-color:rgba(19,20,29,.88) !important;
+ background-image:none !important;
+}
+body.darma-premium-theme .table>tbody>tr:nth-child(2n)>td,
+body.darma-premium-theme .table>tbody>tr:nth-child(2n)>th{
+ background-color:rgba(25,26,35,.94) !important;
+}
+body.darma-premium-theme .table>tbody>tr:hover>td,
+body.darma-premium-theme .table>tbody>tr:hover>th{
+ background-color:#22202b !important;
+}
+body.darma-premium-theme :is(
+ .table-stock td:first-child,.table-stock th:first-child,
+ .material-grid .sticky-col,.takvin-grid .sticky-col,
+ .daily-color-size-matrix td:first-child,.daily-color-size-matrix th:first-child,
+ .pm-table .pm-key
+){
+ background:#1a1b24 !important;
+ background-image:none !important;
+}
+body.darma-premium-theme :is(.excel-scroll,.table-responsive,.pm-scroll,.dashboard-chart-scroll){
+ border-color:rgba(220,211,225,.09) !important;
+}
+body.darma-premium-theme :is(
+ .inventory-summary-row td,.inventory-summary-row th,
+ .inventory-grand td,.inventory-grand th,.brand-total td
+){
+ background:rgba(121,53,73,.10) !important;
+ border-color:rgba(209,88,112,.15) !important;
+}
+body.darma-premium-theme .inventory-capital-row td{
+ background:rgba(35,110,75,.12) !important;
+ border-color:rgba(73,182,126,.19) !important;
+}
+body.darma-premium-theme :is(.raw-edit-row td,.rm97-edit-card){
+ background-color:#1c1b25 !important;
 }
 
-/* Navigation: stronger active state, same DOM and accordion behavior. */
-body.darma-premium-theme .erp-nav-title { color: #747989 !important; }
-body.darma-premium-theme .erp-nav-group-toggle {
-  color: #a9acb9 !important;
-  border-color: transparent !important;
-  background: transparent !important;
-  transition: background-color .18s ease, color .18s ease, box-shadow .18s ease !important;
+/* Forms / filter controls. No change to hit boxes or HTML form semantics. */
+body.darma-premium-theme :is(.form-control,.form-select,.input-group-text,.grid-input,.material-source-select){
+ color:#eeeaf0 !important;
+ background-color:#11131c !important;
+ background-image:none !important;
+ border-color:rgba(218,214,224,.14) !important;
+ box-shadow:inset 0 1px 0 rgba(255,255,255,.02) !important;
 }
-body.darma-premium-theme .erp-nav-group-toggle:hover {
-  color: #f5eff3 !important;
-  background: rgba(235, 67, 96, .065) !important;
-  border-color: rgba(235, 67, 96, .07) !important;
+body.darma-premium-theme :is(.form-control,.form-select,.grid-input,.material-source-select):focus{
+ color:#fff !important;
+ background-color:#181520 !important;
+ border-color:#c94a68 !important;
+ box-shadow:0 0 0 3px rgba(206,56,88,.13) !important;
 }
-body.darma-premium-theme .erp-nav-group.current > .erp-nav-group-toggle {
-  color: #f6e6ec !important;
-  background: rgba(238, 56, 86, .055) !important;
-  border-color: rgba(238, 56, 86, .10) !important;
-}
-body.darma-premium-theme .erp-nav-group-title::before {
-  background: #5b5e6d !important;
-  box-shadow: none !important;
-}
-body.darma-premium-theme .erp-nav-group.current > .erp-nav-group-toggle .erp-nav-group-title::before {
-  background: var(--darma-crimson) !important;
-  box-shadow: 0 0 0 4px rgba(237, 59, 87, .10), 0 0 11px rgba(237, 59, 87, .25) !important;
-}
-body.darma-premium-theme .erp-nav a {
-  color: #a9acb7 !important;
-  border: 1px solid transparent;
-  transition: color .17s ease, background-color .17s ease, box-shadow .17s ease !important;
-}
-body.darma-premium-theme .erp-nav a:hover {
-  color: #f6f2f5 !important;
-  background: rgba(244, 79, 111, .085) !important;
-}
-body.darma-premium-theme .erp-nav a.active {
-  color: #fff7fa !important;
-  background: linear-gradient(105deg, rgba(229, 45, 78, .32), rgba(118, 41, 80, .25)) !important;
-  border-color: rgba(250, 82, 115, .27) !important;
-  box-shadow: inset 3px 0 0 rgba(255, 88, 119, .75), 0 0 23px rgba(214, 32, 70, .16), inset 0 1px 0 rgba(255,255,255,.075) !important;
-}
-body.darma-premium-theme .erp-nav a.active .erp-dot {
-  background: #ff647d !important;
-  box-shadow: 0 0 8px rgba(255, 81, 112, .4);
-}
-body.darma-premium-theme .erp-nav-group-toggle:focus-visible,
-body.darma-premium-theme .erp-nav a:focus-visible {
-  outline: 2px solid #f35d79 !important;
-  outline-offset: 2px;
+body.darma-premium-theme :is(.form-control,.grid-input)::placeholder{color:#737681 !important}
+body.darma-premium-theme .form-select option{
+ color:#f4f2f6 !important;
+ background:#181922 !important;
 }
 
-/* Surfaces. No reflow, no new containers, no cards removed or added. */
-body.darma-premium-theme .card,
-body.darma-premium-theme .glass-card,
-body.darma-premium-theme .v76-domain,
-body.darma-premium-theme .v76-fold,
-body.darma-premium-theme .chart-summary-card,
-body.darma-premium-theme .summary-cell,
-body.darma-premium-theme .brand-report,
-body.darma-premium-theme .financial-tools-card,
-body.darma-premium-theme .report-filter {
-  color: #f1f1f6 !important;
-  background: linear-gradient(145deg, rgba(19, 22, 34, .95), rgba(11, 14, 23, .96)) !important;
-  border-color: var(--darma-edge) !important;
-  box-shadow: var(--darma-shadow) !important;
+/* Buttons — restrained dark secondary, cranberry primary; preserve meanings. */
+body.darma-premium-theme .btn:not(.btn-link){
+ color:#f1eff4 !important;
+ border-color:rgba(215,209,224,.13) !important;
+ background:linear-gradient(180deg,#25242f,#1a1b25) !important;
+ box-shadow:inset 0 1px 0 rgba(255,255,255,.055),0 5px 14px rgba(0,0,0,.22) !important;
 }
-body.darma-premium-theme .card,
-body.darma-premium-theme .glass-card {
-  transition: border-color .18s ease, box-shadow .18s ease, background .18s ease !important;
+body.darma-premium-theme .btn:not(.btn-link):hover{
+ color:#fff !important;
+ border-color:rgba(225,82,114,.24) !important;
+ background:linear-gradient(180deg,#30232e,#24202b) !important;
+ box-shadow:0 8px 21px rgba(0,0,0,.27) !important;
 }
-body.darma-premium-theme .card:hover,
-body.darma-premium-theme .glass-card:hover {
-  border-color: rgba(244, 113, 138, .18) !important;
-  box-shadow: 0 20px 48px rgba(0, 0, 0, .30), inset 0 1px 0 rgba(255,255,255,.04) !important;
+body.darma-premium-theme :is(.btn.btn-primary,a.btn-primary,button.btn-primary){
+ color:#fff !important;
+ background:linear-gradient(110deg,#ab2444,#d83d5c 55%,#b32e4e) !important;
+ border-color:rgba(255,105,136,.38) !important;
+ box-shadow:inset 0 1px 0 rgba(255,190,198,.20),0 8px 24px rgba(191,38,76,.21) !important;
 }
-body.darma-premium-theme .card-header,
-body.darma-premium-theme .card-footer,
-body.darma-premium-theme .brand-report-head,
-body.darma-premium-theme .v76-domain-head {
-  background: rgba(255, 255, 255, .014) !important;
-  border-color: rgba(255, 255, 255, .068) !important;
+body.darma-premium-theme :is(.btn.btn-primary,a.btn-primary,button.btn-primary):hover{
+ background:linear-gradient(110deg,#bc2c50,#e64767 55%,#c53759) !important;
+ box-shadow:inset 0 1px 0 rgba(255,190,198,.24),0 10px 27px rgba(198,44,83,.27) !important;
 }
-body.darma-premium-theme .card-title,
-body.darma-premium-theme .card label,
-body.darma-premium-theme .card strong { color: #f5f4f8 !important; }
-body.darma-premium-theme .capital-hero {
-  background: linear-gradient(125deg, rgba(33, 22, 36, .97), rgba(14, 15, 24, .98) 62%, rgba(41, 19, 34, .93)) !important;
-  border-color: rgba(241, 100, 132, .19) !important;
+body.darma-premium-theme .btn.btn-success{
+ color:#fff !important;
+ background:linear-gradient(120deg,#176a44,#1b915e) !important;
+ border-color:rgba(81,201,139,.30) !important;
 }
-body.darma-premium-theme .quick-card:hover {
-  background: linear-gradient(145deg, rgba(29, 21, 35, .98), rgba(16, 15, 27, .98)) !important;
-  border-color: rgba(255, 99, 127, .35) !important;
-  box-shadow: 0 22px 56px rgba(0,0,0,.35), 0 0 24px rgba(220,34,76,.08) !important;
+body.darma-premium-theme .btn.btn-danger{
+ color:#fff !important;
+ background:linear-gradient(120deg,#90263c,#b0344e) !important;
+ border-color:rgba(233,102,126,.30) !important;
 }
-body.darma-premium-theme .quick-icon {
-  color: #ff7891 !important;
-  background: linear-gradient(145deg, rgba(238, 54, 86, .20), rgba(160, 31, 76, .09)) !important;
-  border: 1px solid rgba(240, 75, 105, .15) !important;
-  box-shadow: 0 0 22px rgba(225, 44, 80, .10), inset 0 1px 0 rgba(255,255,255,.05) !important;
+body.darma-premium-theme .btn.btn-ghost-light{
+ color:#dfdce4 !important;
+ background:rgba(255,255,255,.025) !important;
+ border-color:rgba(255,255,255,.055) !important;
+ box-shadow:none !important;
 }
 
-/* Buttons and form controls: consistent crimson focus/selection language. */
-body.darma-premium-theme .btn:not(.btn-link) {
-  color: #f8f6fa !important;
-  border-color: rgba(216, 210, 227, .14) !important;
-  background: linear-gradient(180deg, rgba(41, 43, 58, .78), rgba(20, 22, 34, .85)) !important;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.065), 0 7px 20px rgba(0,0,0,.20) !important;
+/* Semantic states stay identifiable. Neutral tables should never imply loss. */
+body.darma-premium-theme :is(.text-success,.badge-soft-success,.alert-success){color:#61e0a1 !important}
+body.darma-premium-theme :is(.text-danger,.badge-soft-red,.alert-danger){color:#ff8c9e !important}
+body.darma-premium-theme :is(.badge-soft-orange,.badge-soft-warning){color:#efad71 !important}
+body.darma-premium-theme .badge-soft-orange{
+ background:rgba(184,93,49,.095) !important;
+ border-color:rgba(226,146,86,.13) !important;
 }
-body.darma-premium-theme .btn:not(.btn-link):hover {
-  border-color: rgba(247, 110, 137, .25) !important;
-  background: linear-gradient(180deg, rgba(50, 39, 54, .94), rgba(30, 24, 40, .97)) !important;
-  box-shadow: 0 10px 26px rgba(0,0,0,.25) !important;
+body.darma-premium-theme .badge-soft-success{
+ background:rgba(33,147,89,.105) !important;
+ border-color:rgba(70,209,132,.14) !important;
 }
-body.darma-premium-theme .btn-primary,
-body.darma-premium-theme .btn.btn-primary,
-body.darma-premium-theme a.btn-primary {
-  color: #fff !important;
-  border-color: rgba(255, 114, 142, .52) !important;
-  background: linear-gradient(112deg, #c7234a 0%, #e43b5b 55%, #a72a57 100%) !important;
-  box-shadow: 0 9px 26px rgba(203, 31, 76, .24), inset 0 1px 0 rgba(255,255,255,.20) !important;
+body.darma-premium-theme .badge-soft-red{
+ background:rgba(185,44,76,.11) !important;
+ border-color:rgba(235,82,113,.18) !important;
 }
-body.darma-premium-theme .btn-primary:hover,
-body.darma-premium-theme .btn.btn-primary:hover {
-  background: linear-gradient(112deg, #de3158 0%, #f34a6c 55%, #c12f63 100%) !important;
-  border-color: rgba(255, 148, 169, .65) !important;
-  box-shadow: 0 12px 30px rgba(214, 36, 82, .30) !important;
+body.darma-premium-theme .alert-success{
+ background:rgba(19,57,39,.26) !important;
+ border-color:rgba(65,179,113,.17) !important;
 }
-body.darma-premium-theme .btn-success {
-  background: linear-gradient(135deg, #16834f, #176e47) !important;
-  border-color: rgba(78, 215, 143, .35) !important;
+body.darma-premium-theme .alert-danger{
+ background:rgba(82,22,39,.21) !important;
+ border-color:rgba(225,76,109,.20) !important;
 }
-body.darma-premium-theme .btn-danger {
-  background: linear-gradient(135deg, #ad2c47, #8e243b) !important;
-  border-color: rgba(250, 105, 132, .30) !important;
-}
-body.darma-premium-theme .form-control,
-body.darma-premium-theme .form-select,
-body.darma-premium-theme .input-group-text,
-body.darma-premium-theme .grid-input {
-  color: #f0eff5 !important;
-  background: rgba(13, 16, 26, .93) !important;
-  border-color: rgba(207, 212, 229, .14) !important;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.014) !important;
-}
-body.darma-premium-theme .form-control:focus,
-body.darma-premium-theme .form-select:focus,
-body.darma-premium-theme .grid-input:focus {
-  color: #fff !important;
-  border-color: #ed5873 !important;
-  background: rgba(23, 18, 30, .98) !important;
-  box-shadow: 0 0 0 3px rgba(236, 59, 92, .16), inset 0 1px 0 rgba(255,255,255,.025) !important;
-}
-body.darma-premium-theme .form-control::placeholder,
-body.darma-premium-theme .grid-input::placeholder { color: #797e8d !important; }
-body.darma-premium-theme .form-select option { background: #11141f !important; color: #f5f3f7 !important; }
-
-/* Financial states retain their semantic distinction; do not make all values red. */
-body.darma-premium-theme .text-success,
-body.darma-premium-theme .badge-soft-success { color: #67e2a5 !important; }
-body.darma-premium-theme .text-danger,
-body.darma-premium-theme .badge-soft-red { color: #ff889e !important; }
-body.darma-premium-theme .badge-soft-orange,
-body.darma-premium-theme .badge-soft-warning {
-  color: #ff9aae !important;
-  background: rgba(227, 44, 80, .12) !important;
-  border-color: rgba(236, 68, 100, .18) !important;
-}
-body.darma-premium-theme .badge-soft-success {
-  background: rgba(47, 190, 112, .095) !important;
-  border-color: rgba(71, 209, 141, .18) !important;
-}
-body.darma-premium-theme .badge-soft-red {
-  background: rgba(233, 55, 86, .10) !important;
-  border-color: rgba(241, 77, 111, .18) !important;
+body.darma-premium-theme .badge-soft-orange,.badge-soft-red,.badge-soft-success{
+ box-shadow:none !important;
 }
 
-/* Existing table cells, labels, and widths are deliberately untouched. */
-body.darma-premium-theme .table,
-body.darma-premium-theme .table > :not(caption) > * > * {
-  color: #e2e2ea !important;
-  border-color: rgba(255, 255, 255, .072) !important;
+/* Finer page-level refinements: material reports, report folds and tabs. */
+body.darma-premium-theme :is(.material-block>summary,.v76-fold>summary,.material-cost-catalog,.financial-extra-row,.material-stock-note){
+ background-color:#191b24 !important;
+ background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22150%22%20height%3D%22150%22%20viewBox%3D%220%200%20150%20150%22%3E%3Cfilter%20id%3D%22g%22%3E%3CfeTurbulence%20type%3D%22fractalNoise%22%20baseFrequency%3D%22.8%22%20numOctaves%3D%223%22%20seed%3D%2217%22%20stitchTiles%3D%22stitch%22%2F%3E%3CfeColorMatrix%20type%3D%22saturate%22%20values%3D%220%22%2F%3E%3C%2Ffilter%3E%3Crect%20width%3D%22150%22%20height%3D%22150%22%20opacity%3D%22.13%22%20filter%3D%22url(%23g)%22%2F%3E%3C%2Fsvg%3E"),linear-gradient(140deg,#1c1d27,#14161f) !important;
+ background-size:150px 150px,auto !important;
+ background-blend-mode:soft-light,normal !important;
+ color:#e9e6eb !important;
+ border-color:rgba(219,211,227,.115) !important;
 }
-body.darma-premium-theme .table > thead > tr > th,
-body.darma-premium-theme .table > thead > tr > td {
-  color: #bfc0cc !important;
-  background: rgba(240, 94, 124, .062) !important;
-  border-color: rgba(244, 113, 141, .13) !important;
+body.darma-premium-theme :is(.material-block[open]>summary,.v76-fold[open]>summary){
+ border-color:rgba(225,86,113,.18) !important;
 }
-body.darma-premium-theme .table > tbody > tr > td,
-body.darma-premium-theme .table > tbody > tr > th {
-  background: transparent !important;
+body.darma-premium-theme :is(.v76-domain-kicker,.quick-icon){color:#f17890 !important}
+body.darma-premium-theme :is(.v76-financial-tools,.rm97-kpis,.chart-summary-card){
+ border-color:rgba(221,211,226,.09) !important;
 }
-body.darma-premium-theme .table > tbody > tr:hover > td,
-body.darma-premium-theme .table > tbody > tr:hover > th {
-  background: rgba(243, 87, 118, .057) !important;
+body.darma-premium-theme :is(.dropdown-item,.btn,.erp-nav a):focus-visible,
+body.darma-premium-theme :is(input,select,textarea):focus-visible{
+ outline:2px solid rgba(236,110,140,.78) !important;
+ outline-offset:2px;
 }
-body.darma-premium-theme .table-stock .sticky-col,
-body.darma-premium-theme .material-grid .sticky-col,
-body.darma-premium-theme .takvin-grid .sticky-col {
-  background: #121520 !important;
-}
-body.darma-premium-theme .excel-scroll,
-body.darma-premium-theme .table-responsive {
-  border-color: rgba(238, 75, 109, .095) !important;
-}
-body.darma-premium-theme .modal-content,
-body.darma-premium-theme .dropdown-menu {
-  color: #f4f3f7 !important;
-  background: rgba(15, 17, 28, .985) !important;
-  border-color: rgba(247, 111, 141, .17) !important;
-  box-shadow: 0 25px 55px rgba(0, 0, 0, .48) !important;
-}
-body.darma-premium-theme .dropdown-item { color: #d5d3dd !important; }
-body.darma-premium-theme .dropdown-item:hover,
-body.darma-premium-theme .dropdown-item:focus {
-  color: #fff !important;
-  background: rgba(237, 64, 96, .12) !important;
-}
-body.darma-premium-theme .material-block > summary,
-body.darma-premium-theme .v76-fold > summary {
-  color: #f3f1f5 !important;
-  background: linear-gradient(145deg, rgba(23, 24, 37, .94), rgba(12, 15, 24, .97)) !important;
-  border-color: rgba(237, 77, 109, .13) !important;
-}
-body.darma-premium-theme .material-block[open] > summary,
-body.darma-premium-theme .v76-fold[open] > summary {
-  border-color: rgba(240, 84, 115, .20) !important;
-}
-body.darma-premium-theme .alert {
-  color: #eae6ec !important;
-  background: rgba(27, 22, 32, .95) !important;
-  border-color: rgba(230, 74, 104, .20) !important;
-}
-body.darma-premium-theme .alert-success {
-  color: #bcecd1 !important;
-  border-color: rgba(68, 205, 130, .20) !important;
-  background: rgba(27, 65, 44, .20) !important;
-}
-body.darma-premium-theme .alert-danger {
-  color: #ffbdc9 !important;
-  border-color: rgba(237, 82, 114, .25) !important;
-  background: rgba(91, 26, 43, .27) !important;
-}
-
-/* Maintain standard interactive affordances and motion accessibility. */
-body.darma-premium-theme :where(a, button, input, select, textarea):focus-visible {
-  outline: 2px solid rgba(249, 104, 132, .85);
-  outline-offset: 2px;
-}
-@media (prefers-reduced-motion: reduce) {
-  body.darma-premium-theme *,
-  body.darma-premium-theme *::before,
-  body.darma-premium-theme *::after {
-    animation: none !important;
-    transition: none !important;
-    scroll-behavior: auto !important;
-  }
+@media(prefers-reduced-motion:reduce){
+ body.darma-premium-theme *,
+ body.darma-premium-theme *::before,
+ body.darma-premium-theme *::after{
+  transition:none !important;
+  animation:none !important;
+  scroll-behavior:auto !important;
+ }
 }
