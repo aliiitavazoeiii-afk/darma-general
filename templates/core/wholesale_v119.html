@@ -73,6 +73,7 @@
         </div>
         <form action="{% url 'wholesale_invoice_add' %}" method="post" id="whInvoiceForm">{% csrf_token %}
           <input type="hidden" name="customer_id" value="{{ selected_customer.pk }}">
+          <input type="hidden" name="request_token" value="{{ invoice_token }}">
           <div class="wh119-form-grid">
             <div class="wh119-field"><label>تاریخ صورت (شمسی)</label><input name="date" value="{{ today_j }}" inputmode="numeric" required placeholder="۱۴۰۵/۰۷/۲۲"></div>
             <div class="wh119-field"><label>توضیح</label><input name="note" maxlength="250" placeholder="اختیاری"></div>
@@ -88,6 +89,7 @@
         <h2>ثبت دریافت از {{ selected_customer.name }}</h2>
         <form method="post" action="{% url 'wholesale_receipt_add' %}">{% csrf_token %}
           <input type="hidden" name="customer_id" value="{{ selected_customer.pk }}">
+          <input type="hidden" name="request_token" value="{{ receipt_token }}">
           <div class="wh119-form-grid">
             <div class="wh119-field"><label>تاریخ دریافت (شمسی)</label><input name="date" value="{{ today_j }}" required></div>
             <div class="wh119-field"><label>مبلغ دریافتی (تومان)</label><input name="amount" inputmode="numeric" type="number" min="1" required></div>
