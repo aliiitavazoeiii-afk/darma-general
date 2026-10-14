@@ -206,3 +206,8 @@ Branch `v116-fabric-roll-count-audit` on the V115 stable UI line. Five material 
 ## V117 continuation (2026-10-14)
 
 Do not develop from stale V115 or either divergent V116 branch alone. Integration branch: `v117-unified-ui-fabric-count`, parent `v116-fabric-roll-count-audit` at `b794d266c044a8e0ee6826e12be1d3b572eb59eb`. This incorporates the prior `v116-smooth-rail-report-priority` UI and the Oct 14 V116 per-color explicit fabric-code roll count. Synthetic non-DB tests cover four white and pink rolls with duplicate codes, uncoded sheets, closed completed sheets, and other-brand isolation. To diagnose actual white/pink numbers on production: `docker compose exec -T web python manage.py check_fabric_roll_count_v116`; per-color distinct code maps and uncoded sheet ids printed. Do not assume physical inventory in kg equals the number of registered rolls. V117 deployment gate: `bash server_unified_ui_fabric_v117.sh`; assert PRE=PROJECTED=FINAL before calling live. No formulas, migrations, business stock or financial data altered.
+
+
+## V118 clarified fabric cards
+
+`v118-unapplied-fabric-rolls-color-weight` supersedes V117 fabric cards. User explicitly requested roll count ONLY for coded color rows whose **fabric raw-material consumption** has NOT been applied in that sheet/color. Use positive `MaterialReportConsumption(kind=FABRIC,material_key=color)` as evidence; ignore `MaterialReportOutputApplied` for eligibility. Lifetime delivered weight (kg) for each color is the sum of all saved input weights, applied and unapplied. The 3 sewing output/open work stats and all business logic remain untouched. The user did NOT deploy V117; run the V118 guarded script directly. See `docs/PROJECT_CONTEXT/66_UNAPPLIED_FABRIC_WEIGHT_V118.md`.
