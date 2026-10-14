@@ -1,6 +1,6 @@
 {% extends 'base.html' %}{% load jalali %}{% block title %}داشبورد | DARMA{% endblock %}{% block content %}{% include 'core/_mobile_shell.html' %}
 <style>.dashboard-chart-scroll{overflow-x:auto;overscroll-behavior-inline:contain}.dashboard-chart-canvas{min-width:1250px;height:340px}.dashboard-chart-canvas canvas{width:100%!important;height:100%!important}.chart-summary-card{border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.025);border-radius:14px;padding:14px 16px;height:100%}.chart-summary-label{font-size:.78rem;color:#91a4b7;margin-bottom:7px}.chart-summary-value{font-size:1.28rem;font-weight:800;line-height:1.2}.chart-summary-note{font-size:.72rem;color:#73879a;margin-top:6px}</style>
-<div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4 mobile-page-head"><div><div class="page-kicker">نسخه وب اکسل کسب‌وکار</div><h1 class="page-title mb-1">داشبورد</h1><div class="page-muted">{{ today_j }} · ثبت فروش روزانه و گزارش‌های اصلی</div></div><div class="mobile-page-actions"><a class="btn btn-primary px-4" href="{% url 'sale_start' %}">+ ثبت صورت فروش</a></div></div>
+<div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4 mobile-page-head"><div><h1 class="page-title mb-1">داشبورد</h1></div><div class="mobile-page-actions"><a class="btn btn-primary px-4" href="{% url 'sale_start' %}">+ ثبت صورت فروش</a></div></div>
 
 <div class="row g-2 g-md-3 mb-4">
   <div class="col-6 col-xl-3"><div class="card glass-card h-100"><div class="card-body"><div class="subheader">فروش امروز</div><div class="kpi money mt-2">{{ today_metrics.gross|groupnum }}</div><div class="text-secondary">تومان</div></div></div></div>
@@ -13,9 +13,9 @@
   <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2"><div><h3 class="card-title mb-1">روند فروش ۳۰ روز فروش اخیر</h3><div class="text-secondary small">فقط روزهایی که فروش ثبت شده‌اند؛ روزهای تعطیل و خالی حذف می‌شوند. {{ chart_day_count }} روز در نمودار فعلی.</div></div><span class="badge badge-soft-orange">تا ۳۰ روز</span></div>
   <div class="card-body">
     <div class="row g-2 g-md-3 mb-3">
-      <div class="col-12 col-md-4"><div class="chart-summary-card"><div class="chart-summary-label">میانگین فروش روزانه</div><div class="chart-summary-value money">{{ chart_avg_sales|groupnum }} <span class="fs-6 fw-normal text-secondary">تومان</span></div><div class="chart-summary-note">بر مبنای همین {{ chart_day_count }} روز فروش اخیر</div></div></div>
-      <div class="col-12 col-md-4"><div class="chart-summary-card"><div class="chart-summary-label">میانگین سود روزانه</div><div class="chart-summary-value money {% if chart_avg_profit >= 0 %}text-success{% else %}text-danger{% endif %}">{{ chart_avg_profit|groupnum }} <span class="fs-6 fw-normal text-secondary">تومان</span></div><div class="chart-summary-note">میانگین سود واقعی همان روزهای نمودار</div></div></div>
-      <div class="col-12 col-md-4"><div class="chart-summary-card"><div class="chart-summary-label">میانگین فروش تعدادی</div><div class="chart-summary-value">{{ chart_avg_shorts|qtynum }} <span class="fs-6 fw-normal text-secondary">شورت در روز</span></div><div class="chart-summary-note">شامل فروش‌های عادی و Dia Gallery</div></div></div>
+      <div class="col-12 col-md-4"><div class="chart-summary-card"><div class="chart-summary-label">میانگین فروش روزانه</div><div class="chart-summary-value money">{{ chart_avg_sales|groupnum }} <span class="fs-6 fw-normal text-secondary">تومان</span></div></div></div>
+      <div class="col-12 col-md-4"><div class="chart-summary-card"><div class="chart-summary-label">میانگین سود روزانه</div><div class="chart-summary-value money {% if chart_avg_profit >= 0 %}text-success{% else %}text-danger{% endif %}">{{ chart_avg_profit|groupnum }} <span class="fs-6 fw-normal text-secondary">تومان</span></div></div></div>
+      <div class="col-12 col-md-4"><div class="chart-summary-card"><div class="chart-summary-label">میانگین فروش تعدادی</div><div class="chart-summary-value">{{ chart_avg_shorts|qtynum }} <span class="fs-6 fw-normal text-secondary">شورت در روز</span></div></div></div>
     </div>
     <div class="dashboard-chart-scroll"><div class="dashboard-chart-canvas" dir="ltr"><canvas id="salesTrendChart" dir="ltr"></canvas></div></div>
   </div>
@@ -24,10 +24,10 @@
 
 
 <div class="row g-2 g-md-3">
-  <div class="col-12 col-sm-6 col-xl-3"><a class="card quick-card glass-card h-100 text-decoration-none" href="{% url 'sale_start' %}"><div class="card-body"><span class="quick-icon">01</span><h3 class="mt-3 mb-1">فروش روزانه</h3><div class="text-secondary">تقویم شمسی، ثبت صورت و گزارش نهایی همان روز</div></div></a></div>
-  <div class="col-12 col-sm-6 col-xl-3"><a class="card quick-card glass-card h-100 text-decoration-none" href="{% url 'report' %}"><div class="card-body"><span class="quick-icon">02</span><h3 class="mt-3 mb-1">گزارش جامع</h3><div class="text-secondary">فروش اکسل‌مانند + سرمایه، حساب‌ها و موجودی دستی</div></div></a></div>
-  <div class="col-12 col-sm-6 col-xl-3"><a class="card quick-card glass-card h-100 text-decoration-none" href="{% url 'material_report' %}"><div class="card-body"><span class="quick-icon">03</span><h3 class="mt-3 mb-1">گزارش مواد اولیه</h3><div class="text-secondary">{{ material_blocks }} صورت ثبت‌شده · ورود دستی مشابه اکسل</div></div></a></div>
-  <div class="col-12 col-sm-6 col-xl-3"><a class="card quick-card glass-card h-100 text-decoration-none" href="{% url 'takvin' %}"><div class="card-body"><span class="quick-icon">04</span><h3 class="mt-3 mb-1">خرید تکوین</h3><div class="text-secondary">خرید خالص ماه: <span class="money fw-bold">{{ purchase_month_total|groupnum }}</span> تومان</div></div></a></div>
+  <div class="col-12 col-sm-6 col-xl-3"><a class="card quick-card glass-card h-100 text-decoration-none" href="{% url 'sale_start' %}"><div class="card-body"><span class="quick-icon">01</span><h3 class="mt-3 mb-1">فروش روزانه</h3></div></a></div>
+  <div class="col-12 col-sm-6 col-xl-3"><a class="card quick-card glass-card h-100 text-decoration-none" href="{% url 'report' %}"><div class="card-body"><span class="quick-icon">02</span><h3 class="mt-3 mb-1">گزارش جامع</h3></div></a></div>
+  <div class="col-12 col-sm-6 col-xl-3"><a class="card quick-card glass-card h-100 text-decoration-none" href="{% url 'material_report' %}"><div class="card-body"><span class="quick-icon">03</span><h3 class="mt-3 mb-1">گزارش مواد اولیه</h3></div></a></div>
+  <div class="col-12 col-sm-6 col-xl-3"><a class="card quick-card glass-card h-100 text-decoration-none" href="{% url 'takvin' %}"><div class="card-body"><span class="quick-icon">04</span><h3 class="mt-3 mb-1">خرید تکوین</h3></div></a></div>
 </div>
 
 {{ chart_labels|json_script:"dashboard-chart-labels" }}{{ chart_sales|json_script:"dashboard-chart-sales" }}{{ chart_profit|json_script:"dashboard-chart-profit" }}
