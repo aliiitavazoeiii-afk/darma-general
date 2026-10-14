@@ -11,7 +11,6 @@ from .dia_gallery_v45 import dia_gallery_period_metrics
 from .excel_views import DISPLAY_SIZES, _add_metrics, _empty_metrics, _finish_metrics, _int, _period_range
 from .finance import sale_line_metrics
 from .finance_overview_v104 import finance_kpis
-from .pricing_monitor_v89 import dashboard_pricing_context
 from .finance_excel_v9 import digikala_ledger_total
 from .models import ExcelManualRow, ExcelManualSetting, SaleLine
 from .report_v5 import _raw_material_context, manual_report_action as legacy_manual_report_action
@@ -144,8 +143,6 @@ def report(request):
     }
     context.update(raw)
     context.update(finance_kpis())
-    from datetime import date
-    context.update(dashboard_pricing_context(date.today()))
     return render(request, "core/report_excel_v97.html", context)
 
 
