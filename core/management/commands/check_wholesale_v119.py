@@ -42,7 +42,7 @@ class Command(BaseCommand):
         for marker in (
             'grid-template-columns:repeat(2,minmax(0,1fr))',
             'id="whInvoiceLines"', 'name="customer_id"',
-            'name="date"', 'id="whColorPicker"', 'id="whAddColor"',
+            'name="date"', 'id="whColorPicker"', "picker.addEventListener('change'",
             'id="whColorCardTemplate"', 'data-color-price',
             'data-size-qty="{{ size.pk }}"', 'data-size-available',
             'data-color-id', 'id="whInvoiceHidden"',
