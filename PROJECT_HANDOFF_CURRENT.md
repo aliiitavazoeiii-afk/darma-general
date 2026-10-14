@@ -197,3 +197,7 @@ Branch `v114-clean-icon-sidebar-navigation` based on V113. Nine direct icon nav 
 
 ## V115 STABLE SIDEBAR + REPORT
 Branch `v115-stable-sidebar-report-dashboard` based on V114. Starts collapsed with no full-page toggle flash; power-only collapsed logout; centered 4-column sales cards; shared six Finance KPIs and Darma pricing now in Comprehensive Report instead of Dashboard. Read-only except presentation and view context; no schema/data mutations. Parallel UI work needs deliberate merge. Deployment marker: `SUCCESS: STABLE SIDEBAR + COMPREHENSIVE REPORT V115 DEPLOYED`.
+
+
+## V116 REGISTERED FABRIC ROLL COUNT
+Branch `v116-fabric-roll-count-audit` on the V115 stable UI line. Five material color cards count distinct explicit fabric codes across all Darma sheets, not incomplete cut status or anonymous positive-weight rows. Uncoded sheet IDs can be audited with `check_fabric_roll_count_v116`. Existing delivered/open-work calculations and real material stock remain unchanged. Production marker `SUCCESS: FABRIC ROLL COUNT V116 DEPLOYED`. See `docs/PROJECT_CONTEXT/65_FABRIC_ROLL_COUNT_V116.md`.
