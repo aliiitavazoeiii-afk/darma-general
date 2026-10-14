@@ -203,7 +203,7 @@
   const stock=JSON.parse(document.getElementById('wh-stock-data').textContent);
   const previousPrices=JSON.parse(document.getElementById('wh-price-data').textContent);
   const money=new Intl.NumberFormat('fa-IR');
-  const validCount=value=>value!==''&&Number.isSafeInteger(Number(value))&&Number(value)>=0;
+  const validCount=value=>value===''||(Number.isSafeInteger(Number(value))&&Number(value)>=0);
   const cards=()=>Array.from(holder.querySelectorAll('[data-color-id]'));
   const entriesFor=card=>Array.from(card.querySelectorAll('[data-size-qty]')).map(input=>{
     const color=card.dataset.colorId;
