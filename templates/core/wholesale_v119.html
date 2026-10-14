@@ -1,4 +1,4 @@
-{% extends 'base.html' %}{% load static %}
+{% extends 'base.html' %}{% load static jalali %}
 {% block title %}فروش عمده نوانی | DARMA{% endblock %}
 {% block content %}
 <style>
@@ -78,7 +78,7 @@
         {% for buyer in wholesale_customers %}
           <a class="wh119-person {% if selected_customer.pk == buyer.pk %}active{% endif %}" href="?customer={{ buyer.pk }}">
             <b>{{ buyer.name }}{% if buyer.is_pedram %} · خیاط{% endif %}</b>
-            <span>صورت: {{ buyer.ledger.count }} | مانده: {{ buyer.ledger.balance|floatformat:0 }} تومان</span>
+            <span>صورت: {{ buyer.ledger.count }} | {% if buyer.is_pedram %}مانده خالص خیاط{% else %}مانده طلب{% endif %}: {{ buyer.ledger.balance|groupnum }} تومان</span>
           </a>
         {% empty %}<div class="wh119-muted">هنوز خریدار تعریف نشده است.</div>{% endfor %}
       </div>
@@ -86,11 +86,11 @@
     <section class="wh119-panel">
       <h2>ثبت صورت فروش</h2>
       {% if selected_customer %}
-        <div class="wh119-muted">خریدار: <b>{{ selected_customer.name }}</b> {% if selected_customer.is_pedram %}— مبلغ صورت با حساب خیاط تهاتر می‌شود. مانده فعلی حساب خیاط: {{ wholesale_tailor_balance|floatformat:0 }} تومان{% endif %}</div>
+        <div class="wh119-muted">خریدار: <b>{{ selected_customer.name }}</b> {% if selected_customer.is_pedram %}— فروش به طلب شما اضافه می‌شود؛ بدهی قبلی را کاهش می‌دهد و با مزد تحویل‌های بعدی تسویه می‌شود. مانده خالص حساب خیاط: {{ wholesale_tailor_balance|groupnum }} تومان{% endif %}</div>
         <div class="wh119-ledger">
-          <div><span>کل فروش</span><b>{{ selected_customer.ledger.gross|floatformat:0 }}</b></div>
-          <div><span>تهاتر / دریافت</span><b>{{ selected_customer.ledger.offset|add:selected_customer.ledger.received|floatformat:0 }}</b></div>
-          <div><span>طلب باز</span><b>{{ selected_customer.ledger.balance|floatformat:0 }}</b></div>
+          <div><span>کل فروش</span><b>{{ selected_customer.ledger.gross|groupnum }}</b></div>
+          <div><span>دریافت / تسویه نقدی</span><b>{{ selected_customer.ledger.offset|add:selected_customer.ledger.received|groupnum }}</b></div>
+          <div><span>{% if selected_customer.is_pedram %}مانده خالص حساب خیاط{% else %}طلب باز{% endif %}</span><b>{{ selected_customer.ledger.balance|groupnum }}</b></div>
         </div>
         <form action="{% url 'wholesale_invoice_add' %}" method="post" id="whInvoiceForm">{% csrf_token %}
           <input type="hidden" name="customer_id" value="{{ selected_customer.pk }}">
@@ -134,7 +134,7 @@
             <div class="wh119-table-scroll"><table class="wh119-table">
               <thead><tr><th>تاریخ</th><th>مبلغ (تومان)</th><th>توضیح</th></tr></thead>
               <tbody>{% for receipt in wholesale_receipts %}
-                <tr><td>{{ receipt.jalali_date }}</td><td>{{ receipt.amount|floatformat:0 }}</td><td>{{ receipt.note }}</td></tr>
+                <tr><td>{{ receipt.jalali_date }}</td><td>{{ receipt.amount|groupnum }}</td><td>{{ receipt.note }}</td></tr>
               {% endfor %}</tbody>
             </table></div>
           </div>
@@ -150,14 +150,14 @@
       <details class="wh119-invoice" id="invoice-{{ invoice.pk }}">
         <summary><div class="wh119-summary">
           <div><b>صورت #{{ invoice.pk }} · {{ invoice.customer.name }}</b><div class="wh119-muted">{{ invoice.jalali_date }} · {{ invoice.quantity_total }} عدد</div></div>
-          <div style="text-align:left"><b>{{ invoice.total_amount|floatformat:0 }} تومان</b><div class="wh119-muted">نمایش جزئیات <span aria-hidden="true">⌄</span></div></div>
+          <div style="text-align:left"><b>{{ invoice.total_amount|groupnum }} تومان</b><div class="wh119-muted">نمایش جزئیات <span aria-hidden="true">⌄</span></div></div>
         </div></summary>
         <div class="wh119-body">
           <div class="wh119-table-scroll"><table class="wh119-table">
           <thead><tr><th>مدل / رنگ</th><th>سایز</th><th>تعداد</th><th>فی واحد</th><th>مجموع</th></tr></thead>
-          <tbody>{% for line in invoice.lines.all %}<tr><td>{{ line.color.name }}</td><td>{{ line.size.name }}</td><td>{{ line.quantity }}</td><td>{{ line.unit_price|floatformat:0 }}</td><td>{{ line.amount|floatformat:0 }}</td></tr>{% endfor %}</tbody>
+          <tbody>{% for line in invoice.lines.all %}<tr><td>{{ line.color.name }}</td><td>{{ line.size.name }}</td><td>{{ line.quantity }}</td><td>{{ line.unit_price|groupnum }}</td><td>{{ line.amount|groupnum }}</td></tr>{% endfor %}</tbody>
           </table></div>
-          {% if invoice.tailor_deducted_amount %}<small>تهاتر با حساب خیاط: {{ invoice.tailor_deducted_amount|floatformat:0 }} تومان</small>{% endif %}
+          {% if invoice.tailor_deducted_amount %}<small>تهاتر با حساب خیاط: {{ invoice.tailor_deducted_amount|groupnum }} تومان</small>{% endif %}
           {% if invoice.note %}<div class="wh119-muted mt-2">{{ invoice.note }}</div>{% endif %}
         </div>
       </details>
@@ -169,7 +169,7 @@
   <section class="wh120-color-card" data-color-id="">
     <div class="wh120-color-card-head">
       <div><strong class="wh120-color-name" data-color-title></strong><small>تعداد را برای هر سایز وارد کن</small></div>
-      <div class="wh120-color-price"><label>قیمت واحد این رنگ (تومان)</label><input type="number" data-color-price min="1" inputmode="numeric" placeholder="مثلاً ۸۵۰۰۰"></div>
+      <div class="wh120-color-price"><label>قیمت واحد این رنگ (تومان)</label><input type="text" data-color-price inputmode="numeric" placeholder="مثلاً ۸۵۰۰۰"></div>
       <button type="button" class="wh120-color-remove" data-remove-color aria-label="حذف رنگ">حذف رنگ</button>
     </div>
     <div class="wh120-size-scroller">
@@ -177,7 +177,7 @@
         <thead><tr>{% for size in wholesale_sizes %}<th scope="col">{{ size.name }}</th>{% endfor %}</tr></thead>
         <tbody><tr>{% for size in wholesale_sizes %}
           <td data-size-cell>
-            <input data-size-qty="{{ size.pk }}" type="number" inputmode="numeric" min="0" step="1" placeholder="۰" aria-label="تعداد سایز {{ size.name }}">
+            <input data-size-qty="{{ size.pk }}" type="text" inputmode="numeric" placeholder="۰" aria-label="تعداد سایز {{ size.name }}">
             <small data-size-available>موجودی —</small>
           </td>
         {% endfor %}</tr></tbody>
@@ -203,18 +203,34 @@
   const stock=JSON.parse(document.getElementById('wh-stock-data').textContent);
   const previousPrices=JSON.parse(document.getElementById('wh-price-data').textContent);
   const money=new Intl.NumberFormat('fa-IR');
-  const validCount=value=>value===''||(Number.isSafeInteger(Number(value))&&Number(value)>=0);
+  const toAscii=value=>String(value??'')
+    .replace(/[۰-۹]/g,c=>String(c.charCodeAt(0)-1776))
+    .replace(/[٠-٩]/g,c=>String(c.charCodeAt(0)-1632))
+    .replace(/[٬,\s]/g,'');
+  const asNumber=value=>{
+    const stripped=toAscii(value);
+    return /^\d+$/.test(stripped)?Number(stripped):NaN;
+  };
+  const validCount=value=>String(value).trim()===''||
+    (Number.isSafeInteger(asNumber(value))&&asNumber(value)>=0);
+  function groupInput(input){
+    const raw=toAscii(input.value);
+    if(raw===''){input.value='';return;}
+    if(!/^\d+$/.test(raw))return;
+    const grouped=raw.replace(/\B(?=(\d{3})+(?!\d))/g,'٬');
+    if(input.value!==grouped)input.value=grouped;
+  }
   const cards=()=>Array.from(holder.querySelectorAll('[data-color-id]'));
   const entriesFor=card=>Array.from(card.querySelectorAll('[data-size-qty]')).map(input=>{
     const color=card.dataset.colorId;
     const size=input.dataset.sizeQty;
     const available=Math.max(0,Number(stock[color+':'+size]||0));
-    return {color,size,input,cell:input.closest('[data-size-cell]'),available,quantity:input.value===''?0:Number(input.value)};
+    return {color,size,input,cell:input.closest('[data-size-cell]'),available,quantity:input.value===''?0:asNumber(input.value)};
   });
   function recalc(){
     let count=0,amount=0;
     cards().forEach(card=>{
-      const price=Number(card.querySelector('[data-color-price]').value)||0;
+      const price=asNumber(card.querySelector('[data-color-price]').value)||0;
       let local=0;
       entriesFor(card).forEach(entry=>{
         const ok=validCount(entry.input.value);
@@ -240,7 +256,7 @@
     card.dataset.colorId=id;
     card.querySelector('[data-color-title]').textContent=picker.selectedOptions[0].textContent.trim();
     const price=Object.entries(previousPrices).find(([key])=>key.startsWith(id+':'));
-    if(price)card.querySelector('[data-color-price]').value=String(price[1]);
+    if(price){card.querySelector('[data-color-price]').value=String(price[1]);groupInput(card.querySelector('[data-color-price]'));}
     holder.appendChild(card);
     picker.value='';
     recalc();
@@ -252,13 +268,18 @@
     hidden.appendChild(input);
   }
   picker.addEventListener('change',()=>{if(picker.value)addColor()});
-  holder.addEventListener('input',recalc);
+  holder.addEventListener('input',event=>{
+    if(event.target.matches('[data-size-qty],[data-color-price]'))groupInput(event.target);
+    recalc();
+  });
   holder.addEventListener('click',event=>{
     const button=event.target.closest('[data-remove-color]');
     if(!button)return;
     button.closest('[data-color-id]').remove();
     recalc();
   });
+  const receiptAmount=document.querySelector('form[action*="receipts/add"] input[name="amount"]');
+  if(receiptAmount)receiptAmount.addEventListener('input',()=>groupInput(receiptAmount));
   form.addEventListener('submit',event=>{
     hidden.replaceChildren();
     let count=0;
@@ -269,7 +290,7 @@
     };
     for(const card of cards()){
       const priceField=card.querySelector('[data-color-price]');
-      const price=Number(priceField.value);
+      const price=asNumber(priceField.value);
       const items=entriesFor(card);
       for(const item of items){
         if(!validCount(item.input.value)){
