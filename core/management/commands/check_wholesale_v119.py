@@ -92,7 +92,8 @@ class Command(BaseCommand):
                 raise RuntimeError(f"Invoice {invoice.pk} gross mismatch")
             if sum(x.quantity for x in lines) != invoice.quantity_total:
                 raise RuntimeError(f"Invoice {invoice.pk} piece count mismatch")
-            wanted_offset = invoice.total_amount if invoice.customer.is_pedram else 0
+            # V121: any prior Pedram wrong-sign "offset" has been repaired.
+            wanted_offset = 0
             if invoice.tailor_deducted_amount != wanted_offset:
                 raise RuntimeError(f"Invoice {invoice.pk} tailor offset drift")
             for line in lines:
@@ -107,9 +108,11 @@ class Command(BaseCommand):
                     raise RuntimeError(f"Novani inventory movement mismatch: {reference}")
         for customer in WholesaleCustomer.objects.all():
             values = account(customer)
-            if values["balance"] < 0:
+            # The historical shared tailor account is SIGNED and may be
+            # negative when we owe Pedram; this is legitimate, not a defect.
+            if values["balance"] < 0 and not customer.is_pedram:
                 raise RuntimeError(f"Negative customer receivable ledger: {customer.pk}")
-        self.stdout.write("PEDRAM = ONE LINKED TAILOR-OFFSET BUYER")
+        self.stdout.write("PEDRAM = ONE SIGNED SHARED TAILOR ACCOUNT / WHOLESALE SALES CREATE RECEIVABLE")
         self.stdout.write("NOVANI STOCK = HOME ONLY; EACH INVOICE LINE HAS ONE SALE MOVEMENT")
         self.stdout.write("PERSON ACCOUNT RECEIVABLE / CASH RECEIPT = SEPARATE FROM DAILY SALES")
         self.stdout.write("READ ONLY: NO SALES OR STOCK WRITES")
