@@ -79,7 +79,7 @@ def post_invoice(post):
     count = sum(qty for _, _, qty, _ in items)
     invoice = WholesaleInvoice.objects.create(
         request_token=token, date=when, customer=customer, quantity_total=count, total_amount=gross,
-        tailor_deducted_amount=gross if customer.is_pedram else 0,
+        tailor_deducted_amount=0,  # V121: Pedram sale creates receivable, not settlement
         note=(post.get("note") or "").strip()[:250],
     )
     for color, size, qty, price in items:
@@ -97,9 +97,12 @@ def post_invoice(post):
         )
 
     if customer.is_pedram:
+        # Shared tailor account is signed: negative means we owe Pedram;
+        # positive means Pedram owes us. New wholesale sales are CREDIT to
+        # our receivable, hence increase the signed balance.
         target = _tailor_row(create=True)
         target = ExcelManualRow.objects.select_for_update().get(pk=target.pk)
-        target.amount = int(target.amount or 0) - gross
+        target.amount = int(target.amount or 0) + gross
     else:
         if not customer.account_row_id:
             raise ValueError("حساب شخص متصل نیست.")
