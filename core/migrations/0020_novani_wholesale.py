@@ -1,3 +1,5 @@
+import uuid
+
 from django.db import migrations, models
 import django.db.models.deletion
 
@@ -29,6 +31,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name="WholesaleInvoice",
             fields=[
+                ("request_token", models.UUIDField(default=uuid.uuid4, editable=False, unique=True)),
                 ("id", models.BigAutoField(primary_key=True, serialize=False, auto_created=True, verbose_name="ID")),
                 ("date", models.DateField(db_index=True)),
                 ("note", models.CharField(max_length=250, blank=True)),
@@ -60,6 +63,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name="WholesaleReceipt",
             fields=[
+                ("request_token", models.UUIDField(default=uuid.uuid4, editable=False, unique=True)),
                 ("id", models.BigAutoField(primary_key=True, serialize=False, auto_created=True, verbose_name="ID")),
                 ("date", models.DateField(db_index=True)),
                 ("amount", models.PositiveBigIntegerField()),
