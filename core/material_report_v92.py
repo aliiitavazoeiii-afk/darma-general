@@ -110,19 +110,22 @@ BASE_COLOR_PROGRESS = tuple(v23.BASE_MODELS)
 
 
 def _summarize_open_base_colors(blocks):
-    """Five Darma color cards with *separate* source semantics.
+    """Five Darma cards: unique unapplied fabric codes and all-time input weight.
 
-    roll_count: unique explicitly registered fabric codes for that color
-    across saved Darma material sheets. An empty code is not proof of an
-    additional fabric roll, even when weight/cut was entered.
-    expected/delivered/pending: ONLY still-open output work, unchanged.
-    A missing-code counter is diagnostic only; it is not a roll count.
+    A roll is eligible only when its saved color row has a nonempty fabric
+    code and NO positive, recorded FABRIC consumption for that same block and
+    color. A sewing output application does not mark raw materials as used.
+    The total entered weight is an independent all-time input figure and must
+    include both applied and unapplied sheets (but never another brand).
+
+    Existing expected/delivered/pending output-work metrics are unchanged.
     """
     rows = []
     for key, label in BASE_COLOR_PROGRESS:
         expected = delivered = pending = open_blocks = 0
-        registered_codes = set()
+        unapplied_codes = set()
         missing_codes = 0
+        total_weight = Decimal("0")
         for block in blocks:
             if getattr(block.brand, "name", "") != "دارما":
                 continue
@@ -130,13 +133,23 @@ def _summarize_open_base_colors(blocks):
             code = str(values.get("fabric_code") or "").strip()
             cut = max(0, v23.v20._int(values.get("cut")))
             weight = max(_decimal(values.get("weight")), Decimal("0"))
+            total_weight += weight
 
-            # Count registered fabric rolls separately from open sewing work.
-            # Do not turn a blank code with positive weight into a fake roll.
-            if code:
-                registered_codes.add(code)
-            elif not code and (weight > 0 or cut > 0):
-                missing_codes += 1
+            # Material-report stock-consumption records are color-specific.
+            # Do not conflate applying delivered finished goods with applying
+            # fabric input, and do not exclude an entire multi-color report
+            # just because ANOTHER color's raw materials were applied.
+            fabric_applied = any(
+                row.kind == v23.FABRIC
+                and row.material_key == key
+                and _decimal(row.quantity) > 0
+                for row in block.stock_consumptions.all()
+            )
+            if not fabric_applied:
+                if code:
+                    unapplied_codes.add(code)
+                elif weight > 0 or cut > 0:
+                    missing_codes += 1
 
             applied = sum(
                 max(0, int(item.quantity or 0))
@@ -153,15 +166,16 @@ def _summarize_open_base_colors(blocks):
         rows.append({
             "key": key,
             "label": label,
-            "roll_count": len(registered_codes),
+            "roll_count": len(unapplied_codes),
             "rolls_without_code": int(missing_codes),
+            "total_weight": total_weight,
+            "total_weight_display": _format_weight(total_weight),
             "expected": int(expected),
             "delivered": int(delivered),
             "pending": int(pending),
             "open_blocks": int(open_blocks),
         })
     return rows
-
 
 def _all_time_cut_summary(blocks):
     """Average saved cut quantity across the five canonical Darma colors.
