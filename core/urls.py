@@ -41,6 +41,8 @@ from . import (
     settings_stock_v5,
     takvin_v5,
     views,
+    wholesale_v119,
+    wholesale_export_v119,
 )
 
 urlpatterns = [
@@ -67,6 +69,12 @@ urlpatterns = [
     path("sales/shortage/<int:shortage_id>/resolve/", excel_sales.shortage_resolve, name="shortage_resolve"),
     path("sales/report-line/<int:line_id>/price/", daily_report_actions_v21.sale_price_update, name="daily_sale_price_update"),
     path("sales/report-line/<int:line_id>/delete/", daily_report_actions_v21.sale_line_delete, name="daily_sale_line_delete"),
+
+    path("wholesale/", wholesale_v119.wholesale_home, name="wholesale_home"),
+    path("wholesale/customers/add/", wholesale_v119.wholesale_customer_add, name="wholesale_customer_add"),
+    path("wholesale/invoices/add/", wholesale_v119.wholesale_invoice_add, name="wholesale_invoice_add"),
+    path("wholesale/receipts/add/", wholesale_v119.wholesale_receipt_add, name="wholesale_receipt_add"),
+    path("wholesale/export/xlsx/", wholesale_export_v119.wholesale_export, name="wholesale_export"),
 
     path("returns/", returns_v37.returns_home, name="returns"),
     path("returns/apply/", returns_v37.return_apply, name="return_apply"),
