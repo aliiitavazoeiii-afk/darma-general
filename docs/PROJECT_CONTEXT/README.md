@@ -185,3 +185,7 @@ reconciles tailor wages automatically. Uses additive migration 0019.
 
 ## V115 stable sidebar and comprehensive report
 64. `64_STABLE_SIDEBAR_REPORT_V115.md` — fixes sidebar reload bounce, compact logout, sales metrics layout, six shared finance KPIs and relocates Darma pricing monitoring into Comprehensive Report. New branch: `v115-stable-sidebar-report-dashboard`.
+
+
+## V116 registered fabric-roll count
+65. `65_FABRIC_ROLL_COUNT_V116.md` — distinct registered fabric codes per color, explicit uncoded-sheet diagnostics, no business-state mutation. Branch: `v116-fabric-roll-count-audit`.
