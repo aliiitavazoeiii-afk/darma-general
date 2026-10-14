@@ -199,3 +199,8 @@ Continuation branch: `v117-unified-ui-fabric-count`, descended from the newest `
 ### V118 — unapplied coded fabric rolls and total weight
 
 66. `66_UNAPPLIED_FABRIC_WEIGHT_V118.md` — Count distinct nonempty fabric codes only on color rows without recorded positive fabric consumption, separately from finished output. Show the all-time cumulative delivered fabric weight for each Darma base color. V117 UI remains. Deploy with `server_unapplied_fabric_v118.sh` instead of older scripts.
+
+
+### V119 — Wholesale Novani
+
+67. `67_NOVANI_WHOLESALE_V119.md` — independent wholesale buyer, small invoice cards, Novani stock, Pedram-to-tailor offset, per-buyer prices and Excel export. Single schema migration with registered Pedram; deploy through `server_novani_wholesale_v119.sh` (not older scripts).
