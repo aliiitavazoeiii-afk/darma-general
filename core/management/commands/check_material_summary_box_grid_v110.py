@@ -122,21 +122,23 @@ class Command(BaseCommand):
                     f"Pending delivery status escaped the compact output box: {marker}"
                 )
 
-        # V116 supersedes only V109 roll-count semantics: registered
-        # distinct fabric codes, not the number of still-open cut sheets.
+        # V118: only unconsumed, nonempty fabric codes for the SAME color
+        # are counted as rolls. Weight remains lifetime-entered, regardless
+        # of fabric consumption. The sewing-output stats are unchanged.
         objects = list(
             MaterialReportBlock.objects.select_related("brand")
-            .prefetch_related("output_applications")
+            .prefetch_related("output_applications", "stock_consumptions")
             .all()
         )
         rows = material_report_v92._summarize_open_base_colors(objects)
         expected_keys = list(material_report_v92.v23.BASE_KEYS)
         if [row["key"] for row in rows] != expected_keys:
-            raise RuntimeError("Base-color coverage/order drift under V116")
+            raise RuntimeError("Base-color coverage/order drift under V118")
 
         for row in rows:
             codes = set()
             missing_codes = 0
+            total_weight = material_report_v92.Decimal("0")
             for block in objects:
                 if getattr(block.brand, "name", "") != "دارما":
                     continue
@@ -147,21 +149,34 @@ class Command(BaseCommand):
                     material_report_v92._decimal(values.get("weight")),
                     material_report_v92.Decimal("0"),
                 )
+                total_weight += weight
+                applied = any(
+                    used.kind == material_report_v92.v23.FABRIC
+                    and used.material_key == row["key"]
+                    and material_report_v92._decimal(used.quantity) > 0
+                    for used in block.stock_consumptions.all()
+                )
+                if applied:
+                    continue
                 if code:
                     codes.add(code)
                 elif weight > 0 or cut > 0:
                     missing_codes += 1
             if row["roll_count"] != len(codes):
-                raise RuntimeError("V116 distinct registered fabric-code count drift")
+                raise RuntimeError("V118 distinct UNAPPLIED fabric-code count drift")
             if row["rolls_without_code"] != missing_codes:
-                raise RuntimeError("V116 uncoded diagnostic count drift")
+                raise RuntimeError("V118 uncoded unapplied sheet diagnostic drift")
+            if row["total_weight"] != total_weight:
+                raise RuntimeError("V118 all-time color delivery weight drift")
+            if row["total_weight_display"] != material_report_v92._format_weight(total_weight):
+                raise RuntimeError("V118 displayed color weight drift")
 
         v92_source = (
             Path(settings.BASE_DIR) / "templates/core/material_report_v92.html"
         ).read_text(encoding="utf-8")
         if v92_source.count('data-base-color="{{ item.key }}"') != 1:
             raise RuntimeError("Base-color card template marker drifted")
-        for marker in ("طاقه ثبت‌شده", "item.roll_count", "باید تحویل شود", "تحویل‌شده", "مانده"):
+        for marker in ("طاقه اعمال‌نشده", "item.roll_count", "وزن تحویلی کل", "item.total_weight_display", "باید تحویل شود", "تحویل‌شده", "مانده"):
             if marker not in v92_source:
                 raise RuntimeError(f"Base-color card marker missing: {marker}")
 
