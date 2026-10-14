@@ -64,7 +64,7 @@ echo "$PRE"
 
 echo "=== BUILD / READ ONLY REGRESSION ==="
 docker compose build web || fail "build failed"
-docker compose run --rm --entrypoint python web -m compileall -q core/wholesale_models_v119.py core/wholesale_logic_v119.py core/wholesale_v119.py core/wholesale_export_v119.py core/migrations/0020_novani_wholesale.py core/management/commands/check_wholesale_v119.py || fail "new wholesale Python source syntax check failed"
+docker compose run --rm --entrypoint python web -m compileall -q core/wholesale_models_v119.py core/wholesale_logic_v119.py core/wholesale_v119.py core/wholesale_export_v119.py core/migrations/0020_novani_wholesale.py core/management/commands/check_wholesale_v119.py core/test_wholesale_v119.py || fail "new wholesale Python source syntax check failed"
 docker compose run --rm --entrypoint python web manage.py makemigrations --check --dry-run || fail "unexpected migration"
 docker compose run --rm --entrypoint python web manage.py check || fail "Django check"
 echo "=== V119 MIGRATION SAFETY ==="
