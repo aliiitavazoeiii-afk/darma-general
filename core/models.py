@@ -359,3 +359,7 @@ class TailorBalanceEntry(models.Model):
 
     class Meta:
         ordering = ["-date", "-id"]
+
+
+# Registered after existing core financial models: wholesale uses distinct ledgers.
+from .wholesale_models_v119 import WholesaleCustomer, WholesaleInvoice, WholesaleInvoiceLine, WholesaleReceipt  # noqa: E402,F401
