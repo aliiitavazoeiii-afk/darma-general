@@ -74,8 +74,8 @@ def wholesale_customer_add(request):
         messages.error(request, "نام خریدار معتبر نیست.")
         return redirect("wholesale_home")
     normalized = name.replace("ي", "ی").replace("ك", "ک").replace(" ", "")
-    if normalized == "پدرام":
-        messages.error(request, "پدرام از قبل ثبت شده؛ همان خریدار را انتخاب کن.")
+    if normalized in {"پدرام", "خیاط"}:
+        messages.error(request, "پدرام و حساب خیاط ویژه هستند؛ خریدار پدرام را از فهرست انتخاب کن.")
         return redirect("wholesale_home")
     try:
         with transaction.atomic():
