@@ -27,7 +27,7 @@ def pending_repair():
     return rows, gross
 
 
-def repair(*, apply=False):
+def repair(*, apply=False, expected_gross=None):
     with transaction.atomic():
         # Serialize against new invoice writers that lock Pedram buyer first.
         # Record corrections with the old (positive) 'offset' field, which is
@@ -49,6 +49,11 @@ def repair(*, apply=False):
             if invoice.total_amount != invoice.tailor_deducted_amount:
                 raise ValueError(f"Invoice {invoice.pk} offset mismatch; refused")
         total = sum(int(invoice.total_amount) for invoice in old)
+        if expected_gross is not None and total != int(expected_gross):
+            raise ValueError(
+                f"Expected correction gross {int(expected_gross)}, found {total}; "
+                "no financial data was changed"
+            )
         tailor = _tailor_row(create=False)
         if total and tailor is None:
             raise ValueError("Shared tailor account missing: refusing financial repair")
@@ -78,10 +83,13 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("--apply", action="store_true")
+        parser.add_argument("--expected-gross", type=int, default=None)
 
     def handle(self, *args, **options):
         try:
-            result = repair(apply=options["apply"])
+            result = repair(
+                apply=options["apply"], expected_gross=options["expected_gross"]
+            )
         except Exception as exc:
             raise CommandError(str(exc)) from exc
         self.stdout.write(f"PEDRAM_REPAIR_INVOICE_IDS={result['invoice_ids']}")
