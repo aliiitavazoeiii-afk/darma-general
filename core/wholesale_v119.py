@@ -1,4 +1,5 @@
 """Novani wholesale pages; UI and reports are separate from daily sales."""
+import uuid
 from datetime import date
 
 from django.contrib import messages
@@ -56,6 +57,8 @@ def wholesale_home(request):
         "wholesale_invoices": invoices,
         "wholesale_receipts": receipts,
         "today_j": format_jalali(date.today()),
+        "invoice_token": str(uuid.uuid4()),
+        "receipt_token": str(uuid.uuid4()),
     })
 
 
