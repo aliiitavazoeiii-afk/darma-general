@@ -27,8 +27,8 @@ class Command(BaseCommand):
         if 'sidebar-v116.css' not in base or '<body class="sidebar-collapsed">' not in base:
             raise RuntimeError("V116 CSS or no-flash desktop initial state missing")
         nav = base.split('<nav class="erp-nav" aria-label="منوی اصلی">', 1)[1].split("</nav>", 1)[0]
-        if nav.count('class="nav114-link') != 9 or nav.count('<svg class="v116-icon"') != 9:
-            raise RuntimeError("Expected exactly nine direct sidebar links with inline SVG icons")
+        if nav.count('class="nav114-link') != 10 or nav.count('<svg class="v116-icon"') != 10:
+            raise RuntimeError("Expected exactly ten direct sidebar links with inline SVG icons")
         if '<svg class="v116-icon"' not in base.split('class="nav115-power"', 1)[1]:
             raise RuntimeError("Logout icon is not SVG")
         if "setExpanded(" in base or "main?.addEventListener('pointerenter'" in base:
@@ -107,7 +107,7 @@ class Command(BaseCommand):
             if 'data-report-finance-moved-server="1"' not in html:
                 raise RuntimeError("Obsolete account-editing controls were reintroduced")
 
-        self.stdout.write("SVG NAV = NINE ICONS / FIXED MAIN WIDTH / CSS HOVER OVERLAY")
+        self.stdout.write("SVG NAV = TEN ICONS / FIXED MAIN WIDTH / CSS HOVER OVERLAY")
         self.stdout.write("REPORT = SIX FINANCE KPI + FIVE SALES KPI + VISIBLE CAPITAL")
         self.stdout.write("PRICING = SINGLE LINK TO FULL REPORT WITH XLSX EXPORT")
         self.stdout.write("NO BUSINESS DATA WRITES")
