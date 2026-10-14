@@ -31,7 +31,7 @@ python3 - "$BASE" <<'PY'
 import pathlib, subprocess, sys
 original=subprocess.check_output(["git","show",f"{sys.argv[1]}:core/models.py"])
 current=pathlib.Path("core/models.py").read_bytes()
-append=b"\\n\\n# Registered after existing core financial models: wholesale uses distinct ledgers.\\nfrom .wholesale_models_v119 import WholesaleCustomer, WholesaleInvoice, WholesaleInvoiceLine, WholesaleReceipt  # noqa: E402,F401\\n"
+append=b"\n\n# Registered after existing core financial models: wholesale uses distinct ledgers.\nfrom .wholesale_models_v119 import WholesaleCustomer, WholesaleInvoice, WholesaleInvoiceLine, WholesaleReceipt  # noqa: E402,F401\n"
 if current != original + append:
     raise SystemExit("FAILED: existing core/models.py changed outside V119 import")
 PY
@@ -67,7 +67,7 @@ docker compose build web || fail "build failed"
 docker compose run --rm --entrypoint python web manage.py makemigrations --check --dry-run || fail "unexpected migration"
 docker compose run --rm --entrypoint python web manage.py check || fail "Django check"
 echo "=== V119 MIGRATION SAFETY ==="
-docker compose run --rm --entrypoint python web manage.py showmigrations core | grep -Eq '\\[X\\] 0019_material_output_location' || fail "V119 expects existing core migration 0019 already installed"
+docker compose run --rm --entrypoint python web manage.py showmigrations core | grep -Eq '\[X\] 0019_material_output_location' || fail "V119 expects existing core migration 0019 already installed"
 docker compose run --rm --entrypoint python web manage.py migrate core 0020_novani_wholesale --noinput || fail "V119 migration failed"
 docker compose run --rm --entrypoint python web manage.py check_wholesale_v119 || fail "V119 wholesale ledger check"
 
