@@ -211,3 +211,8 @@ Do not develop from stale V115 or either divergent V116 branch alone. Integratio
 ## V118 clarified fabric cards
 
 `v118-unapplied-fabric-rolls-color-weight` supersedes V117 fabric cards. User explicitly requested roll count ONLY for coded color rows whose **fabric raw-material consumption** has NOT been applied in that sheet/color. Use positive `MaterialReportConsumption(kind=FABRIC,material_key=color)` as evidence; ignore `MaterialReportOutputApplied` for eligibility. Lifetime delivered weight (kg) for each color is the sum of all saved input weights, applied and unapplied. The 3 sewing output/open work stats and all business logic remain untouched. The user did NOT deploy V117; run the V118 guarded script directly. See `docs/PROJECT_CONTEXT/66_UNAPPLIED_FABRIC_WEIGHT_V118.md`.
+
+
+## V119 Novani wholesale (latest continuation)
+
+Branch `v119-novani-wholesale` descends from V118; adds only `خرید تکوین` sidebar label plus one top-section `فروش عمده` link, standalone half-width-card invoices, customer accounts and Pedram linked tailor special handling; four-tab Excel export; safe atomic Novani HOME stock decrement with idempotent UUID; one migration `0020_novani_wholesale` for four new tables and Pedram seed; keeps all existing business formulas and material cards unchanged. See `docs/PROJECT_CONTEXT/67_NOVANI_WHOLESALE_V119.md`. Deploy script `server_novani_wholesale_v119.sh` preserves local Caddyfile and verifies legacy data hashes. Never deploy older V118 on top. Production deployment not yet confirmed.
