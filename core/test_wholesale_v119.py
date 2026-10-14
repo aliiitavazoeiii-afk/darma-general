@@ -10,6 +10,7 @@ from .models import (
     WholesaleInvoice, WholesaleReceipt,
 )
 from .wholesale_logic_v119 import account, add_receipt, post_invoice
+from .management.commands.repair_pedram_wholesale_v121 import repair
 from .business_tools_v14 import _tailor_row, _mellat_row
 
 
@@ -76,15 +77,50 @@ class NovaniWholesaleTests(TestCase):
         self.stock.refresh_from_db()
         self.assertEqual(self.stock.qty, 7)
 
-    def test_pedram_offsets_existing_tailor_and_never_credits_mellat(self):
+    def test_pedram_sale_increases_signed_tailor_receivable(self):
+        # Prior tailor negative means we owe Pedram, not the other way round.
+        self.tailor.amount = -100000
+        self.tailor.save(update_fields=["amount", "updated_at"])
         invoice = post_invoice(self.form(self.pedram, qty="2", price="90000"))
         self.tailor.refresh_from_db()
         self.mellat.refresh_from_db()
-        self.assertEqual(self.tailor.amount, 320000)
+        self.assertEqual(self.tailor.amount, 80000)
         self.assertEqual(self.mellat.amount, 100000)
-        self.assertEqual(invoice.tailor_deducted_amount, 180000)
+        self.assertEqual(invoice.tailor_deducted_amount, 0)
         self.assertEqual(account(self.pedram)["gross"], 180000)
-        self.assertEqual(account(self.pedram)["balance"], 0)
+        self.assertEqual(account(self.pedram)["balance"], 180000)
+        # Material-report output already applies the opposite wage effect
+        # through _adjust_tailor_balance(-wage_delta).
+        self.tailor.amount -= 30000
+        self.tailor.save(update_fields=["amount", "updated_at"])
+        self.tailor.refresh_from_db()
+        self.assertEqual(self.tailor.amount, 50000)
+
+    def test_existing_wrong_sign_pedram_invoice_repaired_once(self):
+        # Simulate an invoice saved by V119/V120 before the sign fix.
+        invoice = post_invoice(self.form(self.pedram, qty="2", price="90000"))
+        invoice.tailor_deducted_amount = invoice.total_amount
+        invoice.save(update_fields=["tailor_deducted_amount"])
+        # V119 also debited the tailor instead of crediting it.
+        self.tailor.refresh_from_db()
+        self.tailor.amount -= 2 * invoice.total_amount
+        self.tailor.save(update_fields=["amount", "updated_at"])
+        before_stock = self.stock.qty
+        dry = repair(apply=False)
+        self.assertEqual(dry["gross"], 180000)
+        self.assertEqual(dry["correction"], 360000)
+        fix = repair(apply=True)
+        self.assertEqual(fix["correction"], 360000)
+        self.tailor.refresh_from_db()
+        self.assertEqual(self.tailor.amount, 680000)
+        invoice.refresh_from_db()
+        self.assertEqual(invoice.tailor_deducted_amount, 0)
+        self.assertEqual(repair(apply=True)["correction"], 0)
+        self.tailor.refresh_from_db()
+        self.assertEqual(self.tailor.amount, 680000)
+        self.stock.refresh_from_db()
+        self.assertEqual(self.stock.qty, before_stock)
+        self.assertEqual(account(self.pedram)["balance"], 180000)
 
     def test_shortage_cannot_partially_debit_anything(self):
         with self.assertRaises(ValueError):
