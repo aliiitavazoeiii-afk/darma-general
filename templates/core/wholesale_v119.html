@@ -6,7 +6,7 @@
 .wh119-header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px}
 .wh119 h1{font-size:1.5rem;font-weight:900;margin:0}.wh119 h2{font-size:1.04rem;font-weight:900;margin:0 0 13px}
 .wh119-panel,.wh119-invoice{border:1px solid rgba(255,255,255,.12);background:linear-gradient(145deg,#13263c,#0b1a2b);border-radius:17px;padding:18px;min-width:0}
-.wh119-panels{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-bottom:20px}
+.wh119-panels{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-bottom:20px;align-items:start}
 .wh119-invoices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 .wh119-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .wh119-field label{font-weight:750;color:#aebfd2;font-size:.75rem;margin-bottom:5px;display:block}
@@ -32,7 +32,7 @@
 .wh119-table-scroll{width:100%;overflow-x:auto}.wh119-table{width:100%;border-collapse:collapse;white-space:nowrap;font-size:.81rem}
 .wh119-table th,.wh119-table td{padding:9px;border-bottom:1px solid #2b4157;text-align:right}.wh119-table th{color:#b4c9dc}
 /* V120: color-first Novani wholesale quantity matrix; old sale cards/sidebar untouched. */
-.wh120-color-picker{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:9px;align-items:end}
+.wh120-color-picker{display:grid;grid-template-columns:1fr;gap:9px;align-items:end}
 .wh120-color-picker .wh119-btn{min-height:40px}
 .wh120-color-cards{display:grid;grid-template-columns:1fr;gap:12px}
 .wh120-color-card{border:1px solid #3b5874;background:rgba(13,33,52,.86);border-radius:14px;padding:13px;min-width:0}
@@ -103,11 +103,11 @@
             <div class="wh119-field">
               <label for="whColorPicker">انتخاب رنگ / مدل نوانی</label>
               <select id="whColorPicker">
-                <option value="">رنگ موردنظر را انتخاب کن</option>
+                <option value="">انتخاب رنگ ← جدول سایزها خودکار باز می‌شود</option>
                 {% for color in wholesale_colors %}<option value="{{ color.pk }}">{{ color.name }}</option>{% endfor %}
               </select>
             </div>
-            <button type="button" class="wh119-btn wh119-btn-alt" id="whAddColor">+ افزودن رنگ</button>
+
           </div>
           <div id="whInvoiceLines" class="wh120-color-cards mt-3" aria-live="polite"></div>
           <div id="whInvoiceHidden" hidden></div>
@@ -251,7 +251,6 @@
     input.type='hidden';input.name=name;input.value=String(value);
     hidden.appendChild(input);
   }
-  document.getElementById('whAddColor').addEventListener('click',addColor);
   picker.addEventListener('change',()=>{if(picker.value)addColor()});
   holder.addEventListener('input',recalc);
   holder.addEventListener('click',event=>{
