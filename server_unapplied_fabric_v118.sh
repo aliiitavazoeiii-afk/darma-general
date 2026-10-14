@@ -8,7 +8,15 @@ BASE=f6424fe0be725833e8f54247c5cc45c0d40b3634
 echo "=== V118 UNAPPLIED CODED FABRIC + COLOR WEIGHT ==="
 test "$(git branch --show-current)" = "v118-unapplied-fabric-rolls-color-weight" || fail "wrong branch"
 git cat-file -e "$BASE^{commit}" || fail "V115 parent commit missing"
-git diff --quiet || fail "local tracked changes exist; safeguard other UI work"
+# Keep locally customized domain routing intact. Caddyfile is an
+# explicitly permitted, uncommitted production override ONLY; everything
+# else must remain clean. Never stash/reset/checkout the Caddyfile.
+git diff --quiet -- . ':(exclude)Caddyfile' || fail "other tracked local changes exist"
+git diff --cached --quiet -- . ':(exclude)Caddyfile' || fail "other staged local changes exist"
+git diff --quiet "$BASE"..HEAD -- Caddyfile || fail "branch unexpectedly modifies Caddyfile"
+test -f Caddyfile || fail "existing Caddyfile missing"
+CADDY_BEFORE=$(sha256sum Caddyfile | awk '{print $1}')
+echo "Caddyfile local override retained (sha256=$CADDY_BEFORE)"
 CHANGED=$(git diff --name-only "$BASE"..HEAD)
 echo "$CHANGED"
 for f in $CHANGED; do
@@ -55,6 +63,7 @@ docker compose run --rm --entrypoint python web manage.py check_production_unit_
 PROJECTED=$(snapshot_image) || fail "PROJECTED hash error"
 test "$PRE" = "$PROJECTED" || { echo "$PROJECTED"; fail "business hash changed before deploy"; }
 
+test "$(sha256sum Caddyfile | awk '{print $1}')" = "$CADDY_BEFORE" || fail "Caddyfile changed before deploy"
 echo "=== LIVE RECREATE ==="
 docker compose up -d --no-deps --force-recreate web || fail "web recreate failed"
 sleep 6
@@ -64,6 +73,8 @@ docker compose exec -T web python manage.py check_fabric_roll_count_v116 || fail
 docker compose exec -T web python manage.py check_production_unit_cost_v113 || fail "live V113 check failed"
 FINAL=$(snapshot_live) || fail "FINAL hash error"
 test "$PRE" = "$FINAL" || { echo "$FINAL"; fail "business hash changed after deploy"; }
+test "$(sha256sum Caddyfile | awk '{print $1}')" = "$CADDY_BEFORE" || fail "Caddyfile was changed during deploy"
+echo "Caddyfile sha256 unchanged: $CADDY_BEFORE"
 echo "SUCCESS: V118 UNAPPLIED FABRIC ROLLS + COLOR WEIGHT DEPLOYED"
 echo "PRE = PROJECTED = FINAL"
 echo "BACKUP=$BACKUP"
