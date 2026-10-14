@@ -23,7 +23,7 @@
       <div class="material-color-progress-card {% if not item.pending %}is-done{% endif %}" data-base-color="{{ item.key }}">
         <div class="material-color-progress-head">
           <h4>{{ item.label }}</h4>
-          <span class="material-color-rolls">طاقه تحویلی <b>{{ item.roll_count|groupnum }}</b></span>
+          <span class="material-color-rolls">طاقه ثبت‌شده <b>{{ item.roll_count|groupnum }}</b></span>
         </div>
         <div class="material-color-progress-row"><span>باید تحویل شود</span><b>{{ item.expected|groupnum }}</b></div>
         <div class="material-color-progress-row"><span>تحویل‌شده</span><b>{{ item.delivered|groupnum }}</b></div>
