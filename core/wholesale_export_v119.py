@@ -12,6 +12,12 @@ from .models import (
 from .wholesale_logic_v119 import account
 
 
+def _excel_text(value):
+    """Prevent buyer-supplied names/notes from becoming executable Excel formulas."""
+    value = str(value or "")
+    return "'" + value if value.startswith(("=", "+", "-", "@")) else value
+
+
 @login_required
 def wholesale_export(request):
     from openpyxl import Workbook
@@ -42,13 +48,13 @@ def wholesale_export(request):
         invoices = invoices.filter(customer=selected)
     for invoice in invoices:
         invoice_tab.append([
-            invoice.pk, format_jalali(invoice.date), invoice.customer.name,
+            invoice.pk, format_jalali(invoice.date), _excel_text(invoice.customer.name),
             invoice.quantity_total, invoice.total_amount,
-            invoice.tailor_deducted_amount, invoice.note,
+            invoice.tailor_deducted_amount, _excel_text(invoice.note),
         ])
         for item in invoice.lines.all():
             item_tab.append([
-                invoice.pk, invoice.customer.name, item.color.name, item.size.name,
+                invoice.pk, _excel_text(invoice.customer.name), _excel_text(item.color.name), _excel_text(item.size.name),
                 item.quantity, item.unit_price, item.amount,
             ])
 
@@ -61,8 +67,8 @@ def wholesale_export(request):
     for buyer in customers:
         ledger = account(buyer)
         balance_tab.append([
-            buyer.name, ledger["gross"], ledger["offset"], ledger["received"],
-            ledger["balance"], buyer.phone,
+            _excel_text(buyer.name), ledger["gross"], ledger["offset"], ledger["received"],
+            ledger["balance"], _excel_text(buyer.phone),
         ])
 
     receipt_tab = book.create_sheet("Receipts")
@@ -72,8 +78,8 @@ def wholesale_export(request):
         receipts = receipts.filter(customer=selected)
     for receipt in receipts:
         receipt_tab.append([
-            format_jalali(receipt.date), receipt.customer.name,
-            receipt.amount, receipt.note,
+            format_jalali(receipt.date), _excel_text(receipt.customer.name),
+            receipt.amount, _excel_text(receipt.note),
         ])
 
     for tab in book.worksheets:
