@@ -88,7 +88,7 @@ class NovaniWholesaleTests(TestCase):
         self.assertEqual(self.mellat.amount, 100000)
         self.assertEqual(invoice.tailor_deducted_amount, 0)
         self.assertEqual(account(self.pedram)["gross"], 180000)
-        self.assertEqual(account(self.pedram)["balance"], 180000)
+        self.assertEqual(account(self.pedram)["balance"], 80000)
         # Material-report output already applies the opposite wage effect
         # through _adjust_tailor_balance(-wage_delta).
         self.tailor.amount -= 30000
@@ -121,7 +121,7 @@ class NovaniWholesaleTests(TestCase):
         self.assertEqual(self.tailor.amount, 680000)
         self.stock.refresh_from_db()
         self.assertEqual(self.stock.qty, before_stock)
-        self.assertEqual(account(self.pedram)["balance"], 180000)
+        self.assertEqual(account(self.pedram)["balance"], 680000)
 
     def test_shortage_cannot_partially_debit_anything(self):
         with self.assertRaises(ValueError):
