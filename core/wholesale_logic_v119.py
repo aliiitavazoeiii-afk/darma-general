@@ -1,4 +1,5 @@
 """Atomic Novani wholesale ledger. Amounts in tomans; independent of SaleLine."""
+import uuid
 from django.db import transaction
 from .brand_colors import colors_for_brand
 from .business_tools_v14 import _tailor_row, _mellat_row
@@ -54,6 +55,9 @@ def parse_items(post, brand):
 
 @transaction.atomic
 def post_invoice(post):
+    token = uuid.UUID(str(post.get("request_token") or ""))
+    if WholesaleInvoice.objects.filter(request_token=token).exists():
+        raise ValueError("این فاکتور قبلاً ثبت شده است.")
     customer = WholesaleCustomer.objects.select_for_update().get(
         pk=positive(post.get("customer_id"), "خریدار")
     )
@@ -74,7 +78,7 @@ def post_invoice(post):
     gross = sum(qty * price for _, _, qty, price in items)
     count = sum(qty for _, _, qty, _ in items)
     invoice = WholesaleInvoice.objects.create(
-        date=when, customer=customer, quantity_total=count, total_amount=gross,
+        request_token=token, date=when, customer=customer, quantity_total=count, total_amount=gross,
         tailor_deducted_amount=gross if customer.is_pedram else 0,
         note=(post.get("note") or "").strip()[:250],
     )
@@ -110,6 +114,9 @@ def post_invoice(post):
 
 @transaction.atomic
 def add_receipt(post):
+    token = uuid.UUID(str(post.get("request_token") or ""))
+    if WholesaleReceipt.objects.filter(request_token=token).exists():
+        raise ValueError("این دریافت قبلاً ثبت شده است.")
     customer = WholesaleCustomer.objects.select_for_update().get(
         pk=positive(post.get("customer_id"), "خریدار")
     )
@@ -129,7 +136,7 @@ def add_receipt(post):
     if int(person.amount or 0) < amount:
         raise ValueError("مانده حساب شخص برای تسویه کافی نیست.")
     receipt = WholesaleReceipt.objects.create(
-        customer=customer, date=when, amount=amount,
+        request_token=token, customer=customer, date=when, amount=amount,
         note=(post.get("note") or "").strip()[:250],
     )
     person.amount = int(person.amount or 0) - amount
