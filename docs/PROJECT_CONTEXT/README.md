@@ -189,3 +189,8 @@ reconciles tailor wages automatically. Uses additive migration 0019.
 
 ## V116 registered fabric-roll count
 65. `65_FABRIC_ROLL_COUNT_V116.md` — distinct registered fabric codes per color, explicit uncoded-sheet diagnostics, no business-state mutation. Branch: `v116-fabric-roll-count-audit`.
+
+
+### V117 integrated UI and fabric counts
+
+Continuation branch: `v117-unified-ui-fabric-count`, descended from the newest `v116-fabric-roll-count-audit` (Oct 14), with V116 SVG sidebar and report-priority changes carried forward from `v116-smooth-rail-report-priority`. Run `bash server_unified_ui_fabric_v117.sh`; it runs the V116 UI check, V110 material summary check and V116 white/pink roll audit, plus legacy immutable finance/production checks. No migrations, stock transfers or data reconciliation are performed. Roll card counts only distinct saved fabric codes; current stock remains a separate physical quantity in kilograms.
