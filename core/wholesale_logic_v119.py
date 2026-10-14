@@ -26,9 +26,18 @@ def account(customer):
     gross = sum(int(row.total_amount) for row in invoices)
     offset = sum(int(row.tailor_deducted_amount) for row in invoices)
     received = sum(int(row.amount) for row in receipts)
+    # Pedram shares the existing tailor person account. Its actual signed
+    # balance also includes older tailor debt/advances and later sewing wages;
+    # it must NOT be replaced by just the sums of wholesale invoices.
+    if customer.is_pedram:
+        tailor = _tailor_row(create=False)
+        balance = int(tailor.amount or 0) if tailor else 0
+    else:
+        balance = gross - offset - received
     return {
         "gross": gross, "offset": offset, "received": received,
-        "balance": gross - offset - received,
+        "balance": balance,
+        "invoice_outstanding": gross - offset - received,
         "count": len(invoices),
     }
 
