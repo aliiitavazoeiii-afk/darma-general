@@ -10,6 +10,7 @@ from .models import (
     WholesaleInvoice, WholesaleReceipt,
 )
 from .wholesale_logic_v119 import account, add_receipt, post_invoice
+from .business_tools_v14 import _tailor_row, _mellat_row
 
 
 class NovaniWholesaleTests(TestCase):
@@ -36,14 +37,12 @@ class NovaniWholesaleTests(TestCase):
         cls.buyer = WholesaleCustomer.objects.create(
             name="خریدار تست عمده", account_row=cls.person,
         )
-        cls.tailor = ExcelManualRow.objects.create(
-            section=ExcelManualRow.PERSONS, title="خیاط",
-            amount=500000, active=True
-        )
-        cls.mellat = ExcelManualRow.objects.create(
-            section=ExcelManualRow.ACCOUNTS, title="ملت",
-            amount=100000, active=True
-        )
+        cls.tailor = _tailor_row(create=True)
+        cls.tailor.amount = 500000
+        cls.tailor.save(update_fields=["amount", "updated_at"])
+        cls.mellat = _mellat_row(create=True)
+        cls.mellat.amount = 100000
+        cls.mellat.save(update_fields=["amount", "updated_at"])
         cls.pedram = WholesaleCustomer.objects.get(name="پدرام")
 
     def form(self, customer, qty="3", price="85000", token=None):
