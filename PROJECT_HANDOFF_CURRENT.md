@@ -201,3 +201,8 @@ Branch `v115-stable-sidebar-report-dashboard` based on V114. Starts collapsed wi
 
 ## V116 REGISTERED FABRIC ROLL COUNT
 Branch `v116-fabric-roll-count-audit` on the V115 stable UI line. Five material color cards count distinct explicit fabric codes across all Darma sheets, not incomplete cut status or anonymous positive-weight rows. Uncoded sheet IDs can be audited with `check_fabric_roll_count_v116`. Existing delivered/open-work calculations and real material stock remain unchanged. Production marker `SUCCESS: FABRIC ROLL COUNT V116 DEPLOYED`. See `docs/PROJECT_CONTEXT/65_FABRIC_ROLL_COUNT_V116.md`.
+
+
+## V117 continuation (2026-10-14)
+
+Do not develop from stale V115 or either divergent V116 branch alone. Integration branch: `v117-unified-ui-fabric-count`, parent `v116-fabric-roll-count-audit` at `b794d266c044a8e0ee6826e12be1d3b572eb59eb`. This incorporates the prior `v116-smooth-rail-report-priority` UI and the Oct 14 V116 per-color explicit fabric-code roll count. Synthetic non-DB tests cover four white and pink rolls with duplicate codes, uncoded sheets, closed completed sheets, and other-brand isolation. To diagnose actual white/pink numbers on production: `docker compose exec -T web python manage.py check_fabric_roll_count_v116`; per-color distinct code maps and uncoded sheet ids printed. Do not assume physical inventory in kg equals the number of registered rolls. V117 deployment gate: `bash server_unified_ui_fabric_v117.sh`; assert PRE=PROJECTED=FINAL before calling live. No formulas, migrations, business stock or financial data altered.
