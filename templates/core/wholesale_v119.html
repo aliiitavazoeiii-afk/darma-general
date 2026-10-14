@@ -65,7 +65,7 @@
     <section class="wh119-panel">
       <h2>ثبت صورت فروش</h2>
       {% if selected_customer %}
-        <div class="wh119-muted">خریدار: <b>{{ selected_customer.name }}</b> {% if selected_customer.is_pedram %}— مبلغ صورت با حساب خیاط تهاتر می‌شود.{% endif %}</div>
+        <div class="wh119-muted">خریدار: <b>{{ selected_customer.name }}</b> {% if selected_customer.is_pedram %}— مبلغ صورت با حساب خیاط تهاتر می‌شود. مانده فعلی حساب خیاط: {{ wholesale_tailor_balance|floatformat:0 }} تومان{% endif %}</div>
         <div class="wh119-ledger">
           <div><span>کل فروش</span><b>{{ selected_customer.ledger.gross|floatformat:0 }}</b></div>
           <div><span>تهاتر / دریافت</span><b>{{ selected_customer.ledger.offset|add:selected_customer.ledger.received|floatformat:0 }}</b></div>
@@ -97,6 +97,17 @@
           <div class="wh119-field mt-2"><label>توضیح</label><input name="note" maxlength="250"></div>
           <div class="wh119-actions"><button type="submit" class="wh119-btn wh119-btn-alt">دریافت و واریز به ملت</button></div>
         </form>
+        {% if wholesale_receipts %}
+          <div class="mt-3">
+            <h2>دریافت‌های ثبت‌شده</h2>
+            <div class="wh119-table-scroll"><table class="wh119-table">
+              <thead><tr><th>تاریخ</th><th>مبلغ (تومان)</th><th>توضیح</th></tr></thead>
+              <tbody>{% for receipt in wholesale_receipts %}
+                <tr><td>{{ receipt.jalali_date }}</td><td>{{ receipt.amount|floatformat:0 }}</td><td>{{ receipt.note }}</td></tr>
+              {% endfor %}</tbody>
+            </table></div>
+          </div>
+        {% endif %}
         {% endif %}
       {% else %}<p class="wh119-muted">برای ثبت صورت، اول یک خریدار را از کارت‌های سمت راست انتخاب کن.</p>{% endif %}
     </section>
