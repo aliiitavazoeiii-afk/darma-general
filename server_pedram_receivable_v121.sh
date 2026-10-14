@@ -76,8 +76,8 @@ docker compose run --rm --entrypoint python web manage.py migrate core 0020_nova
 echo "=== V121 PEDRAM ACCOUNT REPAIR PREVIEW (READ ONLY) ==="
 REPAIR_DRY=$(docker compose run --rm --entrypoint python web manage.py repair_pedram_wholesale_v121) || fail "Pedram reconciliation dry run failed"
 echo "$REPAIR_DRY"
-REPAIR_GROSS=$(printf '%s\\n' "$REPAIR_DRY" | awk -F= '$1=="PEDRAM_REPAIR_GROSS"{print $2}')
-TAILOR_BEFORE=$(printf '%s\\n' "$REPAIR_DRY" | awk -F= '$1=="PEDRAM_TAILOR_BEFORE"{print $2}')
+REPAIR_GROSS=$(printf '%s\n' "$REPAIR_DRY" | awk -F= '$1=="PEDRAM_REPAIR_GROSS"{print $2}')
+TAILOR_BEFORE=$(printf '%s\n' "$REPAIR_DRY" | awk -F= '$1=="PEDRAM_TAILOR_BEFORE"{print $2}')
 case "$REPAIR_GROSS" in
   0|144384000) ;;
   *) fail "Unexpected legacy Pedram gross $REPAIR_GROSS; review invoice IDs before any repair" ;;
@@ -89,10 +89,10 @@ esac
 echo "=== V121 ONE-TIME EXACT REPAIR ==="
 REPAIR_APPLIED=$(docker compose run --rm --entrypoint python web manage.py repair_pedram_wholesale_v121 --apply --expected-gross "$REPAIR_GROSS") || fail "Pedram repair failed (transaction rolled back)"
 echo "$REPAIR_APPLIED"
-TAILOR_AFTER=$(printf '%s\\n' "$REPAIR_APPLIED" | awk -F= '$1=="PEDRAM_TAILOR_AFTER"{print $2}')
+TAILOR_AFTER=$(printf '%s\n' "$REPAIR_APPLIED" | awk -F= '$1=="PEDRAM_TAILOR_AFTER"{print $2}')
 test "$TAILOR_AFTER" = "$((TAILOR_BEFORE + 2 * REPAIR_GROSS))" || fail "tailor balance not increased by expected 2x old invoice total"
 REPAIR_RECHECK=$(docker compose run --rm --entrypoint python web manage.py repair_pedram_wholesale_v121) || fail "recheck failed"
-printf '%s\\n' "$REPAIR_RECHECK" | grep -qx 'PEDRAM_REPAIR_GROSS=0' || fail "old Pedram mis-signed invoices still pending"
+printf '%s\n' "$REPAIR_RECHECK" | grep -qx 'PEDRAM_REPAIR_GROSS=0' || fail "old Pedram mis-signed invoices still pending"
 echo "PEDRAM_CORRECTED_GROSS=$REPAIR_GROSS"
 echo "PEDRAM_SIGNED_TAILOR_BEFORE=$TAILOR_BEFORE"
 echo "PEDRAM_SIGNED_TAILOR_AFTER=$TAILOR_AFTER"
