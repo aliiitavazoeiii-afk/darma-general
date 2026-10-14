@@ -204,3 +204,8 @@ Continuation branch: `v117-unified-ui-fabric-count`, descended from the newest `
 ### V119 — Wholesale Novani
 
 67. `67_NOVANI_WHOLESALE_V119.md` — independent wholesale buyer, small invoice cards, Novani stock, Pedram-to-tailor offset, per-buyer prices and Excel export. Single schema migration with registered Pedram; deploy through `server_novani_wholesale_v119.sh` (not older scripts).
+
+
+### V120 — Wholesale color/size entry
+
+68. `68_NOVANI_COLOR_SIZE_MATRIX_V120.md`: choose a color once to reveal six-size Novani quantity matrix with one wholesale unit price per color; combine multiple colors into one V119 atomic invoice, without touching existing sidebar/finances/exports. Deploy `server_novani_color_matrix_v120.sh`.
