@@ -133,7 +133,7 @@ def _summarize_open_base_colors(blocks):
 
             # Count registered fabric rolls separately from open sewing work.
             # Do not turn a blank code with positive weight into a fake roll.
-            if code and (weight > 0 or cut > 0):
+            if code:
                 registered_codes.add(code)
             elif not code and (weight > 0 or cut > 0):
                 missing_codes += 1
