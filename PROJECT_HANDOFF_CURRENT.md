@@ -216,3 +216,8 @@ Do not develop from stale V115 or either divergent V116 branch alone. Integratio
 ## V119 Novani wholesale (latest continuation)
 
 Branch `v119-novani-wholesale` descends from V118; adds only `خرید تکوین` sidebar label plus one top-section `فروش عمده` link, standalone half-width-card invoices, customer accounts and Pedram linked tailor special handling; four-tab Excel export; safe atomic Novani HOME stock decrement with idempotent UUID; one migration `0020_novani_wholesale` for four new tables and Pedram seed; keeps all existing business formulas and material cards unchanged. See `docs/PROJECT_CONTEXT/67_NOVANI_WHOLESALE_V119.md`. Deploy script `server_novani_wholesale_v119.sh` preserves local Caddyfile and verifies legacy data hashes. Never deploy older V118 on top. Production deployment not yet confirmed.
+
+
+## V120 Novani wholesale color/size matrix — latest
+
+Latest branch `v120-wholesale-color-size-matrix`, parent V119. ONLY new wholesale invoice-entry presentation changes: pick each Novani color/model once, display all six currently supported sizes S/M/L/XL/XXL/3XL as a quantity matrix plus one price per color, submit all nonzero size cells as a single V119-compatible atomic invoice. The sidebar, existing stock/finance/Pedram ledger, historical invoice cards, Excel exports and V118 material reports are unchanged. Inherited V119 `check_wholesale_v119` was updated for matrix markers; `test_wholesale_v119` includes multiple colors/sizes atomic posting. See `docs/PROJECT_CONTEXT/68_NOVANI_COLOR_SIZE_MATRIX_V120.md`. Deploy with `server_novani_color_matrix_v120.sh` (never older script on V120). Not deployed/visually tested on VPS until user provides logs.
