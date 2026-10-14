@@ -63,6 +63,14 @@ class Command(BaseCommand):
         # stock/buyer/Pedram rules, without new backend write semantics.
         if template.count('data-color-price') < 3:
             raise RuntimeError("Color-level pricing input or aggregation missing")
+        for format_marker in (
+            "{% load static jalali %}", "const toAscii=value", "groupInput(input)",
+            'type="text" data-color-price',
+            'name="amount" inputmode="numeric" type="text"',
+            "appendField('unit_price',price)", "|groupnum",
+        ):
+            if format_marker not in template:
+                raise RuntimeError(f"V121 wholesale thousands formatting missing: {format_marker}")
         if ALLOWED_SIZES != {"S", "M", "L", "XL", "XXL", "3XL"}:
             raise RuntimeError("Novani wholesale size range drift")
         if positive("۱۲٬۵۰۰", "مبلغ") != 12500:
@@ -106,8 +114,13 @@ class Command(BaseCommand):
                         or movement.color_id != line.color_id or movement.size_id != line.size_id
                         or movement.location.key != "home"):
                     raise RuntimeError(f"Novani inventory movement mismatch: {reference}")
+        from core.business_tools_v14 import _tailor_row
+        tailor = _tailor_row(create=False)
         for customer in WholesaleCustomer.objects.all():
             values = account(customer)
+            if customer.is_pedram and tailor is not None:
+                if values["balance"] != int(tailor.amount or 0):
+                    raise RuntimeError("Pedram balance is not the shared tailor signed balance")
             # The historical shared tailor account is SIGNED and may be
             # negative when we owe Pedram; this is legitimate, not a defect.
             if values["balance"] < 0 and not customer.is_pedram:
