@@ -9,6 +9,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from .brand_colors import colors_for_brand
+from .business_tools_v14 import tailor_balance
 from .dateutils import format_jalali
 from .inventory_v20 import _sizes_for_brand
 from .models import (
@@ -56,6 +57,7 @@ def wholesale_home(request):
         "wholesale_prices": prices,
         "wholesale_invoices": invoices,
         "wholesale_receipts": receipts,
+        "wholesale_tailor_balance": tailor_balance(),
         "today_j": format_jalali(date.today()),
         "invoice_token": str(uuid.uuid4()),
         "receipt_token": str(uuid.uuid4()),
