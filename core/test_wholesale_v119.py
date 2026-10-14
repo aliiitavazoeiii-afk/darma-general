@@ -113,6 +113,48 @@ class NovaniWholesaleTests(TestCase):
             add_receipt(receipt_form)
         self.assertEqual(WholesaleReceipt.objects.count(), 1)
 
+    def test_multiple_colors_and_sizes_post_as_one_atomic_invoice(self):
+        # Mirrors one V120 matrix submission: two colors, three populated
+        # size cells and one price shared by all sizes of the first color.
+        second_color, _ = Color.objects.get_or_create(
+            name="مدل دوم تست عمده", defaults={"active": True}
+        )
+        second_color.active = True
+        second_color.save(update_fields=["active"])
+        medium, _ = Size.objects.get_or_create(name="M")
+        xl, _ = Size.objects.get_or_create(name="XL")
+        stock_m, _ = StockBalance.objects.update_or_create(
+            brand=self.brand, color=self.color, size=medium,
+            location=self.home, defaults={"qty": 10}
+        )
+        stock_xl, _ = StockBalance.objects.update_or_create(
+            brand=self.brand, color=second_color, size=xl,
+            location=self.home, defaults={"qty": 10}
+        )
+        form = self.form(self.buyer, qty="2", price="80000")
+        form.setlist("color_id", [
+            str(self.color.pk), str(self.color.pk), str(second_color.pk),
+        ])
+        form.setlist("size_id", [
+            str(self.size.pk), str(medium.pk), str(xl.pk),
+        ])
+        form.setlist("quantity", ["2", "1", "3"])
+        form.setlist("unit_price", ["80000", "80000", "95000"])
+        invoice = post_invoice(form)
+        self.assertEqual(invoice.quantity_total, 6)
+        self.assertEqual(invoice.total_amount, 525000)
+        self.assertEqual(invoice.lines.count(), 3)
+        self.assertEqual(InventoryMovement.objects.filter(
+            reference__startswith=f"novani-wholesale:{invoice.pk}:"
+        ).count(), 3)
+        self.stock.refresh_from_db()
+        stock_m.refresh_from_db()
+        stock_xl.refresh_from_db()
+        self.person.refresh_from_db()
+        self.assertEqual((self.stock.qty, stock_m.qty, stock_xl.qty), (8, 9, 7))
+        self.assertEqual(self.person.amount, 525000)
+        self.assertEqual(SaleLine.objects.count(), 0)
+
     def test_pedram_cannot_receive_second_payment(self):
         form = QueryDict(mutable=True)
         form["customer_id"] = str(self.pedram.pk)
