@@ -42,12 +42,27 @@ class Command(BaseCommand):
         for marker in (
             'grid-template-columns:repeat(2,minmax(0,1fr))',
             'id="whInvoiceLines"', 'name="customer_id"',
-            'name="date"', 'name="color_id"', 'name="size_id"',
-            'name="quantity"', 'name="unit_price"',
+            'name="date"', 'id="whColorPicker"', 'id="whAddColor"',
+            'id="whColorCardTemplate"', 'data-color-price',
+            'data-size-qty="{{ size.pk }}"', 'data-size-available',
+            'data-color-id', 'id="whInvoiceHidden"',
+            "appendField('color_id',item.color)",
+            "appendField('size_id',item.size)",
+            "appendField('quantity',item.quantity)",
+            "appendField('unit_price',price)",
+            "if(!nonzero.length)continue",
+            'id="whTotal"', 'id="whPieces"',
             "خروجی اکسل", "حساب خریداران", "فروش عمده نوانی",
         ):
             if marker not in template:
                 raise RuntimeError(f"Wholesale UI missing {marker}")
+        if "whLineTemplate" in template or "whAddLine" in template:
+            raise RuntimeError("Old one-variant-per-row wholesale editor returned")
+        # One shared unit price in the color card, applied to every nonzero
+        # size in its matrix. Hidden POST fields preserve the V119 atomic
+        # stock/buyer/Pedram rules, without new backend write semantics.
+        if template.count('data-color-price') < 3:
+            raise RuntimeError("Color-level pricing input or aggregation missing")
         if ALLOWED_SIZES != {"S", "M", "L", "XL", "XXL", "3XL"}:
             raise RuntimeError("Novani wholesale size range drift")
         if positive("۱۲٬۵۰۰", "مبلغ") != 12500:
