@@ -194,3 +194,8 @@ reconciles tailor wages automatically. Uses additive migration 0019.
 ### V117 integrated UI and fabric counts
 
 Continuation branch: `v117-unified-ui-fabric-count`, descended from the newest `v116-fabric-roll-count-audit` (Oct 14), with V116 SVG sidebar and report-priority changes carried forward from `v116-smooth-rail-report-priority`. Run `bash server_unified_ui_fabric_v117.sh`; it runs the V116 UI check, V110 material summary check and V116 white/pink roll audit, plus legacy immutable finance/production checks. No migrations, stock transfers or data reconciliation are performed. Roll card counts only distinct saved fabric codes; current stock remains a separate physical quantity in kilograms.
+
+
+### V118 — unapplied coded fabric rolls and total weight
+
+66. `66_UNAPPLIED_FABRIC_WEIGHT_V118.md` — Count distinct nonempty fabric codes only on color rows without recorded positive fabric consumption, separately from finished output. Show the all-time cumulative delivered fabric weight for each Darma base color. V117 UI remains. Deploy with `server_unapplied_fabric_v118.sh` instead of older scripts.
