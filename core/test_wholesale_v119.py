@@ -105,6 +105,7 @@ class NovaniWholesaleTests(TestCase):
         self.tailor.refresh_from_db()
         self.tailor.amount -= 2 * invoice.total_amount
         self.tailor.save(update_fields=["amount", "updated_at"])
+        self.stock.refresh_from_db()
         before_stock = self.stock.qty
         dry = repair(apply=False)
         self.assertEqual(dry["gross"], 180000)
