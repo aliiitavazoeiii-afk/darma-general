@@ -110,22 +110,34 @@ BASE_COLOR_PROGRESS = tuple(v23.BASE_MODELS)
 
 
 def _summarize_open_base_colors(blocks):
-    """Outstanding Darma work for the five canonical colors.
+    """Five Darma color cards with *separate* source semantics.
 
-    Only open work is included: saved cut > actually applied finished output.
-    Completed historical sheets are excluded so old production does not inflate
-    the operational pending numbers.
+    roll_count: unique explicitly registered fabric codes for that color
+    across saved Darma material sheets. An empty code is not proof of an
+    additional fabric roll, even when weight/cut was entered.
+    expected/delivered/pending: ONLY still-open output work, unchanged.
+    A missing-code counter is diagnostic only; it is not a roll count.
     """
     rows = []
     for key, label in BASE_COLOR_PROGRESS:
         expected = delivered = pending = open_blocks = 0
-        fabric_codes = set()
-        uncoded_rolls = 0
+        registered_codes = set()
+        missing_codes = 0
         for block in blocks:
             if getattr(block.brand, "name", "") != "دارما":
                 continue
             values = ((block.input_data or {}).get(key) or {})
+            code = str(values.get("fabric_code") or "").strip()
             cut = max(0, v23.v20._int(values.get("cut")))
+            weight = max(_decimal(values.get("weight")), Decimal("0"))
+
+            # Count registered fabric rolls separately from open sewing work.
+            # Do not turn a blank code with positive weight into a fake roll.
+            if code and (weight > 0 or cut > 0):
+                registered_codes.add(code)
+            elif not code and (weight > 0 or cut > 0):
+                missing_codes += 1
+
             applied = sum(
                 max(0, int(item.quantity or 0))
                 for item in block.output_applications.all()
@@ -133,22 +145,16 @@ def _summarize_open_base_colors(blocks):
             )
             if cut <= applied:
                 continue
-
-            code = str(values.get("fabric_code") or "").strip()
-            weight = max(_decimal(values.get("weight")), Decimal("0"))
-            if code:
-                fabric_codes.add(code)
-            elif weight > 0:
-                uncoded_rolls += 1
-
             expected += cut
             delivered += applied
             pending += cut - applied
             open_blocks += 1
+
         rows.append({
             "key": key,
             "label": label,
-            "roll_count": len(fabric_codes) + uncoded_rolls,
+            "roll_count": len(registered_codes),
+            "rolls_without_code": int(missing_codes),
             "expected": int(expected),
             "delivered": int(delivered),
             "pending": int(pending),
