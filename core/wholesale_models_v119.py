@@ -1,4 +1,6 @@
 """Independent Novani wholesale invoices. Never write to daily SaleLine."""
+import uuid
+
 from django.db import models
 
 
@@ -21,6 +23,7 @@ class WholesaleCustomer(models.Model):
 
 
 class WholesaleInvoice(models.Model):
+    request_token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     date = models.DateField(db_index=True)
     customer = models.ForeignKey(
         WholesaleCustomer, on_delete=models.PROTECT, related_name="invoices"
@@ -56,6 +59,7 @@ class WholesaleInvoiceLine(models.Model):
 
 
 class WholesaleReceipt(models.Model):
+    request_token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     date = models.DateField(db_index=True)
     customer = models.ForeignKey(
         WholesaleCustomer, on_delete=models.PROTECT, related_name="receipts"
