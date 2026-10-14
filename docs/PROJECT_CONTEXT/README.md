@@ -209,3 +209,8 @@ Continuation branch: `v117-unified-ui-fabric-count`, descended from the newest `
 ### V120 — Wholesale color/size entry
 
 68. `68_NOVANI_COLOR_SIZE_MATRIX_V120.md`: choose a color once to reveal six-size Novani quantity matrix with one wholesale unit price per color; combine multiple colors into one V119 atomic invoice, without touching existing sidebar/finances/exports. Deploy `server_novani_color_matrix_v120.sh`.
+
+
+### V121 — Correct Pedram claims / repair old invoice
+
+69. `69_PEDRAM_RECEIVABLE_V121.md` — fix wholesale signed Pedram shared tailor balance (+gross, not -gross), correct old 144,384,000-toman invoice once (+288,768,000 relative to wrong posted state; no extra stock movement), show actual net signed person balance, and thousands separators for all wholesale entry fields. Guarded `server_pedram_receivable_v121.sh`.
