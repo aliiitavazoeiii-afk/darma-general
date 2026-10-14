@@ -1,10 +1,12 @@
 """Read-only V119 assertions; safe against the live production database."""
 from pathlib import Path
+from types import SimpleNamespace
 
 from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.db.models import Sum
 from django.template.loader import get_template
+from django.test import RequestFactory, override_settings
 from django.urls import resolve, reverse
 
 from core import wholesale_v119
@@ -50,6 +52,21 @@ class Command(BaseCommand):
             raise RuntimeError("Novani wholesale size range drift")
         if positive("۱۲٬۵۰۰", "مبلغ") != 12500:
             raise RuntimeError("Persian number normalization wrong")
+        storage = {**settings.STORAGES, "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"
+        }}
+        with override_settings(STORAGES=storage):
+            factory = RequestFactory()
+            for path in ("/wholesale/", "/wholesale/?customer=" + str(
+                WholesaleCustomer.objects.get(name="پدرام").pk
+            )):
+                request = factory.get(path)
+                request.user = SimpleNamespace(is_authenticated=True)
+                response = wholesale_v119.wholesale_home(request)
+                if response.status_code != 200:
+                    raise RuntimeError("V119 wholesale page did not render")
+                if 'data-wholesale="v119"' not in response.content.decode("utf-8"):
+                    raise RuntimeError("V119 wholesale page markup missing")
         if WholesaleCustomer.objects.filter(is_pedram=True, name="پدرام").count() != 1:
             raise RuntimeError("Exact Pedram special buyer not seeded")
         if WholesaleCustomer.objects.filter(is_pedram=True).count() != 1:
