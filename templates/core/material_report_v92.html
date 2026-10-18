@@ -17,7 +17,7 @@
     <div class="material-month-kpi"><span class="kpi-label">مانده تحویل</span><div class="kpi-value">{{ material_month_summary.pending|groupnum }}</div><span class="kpi-unit">عدد · کسری خالص پس از تهاتر مازاد</span></div>
     <div class="material-month-kpi"><span class="kpi-label">مازاد خالص تحویل</span><div class="kpi-value">{{ material_month_summary.surplus|groupnum }}</div><span class="kpi-unit">عدد · مازاد پس از تهاتر کسری‌ها</span></div>
     <div class="material-month-kpi"><span class="kpi-label">اعمال‌شده به موجودی</span><div class="kpi-value">{{ material_month_summary.applied|groupnum }}</div><span class="kpi-unit">عدد · جدا از تحویل ثبت‌شده</span></div>
-    <div class="material-month-kpi highlight" data-material-kpi="average-cut"><span class="kpi-label">میانگین تعداد برش</span><div class="kpi-value">{{ material_cut_summary.average_cut|groupnum }}</div><span class="kpi-unit">عدد · {{ material_cut_summary.cut_entry_count|groupnum }} برش ثبت‌شده در ۵ رنگ پایه</span></div>
+    <div class="material-month-kpi highlight" data-material-kpi="average-cut"><span class="kpi-label">میانگین برش صورت‌های فعال</span><div class="kpi-value">{{ material_cut_summary.average_cut|groupnum }}</div><span class="kpi-unit">عدد · {{ material_cut_summary.cut_entry_count|groupnum }} برش ماه جاری و کارهای باز قدیمی در ۵ رنگ پایه</span></div>
   </div>
   <div class="material-color-progress" data-material-color-progress="final">
     <div class="material-color-progress-title">پیشرفت پنج رنگ اصلی — جمع خالص برش و تحویل ثبت‌شده در صورت‌های فعال</div>
