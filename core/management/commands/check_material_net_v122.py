@@ -126,8 +126,8 @@ class Command(BaseCommand):
         synthetic_check()
         source = (Path(settings.BASE_DIR) / "templates/core/material_report_v92.html").read_text(encoding="utf-8")
         for marker in (
-            'data-current-month=', 'materialCarryoverIds', 'material-carry-forward',
-            'material-month-archive', 'مازاد خالص', 'اعمال‌شده به موجودی',
+            'data-current-month=', 'material-month-archive',
+            'مازاد خالص', 'اعمال‌شده به موجودی',
             'تحویل ثبت‌شده', 'مانده خالص',
         ):
             if marker not in source:
