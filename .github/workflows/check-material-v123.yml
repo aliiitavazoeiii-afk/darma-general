@@ -62,4 +62,16 @@ jobs:
           print("PASS: applied materials and older month excluded from summary")
           PY
       - name: Transactional raw materials and stock transfers on isolated test DB
-        run: python manage.py test core.test_material_color_v123 --noinput --verbosity 2
+        run: |
+          # Legacy 0013 migration assumes live seeded brand rows and cannot
+          # bootstrap an empty test database. Sync ONLY the disposable
+          # test database's core schema directly; never alter production.
+          python - <<'PY'
+          import django
+          django.setup()
+          from django.test import override_settings
+          from django.core.management import call_command
+          with override_settings(MIGRATION_MODULES={"core": None}):
+              call_command("test", "core.test_material_color_v123",
+                           interactive=False, verbosity=2)
+          PY
