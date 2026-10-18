@@ -115,6 +115,28 @@ class BidirectionalInventoryTests(TestCase):
             reference__startswith="manual-transfer:"
         ).count(), 2)
 
+    def test_reverse_direction_transfer_edit_preserves_both_stock_cells(self):
+        from core.inventory_operations_v16 import _update_transfer_qty
+        result = transfer(when="2026-10-18", brand=self.brand, size=self.size,
+                          direction="home_to_warehouse", quantities=[(self.color, 6)])
+        transfer_id = result["ids"][0]
+        updated = _update_transfer_qty(transfer_id=transfer_id, target_qty=4)
+        self.assertEqual(updated["new_qty"], 4)
+        home = StockBalance.objects.get(
+            brand=self.brand, color=self.color, size=self.size, location=self.home
+        )
+        warehouse = StockBalance.objects.get(
+            brand=self.brand, color=self.color, size=self.size, location=self.warehouse
+        )
+        self.assertEqual((home.qty, warehouse.qty), (6, 24))
+        # Refuse to rewrite an older transfer if the destination's remaining
+        # physical inventory is too small to reverse.
+        warehouse.qty = 0
+        warehouse.save(update_fields=["qty"])
+        with self.assertRaises(ValueError):
+            _update_transfer_qty(transfer_id=transfer_id, target_qty=0)
+        self.assertEqual(StockTransfer.objects.get(pk=transfer_id).qty, 4)
+
     def test_shortage_refuses_without_any_transfer(self):
         with self.assertRaises(ValueError):
             transfer(when="2026-10-18", brand=self.brand, size=self.size,
