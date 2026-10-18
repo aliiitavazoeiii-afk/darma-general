@@ -150,6 +150,20 @@ def _registered_output_by_key(block):
     }
 
 
+def _color_delivery_unsynced(block, key):
+    """Even equal grand totals can hide a wrong-size pending stock update."""
+    values = (block.output_data or {}).get(key) or {}
+    applied_by_size = {
+        row.size_key: max(0, int(row.quantity or 0))
+        for row in block.output_applications.all()
+        if row.model_key == key
+    }
+    return any(
+        max(0, v23.v20._int(values.get(size_key))) != applied_by_size.get(size_key, 0)
+        for size_key, _ in v23._output_sizes_for_brand(block.brand)
+    )
+
+
 def _block_operational_status(block):
     """Unfinished material or delivery work carries into the next Jalali month.
 
@@ -159,14 +173,11 @@ def _block_operational_status(block):
     """
     keys = v23._active_model_keys(block)
     registered = _registered_output_by_key(block)
-    applied = {}
-    for row in block.output_applications.all():
-        applied[row.model_key] = applied.get(row.model_key, 0) + max(0, int(row.quantity or 0))
     for key in keys:
         cut = max(0, v23.v20._int(((block.input_data or {}).get(key) or {}).get("cut")))
         if cut > registered.get(key, 0):
             return True
-        if registered.get(key, 0) != applied.get(key, 0):
+        if _color_delivery_unsynced(block, key):
             return True
         if _fabric_not_applied(block, key):
             return True
@@ -208,7 +219,8 @@ def _net_color_progress(blocks):
             cut += expected_row
             registered += registered_row
             applied += applied_row
-            if expected_row > registered_row or registered_row != applied_row or _fabric_not_applied(block, key):
+            if (expected_row > registered_row or _color_delivery_unsynced(block, key)
+                    or _fabric_not_applied(block, key)):
                 open_blocks += 1
         balance = registered - cut
         result[key] = {
@@ -295,10 +307,10 @@ def _summarize_open_base_colors(blocks):
     return rows
 
 def _all_time_cut_summary(blocks):
-    """Average saved cut quantity across the five canonical Darma colors.
+    """Average saved cut per Darma base-color for the supplied sheet scope.
 
-    Only Darma blocks and positive saved cut entries are included. This is all-time,
-    matching the user's request to summarize every cutting sheet on the page.
+    V122 calls this with current month + unfinished older sheets only.
+    Historical roll weight and number code auditing remains independent.
     """
     total = 0
     count = 0
@@ -365,7 +377,7 @@ def material_report(request):
     summary["carryover_blocks"] = sum(
         1 for obj in current_month_objects if obj.date < month["start"]
     )
-    cut_summary = _all_time_cut_summary(objects)
+    cut_summary = _all_time_cut_summary(current_month_objects)
     # V118 coded-roll and lifetime-weight semantics are intentionally unchanged.
     # Only the NEW operating-month production totals use net saved delivery.
     base_color_progress = _summarize_open_base_colors(objects)
