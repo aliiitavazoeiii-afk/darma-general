@@ -17,7 +17,7 @@ CHANGED=$(git diff --name-only "$BASE"..HEAD)
 echo "$CHANGED"
 for f in $CHANGED; do
   case "$f" in
-    PROJECT_HANDOFF_CURRENT.md|core/management/commands/check_material_net_v122.py|core/management/commands/check_material_summary_box_grid_v110.py|core/material_report_v92.py|docs/PROJECT_CONTEXT/70_MATERIAL_NET_CARRYOVER_V122.md|docs/PROJECT_CONTEXT/README.md|server_material_net_open_v122.sh|templates/core/material_report_v92.html) ;;
+    .github/workflows/check-material-v122.yml|PROJECT_HANDOFF_CURRENT.md|core/management/commands/check_material_net_v122.py|core/management/commands/check_material_summary_box_grid_v110.py|core/material_report_v92.py|docs/PROJECT_CONTEXT/70_MATERIAL_NET_CARRYOVER_V122.md|docs/PROJECT_CONTEXT/README.md|server_material_net_open_v122.sh|templates/core/material_report_v92.html) ;;
     *) fail "unexpected V122 file: $f" ;;
   esac
 done
