@@ -65,11 +65,14 @@ def _summarize_month_blocks(blocks):
     total_weight = Decimal("0")
     total_cut = 0
     total_delivered = 0
-    total_pending = 0
     total_applied = 0
+    # Net overproduction and shortages between ROLLS of the SAME color.
+    # Different colors or brands must not silently settle each other.
+    by_brand_color = {}
 
     for block in blocks:
         active_keys = v23._active_model_keys(block)
+        registered = _registered_output_by_key(block)
         block_cut = 0
 
         for key in active_keys:
@@ -87,8 +90,13 @@ def _summarize_month_blocks(blocks):
 
             total_weight += weight
             block_cut += cut
+            group = (getattr(block.brand, "name", ""), key)
+            prev_cut, prev_received = by_brand_color.get(group, (0, 0))
+            by_brand_color[group] = (
+                prev_cut + cut, prev_received + registered.get(key, 0)
+            )
 
-        block_delivered = sum(_registered_output_by_key(block).values())
+        block_delivered = sum(registered.values())
         block_applied = sum(
             max(0, int(row.quantity or 0))
             for row in block.output_applications.all()
@@ -97,8 +105,12 @@ def _summarize_month_blocks(blocks):
         total_delivered += block_delivered
         total_applied += block_applied
 
-    total_pending = max(0, total_cut - total_delivered)
-    total_surplus = max(0, total_delivered - total_cut)
+    total_pending = sum(
+        max(0, cut - received) for cut, received in by_brand_color.values()
+    )
+    total_surplus = sum(
+        max(0, received - cut) for cut, received in by_brand_color.values()
+    )
     return {
         "roll_count": len(fabric_codes) + uncoded_rolls,
         "weight": total_weight,
