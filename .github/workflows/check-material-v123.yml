@@ -1,0 +1,65 @@
+name: Verify material colors and inventory transfers V123
+
+on:
+  push:
+    branches:
+      - v123-material-color-apply-inventory-transfer
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  django-regressions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: darma
+          POSTGRES_USER: darma
+          POSTGRES_PASSWORD: darma
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U darma"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_NAME: darma
+      DB_USER: darma
+      DB_PASSWORD: darma
+      DJANGO_SETTINGS_MODULE: config.settings
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Python and schema checks
+        run: |
+          python -m compileall -q core/material_report_v92.py core/material_color_apply_v123.py core/material_color_models_v123.py core/inventory_transfer_v123.py core/test_material_color_v123.py core/management/commands/check_material_transfer_v123.py
+          python manage.py check
+          python manage.py makemigrations --check --dry-run
+      - name: Pure report-and-archive synthetic fixture
+        run: |
+          python - <<'PY'
+          import django
+          django.setup()
+          from django.template.loader import get_template
+          from core.management.commands.check_material_transfer_v123 import synthetic_check
+          synthetic_check()
+          get_template("core/material_report_v92.html")
+          get_template("core/material_report_v36.html")
+          get_template("core/inventory_operations.html")
+          print("PASS: current-month UNAPPLIED pink cut 1500, received 1538, net surplus 38")
+          print("PASS: applied materials and older month excluded from summary")
+          PY
+      - name: Transactional raw materials and stock transfers on isolated test DB
+        run: python manage.py test core.test_material_color_v123 --noinput --verbosity 2
