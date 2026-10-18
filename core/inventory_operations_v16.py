@@ -125,6 +125,12 @@ def _update_transfer_qty(*, transfer_id, target_qty):
             f"{int(source_balance.qty or 0)} عدد است."
         )
 
+    # V123: reducing a HOUSE -> WAREHOUSE transfer must not create
+    # negative physical warehouse inventory if those goods have since moved.
+    if (difference < 0 and transfer.to_location.key == StockLocation.KHORSHID
+            and int(destination_balance.qty or 0) < -difference):
+        raise ValueError("امکان کاهش این انتقال نیست؛ موجودی فعلی انبار برای برگشت کافی نیست.")
+
     if difference:
         source_balance.qty = int(source_balance.qty or 0) - difference
         destination_balance.qty = int(destination_balance.qty or 0) + difference
