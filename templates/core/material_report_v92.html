@@ -5,22 +5,21 @@
 <style>
 .material-v105-kpi-wrap{width:100%} .material-month-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.material-month-kpi{min-width:0;border:1px solid rgba(255,255,255,.11);border-radius:14px;background:rgba(255,255,255,.035);padding:13px 14px;min-height:96px;display:flex;flex-direction:column;justify-content:space-between}.material-month-kpi .kpi-label{display:block;color:#9fb0c4;font-size:.72rem;line-height:1.45;font-weight:700}.material-month-kpi .kpi-value{direction:ltr;unicode-bidi:isolate;text-align:left;font-variant-numeric:tabular-nums;white-space:nowrap;color:#fff;font-size:1.42rem;font-weight:950;line-height:1.15;margin-top:12px}.material-month-kpi .kpi-unit{display:block;color:#8fa2b7;font-size:.68rem;margin-top:5px;line-height:1.4}.material-month-kpi.highlight .kpi-value{color:#ffd08a}.material-month-archive{border:1px solid rgba(255,255,255,.12);border-radius:15px;background:linear-gradient(135deg,rgba(15,39,65,.34),rgba(6,22,39,.24));overflow:hidden}.material-month-archive>summary{cursor:pointer;list-style:none;padding:15px 17px;display:flex;justify-content:space-between;align-items:center;gap:12px}.material-month-archive>summary::-webkit-details-marker{display:none}.material-month-archive>summary:hover{background:rgba(255,255,255,.035)}.material-month-archive-title{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.material-month-archive-title strong{font-size:1rem}.material-month-count{display:inline-flex;align-items:center;border-radius:999px;padding:4px 9px;font-size:.72rem;color:#b9cbe0;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10)}.material-month-archive-toggle{font-size:.75rem;color:#95a7ba;white-space:nowrap}.material-month-archive-body{padding:0 12px 1px;border-top:1px solid rgba(255,255,255,.08)}.material-month-archive-body>.material-block{margin-top:12px!important}.material-color-progress{margin-top:10px}.material-color-progress-title{font-size:.72rem;color:#9fb0c4;margin:0 0 7px 2px}.material-color-progress-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}.material-color-progress-card{min-width:0;border:1px solid rgba(255,255,255,.10);border-radius:13px;background:rgba(255,255,255,.025);padding:11px 12px}.material-color-progress-card h4{margin:0;font-size:.94rem}.material-color-progress-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}.material-color-rolls{display:inline-flex;align-items:center;gap:4px;white-space:nowrap;font-size:.72rem;color:#b9cbe0}.material-color-rolls b{font-size:.9rem;color:#ffd08a}.material-color-progress-row{display:flex;justify-content:space-between;gap:8px;font-size:.69rem;color:#9fb0c4;margin-top:4px}.material-color-progress-row b{color:#f7f9fc;font-size:.78rem}.material-color-progress-row.pending b{color:#ffd08a}.material-color-progress-card.is-done{opacity:.58}
 @media(max-width:1200px){.material-month-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}.material-color-progress-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:767.98px){.material-month-kpis{grid-template-columns:1fr 1fr}.material-page-tools{align-items:stretch}.material-search{width:100%;min-width:0!important;max-width:none!important}.material-color-progress-grid{grid-template-columns:1fr 1fr}}@media(max-width:430px){.material-month-kpis{grid-template-columns:1fr}.material-month-kpi{min-height:84px}.material-month-kpi .kpi-value{font-size:1.3rem}.material-color-progress-grid{grid-template-columns:1fr}}
-.material-carry-badge{display:inline-flex;align-items:center;color:#ffcc8a;background:rgba(255,146,65,.1);border:1px solid rgba(255,160,67,.25);border-radius:8px;padding:4px 8px;font-size:.7rem;margin-inline-start:8px;margin-top:5px}
 </style>
 
 <template id="materialV92Kpis" data-current-month="{{ material_current_month_key }}">
   <div class="material-month-kpis" aria-label="خلاصه گزارش مواد اولیه" data-material-kpis="v105">
-    <div class="material-month-kpi"><span class="kpi-label">پارچه صورت‌های فعال</span><div class="kpi-value">{{ material_month_summary.roll_count|groupnum }}</div><span class="kpi-unit">طاقه · {{ material_current_month_label }} + بازمانده پیشین</span></div>
-    <div class="material-month-kpi"><span class="kpi-label">وزن پارچه صورت‌های فعال</span><div class="kpi-value">{{ material_month_summary.weight_display }}</div><span class="kpi-unit">کیلو · ماه جاری + بازمانده پیشین</span></div>
-    <div class="material-month-kpi"><span class="kpi-label">تعداد برش صورت‌های فعال</span><div class="kpi-value">{{ material_month_summary.minimum_delivery|groupnum }}</div><span class="kpi-unit">عدد · برش ماه و انتقال کار باز</span></div>
+    <div class="material-month-kpi"><span class="kpi-label">پارچه صورت‌های اعمال‌نشده ماه جاری</span><div class="kpi-value">{{ material_month_summary.roll_count|groupnum }}</div><span class="kpi-unit">طاقه · {{ material_current_month_label }} + بازمانده پیشین</span></div>
+    <div class="material-month-kpi"><span class="kpi-label">وزن پارچه صورت‌های اعمال‌نشده ماه جاری</span><div class="kpi-value">{{ material_month_summary.weight_display }}</div><span class="kpi-unit">کیلو · فقط رنگ‌های اعمال‌نشده ماه جاری</span></div>
+    <div class="material-month-kpi"><span class="kpi-label">تعداد برش صورت‌های اعمال‌نشده ماه جاری</span><div class="kpi-value">{{ material_month_summary.minimum_delivery|groupnum }}</div><span class="kpi-unit">عدد · برش ماه با مواد اعمال‌نشده</span></div>
     <div class="material-month-kpi"><span class="kpi-label">تعداد تحویل‌شده</span><div class="kpi-value">{{ material_month_summary.delivered|groupnum }}</div><span class="kpi-unit">عدد · ثبت‌شده در صورت تحویل</span></div>
     <div class="material-month-kpi"><span class="kpi-label">مانده تحویل</span><div class="kpi-value">{{ material_month_summary.pending|groupnum }}</div><span class="kpi-unit">عدد · کسری خالص پس از تهاتر مازاد</span></div>
     <div class="material-month-kpi"><span class="kpi-label">مازاد خالص تحویل</span><div class="kpi-value">{{ material_month_summary.surplus|groupnum }}</div><span class="kpi-unit">عدد · مازاد پس از تهاتر کسری‌ها</span></div>
     <div class="material-month-kpi"><span class="kpi-label">اعمال‌شده به موجودی</span><div class="kpi-value">{{ material_month_summary.applied|groupnum }}</div><span class="kpi-unit">عدد · جدا از تحویل ثبت‌شده</span></div>
-    <div class="material-month-kpi highlight" data-material-kpi="average-cut"><span class="kpi-label">میانگین برش صورت‌های فعال</span><div class="kpi-value">{{ material_cut_summary.average_cut|groupnum }}</div><span class="kpi-unit">عدد · {{ material_cut_summary.cut_entry_count|groupnum }} برش ماه جاری و کارهای باز قدیمی در ۵ رنگ پایه</span></div>
+    <div class="material-month-kpi highlight" data-material-kpi="average-cut"><span class="kpi-label">میانگین برش صورت‌های اعمال‌نشده ماه جاری</span><div class="kpi-value">{{ material_cut_summary.average_cut|groupnum }}</div><span class="kpi-unit">عدد · {{ material_cut_summary.cut_entry_count|groupnum }} برش ماه جاری با مواد اعمال‌نشده در ۵ رنگ پایه</span></div>
   </div>
   <div class="material-color-progress" data-material-color-progress="final">
-    <div class="material-color-progress-title">پیشرفت پنج رنگ اصلی — جمع خالص برش و تحویل ثبت‌شده در صورت‌های فعال</div>
+    <div class="material-color-progress-title">پیشرفت پنج رنگ اصلی — جمع خالص برش و تحویل ثبت‌شده در صورت‌های اعمال‌نشده ماه جاری</div>
     <div class="material-color-progress-grid">
       {% for item in material_base_color_progress %}
       <div class="material-color-progress-card {% if not item.pending and not item.open_blocks %}is-done{% endif %}" data-base-color="{{ item.key }}">
@@ -40,7 +39,6 @@
   </div>
 </template>
 
-{{ material_carryover_ids|json_script:"materialCarryoverIds" }}
 <script>
 (() => {
   const monthNames = {
@@ -62,9 +60,6 @@
     header.insertAdjacentElement('afterend', mount);
   }
 
-  // Prior unfinished sheets stay visible in this month's working list.
-  // This changes only page presentation, not sheet dates or delivery ledger.
-  const carried = new Set(JSON.parse(document.getElementById('materialCarryoverIds')?.textContent || '[]').map(String));
   const blocks = Array.from(document.querySelectorAll('.material-block'));
   const archives = new Map();
   const keyToNumber = (key) => {
@@ -74,17 +69,6 @@
   const currentNumber = keyToNumber(currentMonth);
 
   blocks.forEach((block) => {
-    if (carried.has(String(block.id || '').replace('block-',''))) {
-      block.classList.add('material-carry-forward');
-      const summary = block.querySelector('.material-summary-main');
-      if (summary && !summary.querySelector('.material-carry-badge')) {
-        const badge = document.createElement('span');
-        badge.className = 'material-carry-badge';
-        badge.textContent = 'بازمانده ماه قبل';
-        summary.appendChild(badge);
-      }
-      return;  // never archive an unfinished older sheet
-    }
     const rawDate = String(block.querySelector('.material-date')?.textContent || '').trim();
     const parts = rawDate.split('/');
     if (parts.length < 2) return;
