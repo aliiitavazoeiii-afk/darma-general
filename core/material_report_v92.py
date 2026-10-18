@@ -391,5 +391,6 @@ def material_report(request):
             "material_base_color_progress": base_color_progress,
             "material_current_month_key": month["key"],
             "material_current_month_label": month["label"],
+            "material_carryover_ids": sorted(carryover_ids),
         },
     )
