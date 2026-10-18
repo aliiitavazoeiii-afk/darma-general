@@ -4,7 +4,6 @@ Branch: `v122-material-net-current-open`. Based on `v121-pedram-receivable-fix` 
 
 ## Scope and invariant: Darma only
 
-- **No changes to VPN, Hesab SMS/WhatsApp, Google Messages or their repositories.** Those conversation topics are unrelated to Darma and never added to its codebase.
 - No changes to ERP models, database migrations, any raw-material consumption or finished-goods stock synchronization handler, balance sheet/accounting, wholesale/Pedram repair, Caddyfile or sidebar.
 - Only `core/material_report_v92.py` aggregates and `templates/core/material_report_v92.html` presentation changed; read-only audits, safe install script and project handoff added. All saved production records remain intact.
 
