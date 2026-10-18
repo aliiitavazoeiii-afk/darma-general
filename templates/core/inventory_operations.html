@@ -72,15 +72,15 @@
               {% for x in sizes %}<option value="{{ x.id }}">{{ x.name }}</option>{% endfor %}
             </select>
           </div>
+          <div class="col-6 col-md-3">
+            <label class="form-label" for="transfer-direction">مسیر انتقال</label>
+            <select class="form-select" id="transfer-direction" name="direction">
+              <option value="warehouse_to_home" selected>از انبار به خانه</option>
+              <option value="home_to_warehouse">از خانه به انبار</option>
+            </select>
+          </div>
         </div>
 
-        <div class="col-6 col-md-3 mb-3">
-          <label class="form-label" for="transfer-direction">مسیر انتقال</label>
-          <select class="form-select" id="transfer-direction" name="direction">
-            <option value="warehouse_to_home" selected>از انبار به خانه</option>
-            <option value="home_to_warehouse">از خانه به انبار</option>
-          </select>
-        </div>
         <div class="color-entry-grid">
           {% for color in transfer_colors %}
           <div class="color-entry-cell transfer-color-cell" data-color-id="{{ color.id }}">
