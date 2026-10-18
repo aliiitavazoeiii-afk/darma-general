@@ -90,6 +90,7 @@ urlpatterns = [
     path("material-report/<int:block_id>/save/", material_report_v23.material_block_save, name="material_block_save"),
     path("material-report/<int:block_id>/add-model/", material_report_v23.material_block_add_model, name="material_block_add_model"),
     path("material-report/<int:block_id>/apply/", material_report_v23.material_block_apply_materials, name="material_block_apply"),
+    path("material-report/<int:block_id>/apply-color/", material_report_v23.material_block_apply_color, name="material_block_apply_color"),
     path("material-report/<int:block_id>/apply-output/", material_report_v23.material_block_apply_output, name="material_block_apply_output"),
     path("material-report/<int:block_id>/unapply/", material_report_v20.material_block_unapply_materials, name="material_block_unapply"),
     path("material-report/<int:block_id>/delete/", material_report_v20.material_block_delete, name="material_block_delete"),
