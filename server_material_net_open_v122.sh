@@ -61,12 +61,12 @@ docker compose build web || fail "web build failed"
 docker compose run --rm --entrypoint python web -m compileall -q core/material_report_v92.py core/management/commands/check_material_net_v122.py core/management/commands/check_material_summary_box_grid_v110.py || fail "Python syntax check failed"
 docker compose run --rm --entrypoint python web manage.py makemigrations --check --dry-run || fail "unexpected database schema migration"
 docker compose run --rm --entrypoint python web manage.py check || fail "Django project check failed"
-docker compose run --rm --entrypoint python web manage.py showmigrations core | grep -Eq '\\[X\\] 0020_novani_wholesale' || fail "V119 wholesale migration not applied; deploy earlier approved version first"
+docker compose run --rm --entrypoint python web manage.py showmigrations core | grep -Eq '\[X\] 0020_novani_wholesale' || fail "V119 wholesale migration not applied; deploy earlier approved version first"
 # V121 account repair must be reviewed/finished separately. Never change it
 # as a side effect of a materials report-only release.
 REPAIR_AUDIT=$(docker compose run --rm --entrypoint python web manage.py repair_pedram_wholesale_v121) || fail "financial state preview failed"
 echo "$REPAIR_AUDIT"
-printf '%s\\n' "$REPAIR_AUDIT" | grep -qx 'PEDRAM_REPAIR_GROSS=0' || fail "V121 Pedram repair still pending; run approved V121 recovery before V122"
+printf '%s\n' "$REPAIR_AUDIT" | grep -qx 'PEDRAM_REPAIR_GROSS=0' || fail "V121 Pedram repair still pending; run approved V121 recovery before V122"
 
 docker compose run --rm --entrypoint python web manage.py check_material_net_v122 || fail "V122 net/month+carryover verification failed"
 docker compose run --rm --entrypoint python web manage.py check_material_summary_box_grid_v110 || fail "V110+V118 UI check failed"
