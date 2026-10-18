@@ -9,7 +9,7 @@
 
 <template id="materialV92Kpis" data-current-month="{{ material_current_month_key }}">
   <div class="material-month-kpis" aria-label="خلاصه گزارش مواد اولیه" data-material-kpis="v105">
-    <div class="material-month-kpi"><span class="kpi-label">پارچه صورت‌های اعمال‌نشده ماه جاری</span><div class="kpi-value">{{ material_month_summary.roll_count|groupnum }}</div><span class="kpi-unit">طاقه · {{ material_current_month_label }} + بازمانده پیشین</span></div>
+    <div class="material-month-kpi"><span class="kpi-label">پارچه صورت‌های اعمال‌نشده ماه جاری</span><div class="kpi-value">{{ material_month_summary.roll_count|groupnum }}</div><span class="kpi-unit">طاقه · {{ material_current_month_label }} · بدون ماه‌های قبل</span></div>
     <div class="material-month-kpi"><span class="kpi-label">وزن پارچه صورت‌های اعمال‌نشده ماه جاری</span><div class="kpi-value">{{ material_month_summary.weight_display }}</div><span class="kpi-unit">کیلو · فقط رنگ‌های اعمال‌نشده ماه جاری</span></div>
     <div class="material-month-kpi"><span class="kpi-label">تعداد برش صورت‌های اعمال‌نشده ماه جاری</span><div class="kpi-value">{{ material_month_summary.minimum_delivery|groupnum }}</div><span class="kpi-unit">عدد · برش ماه با مواد اعمال‌نشده</span></div>
     <div class="material-month-kpi"><span class="kpi-label">تعداد تحویل‌شده</span><div class="kpi-value">{{ material_month_summary.delivered|groupnum }}</div><span class="kpi-unit">عدد · ثبت‌شده در صورت تحویل</span></div>
