@@ -615,9 +615,9 @@ def _sync_darma_stock_costed(block, model_key, size_key, delta, destination=None
     stock.save(update_fields=["qty"])
 
 
-def desired_consumption(block):
+def desired_consumption(block, keys=None):
     desired = {}
-    for key in _active_model_keys(block):
+    for key in (_active_model_keys(block) if keys is None else keys):
         values = (block.input_data or {}).get(key, {}) or {}
 
         fabric = max(q(values.get("weight")), Decimal("0"))
@@ -939,7 +939,8 @@ def material_block_apply_materials(request, block_id):
             _save_block_data(block, request)
             _validate_output_editable(block)
             before = block.stock_consumptions.aggregate(v=Sum("quantity"))["v"] or 0
-            sync_report_consumption(block)
+            from .material_color_apply_v123 import sync_all_colors
+            sync_all_colors(block)
             after = block.stock_consumptions.aggregate(v=Sum("quantity"))["v"] or 0
         messages.success(
             request,
@@ -950,6 +951,28 @@ def material_block_apply_materials(request, block_id):
         messages.error(request, "صورت پیدا نشد.")
     except Exception as exc:
         messages.error(request, f"اعمال مواد انجام نشد و کل عملیات برگشت: {exc}")
+    return redirect(f"/material-report/#block-{block_id}")
+
+
+@login_required
+@require_POST
+def material_block_apply_color(request, block_id):
+    """Apply ONLY selected color's fabric and elastic from tailor stock."""
+    from .material_color_apply_v123 import sync_one_color
+    _reset_request_caches()
+    try:
+        with transaction.atomic():
+            block = MaterialReportBlock.objects.select_for_update().select_related("brand").get(pk=block_id)
+            model_key = str(request.POST.get("material_color_key") or "").strip()
+            if model_key not in _active_model_keys(block):
+                raise ValueError("رنگ انتخاب‌شده در این صورت وجود ندارد.")
+            # Preserve the existing form-save mechanics and inventory-output floor.
+            _save_block_data(block, request)
+            _validate_output_editable(block)
+            sync_one_color(block, model_key)
+        messages.success(request, f"مواد اولیه و کش فقط رنگ «{_material_label(model_key)}» اعمال/همگام شد؛ سایر رنگ‌ها تغییری نکردند.")
+    except Exception as exc:
+        messages.error(request, f"اعمال تک‌رنگ انجام نشد؛ همه تغییرات برگشت: {exc}")
     return redirect(f"/material-report/#block-{block_id}")
 
 
