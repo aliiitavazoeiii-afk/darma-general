@@ -81,6 +81,14 @@ def synthetic_check():
     ) != (1500, 1538, 1233, 0, 38):
         raise RuntimeError(f"Pink two-roll net reconciliation failed: {progress}")
 
+    # Monthly total must not let surplus pink cancel a shortage in white.
+    white_short = sheet(8, current, cut=100, delivered=80, applied=80,
+                        brand="دارما", color="white")
+    independent = report._summarize_month_blocks(initial + [white_short])
+    if (independent["minimum_delivery"], independent["delivered"],
+            independent["pending"], independent["surplus"]) != (1600, 1618, 20, 38):
+        raise RuntimeError(f"Different color deficit incorrectly netted: {independent}")
+
     month_summary = report._summarize_month_blocks(initial)
     if (month_summary["minimum_delivery"], month_summary["delivered"],
             month_summary["applied"], month_summary["pending"],
