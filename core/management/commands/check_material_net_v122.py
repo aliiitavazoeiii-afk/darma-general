@@ -99,6 +99,16 @@ def synthetic_check():
     assert report._block_operational_status(other_month_fabric_open)
     assert not report._block_operational_status(other_month_closed)
     assert not report._fabric_not_applied(other_month_closed, "pink")
+    # Same total delivered/applied can still have wrong per-size allocations.
+    size_s, size_m = [name for name, _ in report.v23.DARMA_OUTPUT_SIZES[:2]]
+    swapped = sheet(7, prev, cut=5, delivered=5, applied=5)
+    swapped.output_data["pink"] = {size_s: "5", size_m: "0"}
+    swapped.output_applications = FakeRelated([
+        SimpleNamespace(model_key="pink", size_key=size_m, quantity=5)
+    ])
+    assert report._color_delivery_unsynced(swapped, "pink")
+    assert report._block_operational_status(swapped)
+
 
 
 class Command(BaseCommand):
