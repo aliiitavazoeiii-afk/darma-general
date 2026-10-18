@@ -363,3 +363,7 @@ class TailorBalanceEntry(models.Model):
 
 # Registered after existing core financial models: wholesale uses distinct ledgers.
 from .wholesale_models_v119 import WholesaleCustomer, WholesaleInvoice, WholesaleInvoiceLine, WholesaleReceipt  # noqa: E402,F401
+
+
+# Color-scoped material stock use, independent of finished-goods deliveries.
+from .material_color_models_v123 import MaterialReportColorUse  # noqa: E402,F401
