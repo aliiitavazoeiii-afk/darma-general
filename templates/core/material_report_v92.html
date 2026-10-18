@@ -27,7 +27,7 @@
           <h4>{{ item.label }}</h4>
           <span class="material-color-rolls">طاقه اعمال‌نشده <b>{{ item.roll_count|groupnum }}</b></span>
         </div>
-        <div class="material-color-progress-row" data-color-total-weight="{{ item.key }}"><span>وزن تحویلی کل</span><b>{{ item.total_weight_display }} کیلو</b></div>
+        <div class="material-color-progress-row" data-color-total-weight="{{ item.key }}"><span>وزن پارچه اعمال‌نشده</span><b>{{ item.total_weight_display }} کیلو</b></div>
         <div class="material-color-progress-row"><span>باید تحویل شود</span><b>{{ item.expected|groupnum }}</b></div>
         <div class="material-color-progress-row"><span>تحویل ثبت‌شده</span><b>{{ item.delivered|groupnum }}</b></div>
         <div class="material-color-progress-row pending"><span>مانده خالص</span><b>{{ item.pending|groupnum }}</b></div>
