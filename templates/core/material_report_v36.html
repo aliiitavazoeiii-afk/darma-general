@@ -49,7 +49,7 @@
         <span class="apply-state summary-models-box"><span class="summary-main-line">{% if block.used_model_labels %}مدل‌ها: {{ block.used_model_labels|join:'، ' }}{% else %}مدل‌ها: —{% endif %}</span></span>
         <span class="apply-state summary-codes-box"><span class="summary-main-line">{% if block.fabric_codes %}کد پارچه: {{ block.fabric_codes|join:'، ' }}{% else %}کد پارچه: —{% endif %}</span></span>
         {% if block.materials_applied %}
-        <span class="apply-state applied summary-material-box"><span class="summary-main-line">مواد اعمال‌شده</span></span>
+        <span class="apply-state applied summary-material-box"><span class="summary-main-line">{% if block.materials_all_applied %}مواد اعمال‌شده{% else %}مواد بعضی رنگ‌ها اعمال شده{% endif %}</span></span>
         {% else %}
         <span class="apply-state pending summary-material-box"><span class="summary-main-line">مواد هنوز اعمال نشده</span></span>
         {% endif %}
