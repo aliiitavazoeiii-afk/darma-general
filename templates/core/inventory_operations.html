@@ -182,7 +182,7 @@
         {% for t in recent_transfers %}
         <tr>
           <td class="ltr">{{ t.date|jalali }}</td>
-          <td>{% if t.from_location.key == "home" %}خانه ← انبار{% else %}انبار ← خانه{% endif %}</td>
+          <td>{% if t.from_location.key == "home" %}از خانه به انبار{% else %}از انبار به خانه{% endif %}</td>
           <td>{{ t.color.name }}</td>
           <td>{{ t.size.name }}</td>
           <td class="num fw-bold">{{ t.qty|groupnum }}</td>
