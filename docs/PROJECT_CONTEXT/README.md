@@ -214,3 +214,8 @@ Continuation branch: `v117-unified-ui-fabric-count`, descended from the newest `
 ### V121 — Correct Pedram claims / repair old invoice
 
 69. `69_PEDRAM_RECEIVABLE_V121.md` — fix wholesale signed Pedram shared tailor balance (+gross, not -gross), correct old 144,384,000-toman invoice once (+288,768,000 relative to wrong posted state; no extra stock movement), show actual net signed person balance, and thousands separators for all wholesale entry fields. Guarded `server_pedram_receivable_v121.sh`.
+
+
+### V122 — Net material delivery and open carryover
+
+70. `70_MATERIAL_NET_CARRYOVER_V122.md`: per-color total signed net after offsetting roll surpluses against shortages, registered delivery separated from stock-applied, current Jalali month plus pending earlier-month sheets, V122 live pink audit. Deploy read-only guarded `server_material_net_open_v122.sh`.
