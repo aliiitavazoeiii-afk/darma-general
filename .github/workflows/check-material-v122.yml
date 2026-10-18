@@ -1,0 +1,48 @@
+name: Verify material report V122 (read-only)
+
+on:
+  push:
+    branches:
+      - v122-material-net-current-open
+    paths:
+      - "core/material_report_v92.py"
+      - "core/management/commands/check_material_net_v122.py"
+      - "core/management/commands/check_material_summary_box_grid_v110.py"
+      - "templates/core/material_report_v92.html"
+      - ".github/workflows/check-material-v122.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pure-synthetic-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Python and Django source/templates
+        run: |
+          python -m compileall -q core/material_report_v92.py core/management/commands/check_material_net_v122.py core/management/commands/check_material_summary_box_grid_v110.py
+          python manage.py check
+      - name: Net delivery, individual size sync, and Jalali carryover fixtures
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings
+        run: |
+          python - <<'PY'
+          import django
+          django.setup()
+          from django.template.loader import get_template
+          from core.management.commands.check_material_net_v122 import synthetic_check
+          synthetic_check()
+          get_template("core/material_report_v92.html")
+          print("PASS: two 750-cut rolls -> 1538 entered; 1233 applied; 38 net surplus")
+          print("PASS: previous unfinished month included; closed old/future excluded")
+          print("PASS: same-total wrong-size output still marked open")
+          print("PASS: cross-color shortage cannot be settled by pink surplus")
+          PY
