@@ -48,10 +48,13 @@ def _update_transfer_qty(*, transfer_id, target_qty):
     if transfer.brand.name != "دارما":
         raise ValueError("ویرایش انتقال این بخش فقط برای دارما فعال است.")
     if (
-        transfer.from_location.key != StockLocation.KHORSHID
-        or transfer.to_location.key != StockLocation.HOME
+        (transfer.from_location.key, transfer.to_location.key)
+        not in {
+            (StockLocation.KHORSHID, StockLocation.HOME),
+            (StockLocation.HOME, StockLocation.KHORSHID),
+        }
     ):
-        raise ValueError("فقط انتقال خورشید به خانه از این بخش قابل ویرایش است.")
+        raise ValueError("فقط انتقال بین انبار و خانه از این بخش قابل ویرایش است.")
 
     try:
         target_qty = int(target_qty)
@@ -302,8 +305,8 @@ def inventory_operations(request):
         StockTransfer.objects.filter(
             applied=True,
             brand__name="دارما",
-            from_location__key=StockLocation.KHORSHID,
-            to_location__key=StockLocation.HOME,
+            from_location__key__in=[StockLocation.KHORSHID, StockLocation.HOME],
+            to_location__key__in=[StockLocation.KHORSHID, StockLocation.HOME],
         )
         .select_related("brand", "size", "color", "from_location", "to_location")
         .order_by("-id")[:50]
