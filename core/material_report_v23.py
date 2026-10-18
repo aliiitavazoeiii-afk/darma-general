@@ -498,6 +498,19 @@ def _view_block(block):
     all_elastic_keys = [key for key, _label in choices16 + choices25]
     cost_catalog = live_cost_catalog(keys, all_elastic_keys)
 
+    material_model_keys = [
+        key for key in keys
+        if (
+            str((live_input.get(key) or {}).get("fabric_code") or "").strip()
+            or q((live_input.get(key) or {}).get("weight")) > 0
+            or v20._int((live_input.get(key) or {}).get("cut")) > 0
+        )
+    ]
+    applied_fabric_keys = {
+        row.material_key for row in block.stock_consumptions.all()
+        if row.kind == FABRIC and q(row.quantity) > 0
+    }
+
     return {
         "obj": block,
         "jalali_date": format_jalali(block.date),
@@ -508,6 +521,9 @@ def _view_block(block):
         "output_rows": output_rows,
         "output_sizes": sizes,
         "materials_applied": block.stock_consumptions.exists(),
+        "materials_all_applied": bool(material_model_keys) and all(
+            key in applied_fabric_keys for key in material_model_keys
+        ),
         "material_consumption_count": block.stock_consumptions.count(),
         "output_entered": stats["entered"],
         "output_applied": stats["applied"],
