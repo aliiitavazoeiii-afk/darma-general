@@ -176,7 +176,7 @@ class Command(BaseCommand):
         ).read_text(encoding="utf-8")
         if v92_source.count('data-base-color="{{ item.key }}"') != 1:
             raise RuntimeError("Base-color card template marker drifted")
-        for marker in ("طاقه اعمال‌نشده", "item.roll_count", "وزن تحویلی کل", "item.total_weight_display", "باید تحویل شود", "تحویل‌شده", "مانده"):
+        for marker in ("طاقه اعمال‌نشده", "item.roll_count", "وزن تحویلی کل", "item.total_weight_display", "باید تحویل شود", "تحویل ثبت‌شده", "مانده خالص"):
             if marker not in v92_source:
                 raise RuntimeError(f"Base-color card marker missing: {marker}")
 
