@@ -318,6 +318,79 @@ def _summarize_open_base_colors(blocks):
         })
     return rows
 
+def _current_unapplied_material_metrics(blocks):
+    """Read-side metrics: only current-month colors with raw fabric NOT applied.
+
+    Shortfalls/surpluses net across rolls of the same brand/color only.
+    """
+    rows = {}
+    for block in blocks:
+        brand = getattr(block.brand, "name", "")
+        registered = _registered_output_by_key(block)
+        for key in v23._active_model_keys(block):
+            if not _fabric_not_applied(block, key):
+                continue
+            values = (block.input_data or {}).get(key, {}) or {}
+            group = rows.setdefault((brand, key), {
+                "codes": set(), "uncoded": 0, "weight": Decimal("0"),
+                "cut": 0, "delivered": 0, "applied": 0, "cut_entries": 0,
+            })
+            code = str(values.get("fabric_code") or "").strip()
+            weight = max(_decimal(values.get("weight")), Decimal("0"))
+            cut = max(0, v23.v20._int(values.get("cut")))
+            if code:
+                group["codes"].add(code)
+            elif weight > 0:
+                group["uncoded"] += 1
+            group["weight"] += weight
+            group["cut"] += cut
+            group["delivered"] += registered.get(key, 0)
+            group["applied"] += sum(
+                max(0, int(row.quantity or 0))
+                for row in block.output_applications.all()
+                if row.model_key == key
+            )
+            group["cut_entries"] += int(cut > 0)
+
+    empty = {"codes": set(), "uncoded": 0, "weight": Decimal("0"),
+             "cut": 0, "delivered": 0, "applied": 0, "cut_entries": 0}
+    summary = {
+        "roll_count": sum(len(x["codes"]) + x["uncoded"] for x in rows.values()),
+        "weight": sum((x["weight"] for x in rows.values()), Decimal("0")),
+        "minimum_delivery": sum(x["cut"] for x in rows.values()),
+        "delivered": sum(x["delivered"] for x in rows.values()),
+        "applied": sum(x["applied"] for x in rows.values()),
+        "pending": sum(max(0, x["cut"] - x["delivered"]) for x in rows.values()),
+        "surplus": sum(max(0, x["delivered"] - x["cut"]) for x in rows.values()),
+    }
+    summary["weight_display"] = _format_weight(summary["weight"])
+    base = {}
+    for key, _ in v23.BASE_MODELS:
+        x = rows.get(("دارما", key), empty)
+        signed = x["delivered"] - x["cut"]
+        base[key] = {
+            "roll_count": len(x["codes"]),
+            "rolls_without_code": x["uncoded"],
+            "total_weight": x["weight"],
+            "total_weight_display": _format_weight(x["weight"]),
+            "expected": x["cut"], "delivered": x["delivered"],
+            "applied": x["applied"],
+            "pending": max(0, -signed), "surplus": max(0, signed),
+            "net_delta": signed, "open_blocks": x["cut_entries"],
+        }
+    base_rows = [rows.get(("دارما", key), empty) for key, _ in v23.BASE_MODELS]
+    cut_total = sum(x["cut"] for x in base_rows)
+    count = sum(x["cut_entries"] for x in base_rows)
+    average = (
+        int((Decimal(cut_total) / Decimal(count)).quantize(
+            Decimal("1"), rounding=ROUND_HALF_UP
+        )) if count else 0
+    )
+    return summary, base, {
+        "average_cut": average, "cut_entry_count": count, "cut_total": cut_total,
+    }
+
+
 def _all_time_cut_summary(blocks):
     """Average saved cut per Darma base-color for the supplied sheet scope.
 
@@ -383,24 +456,19 @@ def material_report(request):
     objects = list(queryset.all())
     blocks = [_decorate_block_month(v23._view_block(obj)) for obj in objects]
 
-    current_month_objects = _operational_month_blocks(objects, month)
-    summary = _summarize_month_blocks(current_month_objects)
-    summary["month_label"] = month["label"]
-    summary["carryover_blocks"] = sum(
-        1 for obj in current_month_objects if obj.date < month["start"]
+    # V123 explicitly excludes every older month, whether open or closed.
+    # Only colors whose fabric consumption is still unapplied appear upstairs.
+    current_month_objects = [
+        obj for obj in objects if month["start"] <= obj.date < month["next"]
+    ]
+    summary, by_color, cut_summary = _current_unapplied_material_metrics(
+        current_month_objects
     )
-    cut_summary = _all_time_cut_summary(current_month_objects)
-    # V118 coded-roll and lifetime-weight semantics are intentionally unchanged.
-    # Only the NEW operating-month production totals use net saved delivery.
-    base_color_progress = _summarize_open_base_colors(objects)
-    net_by_color = _net_color_progress(current_month_objects)
-    for row in base_color_progress:
-        row.update(net_by_color[row["key"]])
-    carryover_ids = {
-        obj.pk for obj in current_month_objects if obj.date < month["start"]
-    }
-    for row in blocks:
-        row["carry_forward"] = row["obj"].pk in carryover_ids
+    summary["month_label"] = month["label"]
+    base_color_progress = [
+        {"key": key, "label": label, **by_color[key]}
+        for key, label in v23.BASE_MODELS
+    ]
 
     return render(
         request,
@@ -415,6 +483,5 @@ def material_report(request):
             "material_base_color_progress": base_color_progress,
             "material_current_month_key": month["key"],
             "material_current_month_label": month["label"],
-            "material_carryover_ids": sorted(carryover_ids),
         },
     )
