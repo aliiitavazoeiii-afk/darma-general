@@ -66,6 +66,7 @@ def _summarize_month_blocks(blocks):
     total_cut = 0
     total_delivered = 0
     total_pending = 0
+    total_applied = 0
 
     for block in blocks:
         active_keys = v23._active_model_keys(block)
@@ -87,23 +88,139 @@ def _summarize_month_blocks(blocks):
             total_weight += weight
             block_cut += cut
 
-        block_delivered = sum(
+        block_delivered = sum(_registered_output_by_key(block).values())
+        block_applied = sum(
             max(0, int(row.quantity or 0))
             for row in block.output_applications.all()
         )
         total_cut += block_cut
         total_delivered += block_delivered
-        total_pending += max(0, block_cut - block_delivered)
+        total_applied += block_applied
 
+    total_pending = max(0, total_cut - total_delivered)
+    total_surplus = max(0, total_delivered - total_cut)
     return {
         "roll_count": len(fabric_codes) + uncoded_rolls,
         "weight": total_weight,
         "weight_display": _format_weight(total_weight),
         "minimum_delivery": int(total_cut),
         "delivered": int(total_delivered),
+        "applied": int(total_applied),
         "pending": int(total_pending),
+        "surplus": int(total_surplus),
         "block_count": len(blocks),
     }
+
+
+def _fabric_not_applied(block, key):
+    """True only for a real fabric-input row without a positive color-specific consumption."""
+    values = (block.input_data or {}).get(key, {}) or {}
+    meaningful = (
+        str(values.get("fabric_code") or "").strip()
+        or _decimal(values.get("weight")) > 0
+        or v23.v20._int(values.get("cut")) > 0
+    )
+    if not meaningful:
+        return False
+    return not any(
+        row.kind == v23.FABRIC
+        and row.material_key == key
+        and _decimal(row.quantity) > 0
+        for row in block.stock_consumptions.all()
+    )
+
+
+def _registered_output_by_key(block):
+    """Saved delivery entries, even before stock/output synchronization.
+
+    Output applications are separately reported. A delivery the operator
+    entered is not automatically 'applied', and must not disappear from
+    physical-delivery progress simply because synchronization is pending.
+    """
+    brand = block.brand
+    sizes = v23._output_sizes_for_brand(brand)
+    keys = v23._active_model_keys(block)
+    values = block.output_data or {}
+    return {
+        key: sum(
+            max(0, v23.v20._int((values.get(key) or {}).get(size_key)))
+            for size_key, _ in sizes
+        )
+        for key in keys
+    }
+
+
+def _block_operational_status(block):
+    """Unfinished material or delivery work carries into the next Jalali month.
+
+    Do not 'close' a previous sheet only because some other color's
+    materials were applied. Do not use the month of stock sync: the sheet
+    date is the accounting period; open sheets carry until finished.
+    """
+    keys = v23._active_model_keys(block)
+    registered = _registered_output_by_key(block)
+    applied = {}
+    for row in block.output_applications.all():
+        applied[row.model_key] = applied.get(row.model_key, 0) + max(0, int(row.quantity or 0))
+    for key in keys:
+        cut = max(0, v23.v20._int(((block.input_data or {}).get(key) or {}).get("cut")))
+        if cut > registered.get(key, 0):
+            return True
+        if registered.get(key, 0) != applied.get(key, 0):
+            return True
+        if _fabric_not_applied(block, key):
+            return True
+    return False
+
+
+def _operational_month_blocks(blocks, month):
+    """Current Jalali month + only unfinished sheets carried from older months."""
+    start, next_month = month["start"], month["next"]
+    return [
+        block for block in blocks
+        if (start <= block.date < next_month)
+        or (block.date < start and _block_operational_status(block))
+    ]
+
+
+def _net_color_progress(blocks):
+    """Net signed shortfalls/surpluses ACROSS sheets before zero-clamping.
+
+    Example: two pink rolls each cut 750; deliveries 998 and 540.
+    Net target=1500, received=1538, pending=0, surplus=38.
+    The prior per-sheet max(0, cut-delivered) incorrectly said 210 pending.
+    """
+    result = {}
+    for key, _ in v23.BASE_MODELS:
+        cut = registered = applied = 0
+        open_blocks = 0
+        for block in blocks:
+            if getattr(block.brand, "name", "") != "دارما":
+                continue
+            values = (block.input_data or {}).get(key, {}) or {}
+            expected_row = max(0, v23.v20._int(values.get("cut")))
+            registered_row = _registered_output_by_key(block).get(key, 0)
+            applied_row = sum(
+                max(0, int(a.quantity or 0))
+                for a in block.output_applications.all()
+                if a.model_key == key
+            )
+            cut += expected_row
+            registered += registered_row
+            applied += applied_row
+            if expected_row > registered_row or registered_row != applied_row or _fabric_not_applied(block, key):
+                open_blocks += 1
+        balance = registered - cut
+        result[key] = {
+            "expected": cut,
+            "delivered": registered,
+            "applied": applied,
+            "pending": max(0, -balance),
+            "surplus": max(0, balance),
+            "net_delta": balance,
+            "open_blocks": open_blocks,
+        }
+    return result
 
 
 BASE_COLOR_PROGRESS = tuple(v23.BASE_MODELS)
@@ -242,14 +359,24 @@ def material_report(request):
     objects = list(queryset.all())
     blocks = [_decorate_block_month(v23._view_block(obj)) for obj in objects]
 
-    current_month_objects = [
-        obj for obj in objects
-        if month["start"] <= obj.date < month["next"]
-    ]
+    current_month_objects = _operational_month_blocks(objects, month)
     summary = _summarize_month_blocks(current_month_objects)
     summary["month_label"] = month["label"]
+    summary["carryover_blocks"] = sum(
+        1 for obj in current_month_objects if obj.date < month["start"]
+    )
     cut_summary = _all_time_cut_summary(objects)
+    # V118 coded-roll and lifetime-weight semantics are intentionally unchanged.
+    # Only the NEW operating-month production totals use net saved delivery.
     base_color_progress = _summarize_open_base_colors(objects)
+    net_by_color = _net_color_progress(current_month_objects)
+    for row in base_color_progress:
+        row.update(net_by_color[row["key"]])
+    carryover_ids = {
+        obj.pk for obj in current_month_objects if obj.date < month["start"]
+    }
+    for row in blocks:
+        row["carry_forward"] = row["obj"].pk in carryover_ids
 
     return render(
         request,
