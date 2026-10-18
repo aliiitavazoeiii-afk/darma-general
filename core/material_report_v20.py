@@ -414,6 +414,8 @@ def material_block_unapply_materials(request, block_id):
             if not block.stock_consumptions.exists():
                 raise ValueError("برای این صورت هنوز مصرف مواد اعمال نشده است.")
             reverse_report_consumption(block)
+            # V123: reversing all raw material also clears attribution; no stock writes beyond reversal.
+            block.color_consumptions.all().delete()
         messages.success(request, "فقط اثر مواد اولیه برگشت؛ موجودی شورت‌های تحویلی دست نخورد.")
     except MaterialReportBlock.DoesNotExist:
         messages.error(request, "صورت پیدا نشد.")
