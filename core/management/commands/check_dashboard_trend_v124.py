@@ -36,7 +36,8 @@ class Command(BaseCommand):
         chart_start, chart_end = dates[0], dates[-1]
         by_date = defaultdict(lambda: {"gross": 0, "profit": 0, "units": 0})
         for line in SaleLine.objects.filter(
-            day__date__gte=chart_start, day__date__lte=chart_end, quantity__gt=0
+            day__date__gte=chart_start, day__date__lte=chart_end,
+            quantity__gt=0, sale_price__gt=0,
         ).select_related("day", "product_size__product__brand", "product_size__size"):
             metrics = sale_line_metrics(line)
             row = by_date[line.day.date]
