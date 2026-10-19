@@ -151,12 +151,19 @@ def inventory_transfer_direction(request):
         try:
             token_note = _transfer_token(request.GET.get("request_token"))
             result = _existing_transfer_status(token_note)
+            snapshot = None
+            if result:
+                try:
+                    snapshot = _stock_snapshot_for_operations(
+                        Brand.objects.filter(active=True, name__in=["دارما", "تکوین", "Novani"])
+                    )
+                except Exception:
+                    # A committed transfer must remain discoverable even
+                    # when its presentation-only stock snapshot fails.
+                    snapshot = None
             return JsonResponse({
                 "ok": True, "version": "v125", "found": bool(result),
-                "result": result,
-                "stock_snapshot": _stock_snapshot_for_operations(
-                    Brand.objects.filter(active=True, name__in=["دارما", "تکوین", "Novani"])
-                ) if result else None,
+                "result": result, "stock_snapshot": snapshot,
             })
         except ValueError as exc:
             return JsonResponse({"ok": False, "message": str(exc)}, status=400)
