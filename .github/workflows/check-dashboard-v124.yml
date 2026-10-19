@@ -55,7 +55,7 @@ jobs:
           get_template("core/dashboard_excel_v89.html")
           print("PASS: dashboard HTML template valid")
           PY
-      - name: Disposable database: no-price phantom sales-day regressions
+      - name: Disposable test database for phantom sales-day regressions
         run: |
           # Historical migration 0013 requires production-seeded Brand rows,
           # so build only the temporary test schema directly. Never touch ERP.
