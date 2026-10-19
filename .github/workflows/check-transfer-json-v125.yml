@@ -1,0 +1,71 @@
+name: Verify transfer JSON and exact-once stock V125
+
+on:
+  push:
+    branches:
+      - v125-safe-transfer-json
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  transfer-json-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 16
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: darma
+          POSTGRES_USER: darma
+          POSTGRES_PASSWORD: darma
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U darma"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_NAME: darma
+      DB_USER: darma
+      DB_PASSWORD: darma
+      DJANGO_SETTINGS_MODULE: config.settings
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Python, schema and Django/template checks
+        run: |
+          python -m compileall -q core/inventory_transfer_v123.py core/test_inventory_transfer_json_v125.py
+          python manage.py check
+          python manage.py makemigrations --check --dry-run
+          python - <<'PY'
+          import django
+          django.setup()
+          from django.template.loader import get_template
+          get_template("core/inventory_operations.html")
+          print("PASS: inventory transfer template compiles")
+          PY
+      - name: Disposable PostgreSQL transfer idempotency and JSON auth tests
+        run: |
+          python - <<'PY'
+          import django
+          django.setup()
+          from django.test import override_settings
+          from django.core.management import call_command
+          with override_settings(MIGRATION_MODULES={"core": None}):
+              call_command("test", "core.test_inventory_transfer_json_v125",
+                           interactive=False, verbosity=2)
+          PY
+      - name: Check change isolation to V124
+        run: |
+          test -z "$(git diff --name-only origin/v124-dashboard-chart-repair..HEAD -- core/models.py core/models_final.py core/migrations core/finance.py core/material_report_v23.py core/inventory_operations_v16.py templates/base.html Caddyfile)"
