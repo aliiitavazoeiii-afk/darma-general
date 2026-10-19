@@ -105,7 +105,7 @@ class TransferJsonV125Tests(TestCase):
         changed = self.post(qty=7)
         self.assertEqual(changed.status_code, 400)
         self.assertEqual(changed["Content-Type"], "application/json")
-        self.assertIn("مختلف", changed.json()["message"])
+        self.assertIn("متفاوتی", changed.json()["message"])
         self.assertEqual(self.balances(), (7, 23))
         self.assertEqual(StockTransfer.objects.count(), 1)
 
