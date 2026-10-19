@@ -331,33 +331,119 @@ document.addEventListener('DOMContentLoaded',function(){
   syncAdjustmentUI();
 
   if(transferForm){
-    transferForm.addEventListener('submit',async function(event){
+    // V125: Never submit blindly if the running web container still serves
+    // an older HTML-only endpoint or an expired login/CSRF page.
+    // An in-memory UUID stays with this batch until server-confirmed success.
+    const requestToken=document.createElement('input');
+    requestToken.type='hidden';
+    requestToken.name='request_token';
+    transferForm.appendChild(requestToken);
+    const submit=transferForm.querySelector('button[type="submit"],button:not([type])');
+    let uncertain=false;
+    const makeToken=()=>{
+      if(window.crypto && typeof window.crypto.randomUUID==='function'){
+        return window.crypto.randomUUID();
+      }
+      const bytes=new Uint8Array(16);
+      window.crypto.getRandomValues(bytes);
+      bytes[6]=(bytes[6]&15)|64;bytes[8]=(bytes[8]&63)|128;
+      const hex=Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('');
+      return hex.slice(0,8)+'-'+hex.slice(8,12)+'-'+hex.slice(12,16)+'-'+hex.slice(16,20)+'-'+hex.slice(20);
+    };
+    const show=(message,isError)=>{
+      if(!transferFeedback)return;
+      transferFeedback.textContent=message;
+      transferFeedback.style.color=isError?'#ff9b9b':'#8ff0be';
+    };
+    async function readJson(response,kind){
+      // Browser fetch follows 302 to /login/ by default. Such a response
+      // must never be fed into response.json() or treated as transfer failure.
+      if(response.type==='opaqueredirect'||response.redirected||
+          (response.status>=300&&response.status<400)){
+        throw new Error('سرور به صفحه دیگری هدایت کرد؛ احتمالاً نشست ورود تمام شده یا نسخه قدیمی سایت فعال است. کد HTTP: '+response.status);
+      }
+      const contentType=(response.headers.get('Content-Type')||'').toLowerCase();
+      if(!contentType.includes('application/json')){
+        throw new Error(
+          'پاسخ '+kind+' به‌جای JSON یک صفحه HTML بود (HTTP '+response.status+
+          '). ممکن است نسخه قدیمی سرور، خطای CSRF یا خطای داخلی باشد.'
+        );
+      }
+      const result=await response.json();
+      if(!response.ok||!result.ok){
+        throw new Error(result.message||('خطای سرور (HTTP '+response.status+')'));
+      }
+      if(result.version!=='v125'){
+        throw new Error('نسخه فعال سایت هنوز از انتقال امن V125 پشتیبانی نمی‌کند.');
+      }
+      return result;
+    }
+    async function probe(token){
+      const url=new URL(transferForm.action,location.href);
+      if(token)url.searchParams.set('request_token',token);
+      const response=await fetch(url.toString(),{
+        method:'GET',credentials:'same-origin',redirect:'manual',cache:'no-store',
+        headers:{'Accept':'application/json','X-Requested-With':'XMLHttpRequest'}
+      });
+      return readJson(response,'بررسی وضعیت انتقال');
+    }
+    function complete(result){
+      if(result.stock_snapshot)snapshot=result.stock_snapshot;
+      transferForm.querySelectorAll('input[name^="qty_"]').forEach(input=>input.value='');
+      requestToken.value='';
+      uncertain=false;
+      syncTransferStock();
+      syncAdjustmentUI();
+      show(result.message||'انتقال ثبت شد؛ موجودی به‌روزرسانی شد.',false);
+    }
+    transferForm.addEventListener('submit',async event=>{
       event.preventDefault();
-      const submit=transferForm.querySelector('button[type="submit"],button:not([type])');
+      if(uncertain){
+        show('نتیجه انتقال قبلی هنوز مشخص نیست؛ برای جلوگیری از کسر تکراری، ابتدا سوابق انتقال را بررسی یا صفحه را تازه‌سازی کن.',true);
+        return;
+      }
       if(submit)submit.disabled=true;
-      if(transferFeedback)transferFeedback.textContent='در حال ثبت انتقال...';
+      let attemptedPost=false;
+      if(!requestToken.value)requestToken.value=makeToken();
+      const token=requestToken.value;
+      show('در حال بررسی اتصال و ثبت انتقال...',false);
       try{
+        // An old web process may serve the updated form as a bind-mounted
+        // template, yet return HTML/404 for the new API route. Block POST.
+        await probe();
+        attemptedPost=true;
         const response=await fetch(transferForm.action,{
-          method:'POST',credentials:'same-origin',
-          headers:{'X-Requested-With':'XMLHttpRequest'},
+          method:'POST',credentials:'same-origin',redirect:'manual',cache:'no-store',
+          headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'},
           body:new FormData(transferForm)
         });
-        const result=await response.json();
-        if(!response.ok||!result.ok)throw new Error(result.message||'انتقال ثبت نشد');
-        snapshot=result.stock_snapshot||snapshot;
-        transferForm.querySelectorAll('input[name^="qty_"]').forEach(input=>input.value='');
-        syncTransferStock();
-        syncAdjustmentUI();
-        if(transferFeedback){
-          transferFeedback.textContent=result.message;
-          transferFeedback.style.color='#8ff0be';
-        }
+        const result=await readJson(response,'ثبت انتقال');
+        complete(result);
       }catch(error){
-        if(transferFeedback){
-          transferFeedback.textContent=error.message||'خطای انتقال';
-          transferFeedback.style.color='#ff9b9b';
+        if(attemptedPost){
+          // Never say "not recorded" on a response error: the DB write could
+          // have committed before an HTML proxy/500 response. Ask the server
+          // whether our *exact same UUID batch* was already applied.
+          try{
+            const status=await probe(token);
+            if(status.found && status.result && status.result.applied){
+              complete({
+                stock_snapshot:status.stock_snapshot,
+                message:'انتقال در سرور ثبت شده بود؛ دوباره ثبت نشد. شماره ثبت: '+status.result.transfer_ids.join('، ')
+              });
+              return;
+            }
+            show(error.message+' انتقالی با این شناسه در سرور پیدا نشد؛ می‌توانی دوباره تلاش کنی.',true);
+          }catch(verifyError){
+            uncertain=true;
+            show(error.message+' وضعیت انتقال قابل تأیید نیست؛ برای جلوگیری از ثبت دوباره، سوابق انتقال را بررسی کن. '+verifyError.message,true);
+          }
+        }else{
+          show(error.message+' هیچ درخواست ثبت انتقال ارسال نشد.',true);
         }
-      }finally{if(submit)submit.disabled=false;}
+      }finally{
+        if(submit)submit.disabled=uncertain;
+      }
     });
   }
 });
