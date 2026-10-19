@@ -13,6 +13,19 @@ from .finance import sale_line_metrics
 from .models import MaterialReportBlock, SaleDay, SaleLine, TakvinPurchase
 
 
+def recent_paid_sale_days(today, limit=30):
+    """Sale days with actual positive-gross transactions, newest N only.
+
+    Zero-price positive-quantity entries remain fully intact in the ERP but
+    must not create phantom revenue days in this one dashboard graph.
+    """
+    rows = SaleDay.objects.filter(date__lte=today).filter(
+        Q(lines__quantity__gt=0, lines__sale_price__gt=0)
+        | Q(dia_gallery_sales__quantity__gt=0, dia_gallery_sales__unit_price__gt=0)
+    ).distinct().order_by("-date")[:limit]
+    return sorted(rows, key=lambda day: day.date)
+
+
 @login_required
 def dashboard(request):
     today = date.today()
@@ -37,24 +50,10 @@ def dashboard(request):
     _add_metrics(month_metrics, dia_gallery_period_metrics(month_start, today)["total"])
     _finish_metrics(month_metrics)
 
-    # V124: A positive QUANTITY with a zero sale price is not a sale day
-    # for revenue-chart purposes. The former predicate included those draft
-    # entries, yielding an empty orange bar and often a negative green bar
-    # because digikala processing/cost fees still exist. That single loss
-    # could force Chart.js to stretch its axis down to -50,000,000.
-    # Count the latest 30 actual positive-GROSS sale dates; continue omitting
-    # holidays and days without sales, as the owner originally requested.
-    # IMPORTANT: raw sale records, monthly totals and finance rules unchanged.
-    chart_days = list(
-        SaleDay.objects.filter(date__lte=today)
-        .filter(
-            Q(lines__quantity__gt=0, lines__sale_price__gt=0)
-            | Q(dia_gallery_sales__quantity__gt=0, dia_gallery_sales__unit_price__gt=0)
-        )
-        .distinct()
-        .order_by("-date")[:30]
-    )
-    chart_days.sort(key=lambda day: day.date)
+    # V124: chart = latest 30 monetary-sale days. Empty holidays and
+    # zero-priced drafts are omitted. Monthly and daily finance metrics
+    # above are untouched.
+    chart_days = recent_paid_sale_days(today, limit=30)
 
     # Keep the summary metrics on exactly the same population as the chart:
     # latest N recorded-sale dates, with both ordinary sales and Dia Gallery.
