@@ -229,3 +229,8 @@ Continuation branch: `v117-unified-ui-fabric-count`, descended from the newest `
 ### V124 — Dashboard genuine sales-day chart
 
 72. `72_DASHBOARD_TREND_V124.md` — remove zero-price phantom days and their costs from 30 real-sale-day chart only; preserve Dia Gallery canonical-price sales, show negative profit honestly with compact y-axis, x labels readable; protected `server_dashboard_chart_v124.sh` and live read-only zero-price audit.
+
+
+### V125 — JSON-safe exact-once inventory transfers
+
+73. `73_SAFE_TRANSFER_JSON_V125.md` — guard AJAX transfer against HTML/login/CSRF/old backend, preflight JSON endpoint, one in-memory UUID stored in existing transfer note, idempotent stock movements and read-only status recovery; protected `server_safe_transfer_json_v125.sh`.
