@@ -234,3 +234,8 @@ Continuation branch: `v117-unified-ui-fabric-count`, descended from the newest `
 ### V125 — JSON-safe exact-once inventory transfers
 
 73. `73_SAFE_TRANSFER_JSON_V125.md` — guard AJAX transfer against HTML/login/CSRF/old backend, preflight JSON endpoint, one in-memory UUID stored in existing transfer note, idempotent stock movements and read-only status recovery; protected `server_safe_transfer_json_v125.sh`.
+
+
+### V126 — Inventory transfer Invalid URL front-end repair
+
+74. `74_TRANSFER_INVALID_URL_V126.md` — local `location` select shadowed browser URL base; replace construction with Django-generated same-origin transfer endpoint for safe GET and POST. JS simulated browser regression and inherited V125 exact-once transfer safety remain. Deploy `server_transfer_url_v126.sh`.
