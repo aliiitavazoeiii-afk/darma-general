@@ -224,3 +224,8 @@ Continuation branch: `v117-unified-ui-fabric-count`, descended from the newest `
 ### V123 — Material colors and two-way inventory transfer
 
 71. `71_MATERIAL_COLOR_APPLY_BIDIRECTIONAL_TRANSFER_V123.md` — archive every prior Jalali month, show only this month's raw-fabric-unapplied colors upstairs, add independent color-specific fabric/elastic apply, bidirectional warehouse/home transfer with no-refresh working session and default reset on page reload. Deploy via `server_material_color_transfer_v123.sh`.
+
+
+### V124 — Dashboard genuine sales-day chart
+
+72. `72_DASHBOARD_TREND_V124.md` — remove zero-price phantom days and their costs from 30 real-sale-day chart only; preserve Dia Gallery canonical-price sales, show negative profit honestly with compact y-axis, x labels readable; protected `server_dashboard_chart_v124.sh` and live read-only zero-price audit.
