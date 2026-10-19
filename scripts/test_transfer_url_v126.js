@@ -34,7 +34,8 @@ const elements={
   // This element intentionally has no .href, as on the production page.
   'adjust-location':{
     options:[{dataset:{locationKey:'home'},textContent:'خانه'}],
-    selectedIndex:0
+    selectedIndex:0,
+    addEventListener(){}
   },
 };
 const document={
