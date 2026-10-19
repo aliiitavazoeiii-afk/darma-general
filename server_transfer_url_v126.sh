@@ -17,7 +17,7 @@ CHANGED=$(git diff --name-only "$BASE"..HEAD)
 echo "$CHANGED"
 for f in $CHANGED; do
   case "$f" in
-    .github/workflows/check-transfer-url-v126.yml|scripts/test_transfer_url_v126.js|templates/core/inventory_operations.html|server_transfer_url_v126.sh) ;;
+    .github/workflows/check-transfer-url-v126.yml|PROJECT_HANDOFF_CURRENT.md|docs/PROJECT_CONTEXT/74_TRANSFER_INVALID_URL_V126.md|docs/PROJECT_CONTEXT/README.md|scripts/test_transfer_url_v126.js|server_transfer_url_v126.sh|templates/core/inventory_operations.html) ;;
     *) fail "unexpected V126 file: $f" ;;
   esac
 done
