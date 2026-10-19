@@ -61,14 +61,11 @@ for name in names:
  for row in m.objects.order_by("pk").values_list(*cols):
   h.update(repr(row).encode());h.update(b"\\n")
  print(name+"="+h.hexdigest())'
-snapshot_live(){ docker compose exec -T web python manage.py shell -c "$HASH_CODE" 2>/dev/null | grep -E '^(StockBalance|InventoryMovement|RawMaterialStock|MaterialReportBlock|MaterialReportOutputApplied|MaterialReportOutputLocation|BusinessPayment|AccountEntry|SaleLine|ProductCode|ProductSize|ExcelManualRow|MaterialReportConsumption)='; }
-snapshot_image(){ docker compose run --rm --entrypoint python web manage.py shell -c "$HASH_CODE" 2>/dev/null | grep -E '^(StockBalance|InventoryMovement|RawMaterialStock|MaterialReportBlock|MaterialReportOutputApplied|MaterialReportOutputLocation|BusinessPayment|AccountEntry|SaleLine|ProductCode|ProductSize|ExcelManualRow|MaterialReportConsumption)='; }
-# Both preflight paths MUST emit the same model set in the same order.
-# A previous version accidentally omitted MaterialReportConsumption from
-# snapshot_image's grep, which caused a false "business data changed" stop.
-SNAPSHOT_LIVE_MODELS=$(sed -n 's/^snapshot_live(){.*grep -E '\''\(.*\)'\''; }$/\1/p' "$0")
-SNAPSHOT_IMAGE_MODELS=$(sed -n 's/^snapshot_image(){.*grep -E '\''\(.*\)'\''; }$/\1/p' "$0")
-test -n "$SNAPSHOT_LIVE_MODELS" && test "$SNAPSHOT_LIVE_MODELS" = "$SNAPSHOT_IMAGE_MODELS" || fail "snapshot model filters differ; refusing unsafe comparison"
+# One shared regex: both running-service and candidate-image checks must
+# produce an identical, ordered list of protected ERP model hashes.
+SNAPSHOT_REGEX='^(StockBalance|InventoryMovement|RawMaterialStock|MaterialReportBlock|MaterialReportOutputApplied|MaterialReportOutputLocation|BusinessPayment|AccountEntry|SaleLine|ProductCode|ProductSize|ExcelManualRow|MaterialReportConsumption)='
+snapshot_live(){ docker compose exec -T web python manage.py shell -c "$HASH_CODE" 2>/dev/null | grep -E "$SNAPSHOT_REGEX"; }
+snapshot_image(){ docker compose run --rm --entrypoint python web manage.py shell -c "$HASH_CODE" 2>/dev/null | grep -E "$SNAPSHOT_REGEX"; }
 PRE=$(snapshot_live) || fail "PRE snapshot failed"
 echo "$PRE"
 
