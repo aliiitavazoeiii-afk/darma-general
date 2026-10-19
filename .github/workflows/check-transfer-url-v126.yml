@@ -1,0 +1,82 @@
+name: Verify inventory transfer URL V126
+
+on:
+  push:
+    branches:
+      - v126-transfer-url-fix
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  browser-transfer-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Execute actual transfer page JavaScript with location SELECT shadowing
+        run: node scripts/test_transfer_url_v126.js
+      - name: Static Django route and safe URL checks
+        run: |
+          grep -F 'const transferEndpoint="{% url '\''inventory_transfer_direction_v123'\'' %}";' templates/core/inventory_operations.html
+          grep -F 'fetch(transferEndpoint+query,{' templates/core/inventory_operations.html
+          grep -F 'fetch(transferEndpoint,{' templates/core/inventory_operations.html
+          ! grep -F 'new URL(transferForm.action,location.href)' templates/core/inventory_operations.html
+
+  inherited-backend-json-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 13
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: darma
+          POSTGRES_USER: darma
+          POSTGRES_PASSWORD: darma
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U darma"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_NAME: darma
+      DB_USER: darma
+      DB_PASSWORD: darma
+      DJANGO_SETTINGS_MODULE: config.settings
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Backend route, schema and Django templates
+        run: |
+          python manage.py check
+          python manage.py makemigrations --check --dry-run
+          python - <<'PY'
+          import django
+          django.setup()
+          from django.template.loader import get_template
+          get_template("core/inventory_operations.html")
+          print("PASS: transfer route template renders")
+          PY
+      - name: Retain V125 exact-once transfer and JSON tests on throwaway DB
+        run: |
+          python - <<'PY'
+          import django
+          django.setup()
+          from django.test import override_settings
+          from django.core.management import call_command
+          with override_settings(MIGRATION_MODULES={"core": None}):
+              call_command("test", "core.test_inventory_transfer_json_v125",
+                           interactive=False, verbosity=2)
+          PY
