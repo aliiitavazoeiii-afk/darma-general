@@ -378,10 +378,13 @@ document.addEventListener('DOMContentLoaded',function(){
       }
       return result;
     }
+    // The page already has a local "location" select element. Never use
+    // that variable as window.location or construct an URL with it.
+    // Django generates this SAME origin-relative route for POST and GET.
+    const transferEndpoint="{% url 'inventory_transfer_direction_v123' %}";
     async function probe(token){
-      const url=new URL(transferForm.action,location.href);
-      if(token)url.searchParams.set('request_token',token);
-      const response=await fetch(url.toString(),{
+      const query=token ? '?request_token='+encodeURIComponent(token) : '';
+      const response=await fetch(transferEndpoint+query,{
         method:'GET',credentials:'same-origin',redirect:'manual',cache:'no-store',
         headers:{'Accept':'application/json','X-Requested-With':'XMLHttpRequest'}
       });
@@ -412,7 +415,7 @@ document.addEventListener('DOMContentLoaded',function(){
         // template, yet return HTML/404 for the new API route. Block POST.
         await probe();
         attemptedPost=true;
-        const response=await fetch(transferForm.action,{
+        const response=await fetch(transferEndpoint,{
           method:'POST',credentials:'same-origin',redirect:'manual',cache:'no-store',
           headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'},
           body:new FormData(transferForm)
