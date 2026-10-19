@@ -29,6 +29,13 @@ class DashboardChartDaysTest(TestCase):
             day=dia, size=size, color=color, quantity=1,
             unit_price=71000, unit_cost=60000,
         )
+        # Dia Gallery uses a canonical fixed fee in the money calculations
+        # even if a legacy stored unit_price is zero. Do not lose its day.
+        dia_legacy = SaleDay.objects.create(date=cls.today-timedelta(days=5))
+        DiaGallerySale.objects.create(
+            day=dia_legacy, size=size, color=color, quantity=1,
+            unit_price=0, unit_cost=60000,
+        )
         # A zero-count, non-zero-price line cannot create a monetary sale.
         empty = SaleDay.objects.create(date=cls.today-timedelta(days=4))
         SaleLine.objects.create(day=empty, product_size=product_size, quantity=0, sale_price=85000)
@@ -39,6 +46,7 @@ class DashboardChartDaysTest(TestCase):
     def test_no_zero_price_phantom_sales_day(self):
         dates = [day.date for day in recent_paid_sale_days(self.today, limit=30)]
         self.assertEqual(dates, [
+            self.today-timedelta(days=5),
             self.today-timedelta(days=3),
             self.today-timedelta(days=2),
         ])
