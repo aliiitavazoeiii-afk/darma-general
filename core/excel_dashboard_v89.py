@@ -16,12 +16,14 @@ from .models import MaterialReportBlock, SaleDay, SaleLine, TakvinPurchase
 def recent_paid_sale_days(today, limit=30):
     """Sale days with actual positive-gross transactions, newest N only.
 
-    Zero-price positive-quantity entries remain fully intact in the ERP but
-    must not create phantom revenue days in this one dashboard graph.
+    Zero-price positive-quantity ordinary SaleLine entries remain fully intact
+    in the ERP, but must not create phantom revenue days in this graph. The
+    Dia Gallery metrics use a fixed canonical price even when its old stored
+    unit_price is zero, so its positive-quantity entries still count.
     """
     rows = SaleDay.objects.filter(date__lte=today).filter(
         Q(lines__quantity__gt=0, lines__sale_price__gt=0)
-        | Q(dia_gallery_sales__quantity__gt=0, dia_gallery_sales__unit_price__gt=0)
+        | Q(dia_gallery_sales__quantity__gt=0)
     ).distinct().order_by("-date")[:limit]
     return sorted(rows, key=lambda day: day.date)
 
@@ -52,7 +54,9 @@ def dashboard(request):
 
     # V124: chart = latest 30 monetary-sale days. Empty holidays and
     # zero-priced drafts are omitted. Monthly and daily finance metrics
-    # above are untouched.
+    # above are untouched. The data aggregation below uses the same paid
+    # SaleLine predicate, so no zero-price line's fee/COGS pulls the chart
+    # profit down or inflates its average daily shorts.
     chart_days = recent_paid_sale_days(today, limit=30)
 
     # Keep the summary metrics on exactly the same population as the chart:
@@ -64,7 +68,7 @@ def dashboard(request):
         chart_lines = SaleLine.objects.filter(
             day__date__gte=chart_start,
             day__date__lte=chart_end,
-            quantity__gt=0,
+            quantity__gt=0, sale_price__gt=0,
         ).select_related("day", "product_size__product", "product_size__size")
         for line in chart_lines:
             metrics = sale_line_metrics(line)
