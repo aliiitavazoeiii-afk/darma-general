@@ -17,7 +17,7 @@ CHANGED=$(git diff --name-only "$BASE"..HEAD)
 echo "$CHANGED"
 for f in $CHANGED; do
   case "$f" in
-    .github/workflows/check-dashboard-v124.yml|core/excel_dashboard_v89.py|core/management/commands/check_dashboard_trend_v124.py|core/test_dashboard_chart_v124.py|docs/PROJECT_CONTEXT/72_DASHBOARD_TREND_V124.md|templates/core/dashboard_excel_v89.html|server_dashboard_chart_v124.sh) ;;
+    .github/workflows/check-dashboard-v124.yml|PROJECT_HANDOFF_CURRENT.md|core/excel_dashboard_v89.py|core/management/commands/check_dashboard_trend_v124.py|core/test_dashboard_chart_v124.py|docs/PROJECT_CONTEXT/72_DASHBOARD_TREND_V124.md|docs/PROJECT_CONTEXT/README.md|server_dashboard_chart_v124.sh|templates/core/dashboard_excel_v89.html) ;;
     *) fail "unexpected V124 file: $f" ;;
   esac
 done
