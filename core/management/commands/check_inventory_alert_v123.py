@@ -28,6 +28,14 @@ class Command(BaseCommand):
     def handle(self, *args, **kwargs):
         synthetic_check()
         template = (Path(settings.BASE_DIR) / "templates/core/inventory_v19.html").read_text("utf-8")
+        # Exact stock-cell palette sampled from the owner's reference screenshot.
+        # Keep this check purely presentational, independent of quantities/valuation.
+        for shade in (
+            ".stock-alert-red-hot{background:#7f0c16!important",
+            ".stock-alert-red{background:#3d1c28!important",
+        ):
+            if shade not in template:
+                raise RuntimeError(f"Inventory screenshot red palette drift: {shade}")
         if template.count("stock-alert-red-hot") < 3:
             raise RuntimeError("Strong zero-only highlight missing from both inventory tables")
         required = [
