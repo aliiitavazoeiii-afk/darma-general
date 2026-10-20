@@ -44,9 +44,10 @@ jobs:
         run: pip install -r requirements.txt
       - name: Python and schema checks
         run: |
-          python -m compileall -q core/material_report_v92.py core/material_color_apply_v123.py core/material_color_models_v123.py core/inventory_transfer_v123.py core/test_material_color_v123.py core/management/commands/check_material_transfer_v123.py
+          python -m compileall -q core/material_report_v92.py core/material_color_apply_v123.py core/material_color_models_v123.py core/inventory_transfer_v123.py core/test_material_color_v123.py core/inventory_v20.py core/management/commands/check_inventory_alert_v123.py core/management/commands/check_material_transfer_v123.py
           python manage.py check
           python manage.py makemigrations --check --dry-run
+          python manage.py check_inventory_alert_v123
       - name: Pure report-and-archive synthetic fixture
         run: |
           python - <<'PY'
@@ -58,6 +59,7 @@ jobs:
           get_template("core/material_report_v92.html")
           get_template("core/material_report_v36.html")
           get_template("core/inventory_operations.html")
+          get_template("core/inventory_v19.html")
           print("PASS: current-month UNAPPLIED pink cut 1500, received 1538, net surplus 38")
           print("PASS: applied materials and older month excluded from summary")
           PY
