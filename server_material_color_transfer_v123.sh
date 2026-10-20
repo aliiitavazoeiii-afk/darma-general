@@ -28,6 +28,12 @@ git diff --quiet "$BASE"..HEAD -- \
     core/business_tools_v14.py core/capital_history_v87.py \
     core/finance_overview_v104.py core/sale_entry_v60.py templates/base.html \
     core/final_services.py || fail "protected business/inventory logic changed"
+# Pin both exact approved warning-only files. This prevents a later
+# unreviewed change to stock quantities, valuation, or HTML from passing this
+# release simply because inventory_v20.py is now allowlisted.
+test "$(git hash-object core/inventory_v20.py)" = "2363028c157e0ed95b41559dfffa94a98f9010d2" || fail "inventory source does not match approved zero/under-ten warning-only revision"
+test "$(git hash-object templates/core/inventory_v19.html)" = "335c0106ae065cdbea96b788e8411df1208002ab" || fail "inventory HTML does not match approved warning-only presentation revision"
+
 # V123 only registers one new model; all existing model definitions untouched.
 python3 - "$BASE" <<'PY'
 import pathlib, subprocess, sys
