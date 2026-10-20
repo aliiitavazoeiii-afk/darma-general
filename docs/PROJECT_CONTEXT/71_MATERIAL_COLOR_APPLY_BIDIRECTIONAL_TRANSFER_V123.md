@@ -22,3 +22,8 @@ V123 migration `0021_material_color_use_v123`: creates ONLY one new `core_materi
 Branch `v123-material-color-apply-inventory-transfer`, script `server_material_color_transfer_v123.sh`. Requires V121 Pedram reconciliation already complete; never repairs Pedram during this material-stock feature deploy. Takes PostgreSQL backup before migration. Guards changes against exact V122 parent, protects Caddyfile SHA256 and all existing financial/physical stock data with PRE / PROJECTED / FINAL business hashes (includes MaterialReportConsumption). Applies migration 0021, runs V123 check plus legacy read-only material/fabric/wholesale/finance checks, then replaces web only. No inventory/transfers are posted during deployment.
 
 CI workflow on GitHub uses isolated PostgreSQL test database for color-level shared elastic and bidirectional transfer regressions, plus synthetic monthly material reporting.
+
+
+## Additional V123 inventory warning refinement
+
+The same inventory page `core/inventory_v20.py` / `templates/core/inventory_v19.html` now reserves prominent bright red for **exact zero** in total and home cells; 1–9 units receives a restrained pale-red background; ten or more receives no warning. The update supersedes older 30/50/100 thresholds and earlier exempt models for visual warnings; negative physical balances are weak-red (not strong-zero). `core/management/commands/check_inventory_alert_v123.py` verifies boundary values -1,0,1,9,10,30,50,99,100 in both tables, all brands. Safe deploy pins known exact inventory Python and template blob IDs, thereby preserving stock quantity/valuation business logic.
