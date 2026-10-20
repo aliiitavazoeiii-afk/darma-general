@@ -37,21 +37,27 @@ def _inventory_alert_exempt(color_name):
     return False
 
 
+def _inventory_alert_level(qty, *, exempt=False):
+    """V123 unified, intentionally sparse thresholds for each physical stock cell.
+
+    0 = strong red; 1..9 (and exceptional negative stock) = soft red;
+    10+ = normal. The user's latest universal rule supersedes the old
+    model exclusions for display only; the signature remains compatible.
+    """
+    qty = int(qty)
+    if qty == 0:
+        return "red"
+    if qty < 10:
+        return "orange"
+    return ""
+
+
 def _home_alert_level(qty, *, exempt=False):
-    if exempt:
-        return ""
-    return "red" if int(qty) < 30 else ""
+    return _inventory_alert_level(qty, exempt=exempt)
 
 
 def _total_alert_level(qty, *, exempt=False):
-    if exempt:
-        return ""
-    qty = int(qty)
-    if qty < 50:
-        return "red"
-    if qty < 100:
-        return "orange"
-    return ""
+    return _inventory_alert_level(qty, exempt=exempt)
 
 
 def _sizes_for_brand(brand):
