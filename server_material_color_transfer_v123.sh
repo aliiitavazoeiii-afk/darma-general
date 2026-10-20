@@ -17,7 +17,7 @@ CHANGED=$(git diff --name-only "$BASE"..HEAD)
 echo "$CHANGED"
 for f in $CHANGED; do
   case "$f" in
-    .github/workflows/check-material-v123.yml|PROJECT_HANDOFF_CURRENT.md|core/inventory_operations_v16.py|core/inventory_transfer_v123.py|core/management/commands/check_material_net_v122.py|core/management/commands/check_material_summary_box_grid_v110.py|core/management/commands/check_material_transfer_v123.py|core/material_color_apply_v123.py|core/material_color_models_v123.py|core/material_report_v20.py|core/material_report_v23.py|core/material_report_v92.py|core/migrations/0021_material_color_use_v123.py|core/models.py|core/test_material_color_v123.py|core/urls.py|docs/PROJECT_CONTEXT/71_MATERIAL_COLOR_APPLY_BIDIRECTIONAL_TRANSFER_V123.md|docs/PROJECT_CONTEXT/README.md|server_material_color_transfer_v123.sh|templates/core/inventory_operations.html|templates/core/material_report_v36.html|templates/core/material_report_v92.html) ;;
+    .github/workflows/check-material-v123.yml|PROJECT_HANDOFF_CURRENT.md|core/inventory_operations_v16.py|core/inventory_transfer_v123.py|core/inventory_v20.py|core/management/commands/check_inventory_alert_v123.py|core/management/commands/check_material_net_v122.py|core/management/commands/check_material_summary_box_grid_v110.py|core/management/commands/check_material_transfer_v123.py|core/material_color_apply_v123.py|core/material_color_models_v123.py|core/material_report_v20.py|core/material_report_v23.py|core/material_report_v92.py|core/migrations/0021_material_color_use_v123.py|core/models.py|core/test_material_color_v123.py|core/urls.py|docs/PROJECT_CONTEXT/71_MATERIAL_COLOR_APPLY_BIDIRECTIONAL_TRANSFER_V123.md|docs/PROJECT_CONTEXT/README.md|server_material_color_transfer_v123.sh|templates/core/inventory_operations.html|templates/core/inventory_v19.html|templates/core/material_report_v36.html|templates/core/material_report_v92.html) ;;
     *) fail "unexpected V123 file: $f" ;;
   esac
 done
@@ -25,7 +25,7 @@ done
 # existing HTML sidebar/business templates MUST be identical to V121.
 git diff --quiet "$BASE"..HEAD -- \
     core/material_receipt_sync.py core/material_flow.py core/wholesale_logic_v119.py \
-    core/business_tools_v14.py core/capital_history_v87.py core/inventory_v20.py \
+    core/business_tools_v14.py core/capital_history_v87.py \
     core/finance_overview_v104.py core/sale_entry_v60.py templates/base.html \
     core/final_services.py || fail "protected business/inventory logic changed"
 # V123 only registers one new model; all existing model definitions untouched.
@@ -71,7 +71,7 @@ echo "$PRE"
 
 echo "=== READ-ONLY BUILD AND TESTS ==="
 docker compose build web || fail "web build failed"
-docker compose run --rm --entrypoint python web -m compileall -q core/material_report_v92.py core/material_report_v23.py core/material_report_v20.py core/material_color_apply_v123.py core/material_color_models_v123.py core/inventory_transfer_v123.py core/inventory_operations_v16.py core/migrations/0021_material_color_use_v123.py core/management/commands/check_material_transfer_v123.py core/test_material_color_v123.py || fail "Python syntax check failed"
+docker compose run --rm --entrypoint python web -m compileall -q core/material_report_v92.py core/material_report_v23.py core/material_report_v20.py core/material_color_apply_v123.py core/material_color_models_v123.py core/inventory_transfer_v123.py core/inventory_operations_v16.py core/migrations/0021_material_color_use_v123.py core/management/commands/check_material_transfer_v123.py core/management/commands/check_inventory_alert_v123.py core/inventory_v20.py core/test_material_color_v123.py || fail "Python syntax check failed"
 docker compose run --rm --entrypoint python web manage.py makemigrations --check --dry-run || fail "unexpected database schema migration"
 docker compose run --rm --entrypoint python web manage.py check || fail "Django project check failed"
 docker compose run --rm --entrypoint python web manage.py showmigrations core | grep -Eq '\[X\] 0020_novani_wholesale' || fail "V119 wholesale migration not applied; deploy earlier approved version first"
@@ -84,6 +84,7 @@ printf '%s\n' "$REPAIR_AUDIT" | grep -qx 'PEDRAM_REPAIR_GROSS=0' || fail "V121 P
 echo "=== V123 ISOLATED SCHEMA MIGRATION ==="
 docker compose run --rm --entrypoint python web manage.py migrate core 0021_material_color_use_v123 --noinput || fail "V123 isolated color-consumption migration failed"
 docker compose run --rm --entrypoint python web manage.py check_material_transfer_v123 || fail "V123 material/inventory read-only audit failed"
+docker compose run --rm --entrypoint python web manage.py check_inventory_alert_v123 || fail "V123 inventory warning threshold verification failed"
 
 docker compose run --rm --entrypoint python web manage.py check_material_net_v122 || fail "V122 net/month+carryover verification failed"
 docker compose run --rm --entrypoint python web manage.py check_material_summary_box_grid_v110 || fail "V110+V118 UI check failed"
@@ -99,6 +100,7 @@ echo "=== RECREATE WEB ONLY ==="
 docker compose up -d --no-deps --force-recreate web || fail "web restart failed"
 sleep 6
 docker compose exec -T web python manage.py check_material_transfer_v123 || fail "live V123 audit failed"
+docker compose exec -T web python manage.py check_inventory_alert_v123 || fail "live V123 warning threshold verification failed"
 docker compose exec -T web python manage.py check_material_net_v122 || fail "live V122 verification failed"
 docker compose exec -T web python manage.py check_material_summary_box_grid_v110 || fail "live V110 report regression failed"
 docker compose exec -T web python manage.py check_fabric_roll_count_v116 || fail "live V118 fabric regression failed"
