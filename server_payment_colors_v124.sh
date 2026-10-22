@@ -75,7 +75,38 @@ PRE=$(snapshot_live) || fail "PRE snapshot failed"
 echo "$PRE"
 
 echo "=== READ-ONLY BUILD AND TESTS ==="
-docker compose build web || fail "web build failed"
+# The live server may reach Docker Hub manifest metadata but receive HTTP
+# 403 when retrieving Python layers from Docker Hub's CloudFront CDN.
+# Never edit the tracked Dockerfile, Docker daemon configuration or Caddyfile.
+# If and ONLY if the base-image retrieval fails, try trusted mirrors with a
+# temporary equivalent Dockerfile and tag the exact Compose web image.
+echo "=== V124 SAFE DOCKER BASE-IMAGE FALLBACK ==="
+BUILD_LOG=$(mktemp /tmp/darma-v124-build-log.XXXXXX)
+TEMP_DOCKERFILE=$(mktemp /tmp/darma-v124-Dockerfile.XXXXXX)
+trap 'rm -f "$BUILD_LOG" "$TEMP_DOCKERFILE"' EXIT
+if docker compose build web >"$BUILD_LOG" 2>&1; then
+  cat "$BUILD_LOG"
+  echo "DOCKER_BASE_IMAGE_SOURCE=docker_hub"
+else
+  cat "$BUILD_LOG"
+  if ! grep -Eq 'failed to resolve source metadata|production.cloudfront.docker.com|unexpected status.*403|403 Forbidden' "$BUILD_LOG"; then
+    fail "Docker build failed for a reason other than base-image registry access; current web remains unchanged"
+  fi
+  test "$(head -n 1 Dockerfile)" = "FROM python:3.12-slim" || fail "unexpected tracked Dockerfile base; refusing mirror substitution"
+  WEB_IMAGE=$(docker compose config --format json | python3 -c 'import json,sys; c=json.load(sys.stdin); web=c["services"]["web"]; print(web.get("image") or (c["name"]+"-web"))') || fail "cannot determine Compose web image name"
+  test -n "$WEB_IMAGE" || fail "empty Compose web image name"
+  MIRROR_OK=0
+  for PYTHON_BASE in public.ecr.aws/docker/library/python:3.12-slim mirror.gcr.io/library/python:3.12-slim; do
+    echo "TRY_ALTERNATE_PYTHON_BASE=$PYTHON_BASE"
+    { printf 'FROM %s\n' "$PYTHON_BASE"; tail -n +2 Dockerfile; } > "$TEMP_DOCKERFILE"
+    if docker buildx build --load --progress=plain -f "$TEMP_DOCKERFILE" -t "$WEB_IMAGE" .; then
+      MIRROR_OK=1
+      echo "DOCKER_BASE_IMAGE_SOURCE=$PYTHON_BASE"
+      break
+    fi
+  done
+  test "$MIRROR_OK" = "1" || fail "Docker Hub returned 403 and alternate public registries were also inaccessible; no web restart performed"
+fi
 docker compose run --rm --entrypoint python web -m compileall -q core/material_report_v92.py core/material_report_v23.py core/material_report_v20.py core/material_color_apply_v123.py core/material_color_models_v123.py core/inventory_transfer_v123.py core/inventory_operations_v16.py core/migrations/0021_material_color_use_v123.py core/management/commands/check_material_transfer_v123.py core/management/commands/check_inventory_alert_v123.py core/material_payment_colors_v124.py core/business_tools_v91.py core/material_purchase_v13.py core/management/commands/check_payment_colors_v124.py core/inventory_v20.py core/test_material_color_v123.py || fail "Python syntax check failed"
 docker compose run --rm --entrypoint python web manage.py makemigrations --check --dry-run || fail "unexpected database schema migration"
 docker compose run --rm --entrypoint python web manage.py check || fail "Django project check failed"
@@ -102,7 +133,7 @@ test "$PRE" = "$PROJECTED" || { echo "$PROJECTED"; fail "business data changed d
 
 test "$(sha256sum Caddyfile | awk '{print $1}')" = "$CADDY_BEFORE" || fail "Caddyfile changed"
 echo "=== RECREATE WEB ONLY ==="
-docker compose up -d --no-deps --force-recreate web || fail "web restart failed"
+docker compose up -d --no-deps --no-build --force-recreate web || fail "web restart failed"
 sleep 6
 docker compose exec -T web python manage.py check_payment_colors_v124 || fail "live V124 color validation failed"
 docker compose exec -T web python manage.py check_material_transfer_v123 || fail "live V123 audit failed"
