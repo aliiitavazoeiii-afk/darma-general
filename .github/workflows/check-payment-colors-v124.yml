@@ -1,0 +1,47 @@
+name: Check Darma material payment colors V124
+
+on:
+  push:
+    branches:
+      - v124-dynamic-payment-fabric-colors
+    paths:
+      - "core/material_payment_colors_v124.py"
+      - "core/business_tools_v91.py"
+      - "core/material_purchase_v13.py"
+      - "core/management/commands/check_payment_colors_v124.py"
+      - ".github/workflows/check-payment-colors-v124.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-payment-colors:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Syntax and framework check
+        run: |
+          python -m compileall -q core/business_tools_v91.py core/material_payment_colors_v124.py core/material_purchase_v13.py core/management/commands/check_payment_colors_v124.py
+          python manage.py check
+      - name: Synthetic custom-color purchase and dropdown template
+        run: |
+          python - <<'PY'
+          import django
+          django.setup()
+          from core.management.commands.check_payment_colors_v124 import synthetic_test
+          from django.template.loader import get_template
+          synthetic_test()
+          get_template("core/payments_v91.html")
+          get_template("core/_payment_edit_v22.html")
+          print("PASS: custom Darma inventory color appears once in payment form")
+          print("PASS: custom fabric purchase posts exact stable color ID and correct invoice value")
+          print("PASS: legacy nine colors are preserved and unknown color is rejected")
+          PY
