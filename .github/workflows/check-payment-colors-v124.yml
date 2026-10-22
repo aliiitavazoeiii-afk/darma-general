@@ -54,7 +54,7 @@ jobs:
           ):
               if needle not in shell:
                   raise RuntimeError("V124 guarded deployment regression: "+needle)
-          assert Path("Dockerfile").read_text().startswith("FROM python:3.12-slim\\n")
+          assert Path("Dockerfile").read_text().splitlines()[0] == "FROM python:3.12-slim"
           print("PASS: safe mirrored Python build with unchanged Dockerfile/Caddy and ERP snapshots")
           PY
       - name: Synthetic custom-color purchase and dropdown template
