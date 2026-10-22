@@ -9,7 +9,7 @@ from . import business_tools_v21 as v21
 from . import business_tools_v60 as v60
 from . import business_tools_v62 as v62
 from .dateutils import format_jalali, parse_jalali_date
-from .material_flow import COLOR_LABELS
+from .material_payment_colors_v124 import material_payment_colors
 from .models import BusinessPayment, DigikalaSettlement
 from .payment_source_v63 import SOURCE_CHOICES
 from .finance_overview_v104 import finance_kpis
