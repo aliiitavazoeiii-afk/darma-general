@@ -17,7 +17,7 @@ CHANGED=$(git diff --name-only "$BASE"..HEAD)
 echo "$CHANGED"
 for f in $CHANGED; do
   case "$f" in
-    .github/workflows/check-payment-colors-v124.yml|core/business_tools_v91.py|core/management/commands/check_payment_colors_v124.py|core/material_payment_colors_v124.py|core/material_purchase_v13.py|docs/PROJECT_CONTEXT/72_PAYMENT_REGISTERED_COLORS_V124.md|server_payment_colors_v124.sh) ;;
+    .github/workflows/check-payment-colors-v124.yml|PROJECT_HANDOFF_CURRENT.md|core/business_tools_v91.py|core/management/commands/check_payment_colors_v124.py|core/material_payment_colors_v124.py|core/material_purchase_v13.py|docs/PROJECT_CONTEXT/72_PAYMENT_REGISTERED_COLORS_V124.md|docs/PROJECT_CONTEXT/README.md|server_payment_colors_v124.sh) ;;
     *) fail "unexpected V124 file: $f" ;;
   esac
 done
