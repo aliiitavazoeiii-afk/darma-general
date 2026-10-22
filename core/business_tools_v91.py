@@ -144,7 +144,7 @@ def payments(request):
             "receipt_source_choices": receipts_v64.SOURCE_CHOICES,
             "payees": v62.person_payee_choices(),
             "payment_source_choices": SOURCE_CHOICES,
-            "material_colors": list(COLOR_LABELS.items()),
+            "material_colors": material_payment_colors(),
             "payment_month_total": payment_month_total,
             "receipt_month_total": receipt_month_total,
             "month_label": month_label,
