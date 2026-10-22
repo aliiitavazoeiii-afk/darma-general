@@ -2,6 +2,7 @@ import json
 from decimal import Decimal, ROUND_HALF_UP
 
 from .material_flow import COLOR_LABELS, ELASTIC, FABRIC, WAREHOUSE, add_warehouse_stock, q
+from .material_payment_colors_v124 import payment_material_label
 
 PREFIX = "[mp13]"
 
