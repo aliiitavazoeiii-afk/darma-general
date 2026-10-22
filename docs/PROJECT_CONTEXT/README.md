@@ -224,3 +224,8 @@ Continuation branch: `v117-unified-ui-fabric-count`, descended from the newest `
 ### V123 — Material colors and two-way inventory transfer
 
 71. `71_MATERIAL_COLOR_APPLY_BIDIRECTIONAL_TRANSFER_V123.md` — archive every prior Jalali month, show only this month's raw-fabric-unapplied colors upstairs, add independent color-specific fabric/elastic apply, bidirectional warehouse/home transfer with no-refresh working session and default reset on page reload. Deploy via `server_material_color_transfer_v123.sh`.
+
+
+### V124 — Payment fabric purchase color choices
+
+72. `72_PAYMENT_REGISTERED_COLORS_V124.md` — include all live Darma-registered inventory colors in new and edit payments, retain historic nine color keys, accept new colors in purchase validation; no finance formula or stock write changes. Guarded `server_payment_colors_v124.sh` requires installed V123.
