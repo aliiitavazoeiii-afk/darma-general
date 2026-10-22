@@ -19,9 +19,10 @@ def _round(value):
 
 
 def _label(material_key):
-    if material_key not in COLOR_LABELS:
-        raise ValueError("رنگ مواد اولیه معتبر نیست.")
-    return COLOR_LABELS[material_key]
+    # V124: the exact same permitted options as the rendered payment form.
+    # Historic material keys remain valid; dynamic 'color:<id>' must match
+    # an actual active Darma inventory color to prevent orphan purchase stock.
+    return payment_material_label(material_key)
 
 
 def _posted_material_key(payee, post):
