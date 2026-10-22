@@ -10,6 +10,7 @@ on:
       - "core/material_purchase_v13.py"
       - "core/management/commands/check_payment_colors_v124.py"
       - ".github/workflows/check-payment-colors-v124.yml"
+      - "server_payment_colors_v124.sh"
   workflow_dispatch:
 
 permissions:
@@ -33,6 +34,29 @@ jobs:
         run: |
           python -m compileall -q core/business_tools_v91.py core/material_payment_colors_v124.py core/material_purchase_v13.py core/management/commands/check_payment_colors_v124.py
           python manage.py check
+      - name: Validate guarded Docker Hub 403 recovery is non-mutating
+        run: |
+          sh -n server_payment_colors_v124.sh
+          python - <<'PY'
+          from pathlib import Path
+          shell=Path("server_payment_colors_v124.sh").read_text("utf-8")
+          for needle in (
+              "docker compose build web",
+              "production.cloudfront.docker.com",
+              "public.ecr.aws/docker/library/python:3.12-slim",
+              "mirror.gcr.io/library/python:3.12-slim",
+              "docker buildx build --load",
+              "docker compose config --format json",
+              "--no-deps --no-build --force-recreate web",
+              'test "$PRE" = "$PROJECTED"',
+              'test "$PRE" = "$FINAL"',
+              'test "$(sha256sum Caddyfile',
+          ):
+              if needle not in shell:
+                  raise RuntimeError("V124 guarded deployment regression: "+needle)
+          assert Path("Dockerfile").read_text().startswith("FROM python:3.12-slim\\n")
+          print("PASS: safe mirrored Python build with unchanged Dockerfile/Caddy and ERP snapshots")
+          PY
       - name: Synthetic custom-color purchase and dropdown template
         run: |
           python - <<'PY'
