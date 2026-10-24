@@ -1,6 +1,5 @@
 """Bidirectional physical Darma HOME <-> KHORSHID transfers, without page reload."""
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.http import JsonResponse
 from django.shortcuts import redirect
