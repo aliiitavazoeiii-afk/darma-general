@@ -342,8 +342,26 @@ document.addEventListener('DOMContentLoaded',function(){
           headers:{'X-Requested-With':'XMLHttpRequest'},
           body:new FormData(transferForm)
         });
-        const result=await response.json();
-        if(!response.ok||!result.ok)throw new Error(result.message||'انتقال ثبت نشد');
+        // Login/CSRF expiry and upstream 502 responses can be HTML even
+        // though this endpoint promises JSON. Never parse arbitrary HTML as
+        // JSON or assume the transfer was not recorded: a network failure
+        // after the server's commit can otherwise lead to duplicate stock.
+        const contentType=(response.headers.get('content-type')||'').toLowerCase();
+        if(!contentType.includes('application/json')){
+          const loginPage=response.redirected && /\\/login\\/?$/.test(new URL(response.url,location.href).pathname);
+          if(loginPage || response.status===401)
+            throw new Error('ورود به سایت منقضی شده است (HTTP '+response.status+'). صفحه را دوباره باز کن و وارد شو. پیش از تکرار انتقال، سوابق را بررسی کن.');
+          if(response.status===403)
+            throw new Error('دسترسی یا کد امنیتی فرم منقضی شده است (HTTP 403). صفحه را دوباره باز کن؛ قبل از ثبت مجدد سوابق انتقال را بررسی کن.');
+          throw new Error('سرور به جای پاسخ انتقال، صفحه HTML برگرداند (HTTP '+response.status+'). وضعیت ثبت نامشخص است؛ قبل از اقدام مجدد، موجودی و آخرین انتقال‌ها را بررسی کن.');
+        }
+        let result;
+        try{result=await response.json();}
+        catch(_parseError){
+          throw new Error('پاسخ JSON سرور خراب یا ناقص است (HTTP '+response.status+'). پیش از ثبت مجدد، آخرین انتقال‌ها را بررسی کن.');
+        }
+        if(!response.ok||!result||!result.ok)
+          throw new Error((result && result.message)||('ثبت انتقال تأیید نشد (HTTP '+response.status+')'));
         snapshot=result.stock_snapshot||snapshot;
         transferForm.querySelectorAll('input[name^="qty_"]').forEach(input=>input.value='');
         syncTransferStock();
