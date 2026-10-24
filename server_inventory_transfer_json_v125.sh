@@ -17,7 +17,7 @@ CHANGED=$(git diff --name-only "$BASE"..HEAD)
 echo "$CHANGED"
 for f in $CHANGED; do
   case "$f" in
-    .github/workflows/check-inventory-transfer-json-v125.yml|core/inventory_transfer_v123.py|core/management/commands/check_inventory_transfer_json_v125.py|core/test_inventory_transfer_json_v125.py|docs/PROJECT_CONTEXT/73_INVENTORY_TRANSFER_JSON_V125.md|templates/core/inventory_operations.html|server_inventory_transfer_json_v125.sh) ;;
+    .github/workflows/check-inventory-transfer-json-v125.yml|PROJECT_HANDOFF_CURRENT.md|core/inventory_transfer_v123.py|core/management/commands/check_inventory_transfer_json_v125.py|core/test_inventory_transfer_json_v125.py|docs/PROJECT_CONTEXT/73_INVENTORY_TRANSFER_JSON_V125.md|docs/PROJECT_CONTEXT/README.md|server_inventory_transfer_json_v125.sh|templates/core/inventory_operations.html) ;;
     *) fail "unexpected V125 file: $f" ;;
   esac
 done
