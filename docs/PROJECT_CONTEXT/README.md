@@ -229,3 +229,8 @@ Continuation branch: `v117-unified-ui-fabric-count`, descended from the newest `
 ### V124 — Payment fabric purchase color choices
 
 72. `72_PAYMENT_REGISTERED_COLORS_V124.md` — include all live Darma-registered inventory colors in new and edit payments, retain historic nine color keys, accept new colors in purchase validation; no finance formula or stock write changes. Guarded `server_payment_colors_v124.sh` requires installed V123.
+
+
+### V125 — Transfer JSON response guard
+
+73. `73_INVENTORY_TRANSFER_JSON_V125.md` — fix unexpected HTML response on inventory transfer (session redirect, CSRF, upstream pages), show safe error, no automatic retries, test both directions with exact unchanged total stock, guarded install `server_inventory_transfer_json_v125.sh`.
