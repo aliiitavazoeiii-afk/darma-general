@@ -71,9 +71,22 @@ def transfer(*, when, brand, size, direction, quantities):
     return {"count": len(transferred), "total": sum(q for _, q in quantities), "ids": transferred}
 
 
-@login_required
 @require_POST
 def inventory_transfer_direction(request):
+    ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
+    # @login_required returns a 302 HTML login page. An AJAX client trying
+    # response.json() then fails with Unexpected token '<'. Keep the protected
+    # endpoint, but return an explicit machine-readable 401 instead of HTML.
+    if not request.user.is_authenticated:
+        if ajax:
+            return JsonResponse({
+                "ok": False,
+                "code": "login_required",
+                "message": "نشست ورود تمام شده است. صفحه را بازآوری و دوباره وارد شو؛ قبل از ارسال مجدد سوابق انتقال را کنترل کن.",
+            }, status=401)
+        from django.contrib.auth.views import redirect_to_login
+        return redirect_to_login(request.get_full_path())
+
     try:
         brand = Brand.objects.get(pk=request.POST.get("brand"), active=True, name="دارما")
         size = Size.objects.get(pk=request.POST.get("size"))
@@ -90,7 +103,7 @@ def inventory_transfer_direction(request):
             f"انتقال {source_label} به {destination_label} ثبت شد: "
             f"{result['total']} عدد از {result['count']} رنگ."
         )
-        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        if ajax:
             brands = Brand.objects.filter(active=True, name__in=["دارما", "تکوین", "Novani"])
             return JsonResponse({
                 "ok": True, "message": message,
@@ -99,7 +112,7 @@ def inventory_transfer_direction(request):
             })
         messages.success(request, message)
     except Exception as exc:
-        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
-            return JsonResponse({"ok": False, "message": str(exc)}, status=400)
+        if ajax:
+            return JsonResponse({"ok": False, "code": "transfer_rejected", "message": str(exc)}, status=400)
         messages.error(request, str(exc))
     return redirect("inventory_operations")
