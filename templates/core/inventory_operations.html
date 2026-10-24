@@ -348,7 +348,7 @@ document.addEventListener('DOMContentLoaded',function(){
         // after the server's commit can otherwise lead to duplicate stock.
         const contentType=(response.headers.get('content-type')||'').toLowerCase();
         if(!contentType.includes('application/json')){
-          const loginPage=response.redirected && /\\/login\\/?$/.test(new URL(response.url,location.href).pathname);
+          const loginPage=response.redirected && new URL(response.url,location.href).pathname.startsWith('/login/');
           if(loginPage || response.status===401)
             throw new Error('ورود به سایت منقضی شده است (HTTP '+response.status+'). صفحه را دوباره باز کن و وارد شو. پیش از تکرار انتقال، سوابق را بررسی کن.');
           if(response.status===403)
