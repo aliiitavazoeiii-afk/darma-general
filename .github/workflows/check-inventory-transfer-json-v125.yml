@@ -1,0 +1,73 @@
+name: Check inventory transfer JSON V125
+
+on:
+  push:
+    branches: [v125-inventory-transfer-json-safety]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inventory-ajax:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: darma
+          POSTGRES_USER: darma
+          POSTGRES_PASSWORD: darma
+        ports: [5432:5432]
+        options: >-
+          --health-cmd "pg_isready -U darma"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DJANGO_SETTINGS_MODULE: config.settings
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_NAME: darma
+      DB_USER: darma
+      DB_PASSWORD: darma
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install project dependencies
+        run: pip install -r requirements.txt
+      - name: Syntax and Django routes check
+        run: |
+          python -m compileall -q core/inventory_transfer_v123.py core/test_inventory_transfer_json_v125.py core/management/commands/check_inventory_transfer_json_v125.py
+          python manage.py check
+          python manage.py check_inventory_transfer_json_v125
+      - name: Verify inline UI JavaScript syntax with Node
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          source=Path("templates/core/inventory_operations.html").read_text(encoding="utf8")
+          start=source.index("<script>\ndocument.addEventListener('DOMContentLoaded'")
+          start=source.index("\n",start)+1
+          end=source.index("</script>",start)
+          script=source[start:end]
+          Path("/tmp/inventory_v125_inline.js").write_text(script,encoding="utf8")
+          print("Extracted inline inventory JS",len(script))
+          PY
+          node --check /tmp/inventory_v125_inline.js
+      - name: AJAX happy path, expired session and rejected transfer against isolated test DB
+        run: |
+          python - <<'PY'
+          import django
+          django.setup()
+          from django.test import override_settings
+          from django.core.management import call_command
+          # Legacy 0013 bootstrap depends on seeded production brands.
+          # Test only the disposable CI Postgres DB, never the live system.
+          with override_settings(MIGRATION_MODULES={"core": None}):
+              call_command("test","core.test_inventory_transfer_json_v125",
+                           interactive=False,verbosity=2)
+          PY
