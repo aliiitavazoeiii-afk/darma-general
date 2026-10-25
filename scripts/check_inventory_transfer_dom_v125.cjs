@@ -20,13 +20,13 @@ const end = html.indexOf('</script>', start);
 assert.ok(end > start, 'Missing script close tag');
 const source = html.slice(start, end);
 
-async function simulate({ responseKind = 'success', endpoint = '/inventory/operations/transfer-direction/' } = {}) {
+async function simulate({ responseKind = 'success', endpoint = '/inventory/operations/transfer-direction/', directionValue = 'warehouse_to_home' } = {}) {
   let onSubmit;
   const calls = [];
   const qtyInput = { value: '3' };
   const submitButton = { disabled: false };
   const feedback = { textContent: '', style: { color: '' } };
-  const direction = { value: 'warehouse_to_home' };
+  const direction = { value: directionValue };
   const brand = { value: '1', addEventListener() {} };
   const size = { value: '1', addEventListener() {} };
   // Deliberately mimic the troublesome input named "action".
@@ -129,14 +129,15 @@ async function simulate({ responseKind = 'success', endpoint = '/inventory/opera
 
 (async () => {
   for (const d of ['warehouse_to_home', 'home_to_warehouse']) {
-    const result = await simulate();
+    const result = await simulate({directionValue:d});
     assert.equal(result.calls.length, 1, 'One click should send exactly one request');
     assert.equal(result.calls[0].target, '/inventory/operations/transfer-direction/');
     assert.equal(result.calls[0].options.method, 'POST');
     assert.equal(result.calls[0].options.headers['X-Requested-With'], 'XMLHttpRequest');
     assert.equal(result.payloads.length, 1);
+    assert.equal(result.payloads[0].direction, d);
     assert.equal(result.qtyInput.value, '', 'Only quantity input clears on success');
-    assert.equal(result.direction.value, 'warehouse_to_home', 'Direction does not reset on submit');
+    assert.equal(result.direction.value, d, 'Direction does not reset on submit');
     assert.ok(result.feedback.textContent.includes('انتقال ثبت شد'));
     assert.ok(!String(result.calls[0].target).includes('[object'));
   }
