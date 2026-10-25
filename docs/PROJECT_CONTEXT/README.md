@@ -229,3 +229,6 @@ Continuation branch: `v117-unified-ui-fabric-count`, descended from the newest `
 ### V124 — Payment fabric purchase color choices
 
 72. `72_PAYMENT_REGISTERED_COLORS_V124.md` — include all live Darma-registered inventory colors in new and edit payments, retain historic nine color keys, accept new colors in purchase validation; no finance formula or stock write changes. Guarded `server_payment_colors_v124.sh` requires installed V123.
+
+
+74. V125 `73_JALALI_MATERIAL_ARCHIVE_REPORT_V125.md` — archived Jalali month KPI selection on month-header click; restores Mehr 1405 summary without carrying into Aban and separately counts unfinished tailoring deliveries after fabric has been applied.
