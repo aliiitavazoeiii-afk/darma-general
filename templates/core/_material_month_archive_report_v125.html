@@ -1,0 +1,73 @@
+{% load jalali %}
+<section class="material-arch-report" data-archive-report-period="{{ archive.key }}" aria-label="گزارش مواد اولیه {{ archive.label }}">
+  <div class="material-arch-heading">
+    <div>
+      <strong>گزارش ماه {{ archive.label }}</strong>
+      <div class="material-arch-sub">آمار مستقل همین ماه · {{ archive.sheet_count|groupnum }} صورت · مطابق آخرین اطلاعات ثبت‌شده</div>
+    </div>
+    <span class="material-arch-note">بدون ورود به آمار ماه جاری</span>
+  </div>
+
+  <div class="material-arch-section-title">۱) وضعیت پارچه و رنگ‌هایی که موادشان هنوز اعمال نشده</div>
+  <div class="material-month-kpis" data-material-archive-kpis="{{ archive.key }}">
+    <div class="material-month-kpi"><span class="kpi-label">طاقه با مواد اعمال‌نشده</span><div class="kpi-value">{{ archive.summary.roll_count|groupnum }}</div><span class="kpi-unit">طاقه · فقط {{ archive.label }}</span></div>
+    <div class="material-month-kpi"><span class="kpi-label">وزن پارچه اعمال‌نشده</span><div class="kpi-value">{{ archive.summary.weight_display }}</div><span class="kpi-unit">کیلو · همین ماه</span></div>
+    <div class="material-month-kpi"><span class="kpi-label">برش مواد اعمال‌نشده</span><div class="kpi-value">{{ archive.summary.minimum_delivery|groupnum }}</div><span class="kpi-unit">عدد · همین ماه</span></div>
+    <div class="material-month-kpi"><span class="kpi-label">تحویل ثبت‌شده برای مواد اعمال‌نشده</span><div class="kpi-value">{{ archive.summary.delivered|groupnum }}</div><span class="kpi-unit">عدد · ثبت‌شده در صورت</span></div>
+    <div class="material-month-kpi"><span class="kpi-label">مانده خالص مواد اعمال‌نشده</span><div class="kpi-value">{{ archive.summary.pending|groupnum }}</div><span class="kpi-unit">عدد · مازاد و کسری هر رنگ تهاتر شده</span></div>
+    <div class="material-month-kpi"><span class="kpi-label">مازاد خالص تحویل</span><div class="kpi-value">{{ archive.summary.surplus|groupnum }}</div><span class="kpi-unit">عدد · همین ماه</span></div>
+    <div class="material-month-kpi"><span class="kpi-label">اعمال‌شده به موجودی</span><div class="kpi-value">{{ archive.summary.applied|groupnum }}</div><span class="kpi-unit">عدد · مربوط به مواد اعمال‌نشده</span></div>
+    <div class="material-month-kpi highlight"><span class="kpi-label">میانگین برش</span><div class="kpi-value">{{ archive.cut_summary.average_cut|groupnum }}</div><span class="kpi-unit">عدد · {{ archive.cut_summary.cut_entry_count|groupnum }} ردیف برش پنج رنگ اصلی</span></div>
+  </div>
+
+  <div class="material-color-progress">
+    <div class="material-color-progress-title">پنج رنگ اصلی {{ archive.label }} — فقط مواد اعمال‌نشده</div>
+    <div class="material-color-progress-grid">
+      {% for item in archive.color_progress %}
+      <div class="material-color-progress-card {% if not item.pending and not item.open_blocks %}is-done{% endif %}" data-arch-base-color="{{ item.key }}">
+        <div class="material-color-progress-head">
+          <h4>{{ item.label }}</h4>
+          <span class="material-color-rolls">طاقه باز <b>{{ item.roll_count|groupnum }}</b></span>
+        </div>
+        <div class="material-color-progress-row"><span>وزن اعمال‌نشده</span><b>{{ item.total_weight_display }} کیلو</b></div>
+        <div class="material-color-progress-row"><span>برش</span><b>{{ item.expected|groupnum }}</b></div>
+        <div class="material-color-progress-row"><span>تحویل ثبت‌شده</span><b>{{ item.delivered|groupnum }}</b></div>
+        <div class="material-color-progress-row pending"><span>مانده خالص</span><b>{{ item.pending|groupnum }}</b></div>
+        <div class="material-color-progress-row"><span>مازاد خالص</span><b>{{ item.surplus|groupnum }}</b></div>
+        <div class="material-color-progress-row"><span>تحویل اعمال‌شده به موجودی</span><b>{{ item.applied|groupnum }}</b></div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="material-arch-section-title">۲) مانده تحویل تمام صورت‌های {{ archive.label }}</div>
+  <div class="material-arch-sub">این قسمت رنگ‌هایی را که موادشان قبلاً اعمال شده ولی هنوز تحویل کامل نشده‌اند هم نشان می‌دهد؛ هیچ کسری با مازاد رنگ دیگری تهاتر نمی‌شود.</div>
+  <div class="material-arch-totals">
+    <span>کل برش <b>{{ archive.delivery.expected|groupnum }}</b></span>
+    <span>تحویل ثبت‌شده <b>{{ archive.delivery.delivered|groupnum }}</b></span>
+    <span>مانده خالص <b>{{ archive.delivery.pending|groupnum }}</b></span>
+    <span>مازاد خالص <b>{{ archive.delivery.surplus|groupnum }}</b></span>
+    <span>در انتظار اعمال به موجودی <b>{{ archive.delivery.awaiting_stock_apply|groupnum }}</b></span>
+  </div>
+  <div class="table-responsive material-arch-table-wrap">
+    <table class="table table-sm table-bordered material-arch-table">
+      <thead><tr><th>برند / رنگ</th><th>برش</th><th>تحویل ثبت‌شده</th><th>اعمال به موجودی</th><th>مانده خالص</th><th>مازاد خالص</th><th>تحویل هنوز اعمال‌نشده</th><th>ردیف مواد اعمال‌نشده</th></tr></thead>
+      <tbody>
+      {% for row in archive.delivery.rows %}
+      <tr class="{% if row.has_pending %}material-arch-row-open{% endif %}">
+        <th>{{ row.brand }} / {{ row.label }}</th>
+        <td>{{ row.expected|groupnum }}</td>
+        <td>{{ row.delivered|groupnum }}</td>
+        <td>{{ row.applied|groupnum }}</td>
+        <td class="{% if row.pending %}material-arch-pending{% endif %}">{{ row.pending|groupnum }}</td>
+        <td>{{ row.surplus|groupnum }}</td>
+        <td>{{ row.awaiting_stock_apply|groupnum }}</td>
+        <td>{{ row.fabric_unapplied|groupnum }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="8" class="text-secondary text-center">برای این ماه ردیف تولیدی ثبت نشده است.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
