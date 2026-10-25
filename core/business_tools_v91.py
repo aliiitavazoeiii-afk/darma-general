@@ -2,6 +2,7 @@ from datetime import date
 
 from django.contrib.auth.decorators import login_required
 from django.db.models import Sum
+from django.core.paginator import Paginator
 from django.shortcuts import render
 
 from . import business_receipts_v64 as receipts_v64
@@ -78,6 +79,57 @@ def _receipt_filter_data(request):
     }
 
 
+def _payment_filter_data(request):
+    """Filter ALL historical actual payments; page rows but never page sums.
+
+    Uses the same Jalali inclusive date behavior as V91 receipts; importantly
+    gross purchase/invoice values do not enter these cash-payment totals.
+    """
+    raw_from = (request.GET.get("payment_from") or "").strip()
+    raw_to = (request.GET.get("payment_to") or "").strip()
+    active = bool(raw_from or raw_to)
+    error = ""
+    start_date = end_date = None
+    try:
+        if raw_from:
+            start_date = parse_jalali_date(raw_from)
+        if raw_to:
+            end_date = parse_jalali_date(raw_to)
+        if start_date and end_date and start_date > end_date:
+            raise ValueError("تاریخ شروع نمی‌تواند بعد از تاریخ پایان باشد.")
+    except Exception as exc:
+        error = str(exc)
+
+    all_payments = BusinessPayment.objects.all()
+    all_time_total = int(all_payments.aggregate(v=Sum("amount"))["v"] or 0)
+    all_time_count = all_payments.count()
+    rows_qs = all_payments.none() if error else all_payments
+    if not error:
+        if start_date:
+            rows_qs = rows_qs.filter(date__gte=start_date)
+        if end_date:
+            rows_qs = rows_qs.filter(date__lte=end_date)
+    rows_qs = rows_qs.order_by("-date", "-id")
+
+    # Filter count and total MUST use the full queryset (not the current page
+    # and not the old last-100 dashboard limit).
+    filtered_total = int(rows_qs.aggregate(v=Sum("amount"))["v"] or 0)
+    filtered_count = rows_qs.count()
+    page = Paginator(rows_qs, 100).get_page(request.GET.get("payment_page"))
+    return {
+        "rows": v62._payment_rows(queryset=page.object_list),
+        "total": filtered_total,
+        "count": filtered_count,
+        "all_total": all_time_total,
+        "all_count": all_time_count,
+        "active": active,
+        "error": error,
+        "raw_from": raw_from,
+        "raw_to": raw_to,
+        "page": page,
+    }
+
+
 @login_required
 def payments(request):
     """V91 read-only receipts filtering layered over the V62/V64 finance flow."""
@@ -99,7 +151,8 @@ def payments(request):
         ).aggregate(v=Sum("amount"))["v"] or 0
     )
 
-    payment_rows = v62._payment_rows() if section == "payments" else []
+    payment_filter = _payment_filter_data(request) if section == "payments" else None
+    payment_rows = payment_filter["rows"] if payment_filter is not None else []
     elastic_multi_payloads = {
         str(row.id): row.purchase_data
         for row in payment_rows
@@ -124,10 +177,19 @@ def payments(request):
 
     return render(
         request,
-        "core/payments_v91.html",
+        "core/payments_v126.html",
         {
             "section": section,
             "payment_rows": payment_rows,
+            "payment_filtered_total": payment_filter["total"] if payment_filter else 0,
+            "payment_filtered_count": payment_filter["count"] if payment_filter else 0,
+            "payment_all_time_total": payment_filter["all_total"] if payment_filter else 0,
+            "payment_all_time_count": payment_filter["all_count"] if payment_filter else 0,
+            "payment_filter_active": payment_filter["active"] if payment_filter else False,
+            "payment_filter_error": payment_filter["error"] if payment_filter else "",
+            "payment_filter_from": payment_filter["raw_from"] if payment_filter else "",
+            "payment_filter_to": payment_filter["raw_to"] if payment_filter else "",
+            "payment_filter_page": payment_filter["page"] if payment_filter else None,
             "elastic_multi_payloads": elastic_multi_payloads,
             "payment_source_payloads": payment_source_payloads,
             "receipt_rows": receipt_filter["rows"],
