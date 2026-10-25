@@ -42,7 +42,7 @@ test "$(git hash-object templates/core/inventory_v19.html)" = "ee2171ef85a8be431
 # V125 modifies only the previously approved historic materials report
 # presentation and read-side aggregation; pin exact two files.
 test "$(git hash-object core/material_report_v92.py)" = "28def6ba0268c31b759fce107f36102baa1d10bc" || fail "material archive month report Python source drift"
-test "$(git hash-object templates/core/material_report_v92.html)" = "9ddc57b1656eca748af8cbeb4068e6ca075ddb1c" || fail "material archive month report UI drift"
+test "$(git hash-object templates/core/material_report_v92.html)" = "120803312b9881b62bf37b0649d3101b00f44db7" || fail "material archive month report UI drift"
 
 # Only the three approved payment color source files may modify payment
 # behavior. Their pinned blobs lock the price, bank, raw-stock and editing
