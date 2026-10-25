@@ -337,7 +337,14 @@ document.addEventListener('DOMContentLoaded',function(){
       if(submit)submit.disabled=true;
       if(transferFeedback)transferFeedback.textContent='در حال ثبت انتقال...';
       try{
-        const response=await fetch(transferForm.action,{
+        // HTMLInputElement[name="action"] shadows HTMLFormElement.action;
+        // use the literal form attribute so fetch cannot POST to
+        // /inventory/operations/[object HTMLInputElement].
+        const endpoint=transferForm.getAttribute('action');
+        if(!endpoint || new URL(endpoint,location.href).pathname!=='/inventory/operations/transfer-direction/'){
+          throw new Error('آدرس فرم انتقال معتبر نیست؛ صفحه را دوباره باز کن. هیچ انتقالی ارسال نشد.');
+        }
+        const response=await fetch(endpoint,{
           method:'POST',credentials:'same-origin',
           headers:{'X-Requested-With':'XMLHttpRequest'},
           body:new FormData(transferForm)
