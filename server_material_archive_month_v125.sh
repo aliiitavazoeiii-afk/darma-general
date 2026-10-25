@@ -17,7 +17,7 @@ CHANGED=$(git diff --name-only "$BASE"..HEAD)
 echo "$CHANGED"
 for f in $CHANGED; do
   case "$f" in
-    .github/workflows/check-material-archive-v125.yml|core/management/commands/check_material_archive_month_v125.py|core/material_report_v92.py|templates/core/material_report_v92.html|server_material_archive_month_v125.sh) ;;
+    .github/workflows/check-material-archive-v125.yml|PROJECT_HANDOFF_CURRENT.md|core/management/commands/check_material_archive_month_v125.py|core/material_report_v92.py|docs/PROJECT_CONTEXT/73_JALALI_MATERIAL_ARCHIVE_REPORT_V125.md|docs/PROJECT_CONTEXT/README.md|server_material_archive_month_v125.sh|templates/core/material_report_v92.html) ;;
     *) fail "unexpected V125 file: $f" ;;
   esac
 done
