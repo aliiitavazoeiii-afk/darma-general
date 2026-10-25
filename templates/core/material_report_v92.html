@@ -199,7 +199,16 @@
     if (target) {
       target.open = true;
       const archive = target.closest('.material-month-archive');
-      if (archive) archive.open = true;
+      if (archive) {
+        archive.open = true;
+        // Save/apply actions return to #block-ID. Preserve the archived
+        // month summary even after that redirect, not just the open sheet.
+        if (archive.dataset.monthKey !== selectedMonth) {
+          const url = new URL(window.location.href);
+          url.searchParams.set('report_month', archive.dataset.monthKey);
+          window.location.replace(url.toString());
+        }
+      }
     }
   }
 
