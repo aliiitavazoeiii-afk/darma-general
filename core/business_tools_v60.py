@@ -158,8 +158,10 @@ def _reverse_full(payment):
     v21._reverse_payment_effects(payment)
 
 
-def _payment_rows():
-    rows = list(BusinessPayment.objects.all()[:100])
+def _payment_rows(queryset=None):
+    # The legacy page keeps its last-100 behavior. V126 can pass a paginated,
+    # date-filtered queryset without modifying how payment details are decoded.
+    rows = list(BusinessPayment.objects.all()[:100] if queryset is None else queryset)
     for row in rows:
         purchase = purchase_data_for_payment(row) if row.payee in MATERIAL_PAYEES else None
         prep = v22._prepayment_data_for(row) if row.payee in MATERIAL_PAYEES and not purchase else {}
