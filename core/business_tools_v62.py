@@ -216,8 +216,8 @@ def _save_payment_fields(payment, parsed):
     payment.save(update_fields=["source_account"])
 
 
-def _payment_rows():
-    rows = v60._payment_rows()
+def _payment_rows(queryset=None):
+    rows = v60._payment_rows(queryset=queryset)
     for row in rows:
         row.payee_label = _payee_label(row.payee)
         row.source_account_label = SOURCE_LABELS.get(_payment_source(row), "ملت")
