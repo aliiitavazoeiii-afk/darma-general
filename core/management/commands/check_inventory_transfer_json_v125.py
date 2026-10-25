@@ -51,6 +51,14 @@ class Command(BaseCommand):
             raise RuntimeError("Transfer fetch must use literal action attribute")
         if "fetch(endpoint,{" not in template:
             raise RuntimeError("Transfer must send request to literal endpoint")
+        # 2026-10-25: location is a <select> variable in this closure;
+        # location.href is undefined, causing Failed to construct URL.
+        if "location.href" in template or "new URL(" in template:
+            raise RuntimeError("DOM location selector shadows window.location; URL constructor not allowed")
+        if "if(endpoint !== '/inventory/operations/transfer-direction/')" not in template:
+            raise RuntimeError("Transfer endpoint must be compared directly without URL constructor")
+        if "String(response.url||'').includes('/login/')" not in template:
+            raise RuntimeError("Login detection must avoid shadowed location variable")
         if "/inventory/operations/transfer-direction/" not in template:
             raise RuntimeError("Missing route safeguard against stray form action")
         get_template("core/inventory_operations.html")
