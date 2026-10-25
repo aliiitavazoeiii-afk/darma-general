@@ -439,6 +439,103 @@ def _decorate_block_month(row):
     return row
 
 
+def _archive_delivery_status(month_blocks):
+    """All-color month delivery status, EVEN when raw fabric was already applied.
+
+    Per brand+color, offset surpluses across rolls before computing missing
+    pieces. Never allow one color's overdelivery to hide another's shortage.
+    Saved delivery and applied-to-finished-inventory are separate concepts.
+    """
+    colors = {}
+    for block in month_blocks:
+        brand = getattr(block.brand, "name", "") or ""
+        received = _registered_output_by_key(block)
+        for key in v23._active_model_keys(block):
+            values = (block.input_data or {}).get(key) or {}
+            cut = max(0, v23.v20._int(values.get("cut")))
+            registered = received.get(key, 0)
+            applied = sum(
+                max(0, int(row.quantity or 0))
+                for row in block.output_applications.all()
+                if row.model_key == key
+            )
+            if not (cut or registered or applied or _fabric_not_applied(block, key)):
+                continue
+            row = colors.setdefault((brand, key), {
+                "brand": brand, "key": key,
+                "label": v23._material_label(key),
+                "expected": 0, "delivered": 0, "applied": 0,
+                "fabric_unapplied": 0,
+            })
+            row["expected"] += cut
+            row["delivered"] += registered
+            row["applied"] += applied
+            if _fabric_not_applied(block, key):
+                row["fabric_unapplied"] += 1
+
+    result = []
+    for row in colors.values():
+        signed = row["delivered"] - row["expected"]
+        row["pending"] = max(0, -signed)
+        row["surplus"] = max(0, signed)
+        row["awaiting_stock_apply"] = max(0, row["delivered"] - row["applied"])
+        row["has_pending"] = bool(
+            row["pending"] or row["awaiting_stock_apply"] or row["fabric_unapplied"]
+        )
+        result.append(row)
+    result.sort(key=lambda row: (
+        not row["has_pending"], row["brand"] != "دارما",
+        not bool(row["pending"]), row["label"],
+    ))
+    return {
+        "rows": result,
+        "expected": sum(row["expected"] for row in result),
+        "delivered": sum(row["delivered"] for row in result),
+        "applied": sum(row["applied"] for row in result),
+        "pending": sum(row["pending"] for row in result),
+        "surplus": sum(row["surplus"] for row in result),
+        "awaiting_stock_apply": sum(row["awaiting_stock_apply"] for row in result),
+        "pending_color_count": sum(int(row["has_pending"]) for row in result),
+    }
+
+
+def _past_month_dashboard_reports(objects, active_month):
+    """Read-only reports for each previous Jalali month, without carry-over.
+
+    Not a historical snapshot: saved/applied values reflect current progress
+    on that month's original sheets (so remaining quantities stay useful).
+    """
+    months = {}
+    active_key = active_month["key"]
+    for block in objects:
+        jalali = jdatetime.date.fromgregorian(date=block.date)
+        key = f"{jalali.year:04d}/{jalali.month:02d}"
+        if key >= active_key:
+            continue
+        entry = months.setdefault(key, {
+            "key": key,
+            "label": f"{JALALI_MONTH_NAMES[jalali.month]} {jalali.year}",
+            "blocks": [],
+        })
+        entry["blocks"].append(block)
+
+    result = []
+    for key in sorted(months, reverse=True):
+        item = months[key]
+        month_objects = item.pop("blocks")
+        summary, colors, average = _current_unapplied_material_metrics(month_objects)
+        item["summary"] = summary
+        item["cut_summary"] = average
+        item["color_progress"] = [
+            {"key": color_key, "label": label, **colors[color_key]}
+            for color_key, label in v23.BASE_MODELS
+        ]
+        item["delivery"] = _archive_delivery_status(month_objects)
+        item["sheet_count"] = len(month_objects)
+        result.append(item)
+    return result
+
+
 @login_required
 def material_report(request):
     """V92: V23 material report with current-month KPIs and previous-month UI archive."""
@@ -465,6 +562,7 @@ def material_report(request):
         current_month_objects
     )
     summary["month_label"] = month["label"]
+    archive_reports = _past_month_dashboard_reports(objects, month)
     base_color_progress = [
         {"key": key, "label": label, **by_color[key]}
         for key, label in v23.BASE_MODELS
@@ -483,5 +581,6 @@ def material_report(request):
             "material_base_color_progress": base_color_progress,
             "material_current_month_key": month["key"],
             "material_current_month_label": month["label"],
+            "material_archive_reports": archive_reports,
         },
     )
