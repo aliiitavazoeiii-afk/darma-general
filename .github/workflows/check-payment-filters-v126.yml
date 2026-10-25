@@ -1,0 +1,98 @@
+name: Verify all-time payment filters and receipts V126
+
+on:
+  push:
+    branches:
+      - v126-payment-history-filters
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  payment-date-filters:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: darma
+          POSTGRES_USER: darma
+          POSTGRES_PASSWORD: darma
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U darma"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_NAME: darma
+      DB_USER: darma
+      DB_PASSWORD: darma
+      DJANGO_SETTINGS_MODULE: config.settings
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Python syntax, Django framework and deploy-shell checks
+        run: |
+          python -m compileall -q core/business_tools_v91.py core/business_tools_v60.py core/business_tools_v62.py core/test_payment_filters_v126.py core/management/commands/check_payment_filters_v126.py
+          python manage.py check
+          python manage.py makemigrations --check --dry-run
+          sh -n server_payment_history_filters_v126.sh
+      - name: Template and historical audit compatibility
+        run: |
+          python - <<'PY'
+          import django
+          django.setup()
+          from django.template.loader import get_template
+          from core.management.commands.check_material_archive_month_v125 import synthetic_check as archive
+          from core.management.commands.check_payment_colors_v124 import synthetic_test as colors
+          from core.management.commands.check_material_transfer_v123 import synthetic_check as materials
+          get_template("core/payments_v126.html")
+          get_template("core/payments_v91.html")
+          colors()
+          archive()
+          materials()
+          print("PASS: receipt UI stays V91, V125 monthly materials, V124 colors, V123 transfers")
+          PY
+      - name: Actual payment filters and pagination on isolated disposable database
+        run: |
+          # Existing historical 0013 migration requires seeded production data.
+          # Bypass only core test migrations in isolated CI database.
+          python - <<'PY'
+          import django
+          django.setup()
+          from django.test import override_settings
+          from django.core.management import call_command
+          with override_settings(MIGRATION_MODULES={"core": None}):
+              call_command("test", "core.test_payment_filters_v126",
+                           interactive=False, verbosity=2)
+          PY
+      - name: Production deploy guard contains no financial write operation
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          s=Path("server_payment_history_filters_v126.sh").read_text("utf-8")
+          for check in (
+              "CADDY_BEFORE",
+              "check_payment_filters_v126",
+              "check_receipt_filters_v91",
+              "check_material_archive_month_v125",
+              "check_payment_colors_v124",
+              "no-build --force-recreate web",
+              'test "$PRE" = "$PROJECTED"',
+              'test "$PRE" = "$FINAL"',
+          ):
+              if check not in s:
+                  raise RuntimeError(f"missing production guard: {check}")
+          print("PASS: read-only reporting update, backup, ledger hash protections, no migrations")
+          PY
