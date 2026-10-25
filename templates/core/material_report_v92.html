@@ -5,6 +5,7 @@
 <style>
 .material-v105-kpi-wrap{width:100%} .material-month-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.material-month-kpi{min-width:0;border:1px solid rgba(255,255,255,.11);border-radius:14px;background:rgba(255,255,255,.035);padding:13px 14px;min-height:96px;display:flex;flex-direction:column;justify-content:space-between}.material-month-kpi .kpi-label{display:block;color:#9fb0c4;font-size:.72rem;line-height:1.45;font-weight:700}.material-month-kpi .kpi-value{direction:ltr;unicode-bidi:isolate;text-align:left;font-variant-numeric:tabular-nums;white-space:nowrap;color:#fff;font-size:1.42rem;font-weight:950;line-height:1.15;margin-top:12px}.material-month-kpi .kpi-unit{display:block;color:#8fa2b7;font-size:.68rem;margin-top:5px;line-height:1.4}.material-month-kpi.highlight .kpi-value{color:#ffd08a}.material-month-archive{border:1px solid rgba(255,255,255,.12);border-radius:15px;background:linear-gradient(135deg,rgba(15,39,65,.34),rgba(6,22,39,.24));overflow:hidden}.material-month-archive>summary{cursor:pointer;list-style:none;padding:15px 17px;display:flex;justify-content:space-between;align-items:center;gap:12px}.material-month-archive>summary::-webkit-details-marker{display:none}.material-month-archive>summary:hover{background:rgba(255,255,255,.035)}.material-month-archive-title{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.material-month-archive-title strong{font-size:1rem}.material-month-count{display:inline-flex;align-items:center;border-radius:999px;padding:4px 9px;font-size:.72rem;color:#b9cbe0;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10)}.material-month-archive-toggle{font-size:.75rem;color:#95a7ba;white-space:nowrap}.material-month-archive-body{padding:0 12px 1px;border-top:1px solid rgba(255,255,255,.08)}.material-month-archive-body>.material-block{margin-top:12px!important}.material-color-progress{margin-top:10px}.material-color-progress-title{font-size:.72rem;color:#9fb0c4;margin:0 0 7px 2px}.material-color-progress-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}.material-color-progress-card{min-width:0;border:1px solid rgba(255,255,255,.10);border-radius:13px;background:rgba(255,255,255,.025);padding:11px 12px}.material-color-progress-card h4{margin:0;font-size:.94rem}.material-color-progress-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}.material-color-rolls{display:inline-flex;align-items:center;gap:4px;white-space:nowrap;font-size:.72rem;color:#b9cbe0}.material-color-rolls b{font-size:.9rem;color:#ffd08a}.material-color-progress-row{display:flex;justify-content:space-between;gap:8px;font-size:.69rem;color:#9fb0c4;margin-top:4px}.material-color-progress-row b{color:#f7f9fc;font-size:.78rem}.material-color-progress-row.pending b{color:#ffd08a}.material-color-progress-card.is-done{opacity:.58}
 @media(max-width:1200px){.material-month-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}.material-color-progress-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:767.98px){.material-month-kpis{grid-template-columns:1fr 1fr}.material-page-tools{align-items:stretch}.material-search{width:100%;min-width:0!important;max-width:none!important}.material-color-progress-grid{grid-template-columns:1fr 1fr}}@media(max-width:430px){.material-month-kpis{grid-template-columns:1fr}.material-month-kpi{min-height:84px}.material-month-kpi .kpi-value{font-size:1.3rem}.material-color-progress-grid{grid-template-columns:1fr}}
+.material-arch-report{padding:14px 3px 18px}.material-arch-heading{display:flex;gap:12px;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;margin:3px 0 13px}.material-arch-heading strong{font-size:1.02rem;color:#fff}.material-arch-sub{font-size:.75rem;color:#aabace;line-height:1.85;margin:4px 0 10px}.material-arch-note{color:#8ca5be;font-size:.69rem;border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:5px 9px}.material-arch-section-title{margin:12px 0 9px;font-weight:850;font-size:.88rem;color:#f2f7ff}.material-arch-totals{display:flex;flex-wrap:wrap;gap:7px;margin:9px 0 12px}.material-arch-totals span{border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:6px 9px;font-size:.7rem;color:#bdd0e0;background:rgba(255,255,255,.03)}.material-arch-totals b{color:#f5f7fa}.material-arch-table-wrap{border-radius:10px;overflow-x:auto}.material-arch-table{margin:0;min-width:850px;font-size:.75rem}.material-arch-table th,.material-arch-table td{padding:8px 7px;text-align:center;vertical-align:middle;white-space:nowrap}.material-arch-table th:first-child{text-align:right;position:sticky;right:0;background:#17283a;z-index:1}.material-arch-row-open td{background:rgba(245,158,11,.045)}.material-arch-pending{color:#ffd08a!important;font-weight:850}
 </style>
 
 <template id="materialV92Kpis" data-current-month="{{ material_current_month_key }}">
@@ -39,6 +40,12 @@
   </div>
 </template>
 
+<template id="materialArchiveReports" aria-hidden="true">
+  {% for archive in material_archive_reports %}
+    {% include 'core/_material_month_archive_report_v125.html' with archive=archive %}
+  {% endfor %}
+</template>
+
 <script>
 (() => {
   const monthNames = {
@@ -62,6 +69,14 @@
 
   const blocks = Array.from(document.querySelectorAll('.material-block'));
   const archives = new Map();
+  // Reports are rendered read-only for each month from its original sheets.
+  // Keep archive DOM collapsed until the operator explicitly opens that month.
+  const archiveReportNodes = new Map();
+  document.querySelectorAll('#materialArchiveReports').forEach((parent) => {
+    parent.content.querySelectorAll('[data-archive-report-period]').forEach((node) => {
+      archiveReportNodes.set(node.dataset.archiveReportPeriod, node);
+    });
+  });
   const keyToNumber = (key) => {
     const parts = String(key || '').split('/');
     return (Number(parts[0]) * 100) + Number(parts[1]);
@@ -105,6 +120,8 @@
       const body = document.createElement('div');
       body.className = 'material-month-archive-body';
       archive.append(summary, body);
+      const reportNode = archiveReportNodes.get(key);
+      if (reportNode) body.appendChild(reportNode.cloneNode(true));
       block.parentNode.insertBefore(archive, block);
       entry = {archive, body, count, total:0};
       archives.set(key, entry);
