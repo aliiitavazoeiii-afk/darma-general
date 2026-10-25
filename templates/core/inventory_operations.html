@@ -341,7 +341,7 @@ document.addEventListener('DOMContentLoaded',function(){
         // use the literal form attribute so fetch cannot POST to
         // /inventory/operations/[object HTMLInputElement].
         const endpoint=transferForm.getAttribute('action');
-        if(!endpoint || new URL(endpoint,location.href).pathname!=='/inventory/operations/transfer-direction/'){
+        if(endpoint !== '/inventory/operations/transfer-direction/'){
           throw new Error('آدرس فرم انتقال معتبر نیست؛ صفحه را دوباره باز کن. هیچ انتقالی ارسال نشد.');
         }
         const response=await fetch(endpoint,{
@@ -355,7 +355,7 @@ document.addEventListener('DOMContentLoaded',function(){
         // after the server's commit can otherwise lead to duplicate stock.
         const contentType=(response.headers.get('content-type')||'').toLowerCase();
         if(!contentType.includes('application/json')){
-          const loginPage=response.redirected && new URL(response.url,location.href).pathname.startsWith('/login/');
+          const loginPage=response.redirected && String(response.url||'').includes('/login/');
           if(loginPage || response.status===401)
             throw new Error('ورود به سایت منقضی شده است (HTTP '+response.status+'). صفحه را دوباره باز کن و وارد شو. پیش از تکرار انتقال، سوابق را بررسی کن.');
           if(response.status===403)
