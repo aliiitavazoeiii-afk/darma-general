@@ -232,3 +232,6 @@ Continuation branch: `v117-unified-ui-fabric-count`, descended from the newest `
 
 
 73. V125 `73_JALALI_MATERIAL_ARCHIVE_REPORT_V125.md` — archived Jalali month KPI selection on month-header click; restores Mehr 1405 summary without carrying into Aban and separately counts unfinished tailoring deliveries after fabric has been applied.
+
+
+75. V126 `74_PAYMENT_HISTORY_FILTERS_V126.md` — payments Jalali date range filters matching receipts, all-time unfiltered amount, 100-row pages, no financial ledger writes, guarded installer.
