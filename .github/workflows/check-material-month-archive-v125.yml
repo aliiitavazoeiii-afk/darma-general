@@ -1,0 +1,68 @@
+name: Verify archived Jalali month material reports V125
+
+on:
+  push:
+    branches:
+      - v125-material-month-archive-reports
+    paths:
+      - "core/material_report_v92.py"
+      - "core/management/commands/check_material_archive_v125.py"
+      - "templates/core/material_report_v92.html"
+      - "templates/core/_material_month_archive_report_v125.html"
+      - ".github/workflows/check-material-month-archive-v125.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit-month-archives:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      DJANGO_SETTINGS_MODULE: config.settings
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Django syntax and template checks
+        run: |
+          python -m compileall -q core/material_report_v92.py core/management/commands/check_material_archive_v125.py
+          python manage.py check
+          python - <<'PY'
+          import django
+          django.setup()
+          from django.template.loader import get_template
+          get_template("core/material_report_v92.html")
+          get_template("core/_material_month_archive_report_v125.html")
+          print("PASS: archive DOM and Django fragments compile")
+          PY
+      - name: Test Mehr archived KPIs and outstanding items without altering Aban
+        run: |
+          python - <<'PY'
+          import django
+          django.setup()
+          from core.management.commands.check_material_archive_v125 import synthetic_check
+          synthetic_check()
+          print("PASS: Mehr 1405 rolls=2, cut=1500, delivered=1538, stock-applied=1233")
+          print("PASS: pink net surplus=38, unrelated white unreceived=80")
+          print("PASS: Mehr, Shahrivar, Aban isolated and old receipts stay editable")
+          PY
+      - name: Browser JavaScript parses; archives remain closed
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          text=Path("templates/core/material_report_v92.html").read_text("utf-8")
+          js=text.split("<script>",1)[1].split("</script>",1)[0]
+          Path("/tmp/material_archive_v125.js").write_text(js,encoding="utf-8")
+          assert "archive.open = true" in js
+          assert "const archive = document.createElement('details')" in js
+          assert "reportNode.cloneNode(true)" in js
+          assert "if (keyToNumber(key) >= currentNumber) return;" in js
+          assert ".material-block" in js
+          PY
+          node --check /tmp/material_archive_v125.js
