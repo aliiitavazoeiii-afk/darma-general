@@ -229,3 +229,8 @@ Continuation branch: `v117-unified-ui-fabric-count`, descended from the newest `
 ### V124 — Payment fabric purchase color choices
 
 72. `72_PAYMENT_REGISTERED_COLORS_V124.md` — include all live Darma-registered inventory colors in new and edit payments, retain historic nine color keys, accept new colors in purchase validation; no finance formula or stock write changes. Guarded `server_payment_colors_v124.sh` requires installed V123.
+
+
+### V125 — Jalali month archives with independent reports
+
+73. `73_JALALI_MONTH_ARCHIVE_REPORTS_V125.md`: clicking a collapsed past-month material archive displays that month’s raw-material KPIs, five color cards, and all-color still-owed production (even for fabric already consumed), isolated from current-month figures. No schema change. Read-only audit `check_material_archive_v125` and guarded `server_material_archive_v125.sh`.
