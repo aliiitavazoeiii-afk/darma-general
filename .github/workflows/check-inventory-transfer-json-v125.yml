@@ -58,6 +58,10 @@ jobs:
           print("Extracted inline inventory JS",len(script))
           PY
           node --check /tmp/inventory_v125_inline.js
+      - name: Execute actual inventory form JavaScript in shadowed-action/location DOM
+        run: |
+          node --check scripts/check_inventory_transfer_dom_v125.cjs
+          node scripts/check_inventory_transfer_dom_v125.cjs
       - name: AJAX happy path, expired session and rejected transfer against isolated test DB
         run: |
           python - <<'PY'
