@@ -17,7 +17,7 @@ CHANGED=$(git diff --name-only "$BASE"..HEAD)
 echo "$CHANGED"
 for f in $CHANGED; do
   case "$f" in
-    .github/workflows/check-inventory-transfer-json-v125.yml|PROJECT_HANDOFF_CURRENT.md|core/inventory_transfer_v123.py|core/management/commands/check_inventory_transfer_json_v125.py|core/test_inventory_transfer_json_v125.py|docs/PROJECT_CONTEXT/73_INVENTORY_TRANSFER_JSON_V125.md|docs/PROJECT_CONTEXT/README.md|server_inventory_transfer_json_v125.sh|templates/core/inventory_operations.html) ;;
+    .github/workflows/check-inventory-transfer-json-v125.yml|PROJECT_HANDOFF_CURRENT.md|core/inventory_transfer_v123.py|core/management/commands/check_inventory_transfer_json_v125.py|core/test_inventory_transfer_json_v125.py|docs/PROJECT_CONTEXT/73_INVENTORY_TRANSFER_JSON_V125.md|docs/PROJECT_CONTEXT/README.md|scripts/check_inventory_transfer_dom_v125.cjs|server_inventory_transfer_json_v125.sh|templates/core/inventory_operations.html) ;;
     *) fail "unexpected V125 file: $f" ;;
   esac
 done
@@ -45,7 +45,7 @@ git diff --quiet "$BASE"..HEAD -- core/models.py core/migrations core/material_r
 # Exact, reviewed transfer-only code/UI changes. Nothing may alter
 # the StockTransfer -> StockBalance/InventoryMovement posting arithmetic.
 test "$(git hash-object core/inventory_transfer_v123.py)" = "5b17d683358d094a5efbe420a1856f8beb8ff874" || fail "V125 transfer endpoint code drift"
-test "$(git hash-object templates/core/inventory_operations.html)" = "4a1be5c93fdf703188676ee6694d2adaad583e2d" || fail "V125 transfer-page AJAX guard drift"
+test "$(git hash-object templates/core/inventory_operations.html)" = "b4abf0ff929265e4132b962a7eed355f8edeb03e" || fail "V125 transfer-page AJAX guard drift"
 
 MIGRATION_CHANGED=$(git diff --name-only "$BASE"..HEAD -- core/migrations)
 test -z "$MIGRATION_CHANGED" || fail "V125 must not introduce migrations"
