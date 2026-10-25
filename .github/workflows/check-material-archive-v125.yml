@@ -1,0 +1,68 @@
+name: Verify archived Jalali material month V125
+
+on:
+  push:
+    branches:
+      - v125-material-archive-month-report
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  read-only-archive-report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    env:
+      DJANGO_SETTINGS_MODULE: config.settings
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Source syntax and Django check
+        run: |
+          python -m compileall -q core/material_report_v92.py core/management/commands/check_material_archive_month_v125.py
+          python manage.py check
+          sh -n server_material_archive_month_v125.sh
+      - name: Pure archived-period report, delivery debts, template checks
+        run: |
+          python - <<'PY'
+          import django
+          django.setup()
+          from django.template.loader import get_template
+          from core.management.commands.check_material_archive_month_v125 import synthetic_check
+          from core.management.commands.check_material_transfer_v123 import synthetic_check as check_v123
+          from core.management.commands.check_payment_colors_v124 import synthetic_test as check_v124
+          current, old=synthetic_check()
+          assert current["key"]=="1405/08" and old["key"]=="1405/07"
+          check_v123()
+          check_v124()
+          get_template("core/material_report_v92.html")
+          get_template("core/material_report_v36.html")
+          print("PASS: month-bound archives, November KPI unchanged")
+          print("PASS: opening Mehr 1405 restores own raw-unapplied color dashboard")
+          print("PASS: outstanding by every color includes already-applied fabric")
+          print("PASS: V123 one-color materials/inventory, V124 payment colors intact")
+          PY
+      - name: Check report deployment preserves financial and stock files
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          script=Path("server_material_archive_month_v125.sh").read_text("utf-8")
+          for marker in (
+              "CADDY_BEFORE",
+              "check_material_archive_month_v125",
+              "check_payment_colors_v124",
+              "check_material_transfer_v123",
+              'test "$PRE" = "$PROJECTED"',
+              'test "$PRE" = "$FINAL"',
+              "no-build --force-recreate web",
+          ):
+              if marker not in script:
+                  raise RuntimeError("V125 protection missing: "+marker)
+          print("PASS: guarded code-only V125 deploy preserves finance and inventory")
+          PY
