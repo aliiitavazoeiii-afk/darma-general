@@ -45,7 +45,7 @@ git diff --quiet "$BASE"..HEAD -- core/models.py core/migrations core/material_r
 # Exact, reviewed transfer-only code/UI changes. Nothing may alter
 # the StockTransfer -> StockBalance/InventoryMovement posting arithmetic.
 test "$(git hash-object core/inventory_transfer_v123.py)" = "5b17d683358d094a5efbe420a1856f8beb8ff874" || fail "V125 transfer endpoint code drift"
-test "$(git hash-object templates/core/inventory_operations.html)" = "ed7158667c446032f69e5adc05937bfb0d6e64a7" || fail "V125 transfer-page AJAX guard drift"
+test "$(git hash-object templates/core/inventory_operations.html)" = "4a1be5c93fdf703188676ee6694d2adaad583e2d" || fail "V125 transfer-page AJAX guard drift"
 
 MIGRATION_CHANGED=$(git diff --name-only "$BASE"..HEAD -- core/migrations)
 test -z "$MIGRATION_CHANGED" || fail "V125 must not introduce migrations"
