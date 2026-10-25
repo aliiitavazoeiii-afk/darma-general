@@ -10,6 +10,7 @@ on:
       - "templates/core/material_report_v92.html"
       - "templates/core/_material_month_archive_report_v125.html"
       - ".github/workflows/check-material-month-archive-v125.yml"
+      - "server_material_archive_v125.sh"
   workflow_dispatch:
 
 permissions:
@@ -66,3 +67,30 @@ jobs:
           assert ".material-block" in js
           PY
           node --check /tmp/material_archive_v125.js
+
+      - name: Deployment safety guard and shell grammar
+        run: |
+          sh -n server_material_archive_v125.sh
+          python - <<'PY'
+          from pathlib import Path
+          script=Path("server_material_archive_v125.sh").read_text("utf-8")
+          for needle in (
+              "V125 MATERIAL MONTH ARCHIVE REPORTS DEPLOYED",
+              "check_material_archive_v125",
+              "pg_dump",
+              "CADDY_BEFORE",
+              "SNAPSHOT_REGEX",
+              'test "$PRE" = "$PROJECTED"',
+              'test "$PRE" = "$FINAL"',
+              "--no-deps --no-build --force-recreate web",
+              "core/material_report_v23.py",
+              "core/models.py core/migrations",
+              "core/business_tools_v91.py",
+              "core/material_purchase_v13.py",
+          ):
+              if needle not in script:
+                  raise RuntimeError("V125 safe deploy guard missing: "+needle)
+          assert "manage.py migrate" not in script
+          assert Path("Dockerfile").read_text("utf-8").splitlines()[0] == "FROM python:3.12-slim"
+          print("PASS: script changes only reports and reads production data")
+          PY
