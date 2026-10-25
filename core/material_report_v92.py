@@ -426,6 +426,74 @@ def _all_time_cut_summary(blocks):
     }
 
 
+def _all_month_color_delivery_metrics(blocks):
+    """Live as-of-now cut and delivered amounts for ALL colors of this month.
+
+    Unlike top-of-page material-unapplied KPIs, this separate archived-month
+    breakdown includes already-applied fabric: applying fabric must NOT erase
+    an outstanding sewing delivery from the historic month's report.
+    Net quantities across rolls of the same color before clamping, never
+    allow a surplus in a different color to cover a deficit.
+    """
+    groups = {}
+    for block in blocks:
+        if getattr(block.brand, "name", "") != "دارما":
+            continue
+        received = _registered_output_by_key(block)
+        output_applied = {}
+        for row in block.output_applications.all():
+            output_applied[row.model_key] = (
+                output_applied.get(row.model_key, 0)
+                + max(0, int(row.quantity or 0))
+            )
+        for key in v23._active_model_keys(block):
+            values = (block.input_data or {}).get(key, {}) or {}
+            cut = max(0, v23.v20._int(values.get("cut")))
+            entered = received.get(key, 0)
+            applied = output_applied.get(key, 0)
+            if not cut and not entered and not applied:
+                continue
+            entry = groups.setdefault(key, {
+                "key": key, "label": v23._material_label(key),
+                "expected": 0, "delivered": 0, "applied": 0,
+            })
+            entry["expected"] += cut
+            entry["delivered"] += entered
+            entry["applied"] += applied
+
+    results = []
+    for row in groups.values():
+        delta = row["delivered"] - row["expected"]
+        row["pending"] = max(0, -delta)
+        row["surplus"] = max(0, delta)
+        results.append(row)
+    order = {key: idx for idx, (key, _) in enumerate(v23.BASE_MODELS)}
+    results.sort(key=lambda row: (order.get(row["key"], len(order)), row["label"]))
+    return {
+        "rows": results,
+        "expected": sum(x["expected"] for x in results),
+        "delivered": sum(x["delivered"] for x in results),
+        "applied": sum(x["applied"] for x in results),
+        "pending": sum(x["pending"] for x in results),
+        "surplus": sum(x["surplus"] for x in results),
+    }
+
+
+def _selected_month_context(requested_key, current_month, blocks):
+    """Accept only months belonging to a saved sheet, never arbitrary URL dates."""
+    available = {row["month_key"] for row in blocks if row.get("month_key")}
+    if not requested_key or requested_key == current_month["key"]:
+        return current_month
+    if requested_key not in available or requested_key > current_month["key"]:
+        return current_month
+    try:
+        jy, jm = (int(value) for value in requested_key.split("/"))
+        first_day = jdatetime.date(jy, jm, 1).togregorian()
+    except (ValueError, TypeError, OverflowError):
+        return current_month
+    return _jalali_month_context(first_day)
+
+
 def _decorate_block_month(row):
     parts = str(row.get("jalali_date") or "").split("/")
     if len(parts) >= 2:
@@ -448,23 +516,31 @@ def material_report(request):
 
     v23._reset_request_caches()
     brands = v23.v20._material_brands()
-    month = _jalali_month_context()
+    current_month = _jalali_month_context()
 
     queryset = MaterialReportBlock.objects.select_related("brand").prefetch_related(
         "output_applications", "stock_consumptions"
     )
     objects = list(queryset.all())
     blocks = [_decorate_block_month(v23._view_block(obj)) for obj in objects]
+    month = _selected_month_context(
+        (request.GET.get("report_month") or "").strip(), current_month, blocks
+    )
 
-    # V123 explicitly excludes every older month, whether open or closed.
-    # Only colors whose fabric consumption is still unapplied appear upstairs.
-    current_month_objects = [
+    # Keep V123's strict single-month/unapplied-fabric KPI definition, but
+    # permit an explicitly selected archived month. Nothing carries into NOW.
+    selected_month_objects = [
         obj for obj in objects if month["start"] <= obj.date < month["next"]
     ]
     summary, by_color, cut_summary = _current_unapplied_material_metrics(
-        current_month_objects
+        selected_month_objects
     )
     summary["month_label"] = month["label"]
+    is_archived = month["key"] != current_month["key"]
+    archive_deliveries = (
+        _all_month_color_delivery_metrics(selected_month_objects)
+        if is_archived else None
+    )
     base_color_progress = [
         {"key": key, "label": label, **by_color[key]}
         for key, label in v23.BASE_MODELS
@@ -481,7 +557,11 @@ def material_report(request):
             "material_month_summary": summary,
             "material_cut_summary": cut_summary,
             "material_base_color_progress": base_color_progress,
-            "material_current_month_key": month["key"],
-            "material_current_month_label": month["label"],
+            "material_current_month_key": current_month["key"],
+            "material_current_month_label": current_month["label"],
+            "material_selected_month_key": month["key"],
+            "material_selected_month_label": month["label"],
+            "material_selected_is_archive": is_archived,
+            "material_archive_deliveries": archive_deliveries,
         },
     )
