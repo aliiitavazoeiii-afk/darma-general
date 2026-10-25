@@ -39,6 +39,20 @@ class Command(BaseCommand):
         ):
             if needle not in template:
                 raise RuntimeError(f"Transfer response guard missing: {needle}")
+        # Regression: HTML form has a hidden <input name="action">.
+        # JS form.action then evaluates to that DOM element instead of URL.
+        # The exact 404 observed on the server was
+        # /inventory/operations/[object%20HTMLInputElement].
+        if 'name="action" value="transfer"' not in template:
+            raise RuntimeError("Transfer action-shadowing regression fixture missing")
+        if "fetch(transferForm.action" in template:
+            raise RuntimeError("Transfer fetch uses shadowed form.action property")
+        if "transferForm.getAttribute('action')" not in template:
+            raise RuntimeError("Transfer fetch must use literal action attribute")
+        if "fetch(endpoint,{" not in template:
+            raise RuntimeError("Transfer must send request to literal endpoint")
+        if "/inventory/operations/transfer-direction/" not in template:
+            raise RuntimeError("Missing route safeguard against stray form action")
         get_template("core/inventory_operations.html")
         self.stdout.write("UNAUTHENTICATED_AJAX=401_APPLICATION_JSON")
         self.stdout.write("LOGIN_CSRF_SERVER_HTML=EXPLICIT_USER_MESSAGE")
