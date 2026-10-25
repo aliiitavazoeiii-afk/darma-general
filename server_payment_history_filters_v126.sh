@@ -17,7 +17,7 @@ CHANGED=$(git diff --name-only "$BASE"..HEAD)
 echo "$CHANGED"
 for f in $CHANGED; do
   case "$f" in
-    .github/workflows/check-payment-filters-v126.yml|core/business_tools_v60.py|core/business_tools_v62.py|core/business_tools_v91.py|core/management/commands/check_payment_filters_v126.py|core/test_payment_filters_v126.py|templates/core/payments_v126.html|server_payment_history_filters_v126.sh) ;;
+    .github/workflows/check-payment-filters-v126.yml|PROJECT_HANDOFF_CURRENT.md|core/business_tools_v60.py|core/business_tools_v62.py|core/business_tools_v91.py|core/management/commands/check_payment_filters_v126.py|core/test_payment_filters_v126.py|docs/PROJECT_CONTEXT/74_PAYMENT_HISTORY_FILTERS_V126.md|docs/PROJECT_CONTEXT/README.md|server_payment_history_filters_v126.sh|templates/core/payments_v126.html) ;;
     *) fail "unexpected V126 file: $f" ;;
   esac
 done
