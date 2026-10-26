@@ -1,3 +1,7 @@
+> **2026-10-26 CURRENT INDEX:** Begin with `docs/00_NEW_CHAT_READ_FIRST_V126.md` and `75_MASTER_HISTORY_AND_FINAL_DECISIONS_V126.md`, `76_ACTIVE_MODULE_AND_LEDGER_MAP_V126.md`, `77_DEPLOYMENT_AND_CHANGE_PROTOCOL_V126.md`. The manifest below records old development stages through V126, not the newest authority by itself. New docs are on `docs-v126-complete-handoff-1405-08`, while deployable functionality remains `v126-payment-history-filters`.
+
+---
+
 # PROJECT_CONTEXT MANIFEST
 
 This directory is the authoritative, detailed continuation pack for a new AI/chat.
