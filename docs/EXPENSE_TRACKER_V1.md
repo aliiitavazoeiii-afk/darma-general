@@ -1,5 +1,7 @@
 # Expense Tracker V1 — isolated branch site
 
+> **New chat / continuation:** read [EXPENSE_TRACKER_NEW_CHAT_HANDOFF.md](./EXPENSE_TRACKER_NEW_CHAT_HANDOFF.md) first. It contains the complete history, production incidents, deployment caveats, current PWA V9 policy, Gunicorn hardening, and a copy/paste continuation prompt.
+
 Branch: `expense-tracker-v1`
 
 Base commit: `40ba4293dcd7b05fedef33f37f70ebcbeedd8655`
@@ -201,3 +203,19 @@ V8 regression command:
 Expected deployment marker:
 
 `SUCCESS: EXPENSE TRACKER CATEGORY REPORT V8 DEPLOYED`
+
+
+## PWA V9 + runtime hardening — latest source state
+
+After intermittent `Failed to fetch` / calendar symptoms, the service worker was changed so it no longer precaches expense JS/CSS. Current cache name is `kharj-man-shell-v9`; only app icons are cached. The frontend registers the worker with `updateViaCache: "none"` and explicitly requests an update.
+
+After repeated production incidents where the expense container remained `Up` but HTTP requests hung, GitHub source was hardened:
+
+- Gunicorn uses 3 synchronous workers;
+- timeout 60s;
+- graceful timeout 20s;
+- workers recycle with `max-requests=250` plus jitter;
+- worker temp files use `/dev/shm`;
+- host debug port 8011 defaults to `127.0.0.1`, because Caddy reaches `expense-web:8000` through Docker networking and public port exposure was unnecessary.
+
+Important: GitHub source state is not proof of production deployment. The production expense worktree was observed with broken Git worktree metadata, and a successful repair + guarded deployment of the hardening commits was not confirmed before the new-chat handoff. See `EXPENSE_TRACKER_NEW_CHAT_HANDOFF.md`.
