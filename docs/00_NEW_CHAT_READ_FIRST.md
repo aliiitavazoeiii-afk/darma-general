@@ -1,3 +1,7 @@
+> **NEWER HANDOFF OVERRIDE — 2026-10-26:** This long forensic history was last synced through V108. The **authoritative continuation to V126** is `docs/00_NEW_CHAT_READ_FIRST_V126.md` plus context docs 75, 76, 77 on the documentation-only `docs-v126-complete-handoff-1405-08` branch. All old "latest branch" claims below are superseded by V126; retain old operational/forensic details only where not superseded.
+
+---
+
 # DARMA GENERAL — NEW CHAT READ FIRST
 
 **AUTHORITATIVE CONTINUATION ENTRYPOINT — READ THIS FILE COMPLETELY BEFORE TOUCHING CODE OR DATA**
