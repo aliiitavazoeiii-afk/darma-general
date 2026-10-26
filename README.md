@@ -1,3 +1,7 @@
+> **Current new-chat handoff (2026-10-26):** [docs/00_NEW_CHAT_READ_FIRST_V126.md](docs/00_NEW_CHAT_READ_FIRST_V126.md) and [DARMA_NEW_CHAT_PROMPT_V126.md](DARMA_NEW_CHAT_PROMPT_V126.md). These links belong to the documentation-only branch; V126 remains the actual working functional version.
+
+---
+
 # DARMA General ERP
 
 پنل مدیریتی اختصاصی برای فروش روزانه، موجودی، گزارش جامع، دیجی‌کالا، پرداخت‌ها، مواد اولیه و تولید.
