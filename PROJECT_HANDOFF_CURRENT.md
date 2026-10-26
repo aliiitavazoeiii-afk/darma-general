@@ -1,3 +1,7 @@
+> **READ THIS FIRST FOR THE CURRENT PROJECT (2026-10-26):** `docs/00_NEW_CHAT_READ_FIRST_V126.md` → `docs/PROJECT_CONTEXT/75_MASTER_HISTORY_AND_FINAL_DECISIONS_V126.md` → `76_ACTIVE_MODULE_AND_LEDGER_MAP_V126.md` → `77_DEPLOYMENT_AND_CHANGE_PROTOCOL_V126.md`. Functional V126 at `90a79e993adced1689c70d5b0777ce2ea7f2789f`, owner accepted after installation. This branch is DOCUMENTATION ONLY. All lower "latest" declarations belong to their historical stage and may be superseded.
+
+---
+
 # CURRENT PROJECT HANDOFF
 
 For the authoritative detailed continuation record, read:
