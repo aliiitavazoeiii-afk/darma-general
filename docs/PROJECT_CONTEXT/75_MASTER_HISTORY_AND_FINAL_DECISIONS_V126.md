@@ -10,7 +10,7 @@
 ## What the project is
 A private, stateful production Django/PostgreSQL ERP for owner-managed Darma clothing manufacturing and sales, Novani production/wholesale, Takvin purchasing/sales, and Anbaresh as a sales channel backed by Darma stock. It covers product definitions, date-effective pricing/cost, daily manual + Digikala Excel sales, Digikala read-only integrations, Dia Gallery, color/size stock, raw fabrics and elastic, tailor consumption and three-way editable delivery inputs, customer/person and bank accounts, payments, receipts, returns, cost/profit calculator, current capital, historic reports and wholesale.
 
-It is **NOT** the user's other Darma pricing-analysis repository, expense tracker, VPN subscription/control center, or any WhatsApp/SMS app. Do not modify or import those systems from this repository without a separate explicit request. Never put infrastructure/server secrets in a handoff.
+This is the ERP repository only. Keep unrelated standalone projects isolated; never copy their code, credentials, deployment instructions, or workflows into this system. Never put infrastructure/server secrets in a handoff.
 
 ## Final authority / avoid mixing old documents
 1. Newest explicit owner instruction, with its date and corrected context.
@@ -81,7 +81,7 @@ It is **NOT** the user's other Darma pricing-analysis repository, expense tracke
 Historical checkpoint values in `08_LIVE_STATE_AND_CHECKPOINTS.md` are **snapshots**. V65 was production-confirmed in that old document; later user acceptance and GitHub Actions confirmations are recorded in individual follow-up branches. Never claim any old fixed capital/inventory value is still current, and never silently repair it. The owner's separate 30 Mehr capital estimate may require -~700m toman due to yet-unreconciled fabric/elastic costs; that is a pending business/accounting concern in a DIFFERENT pricing-analysis repo, NOT authority to subtract anything from ERP automatically.
 
 ## Extra project isolation rule
-This repository does NOT contain the VPN system or its WhatsApp SMS/mobile app. Their accidental discussion in a Darma chat must not be interpreted as shared code or a feature request. The Novani wholesale *website* is also a separate WordPress undertaking, not this ERP's /wholesale/ module.
+This ERP repository has no ownership over unrelated services. Distinguish the separate Novani public website from this ERP's internal /wholesale/ accounting/stock module.
 
 ## Next AI handoff
 Open `DARMA_NEW_CHAT_PROMPT_V126.md`, obey reading order, verify live branch and actual routes. For changes create a feature branch from actual verified latest functional HEAD, design test/rollback and guarded install. Do not work on the *documentation branch* as if it were a new deployed code release.
