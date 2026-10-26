@@ -111,7 +111,7 @@ CHANGED=$(git diff --name-only "$BASE"..HEAD)
 echo "$CHANGED"
 for f in $CHANGED; do
   case "$f" in
-    expense_site/*|expense_tracker/*|templates/expense_tracker/*|static/expense_tracker/*|Dockerfile.expense|compose.expense.yml|expense_entrypoint.sh|server_expense_tracker_v1.sh|docs/EXPENSE_TRACKER_V1.md) ;;
+    expense_site/*|expense_tracker/*|templates/expense_tracker/*|static/expense_tracker/*|Dockerfile.expense|compose.expense.yml|expense_entrypoint.sh|server_expense_tracker_v1.sh|docs/EXPENSE_TRACKER_V1.md|docs/EXPENSE_TRACKER_NEW_CHAT_HANDOFF.md) ;;
     *) fail "unexpected file changed on isolated expense branch: $f" ;;
   esac
 done
