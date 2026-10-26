@@ -1,3 +1,7 @@
+> **CURRENT HANDOFF (2026-10-26):** The original AI_START_HERE text below stops at V37/V108-era assumptions and is HISTORICAL. **Read `docs/00_NEW_CHAT_READ_FIRST_V126.md` first.** Latest verified functional source is `v126-payment-history-filters` (SHA `90a79e993adced1689c70d5b0777ce2ea7f2789f`); full history in `docs/PROJECT_CONTEXT/75_MASTER_HISTORY_AND_FINAL_DECISIONS_V126.md`. This Git branch `docs-v126-complete-handoff-1405-08` is documentation-only and not a deploy target.
+
+---
+
 # AI START HERE — DARMA GENERAL
 
 **CURRENT AUTHORITATIVE ENTRYPOINT: `docs/00_NEW_CHAT_READ_FIRST.md`**
