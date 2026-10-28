@@ -7,7 +7,7 @@ production POST, while the V123 dedicated URL stays backward-compatible.
 from pathlib import Path
 
 from django.conf import settings
-from django.test import Client
+from django.test import Client, override_settings
 from django.urls import resolve, reverse
 
 from core import inventory_operations_v16, inventory_transfer_v123
@@ -19,13 +19,19 @@ class SamePageTransferV128Tests(TransferJsonTransportV127Tests):
     def setUp(self):
         super().setUp()
         self.url = reverse("inventory_operations")
+        self.data["action"] = "transfer"
 
     def test_same_route_serves_get_and_ajax_transfer_post(self):
         self.assertEqual(self.url, "/inventory/operations/")
         self.assertIs(resolve(self.url).func, inventory_operations_v16.inventory_operations)
         client = Client()
         client.force_login(self.user)
-        get_response = client.get(self.url)
+        with override_settings(STORAGES={
+            "staticfiles": {
+                "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+            },
+        }):
+            get_response = client.get(self.url)
         self.assertEqual(get_response.status_code, 200)
         html = get_response.content.decode("utf-8")
         self.assertIn('id="stock-transfer-form"', html)
