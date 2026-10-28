@@ -7,6 +7,7 @@ from django.shortcuts import redirect, render
 from django.views.decorators.http import require_POST
 
 from . import inventory_operations_v15 as v15
+from . import inventory_transfer_v123 as transfer_v123
 from .brand_colors import colors_for_brand
 from .dateutils import format_jalali
 from .models import (
@@ -185,8 +186,20 @@ def inventory_transfer_update(request, transfer_id):
     return redirect("inventory_operations")
 
 
+@transfer_v123.transfer_ajax_auth
 @login_required
 def inventory_operations(request):
+    # V128: POST the transfer to the already working, canonical operations
+    # page, rather than requiring a second endpoint exposed by the proxy.
+    # This exact handler retains V127 CSRF protection, stock locks, JSON,
+    # and atomic transfer+snapshot+response semantics. No double posting.
+    if (
+        request.method == "POST"
+        and transfer_v123._ajax(request)
+        and request.POST.get("action") == "transfer"
+    ):
+        return transfer_v123.inventory_transfer_direction(request)
+
     brands = Brand.objects.filter(active=True, name__in=INVENTORY_BRANDS).order_by("id")
     transfer_brands = brands.filter(name="دارما")
     sizes = Size.objects.all()
