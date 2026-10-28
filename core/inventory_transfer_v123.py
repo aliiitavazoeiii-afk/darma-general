@@ -122,23 +122,23 @@ def inventory_transfer_direction(request):
                 when=_date(request.POST.get("date")), brand=brand, size=size,
                 direction=direction, quantities=colors,
             )
+            source_label, destination_label = (
+                ("خانه", "انبار") if direction == "home_to_warehouse" else ("انبار", "خانه")
+            )
+            message = (
+                f"انتقال {source_label} به {destination_label} ثبت شد: "
+                f"{result['total']} عدد از {result['count']} رنگ."
+            )
             if ajax:
                 brands = Brand.objects.filter(active=True, name__in=["دارما", "تکوین", "Novani"])
                 snapshot = _stock_snapshot_for_operations(brands)
-        source_label, destination_label = (
-            ("خانه", "انبار") if direction == "home_to_warehouse" else ("انبار", "خانه")
-        )
-        message = (
-            f"انتقال {source_label} به {destination_label} ثبت شد: "
-            f"{result['total']} عدد از {result['count']} رنگ."
-        )
-        if ajax:
-            response = JsonResponse({
-                "ok": True, "message": message,
-                "stock_snapshot": snapshot, "transfer_ids": result["ids"],
-            })
-            response["Cache-Control"] = "no-store"
-            return response
+                # Serialize the entire response before committing the stock move.
+                response = JsonResponse({
+                    "ok": True, "message": message,
+                    "stock_snapshot": snapshot, "transfer_ids": result["ids"],
+                })
+                response["Cache-Control"] = "no-store"
+                return response
         messages.success(request, message)
     except Exception as exc:
         if ajax:
