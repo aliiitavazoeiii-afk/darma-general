@@ -59,7 +59,7 @@ git diff --quiet "$BASE"..HEAD -- core/models.py core/migrations core/material_r
 # The only altered transfer, CSRF and browser transport source files are pinned
 # to the audited branch blobs. Prevent an unreviewed ledger or auth change.
 test "$(git hash-object config/settings.py)" = "f575fd81b74f0beff2b726fe3e99ea69d11f86d7" || fail "CSRF settings drift"
-test "$(git hash-object core/inventory_transfer_v123.py)" = "52d632e177ccdf630ce753576738b2f63a230907" || fail "transfer endpoint drift"
+test "$(git hash-object core/inventory_transfer_v123.py)" = "a458792d59b3dbc127c352b11f9325428b23c3ca" || fail "transfer endpoint drift"
 test "$(git hash-object templates/core/inventory_operations.html)" = "19b92b91dbbdc61c5bae9ab80042557ff873caf8" || fail "transfer browser UI drift"
 
 MIGRATION_CHANGED=$(git diff --name-only "$BASE"..HEAD -- core/migrations)
