@@ -21,7 +21,14 @@ def _ajax(request):
 
 def csrf_failure(request, reason=""):
     """Preserve normal Django CSRF HTML errors, but return JSON to transfer AJAX."""
-    if request.path == "/inventory/operations/transfer-direction/" and _ajax(request):
+    if (
+        request.method == "POST"
+        and request.path in (
+            "/inventory/operations/transfer-direction/",
+            "/inventory/operations/",
+        )
+        and _ajax(request)
+    ):
         return JsonResponse({
             "ok": False, "code": "csrf_failed",
             "message": "اعتبار امنیتی صفحه منقضی شده است؛ صفحه را تازه‌سازی و دوباره وارد شو.",
