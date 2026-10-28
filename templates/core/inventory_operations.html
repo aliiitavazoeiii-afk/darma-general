@@ -52,7 +52,7 @@
           <div class="text-secondary compact-help">جهت انتقال، برند و سایز را انتخاب کن و تعداد رنگ‌ها را یکجا ثبت کن.</div>
         </div>
       </div>
-      <form method="post" action="{% url 'inventory_transfer_direction_v123' %}" class="card-body inventory-op-form" id="stock-transfer-form" autocomplete="off">
+      <form method="post" action="{% url 'inventory_operations' %}" class="card-body inventory-op-form" id="stock-transfer-form" autocomplete="off">
         {% csrf_token %}
         <input type="hidden" name="action" value="transfer">
         <div class="row g-2 mb-3">
