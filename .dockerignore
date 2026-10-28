@@ -1,0 +1,24 @@
+# Never package host-side production credentials, backups or VCS metadata into
+# the public application build context. Compose injects .env at runtime.
+.git
+.git/**
+.env
+.env.*
+!.env.example
+backups
+backups/**
+*.sql
+*.sql.gz
+*.sqlite
+*.sqlite3
+**/__pycache__
+**/__pycache__/**
+**/*.pyc
+**/*.pyo
+.pytest_cache
+.mypy_cache
+.venv
+venv
+node_modules
+*.log
+Caddyfile
