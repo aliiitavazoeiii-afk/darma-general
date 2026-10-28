@@ -235,3 +235,6 @@ Continuation branch: `v117-unified-ui-fabric-count`, descended from the newest `
 
 
 75. V126 `74_PAYMENT_HISTORY_FILTERS_V126.md` — payments Jalali date range filters matching receipts, all-time unfiltered amount, 100-row pages, no financial ledger writes, guarded installer.
+
+
+76. V127 `78_TRANSFER_JSON_TRANSPORT_V127.md` — stock transfer AJAX transport: HTML login/CSRF/proxy responses now classified, scope-specific JSON 401/403, no automatic retry; actual stock transfer plus snapshot and response serialization now one atomic transaction, so snapshot failure cannot commit invisible transfers. Branch `v127-transfer-json-atomic-response` from confirmed V126; read-only audit and isolated tests, guarded web-only deployment with business hashes. Not production-confirmed until operator installs and shares success marker.
