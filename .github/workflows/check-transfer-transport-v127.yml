@@ -60,6 +60,14 @@ jobs:
               'core/inventory_transfer_v123.py', 'config/settings.py',
           ):
               assert marker in s, marker
+          df=Path("Dockerfile").read_text("utf-8")
+          ignore=Path(".dockerignore").read_text("utf-8").splitlines()
+          for marker in ("--timeout 120", "--retries 8"):
+              assert marker in df, marker
+          for marker in (".env", ".env.*", "backups", "*.sql", "Caddyfile", ".git"):
+              assert marker in ignore, marker
+          for marker in ("PYPI_READ_TIMEOUT_RETRY", "BUILD_ATTEMPT", "DOCKER_WEB_BUILD_ATTEMPT"):
+              assert marker in s, marker
           print("PASS: V127 guards and protected business snapshot")
           PY
       - name: Isolated PostgreSQL transport and rollback scenarios
