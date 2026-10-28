@@ -64,7 +64,7 @@ test "$(git hash-object templates/core/inventory_operations.html)" = "19b92b91db
 # Build-only resilience and privacy fixes. Do not let a changed Dockerfile
 # or .dockerignore silently enter the production image.
 test "$(git hash-object Dockerfile)" = "5412293d17c7ff736406cdfac71cbb367cc49614" || fail "Dockerfile pip timeout pin drift"
-test "$(git hash-object .dockerignore)" = "0" || fail "Docker context exclusion rules drift"
+test "$(git hash-object .dockerignore)" = "b18e1b1fe92a87a35341f1f26ca30d55f8e069f5" || fail "Docker context exclusion rules drift"
 
 MIGRATION_CHANGED=$(git diff --name-only "$BASE"..HEAD -- core/migrations)
 test -z "$MIGRATION_CHANGED" || fail "V127 must not introduce migrations"
@@ -121,7 +121,7 @@ for BUILD_ATTEMPT in 1 2 3; do
     break
   fi
   cat "$BUILD_LOG"
-  if grep -Eq 'ReadTimeoutError|Read timed out|The read operation timed out|files\\.pythonhosted\\.org.*timed out' "$BUILD_LOG"; then
+  if grep -Eq 'ReadTimeoutError|Read timed out|The read operation timed out|files\.pythonhosted\.org.*timed out' "$BUILD_LOG"; then
     if [ "$BUILD_ATTEMPT" -lt 3 ]; then
       echo "PYPI_READ_TIMEOUT_RETRY=$BUILD_ATTEMPT"
       sleep 5
@@ -140,7 +140,7 @@ for BUILD_ATTEMPT in 1 2 3; do
   MIRROR_OK=0
   for PYTHON_BASE in public.ecr.aws/docker/library/python:3.12-slim mirror.gcr.io/library/python:3.12-slim; do
     echo "TRY_ALTERNATE_PYTHON_BASE=$PYTHON_BASE"
-    { printf 'FROM %s\\n' "$PYTHON_BASE"; tail -n +2 Dockerfile; } > "$TEMP_DOCKERFILE"
+    { printf 'FROM %s\n' "$PYTHON_BASE"; tail -n +2 Dockerfile; } > "$TEMP_DOCKERFILE"
     if docker buildx build --load --progress=plain -f "$TEMP_DOCKERFILE" -t "$WEB_IMAGE" .; then
       MIRROR_OK=1
       echo "DOCKER_BASE_IMAGE_SOURCE=$PYTHON_BASE"
