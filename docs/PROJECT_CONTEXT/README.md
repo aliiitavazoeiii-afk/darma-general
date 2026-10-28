@@ -238,3 +238,6 @@ Continuation branch: `v117-unified-ui-fabric-count`, descended from the newest `
 
 
 76. V127 `78_TRANSFER_JSON_TRANSPORT_V127.md` — stock transfer AJAX transport: HTML login/CSRF/proxy responses now classified, scope-specific JSON 401/403, no automatic retry; actual stock transfer plus snapshot and response serialization now one atomic transaction, so snapshot failure cannot commit invisible transfers. Branch `v127-transfer-json-atomic-response` from confirmed V126; read-only audit and isolated tests, guarded web-only deployment with business hashes. Not production-confirmed until operator installs and shares success marker.
+
+
+77. V128 `79_TRANSFER_SAME_PAGE_ROUTE_V128.md` — confirmed browser 404 on dedicated transfer endpoint with no recorded transfer; AJAX transfer now POSTs to canonical `/inventory/operations/` GET/POST route and delegates to the unchanged V127 atomic/JSON handler. CSRF/auth JSON on this path, legacy route retained, isolated PostgreSQL/rollback tests and guarded web-only release. CI and live installation must be confirmed separately.
