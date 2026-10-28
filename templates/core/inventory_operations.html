@@ -339,10 +339,35 @@ document.addEventListener('DOMContentLoaded',function(){
       try{
         const response=await fetch(transferForm.action,{
           method:'POST',credentials:'same-origin',
-          headers:{'X-Requested-With':'XMLHttpRequest'},
+          headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'},
           body:new FormData(transferForm)
         });
-        const result=await response.json();
+        // A session/CSRF/proxy error may be an HTML page, not JSON.
+        // Never retry a POST automatically: on a broken connection it may
+        // already have committed on the server.
+        const contentType=(response.headers.get('Content-Type')||'').toLowerCase();
+        if(!contentType.includes('application/json')){
+          const redirectedToLogin=response.redirected &&
+            new URL(response.url,window.location.href).pathname.startsWith('/login/');
+          if(redirectedToLogin||response.status===401){
+            throw new Error('نشست ورود منقضی شده است. دوباره وارد حساب شو و قبل از ثبت مجدد، آخرین انتقال‌ها را بررسی کن.');
+          }
+          if(response.status===403){
+            throw new Error('اعتبار امنیتی صفحه منقضی شده است. صفحه را تازه‌سازی کن و پیش از ثبت مجدد سابقه انتقال را بررسی کن.');
+          }
+          throw new Error('سرور پاسخ غیرمنتظره دریافت کرده (HTTP '+response.status+'). ابتدا آخرین انتقال‌ها را بررسی کن؛ شاید انتقال ثبت شده باشد. سپس صفحه را تازه‌سازی کن.');
+        }
+        let result;
+        try{result=await response.json();}
+        catch(_error){
+          throw new Error('پاسخ سرور ناقص است. قبل از ثبت مجدد، آخرین انتقال‌ها را بررسی کن.');
+        }
+        if(response.status===401||result.code==='authentication_required'){
+          throw new Error('نشست ورود منقضی شده است. دوباره وارد حساب شو.');
+        }
+        if(response.status===403||result.code==='csrf_failed'){
+          throw new Error('اعتبار امنیتی صفحه منقضی شده است. صفحه را تازه‌سازی کن.');
+        }
         if(!response.ok||!result.ok)throw new Error(result.message||'انتقال ثبت نشد');
         snapshot=result.stock_snapshot||snapshot;
         transferForm.querySelectorAll('input[name^="qty_"]').forEach(input=>input.value='');
