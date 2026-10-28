@@ -6,6 +6,8 @@ SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret")
 DEBUG = os.getenv("DEBUG", "0") == "1"
 ALLOWED_HOSTS = [x.strip() for x in os.getenv("ALLOWED_HOSTS", "127.0.0.1,localhost").split(",") if x.strip()]
 CSRF_TRUSTED_ORIGINS = [x.strip() for x in os.getenv("CSRF_TRUSTED_ORIGINS", "").split(",") if x.strip()]
+# JSON CSRF failures only for AJAX stock-transfer POST; all other pages retain Django default.
+CSRF_FAILURE_VIEW = "core.inventory_transfer_v123.csrf_failure"
 
 INSTALLED_APPS = [
     "django.contrib.admin",
