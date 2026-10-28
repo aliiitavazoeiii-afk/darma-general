@@ -241,3 +241,6 @@ Continuation branch: `v117-unified-ui-fabric-count`, descended from the newest `
 
 
 77. V128 `79_TRANSFER_SAME_PAGE_ROUTE_V128.md` — confirmed browser 404 on dedicated transfer endpoint with no recorded transfer; AJAX transfer now POSTs to canonical `/inventory/operations/` GET/POST route and delegates to the unchanged V127 atomic/JSON handler. CSRF/auth JSON on this path, legacy route retained, isolated PostgreSQL/rollback tests and guarded web-only release. CI and live installation must be confirmed separately.
+
+
+78. V129 `80_TRANSFER_FORM_ACTION_SHADOW_V129.md` — diagnosed via production log POST to `/inventory/operations/[object%20HTMLInputElement]`; hidden `name="action"` input shadowed `HTMLFormElement.action`. One runtime JS change to `getAttribute('action')`; real JavaScript shadowing regression test, safe production audit and web-only protected deploy. V128 URL changes alone did not resolve the true cause.
