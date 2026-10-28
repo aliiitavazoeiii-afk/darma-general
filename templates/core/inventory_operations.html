@@ -337,7 +337,9 @@ document.addEventListener('DOMContentLoaded',function(){
       if(submit)submit.disabled=true;
       if(transferFeedback)transferFeedback.textContent='در حال ثبت انتقال...';
       try{
-        const response=await fetch(transferForm.action,{
+        // The hidden input[name="action"] shadows HTMLFormElement.action.
+        // Read the action attribute explicitly, never the shadowed JS property.
+        const response=await fetch(transferForm.getAttribute('action'),{
           method:'POST',credentials:'same-origin',
           headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'},
           body:new FormData(transferForm)
