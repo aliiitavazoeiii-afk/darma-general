@@ -1,5 +1,9 @@
 """Bidirectional physical Darma HOME <-> KHORSHID transfers, without page reload."""
 from django.contrib import messages
+from functools import wraps
+from django.conf import settings
+from django.contrib.auth.views import redirect_to_login
+from django.views.csrf import csrf_failure as default_csrf_failure
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.http import JsonResponse
@@ -10,6 +14,35 @@ from .brand_colors import colors_for_brand
 from .final_services import sync_stock_transfer
 from .inventory_operations_v15 import _date, _stock_snapshot_for_operations
 from .models import Brand, Size, StockBalance, StockLocation, StockTransfer
+
+def _ajax(request):
+    return request.headers.get("X-Requested-With") == "XMLHttpRequest"
+
+
+def csrf_failure(request, reason=""):
+    """Preserve normal Django CSRF HTML errors, but return JSON to transfer AJAX."""
+    if request.path == "/inventory/operations/transfer-direction/" and _ajax(request):
+        return JsonResponse({
+            "ok": False, "code": "csrf_failed",
+            "message": "اعتبار امنیتی صفحه منقضی شده است؛ صفحه را تازه‌سازی و دوباره وارد شو.",
+        }, status=403)
+    return default_csrf_failure(request, reason=reason)
+
+
+def transfer_ajax_auth(view):
+    """Prevent login_required from redirecting AJAX POST to an HTML login page."""
+    @wraps(view)
+    def wrapped(request, *args, **kwargs):
+        if not request.user.is_authenticated and _ajax(request):
+            return JsonResponse({
+                "ok": False, "code": "authentication_required",
+                "message": "نشست ورود منقضی شده است؛ دوباره وارد حساب شو.",
+            }, status=401)
+        if not request.user.is_authenticated:
+            return redirect_to_login(request.get_full_path(), settings.LOGIN_URL)
+        return view(request, *args, **kwargs)
+    return wrapped
+
 
 DIRECTIONS = {
     "warehouse_to_home": (StockLocation.KHORSHID, StockLocation.HOME),
@@ -71,18 +104,27 @@ def transfer(*, when, brand, size, direction, quantities):
     return {"count": len(transferred), "total": sum(q for _, q in quantities), "ids": transferred}
 
 
+@transfer_ajax_auth
 @login_required
 @require_POST
 def inventory_transfer_direction(request):
+    ajax = _ajax(request)
     try:
         brand = Brand.objects.get(pk=request.POST.get("brand"), active=True, name="دارما")
         size = Size.objects.get(pk=request.POST.get("size"))
         direction = str(request.POST.get("direction") or "warehouse_to_home")
         colors = _positive_quantities(request.POST, brand)
-        result = transfer(
-            when=_date(request.POST.get("date")), brand=brand, size=size,
-            direction=direction, quantities=colors,
-        )
+        # The transfer and its response snapshot must succeed or fail together.
+        # An old response-snapshot failure could report an error AFTER stock moved,
+        # inviting the operator to accidentally post the same movement again.
+        with transaction.atomic():
+            result = transfer(
+                when=_date(request.POST.get("date")), brand=brand, size=size,
+                direction=direction, quantities=colors,
+            )
+            if ajax:
+                brands = Brand.objects.filter(active=True, name__in=["دارما", "تکوین", "Novani"])
+                snapshot = _stock_snapshot_for_operations(brands)
         source_label, destination_label = (
             ("خانه", "انبار") if direction == "home_to_warehouse" else ("انبار", "خانه")
         )
@@ -90,16 +132,20 @@ def inventory_transfer_direction(request):
             f"انتقال {source_label} به {destination_label} ثبت شد: "
             f"{result['total']} عدد از {result['count']} رنگ."
         )
-        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
-            brands = Brand.objects.filter(active=True, name__in=["دارما", "تکوین", "Novani"])
-            return JsonResponse({
+        if ajax:
+            response = JsonResponse({
                 "ok": True, "message": message,
-                "stock_snapshot": _stock_snapshot_for_operations(brands),
-                "transfer_ids": result["ids"],
+                "stock_snapshot": snapshot, "transfer_ids": result["ids"],
             })
+            response["Cache-Control"] = "no-store"
+            return response
         messages.success(request, message)
     except Exception as exc:
-        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
-            return JsonResponse({"ok": False, "message": str(exc)}, status=400)
+        if ajax:
+            response = JsonResponse({
+                "ok": False, "code": "transfer_failed", "message": str(exc),
+            }, status=400)
+            response["Cache-Control"] = "no-store"
+            return response
         messages.error(request, str(exc))
     return redirect("inventory_operations")
