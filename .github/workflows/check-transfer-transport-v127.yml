@@ -70,6 +70,11 @@ jobs:
               assert marker in s, marker
           print("PASS: V127 guards and protected business snapshot")
           PY
+      - name: Build production Docker image in clean CI context
+        run: |
+          docker build --progress=plain -t darma-v127-ci .
+          docker run --rm --entrypoint python darma-v127-ci -c "import django, psycopg, whitenoise; print('SUCCESS: V127 DOCKER PYTHON IMPORTS')"
+          docker run --rm --entrypoint /bin/sh darma-v127-ci -c 'test -f /app/manage.py && test ! -e /app/.env && test ! -e /app/Caddyfile && test ! -d /app/backups && echo "SUCCESS: CLEAN DOCKER CONTEXT"'
       - name: Isolated PostgreSQL transport and rollback scenarios
         run: |
           # V119 historical migrations reference live production seed data;
