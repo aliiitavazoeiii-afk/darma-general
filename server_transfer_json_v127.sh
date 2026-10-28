@@ -17,7 +17,7 @@ CHANGED=$(git diff --name-only "$BASE"..HEAD)
 echo "$CHANGED"
 for f in $CHANGED; do
   case "$f" in
-    .github/workflows/check-transfer-transport-v127.yml|PROJECT_HANDOFF_CURRENT.md|core/inventory_transfer_v123.py|core/management/commands/check_transfer_transport_v127.py|core/test_transfer_transport_v127.py|config/settings.py|docs/PROJECT_CONTEXT/78_TRANSFER_JSON_TRANSPORT_V127.md|docs/PROJECT_CONTEXT/README.md|server_transfer_json_v127.sh|templates/core/inventory_operations.html) ;;
+    .dockerignore|.github/workflows/check-transfer-transport-v127.yml|Dockerfile|PROJECT_HANDOFF_CURRENT.md|core/inventory_transfer_v123.py|core/management/commands/check_transfer_transport_v127.py|core/test_transfer_transport_v127.py|config/settings.py|docs/PROJECT_CONTEXT/78_TRANSFER_JSON_TRANSPORT_V127.md|docs/PROJECT_CONTEXT/README.md|server_transfer_json_v127.sh|templates/core/inventory_operations.html) ;;
     *) fail "unexpected V127 file: $f" ;;
   esac
 done
@@ -61,6 +61,10 @@ git diff --quiet "$BASE"..HEAD -- core/models.py core/migrations core/material_r
 test "$(git hash-object config/settings.py)" = "f575fd81b74f0beff2b726fe3e99ea69d11f86d7" || fail "CSRF settings drift"
 test "$(git hash-object core/inventory_transfer_v123.py)" = "a458792d59b3dbc127c352b11f9325428b23c3ca" || fail "transfer endpoint drift"
 test "$(git hash-object templates/core/inventory_operations.html)" = "19b92b91dbbdc61c5bae9ab80042557ff873caf8" || fail "transfer browser UI drift"
+# Build-only resilience and privacy fixes. Do not let a changed Dockerfile
+# or .dockerignore silently enter the production image.
+test "$(git hash-object Dockerfile)" = "5412293d17c7ff736406cdfac71cbb367cc49614" || fail "Dockerfile pip timeout pin drift"
+test "$(git hash-object .dockerignore)" = "0" || fail "Docker context exclusion rules drift"
 
 MIGRATION_CHANGED=$(git diff --name-only "$BASE"..HEAD -- core/migrations)
 test -z "$MIGRATION_CHANGED" || fail "V127 must not introduce migrations"
@@ -104,13 +108,31 @@ echo "=== V127 SAFE DOCKER BASE-IMAGE FALLBACK ==="
 BUILD_LOG=$(mktemp /tmp/darma-v127-build-log.XXXXXX)
 TEMP_DOCKERFILE=$(mktemp /tmp/darma-v127-Dockerfile.XXXXXX)
 trap 'rm -f "$BUILD_LOG" "$TEMP_DOCKERFILE"' EXIT
-if docker compose build web >"$BUILD_LOG" 2>&1; then
+# Transient PyPI wheel-download timeouts are not base-image registry errors.
+# Retry the unchanged pinned Dockerfile at most three times. Do not restart
+# the live web container unless a complete verified build succeeds.
+BUILD_OK=0
+for BUILD_ATTEMPT in 1 2 3; do
+  echo "DOCKER_WEB_BUILD_ATTEMPT=$BUILD_ATTEMPT/3"
+  if docker compose build web >"$BUILD_LOG" 2>&1; then
+    cat "$BUILD_LOG"
+    echo "DOCKER_BASE_IMAGE_SOURCE=docker_hub"
+    BUILD_OK=1
+    break
+  fi
   cat "$BUILD_LOG"
-  echo "DOCKER_BASE_IMAGE_SOURCE=docker_hub"
-else
-  cat "$BUILD_LOG"
+  if grep -Eq 'ReadTimeoutError|Read timed out|The read operation timed out|files\\.pythonhosted\\.org.*timed out' "$BUILD_LOG"; then
+    if [ "$BUILD_ATTEMPT" -lt 3 ]; then
+      echo "PYPI_READ_TIMEOUT_RETRY=$BUILD_ATTEMPT"
+      sleep 5
+      continue
+    fi
+    fail "PyPI wheel download timed out after three safe builds; live web remains unchanged"
+  fi
+  # Preserve the previously approved trusted base-image mirrors ONLY when
+  # the Docker Hub image itself failed; do not use mirrors for PyPI problems.
   if ! grep -Eq 'failed to resolve source metadata|production.cloudfront.docker.com|unexpected status.*403|403 Forbidden' "$BUILD_LOG"; then
-    fail "Docker build failed for a reason other than base-image registry access; current web remains unchanged"
+    fail "Docker build failed for a reason other than base-image registry access or PyPI timeout; current web remains unchanged"
   fi
   test "$(head -n 1 Dockerfile)" = "FROM python:3.12-slim" || fail "unexpected tracked Dockerfile base; refusing mirror substitution"
   WEB_IMAGE=$(docker compose config --format json | python3 -c 'import json,sys; c=json.load(sys.stdin); web=c["services"]["web"]; print(web.get("image") or (c["name"]+"-web"))') || fail "cannot determine Compose web image name"
@@ -118,7 +140,7 @@ else
   MIRROR_OK=0
   for PYTHON_BASE in public.ecr.aws/docker/library/python:3.12-slim mirror.gcr.io/library/python:3.12-slim; do
     echo "TRY_ALTERNATE_PYTHON_BASE=$PYTHON_BASE"
-    { printf 'FROM %s\n' "$PYTHON_BASE"; tail -n +2 Dockerfile; } > "$TEMP_DOCKERFILE"
+    { printf 'FROM %s\\n' "$PYTHON_BASE"; tail -n +2 Dockerfile; } > "$TEMP_DOCKERFILE"
     if docker buildx build --load --progress=plain -f "$TEMP_DOCKERFILE" -t "$WEB_IMAGE" .; then
       MIRROR_OK=1
       echo "DOCKER_BASE_IMAGE_SOURCE=$PYTHON_BASE"
@@ -126,7 +148,10 @@ else
     fi
   done
   test "$MIRROR_OK" = "1" || fail "Docker Hub returned 403 and alternate public registries were also inaccessible; no web restart performed"
-fi
+  BUILD_OK=1
+  break
+done
+test "$BUILD_OK" = "1" || fail "Docker web build did not complete; live web remains unchanged"
 docker compose run --rm --entrypoint python web -m compileall -q core/material_report_v92.py core/material_report_v23.py core/material_report_v20.py core/material_color_apply_v123.py core/material_color_models_v123.py core/inventory_transfer_v123.py core/inventory_operations_v16.py core/migrations/0021_material_color_use_v123.py core/management/commands/check_material_transfer_v123.py core/management/commands/check_inventory_alert_v123.py core/material_payment_colors_v124.py core/business_tools_v91.py core/material_purchase_v13.py core/management/commands/check_payment_colors_v124.py core/management/commands/check_material_archive_month_v125.py core/management/commands/check_payment_filters_v126.py core/management/commands/check_receipt_filters_v91.py core/business_tools_v60.py core/business_tools_v62.py core/inventory_v20.py core/test_material_color_v123.py core/test_transfer_transport_v127.py core/management/commands/check_transfer_transport_v127.py config/settings.py || fail "Python syntax check failed"
 docker compose run --rm --entrypoint python web manage.py makemigrations --check --dry-run || fail "unexpected database schema migration"
 docker compose run --rm --entrypoint python web manage.py check || fail "Django project check failed"
