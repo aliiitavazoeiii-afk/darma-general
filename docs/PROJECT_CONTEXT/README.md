@@ -244,3 +244,6 @@ Continuation branch: `v117-unified-ui-fabric-count`, descended from the newest `
 
 
 78. V129 `80_TRANSFER_FORM_ACTION_SHADOW_V129.md` — diagnosed via production log POST to `/inventory/operations/[object%20HTMLInputElement]`; hidden `name="action"` input shadowed `HTMLFormElement.action`. One runtime JS change to `getAttribute('action')`; real JavaScript shadowing regression test, safe production audit and web-only protected deploy. V128 URL changes alone did not resolve the true cause.
+
+
+79. V130 `81_TAKVIN_SIGNED_OVERPAYMENT_V130.md` — supplier Takvin overpayment clamped to zero and deleted ERP payment inflated debt; signed payment model and credit-aware finance labels, isolated real HTTP tests and audit-only guarded release. Existing erroneous balance requires separately evidenced, idempotent reconciliation, not automatic repair.
