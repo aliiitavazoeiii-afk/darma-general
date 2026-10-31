@@ -4,10 +4,12 @@ Run only against isolated disposable test database.  Never POST production
 money transactions in CI, the read-only audit, or release preflight.
 """
 from datetime import date
+from io import StringIO
 from pathlib import Path
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core.management import call_command
 from django.test import TestCase
 from django.urls import reverse
 
@@ -95,3 +97,23 @@ class TakvinSignedPaymentV130Tests(TestCase):
             self.assertIn("takvin_debt < 0", text)
             self.assertIn("طلب از تکوین", text)
             self.assertIn("بدهی تکوین", text)
+    def test_read_only_audit_does_not_modify_current_financial_rows(self):
+        before = (
+            self.debt.value,
+            self.bank.amount,
+            BusinessPayment.objects.count(),
+        )
+        output = StringIO()
+        call_command("check_takvin_signed_v130", stdout=output)
+        text = output.getvalue()
+        self.assertIn("TAKVIN_SIGNED_BALANCE_TOMAN=47600000", text)
+        self.assertIn("SUCCESS: TAKVIN READ-ONLY AUDIT", text)
+        self.debt.refresh_from_db()
+        self.bank.refresh_from_db()
+        after = (
+            self.debt.value,
+            self.bank.amount,
+            BusinessPayment.objects.count(),
+        )
+        self.assertEqual(before, after)
+
