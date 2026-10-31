@@ -247,3 +247,6 @@ Continuation branch: `v117-unified-ui-fabric-count`, descended from the newest `
 
 
 79. V130 `81_TAKVIN_SIGNED_OVERPAYMENT_V130.md` — supplier Takvin overpayment clamped to zero and deleted ERP payment inflated debt; signed payment model and credit-aware finance labels, isolated real HTTP tests and audit-only guarded release. Existing erroneous balance requires separately evidenced, idempotent reconciliation, not automatic repair.
+
+
+80. V131 `82_TAKVIN_DELETED_PAYMENT_RECOVERY_V131.md` — exact Takvin pre-overpayment debt 47,520,000 verified in independent Oct26/28 backups; deleted real payment 50M, erroneous current +50M. Audited read-only-by-default guarded one-time recovery command, two-bank and rollback tests, protected deployment with no financial mutation until bank/date explicitly selected.
