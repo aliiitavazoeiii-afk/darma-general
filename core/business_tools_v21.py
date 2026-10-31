@@ -203,7 +203,10 @@ def _apply_payment_effects(payment, purchase_data=None, prepayment_title=None):
         tailor.save(update_fields=["amount", "updated_at"])
     elif payment.payee == "takvin":
         debt = _takvin_setting()
-        debt.value = max(0, int(debt.value or 0) - int(payment.amount or 0))
+        # Keep the balance signed: a payment above supplier debt creates
+        # a receivable (negative debt). Clamping to zero silently loses
+        # the overpayment and makes deleting the payment add excess debt.
+        debt.value = int(debt.value or 0) - int(payment.amount or 0)
         debt.save(update_fields=["value", "updated_at"])
 
 
