@@ -14,5 +14,5 @@
   <div class="finance-kpi-card positive" data-finance-kpi="digikala"><div class="finance-kpi-label">طلب دیجی‌کالا</div><div class="finance-kpi-value money">{{ digikala_receivable|groupnum }}</div></div>
   <div class="finance-kpi-card positive" data-finance-kpi="dia"><div class="finance-kpi-label">طلب Dia Gallery</div><div class="finance-kpi-value money">{{ dia_gallery_receivable|groupnum }}</div></div>
   <div class="finance-kpi-card" data-finance-kpi="tailor"><div class="finance-kpi-label">حساب خیاط</div><div class="finance-kpi-value money">{{ tailor_balance|groupnum }}</div></div>
-  <div class="finance-kpi-card" data-finance-kpi="takvin"><div class="finance-kpi-label">بدهی تکوین</div><div class="finance-kpi-value money">{{ takvin_debt|groupnum }}</div></div>
+  <div class="finance-kpi-card" data-finance-kpi="takvin"><div class="finance-kpi-label">{% if takvin_debt < 0 %}طلب از تکوین{% elif takvin_debt == 0 %}تسویه تکوین{% else %}بدهی تکوین{% endif %}</div><div class="finance-kpi-value money">{{ takvin_debt|groupnum }}</div></div>
 </div>
