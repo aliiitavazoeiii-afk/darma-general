@@ -88,9 +88,10 @@ jobs:
               call_command("test", "core.test_transfer_transport_v127",
                            "core.test_payment_filters_v126", "core.test_transfer_same_page_v128", "core.test_transfer_form_action_v129", "core.test_takvin_signed_payment_v130", interactive=False, verbosity=2)
           PY
-      - name: Read-only transport and historical regression
+      - name: Read-only transfer and historical regression
         run: |
-          python manage.py check_takvin_signed_v130
+          # Takvin database audit is tested inside disposable PostgreSQL TestCase
+          # above; the test runner destroys that database before this step.
           python manage.py check_transfer_form_action_v129
           python manage.py check_transfer_same_page_v128
           python manage.py check_transfer_transport_v127
