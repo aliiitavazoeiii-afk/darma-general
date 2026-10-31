@@ -1,0 +1,108 @@
+name: Verify exact one-time Takvin deleted-payment recovery V131
+
+on:
+  push:
+    branches:
+      - v131-takvin-deleted-payment-recovery
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  stock-transfer-transport:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: darma
+          POSTGRES_USER: darma
+          POSTGRES_PASSWORD: darma
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U darma"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_NAME: darma
+      DB_USER: darma
+      DB_PASSWORD: darma
+      DJANGO_SETTINGS_MODULE: config.settings
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Syntax, routes, schema and guarded script
+        run: |
+          python -m compileall -q core/inventory_transfer_v123.py core/inventory_operations_v16.py core/test_transfer_transport_v127.py core/test_transfer_same_page_v128.py core/test_transfer_form_action_v129.py core/management/commands/check_transfer_transport_v127.py core/management/commands/check_transfer_same_page_v128.py core/management/commands/check_transfer_form_action_v129.py core/business_tools_v21.py core/test_takvin_signed_payment_v130.py core/management/commands/check_takvin_signed_v130.py core/test_takvin_recovery_v131.py core/management/commands/recover_takvin_deleted_50m_v131.py config/settings.py
+          python manage.py check
+          python manage.py makemigrations --check --dry-run
+          sh -n server_takvin_recovery_v131.sh
+          python - <<'PY'
+          from pathlib import Path
+          s=Path("server_takvin_recovery_v131.sh").read_text("utf-8")
+          for marker in (
+              'CADDY_BEFORE', 'pg_dump', 'recover_takvin_deleted_50m_v131', 'check_takvin_signed_v130', 'check_transfer_form_action_v129', 'check_transfer_same_page_v128', 'check_transfer_transport_v127',
+              'check_payment_filters_v126', 'check_material_transfer_v123',
+              'no-build --force-recreate web',
+              'test "$PRE" = "$PROJECTED"',
+              'test "$PRE" = "$FINAL"',
+              'core/inventory_transfer_v123.py', 'core/inventory_operations_v16.py', 'ExcelManualSetting', 'TakvinPurchase', 'config/settings.py',
+          ):
+              assert marker in s, marker
+          df=Path("Dockerfile").read_text("utf-8")
+          ignore=Path(".dockerignore").read_text("utf-8").splitlines()
+          for marker in ("--timeout 120", "--retries 8"):
+              assert marker in df, marker
+          for marker in (".env", ".env.*", "backups", "*.sql", "Caddyfile", ".git"):
+              assert marker in ignore, marker
+          for marker in ("PYPI_READ_TIMEOUT_RETRY", "BUILD_ATTEMPT", "DOCKER_WEB_BUILD_ATTEMPT"):
+              assert marker in s, marker
+          print("PASS: V131 guarded no-write recovery command and protected financial snapshot")
+          PY
+      - name: Build production Docker image in clean CI context
+        run: |
+          docker build --progress=plain -t darma-v131-ci .
+          docker run --rm --entrypoint python darma-v131-ci -c "import django, psycopg, whitenoise; print('SUCCESS: V131 DOCKER PYTHON IMPORTS')"
+          docker run --rm --entrypoint /bin/sh darma-v131-ci -c 'test -f /app/manage.py && test ! -e /app/.env && test ! -e /app/Caddyfile && test ! -d /app/backups && echo "SUCCESS: CLEAN DOCKER CONTEXT"'
+      - name: Isolated PostgreSQL transport and rollback scenarios
+        run: |
+          # V119 historical migrations reference live production seed data;
+          # bypass only core migrations for this disposable CI test database.
+          python - <<'PY'
+          import django
+          django.setup()
+          from django.test import override_settings
+          from django.core.management import call_command
+          with override_settings(MIGRATION_MODULES={"core": None}):
+              call_command("test", "core.test_transfer_transport_v127",
+                           "core.test_payment_filters_v126", "core.test_transfer_same_page_v128", "core.test_transfer_form_action_v129", "core.test_takvin_signed_payment_v130", "core.test_takvin_recovery_v131", interactive=False, verbosity=2)
+          PY
+      - name: Read-only transfer and historical regression
+        run: |
+          # Takvin database audit is tested inside disposable PostgreSQL TestCase
+          # above; the test runner destroys that database before this step.
+          python manage.py check_transfer_form_action_v129
+          python manage.py check_transfer_same_page_v128
+          python manage.py check_transfer_transport_v127
+          python - <<'PY'
+          import django
+          django.setup()
+          from core.management.commands.check_material_transfer_v123 import synthetic_check as material
+          from core.management.commands.check_inventory_alert_v123 import synthetic_check as inventory
+          from core.management.commands.check_material_archive_month_v125 import synthetic_check as archive
+          material()
+          inventory()
+          archive()
+          print("PASS: V131 V123/V125 material and inventory contracts unchanged")
+          PY
