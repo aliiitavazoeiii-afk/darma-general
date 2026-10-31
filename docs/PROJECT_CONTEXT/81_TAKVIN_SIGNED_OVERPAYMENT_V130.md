@@ -1,0 +1,21 @@
+# V130 — signed Takvin debt and overpayment receivable, exact reversal
+
+## Production incident (2026-10-31)
+User reported an **actual** payment of 50,000,000 toman to supplier Takvin when outstanding debt was approximately 47 million plus. ERP showed zero rather than ~2.4 million supplier credit. The user then **deleted** the payment record in the ERP and the balance jumped to +50,000,000 toman debt.
+
+Root cause in live `core/business_tools_v21.py`: `_apply_payment_effects` on payee `takvin` did `debt.value = max(0, previous_debt - payment.amount)`, destroying overpayment credit. `_reverse_payment_effects` simply added full payment amount to the clamped zero. The current HTTP payment routes in `core/urls.py` are `business_tools_v62.payment_add/update/delete`, which delegate via v60 to those v21 functions. This makes the loss real, not just a display problem. Takvin purchases in `core/takvin_v5.py` independently update `ExcelManualSetting(takvin_debt)` and already allow signed deltas. `core/capital_history_v87.py` subtracts the signed setting as a liability, so a negative balance correctly becomes a receivable asset.
+
+## Surgical code change
+Based on successful V129 `ba41d6f0479f65b3a1d72084b6ba2836fc8228a9`:
+- `core/business_tools_v21.py`: replace the single `max(0,...)` expression with signed arithmetic `int(previous) - int(payment.amount)`. Reverse already adds amount exactly. No other money, stock, transfer, purchase or bank code changes.
+- `templates/core/_finance_kpis_v104.html` and `templates/core/finance_accounts_v97.html`: signed card text: positive «بدهی تکوین», negative «طلب از تکوین», zero «تسویه تکوین». The signed amount remains stored as a negative value to preserve the existing capital formula. No migrations.
+- `core/test_takvin_signed_payment_v130.py`: isolated Django HTTP view add/update/delete tests using real v62 route, 47,600,000 prior debt and 50,000,000 payment => -2,400,000 supplier credit, exact restore of prior debt and bank on delete, edit to 49m, existing credit changes, display labels; tests use disposable CI PostgreSQL only.
+- `core/management/commands/check_takvin_signed_v130.py`: read-only inventory-independent audit of current setting, active Takvin payments and purchases, bank account snapshot; no database writes.
+- `.github/workflows/check-takvin-signed-v130.yml`: builds Docker, runs disposable CI PostgreSQL tests including v126-v129.
+- `server_takvin_signed_v130.sh`: guarded release verifies pinned V129 baseline, diffs, changed hashes, backup, unchanged Caddyfile, **ExcelManualSetting, TakvinPurchase and all old protected model hashes** PRE=PROJECTED=FINAL, read-only audit, web-only rebuild/recreate; **NO REPAIR OF THE EXISTING WRONG BALANCE**.
+
+## Important: one-time financial data repair is separate and not approved by deployment
+The earlier clamping lost the exact overpayment. Payment deletion restored the bank-account effect, but the supplier debt setting now incorrectly holds 50,000,000 instead of the precise pre-payment debt (~47.6M). The user truly paid 50M to the supplier, so after recovering the precise old debt the 50M payment must be represented **once** and balance should become negative by exact difference. Do NOT record another real bank transfer. Do NOT assume an approximate value is the precise old debt. Historical `BusinessPayment` deletion means the record no longer exists; old balance may be recoverable from `backups/before-*.sql`, external bank evidence and dated Takvin purchases. Do not blindly reset to zero, change the bank, insert duplicate payment, or overwrite the supplier balance.
+Take a fresh SQL backup, inspect exact current setting and bank/payments (read-only command), identify a backup with `takvin_debt` from before the first overpayment and reconcile all intervening Takvin purchases/payments. After exact value and provenance confirmed, produce a one-time auditable atomic correction with expected-state guards, and ensure the real 50M payment is represented exactly once with its correct date/source, leaving negative supplier debt and reflecting the bank debit once. Release alone does not change the current 50M misbalance.
+
+User previously had a separate production-related 159 XL stock transfer incident; this code change must not modify it or its stock.
