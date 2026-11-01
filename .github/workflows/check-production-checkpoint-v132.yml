@@ -1,0 +1,67 @@
+name: Verify read-only production checkpoint V132
+
+on:
+  push:
+    branches: [v132-production-safe-checkpoint]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  checkpoint-static-safety:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate script syntax and non-destructive invariants
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          bash -n scripts/create_production_checkpoint_v132.sh
+          python3 - <<'PY'
+          from pathlib import Path
+          s = Path("scripts/create_production_checkpoint_v132.sh").read_text("utf-8")
+          required = [
+              "set -Eeuo pipefail", "umask 077",
+              "PROJECT=/opt/darma-general", "BASE=/root/darma-safe-checkpoints",
+              'docker compose ps -q web', 'docker compose ps -q db',
+              'docker inspect -f', 'docker save "$WEB_IMAGE"',
+              "pg_dump", "--format=custom", "pg_restore --list",
+              "pg_dumpall --globals-only",
+              "project-live-source-and-private-config.tar.gz",
+              "git-live-commit.txt", "core-migrations.txt",
+              "economic-state-before.txt", "economic-state-after.txt",
+              'cmp -s "$STAGING/economic-state-before.txt"',
+              "SHA256SUMS.txt", "sha256sum --check",
+              'mv "$STAGING" "$CHECKPOINT"',
+              "DATABASE_AND_INVENTORY_AND_TAILOR_LEDGER_UNCHANGED=YES",
+              "RUNNING_SERVICES_RESTARTED=NO",
+              "DB RESTORE IS DESTRUCTIVE",
+          ]
+          for needle in required:
+              assert needle in s, needle
+          prohibited = (
+              "docker compose down",
+              "docker compose up",
+              "docker compose restart",
+              "docker restart",
+              "docker rm ",
+              "docker volume rm",
+              "pg_restore --clean",
+              "manage.py migrate",
+              "manage.py flush",
+              "manage.py loaddata",
+              "git checkout",
+              "git switch",
+              "git reset --hard",
+              "git clean -fd",
+              "chmod 777",
+          )
+          for bad in prohibited:
+              assert bad not in s, f"Destructive action found: {bad}"
+          assert s.index('take_snapshot > "$STAGING/economic-state-before.txt"') < s.index('pg_dump -U "$DB_USER"')
+          assert s.index('pg_dumpall --globals-only') < s.index('take_snapshot > "$STAGING/economic-state-after.txt"')
+          assert s.index('sha256sum --check') < s.index('mv "$STAGING" "$CHECKPOINT"')
+          print("SUCCESS: V132 backup syntax and no-write safety policy verified")
+          PY
