@@ -22,6 +22,11 @@
 .prod131-toolbar{display:flex;align-items:end;gap:11px;flex-wrap:wrap;margin-bottom:13px}
 .prod131-toolbar label{display:flex;flex-direction:column;gap:5px;min-width:155px}.prod131-toolbar label>span{font-size:.72rem;color:var(--p-muted)}
 .prod131-search{flex:1 1 290px;max-width:440px}.prod131-month-summary{font-size:.74rem;color:var(--p-muted);margin:0 auto 5px 0}.prod131-month-summary b{color:#fff}
+.prod131-filter-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:7px;margin:0 0 12px}
+.prod131-filter-metrics[hidden]{display:none!important}
+.prod131-filter-metrics>div{border:1px solid rgba(251,160,61,.17);background:rgba(251,160,61,.045);border-radius:10px;padding:9px 10px;min-width:0}
+.prod131-filter-metrics span{font-size:.67rem;color:#b1c1d0;display:block;margin-bottom:5px}
+.prod131-filter-metrics b{font-size:.86rem;color:#fff;display:block}
 .prod131-hidden-form{display:none}
 .prod131-table-wrap{overflow:auto;border:1px solid var(--p-line);border-radius:13px;background:rgba(1,14,28,.12)}
 .prod131-table{border-collapse:collapse;min-width:780px;width:100%;font-size:.78rem}
