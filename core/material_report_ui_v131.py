@@ -108,10 +108,15 @@ def _editor(block):
         if (v23._values_have_input(raw) or v23._values_have_output(out)
                 or key in applied_keys or key in consumed_keys):
             visible.append(key)
-    # An empty newly-created sheet needs one explicit color selection, not five
-    # permanently visible columns. Unused base colors are still posted unchanged.
+    # Newly-created empty sheets expose the five base colors once, so the
+    # operator can choose pink/white/black without opening a different page.
+    # After any row is filled, unused base colors disappear on the next load.
     if not visible:
-        visible = [keys[0]] if keys else []
+        visible = [key for key in keys if key in v23.BASE_KEYS]
+    # An explicitly added extra model must remain editable even while blank.
+    for key in v23._meta_keys(block.input_data):
+        if key not in v23.BASE_KEYS and key in keys and key not in visible:
+            visible.append(key)
 
     hidden_fields = []
     rows = []
@@ -204,11 +209,6 @@ def material_report(request):
         active = [b for b in blocks if _month_key(b.date) == month]
 
     editors = [_editor(b) for b in active]
-    # Keep row and its exact original block form associated; no data duplication.
-    for editor in editors:
-        for row in editor["rows"]:
-            row["sheet"] = editor
-
     tailor = RawMaterialStock.objects.filter(active=True, location=TAILOR)
     stock = {
         "fabric_kg": tailor.filter(kind=FABRIC).aggregate(v=Sum("quantity"))["v"] or Decimal("0"),
