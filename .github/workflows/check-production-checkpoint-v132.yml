@@ -60,6 +60,13 @@ jobs:
           )
           for bad in prohibited:
               assert bad not in s, f"Destructive action found: {bad}"
+          # Regression: invoking `git show ... | bash` let Docker consume the
+          # remaining script over stdin, causing silent premature EOF.
+          exec_lines = [line for line in s.splitlines() if line.lstrip().startswith("docker compose exec -T")]
+          assert len(exec_lines) == 5, exec_lines
+          for line in exec_lines:
+              assert "< /dev/null" in line or ' < "$STAGING/database-complete.dump"' in line, line
+          assert 'if [ "$code" -eq 0 ]; then' in s, "Incomplete exit 0 must fail closed"
           assert s.index('take_snapshot > "$STAGING/economic-state-before.txt"') < s.index('pg_dump -U "$DB_USER"')
           assert s.index('pg_dumpall --globals-only') < s.index('take_snapshot > "$STAGING/economic-state-after.txt"')
           assert s.index('sha256sum --check') < s.index('mv "$STAGING" "$CHECKPOINT"')
