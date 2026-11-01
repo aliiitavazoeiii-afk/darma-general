@@ -3,6 +3,8 @@
 # Repo source is delivered by GitHub; keep this script and its resulting archives OFF GitHub.
 set -Eeuo pipefail
 umask 077
+# Run this script from a real on-disk file (not through git-show | bash).
+# Its docker compose exec commands also have explicit stdin redirection.
 
 PROJECT=/opt/darma-general
 BASE=/root/darma-safe-checkpoints
@@ -14,9 +16,14 @@ DONE=0
 on_exit() {
   code=$?
   if [ "$DONE" != 1 ]; then
-    printf 'CHECKPOINT_FAILED: exit=%s\n' "$code" >&2
+    printf 'CHECKPOINT_FAILED: exit=%s (incomplete backup must never be trusted)\n' "$code" >&2
     [ -z "$STAGING" ] || printf 'PARTIAL_BACKUP_NOT_VALID=%s\n' "$STAGING" >&2
     printf 'NO DATABASE RESTORE OR APPLICATION RESTART WAS PERFORMED\n' >&2
+    if [ "$code" -eq 0 ]; then
+      # A shell script streamed to bash over stdin can end prematurely when a
+      # subprocess reads that stream; this must never appear to have succeeded.
+      exit 1
+    fi
   fi
 }
 trap on_exit EXIT
@@ -97,7 +104,7 @@ for model_name in sorted(set(model_names)):
 PY
 )"
 take_snapshot() {
-  docker compose exec -T web python manage.py shell -c "$SNAPSHOT_CODE" | grep -E '^(MODEL=|MODEL_NOT_INSTALLED=)' | sort
+  docker compose exec -T web python manage.py shell -c "$SNAPSHOT_CODE" < /dev/null | grep -E '^(MODEL=|MODEL_NOT_INSTALLED=)' | sort
 }
 
 git rev-parse HEAD > "$STAGING/git-live-commit.txt"
@@ -109,16 +116,16 @@ printf '%s\n' "$WEB_IMAGE" > "$STAGING/web-live-image-id.txt"
 printf '%s\n' "$WEB_IMAGE_REF" > "$STAGING/web-live-image-original-reference.txt"
 docker inspect "$WEB_CONTAINER" > "$STAGING/web-container-inspect.json"
 docker inspect "$DB_CONTAINER" > "$STAGING/db-container-inspect.json"
-docker compose exec -T web python manage.py showmigrations core > "$STAGING/core-migrations.txt"
+docker compose exec -T web python manage.py showmigrations core < /dev/null > "$STAGING/core-migrations.txt"
 take_snapshot > "$STAGING/economic-state-before.txt"
 [ -s "$STAGING/economic-state-before.txt" ] || fail 'Pre-checkpoint economic snapshot empty.'
 
 printf '\n[1/5] Full PostgreSQL data/schema snapshot\n'
-docker compose exec -T db pg_dump -U "$DB_USER" -d "$DB_NAME" --format=custom --compress=6 --no-owner --no-acl > "$STAGING/database-complete.dump"
+docker compose exec -T db pg_dump -U "$DB_USER" -d "$DB_NAME" --format=custom --compress=6 --no-owner --no-acl < /dev/null > "$STAGING/database-complete.dump"
 [ -s "$STAGING/database-complete.dump" ] || fail 'Database dump missing.'
 docker compose exec -T db pg_restore --list < "$STAGING/database-complete.dump" > "$STAGING/database-restore-catalog.txt"
 grep -q 'TABLE DATA' "$STAGING/database-restore-catalog.txt" || fail 'Database dump has no table data catalog.'
-docker compose exec -T db pg_dumpall --globals-only -U "$DB_USER" > "$STAGING/postgres-cluster-globals.sql"
+docker compose exec -T db pg_dumpall --globals-only -U "$DB_USER" < /dev/null > "$STAGING/postgres-cluster-globals.sql"
 [ -s "$STAGING/postgres-cluster-globals.sql" ] || fail 'Postgres roles/globals dump failed.'
 
 printf '\n[2/5] Current server code, local overrides, git history and config\n'
