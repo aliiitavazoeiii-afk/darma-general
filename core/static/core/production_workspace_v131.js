@@ -22,12 +22,49 @@
   function visibleRows() {
     let shown = 0;
     const query = normalize(search?.value);
+    const summary = {weight:0, cut:0, entered:0, remaining:0, costWeighted:0, costCut:0};
     groups.forEach(group => {
       const matches = !query || normalize(group.dataset.search).includes(query);
       group.hidden = !matches;
-      if (matches) shown++;
+      if (!matches) return;
+      shown++;
+      const weight = number(group.dataset.weight), cut = number(group.dataset.cut);
+      const unitCost = number(group.dataset.unitCost);
+      summary.weight += weight;
+      summary.cut += cut;
+      summary.entered += number(group.dataset.entered);
+      summary.remaining += number(group.dataset.remaining);
+      if (cut > 0 && unitCost > 0) {
+        summary.costCut += cut;
+        summary.costWeighted += cut * unitCost;
+      }
     });
     if (noResults) noResults.hidden = shown > 0;
+    const metrics = document.getElementById('prod131-filter-metrics');
+    if (metrics) {
+      metrics.hidden = !query;
+      if (query) {
+        const parts = [
+          ['کدهای پیدا شده', format(shown)],
+          ['وزن کل', summary.weight.toLocaleString('fa-IR', {maximumFractionDigits:2}) + ' کیلو'],
+          ['برش', format(summary.cut)],
+          ['تحویل', format(summary.entered)],
+          ['مانده', format(summary.remaining)],
+          ['میانگین برش', shown ? format(summary.cut / shown) : '۰'],
+          ['میانگین بهای تولید', summary.costCut ? format(summary.costWeighted / summary.costCut) + ' تومان' : '—'],
+        ];
+        // Only static labels + numeric values derived from validated read-only data attrs.
+        metrics.replaceChildren(...parts.map(([label, value]) => {
+          const node = document.createElement('div');
+          const caption = document.createElement('span');
+          const amount = document.createElement('b');
+          caption.textContent = label;
+          amount.textContent = value;
+          node.append(caption, amount);
+          return node;
+        }));
+      }
+    }
   }
   search?.addEventListener('input', visibleRows);
   month?.addEventListener('change', () => {
