@@ -62,12 +62,22 @@ def _roll_entries(block):
     return entries
 
 
-def _totals(blocks):
+def _totals(blocks, only_open=False):
     total = {"rolls": 0, "weight": Decimal("0"), "cut": 0,
              "entered": 0, "applied": 0, "remaining": 0, "open_rolls": 0,
              "average_cut": 0}
     for block in blocks:
+        raw_applied = {
+            row.material_key for row in block.stock_consumptions.all()
+            if row.kind == FABRIC and q(row.quantity) > 0
+        }
         for roll in _roll_entries(block):
+            if only_open and not (
+                roll["cut"] > roll["entered"]
+                or roll["entered"] != roll["applied"]
+                or (roll["weight"] > 0 and roll["key"] not in raw_applied)
+            ):
+                continue
             total["rolls"] += 1
             total["weight"] += roll["weight"]
             total["cut"] += roll["cut"]
@@ -222,7 +232,7 @@ def material_report(request):
         "months": [{"key": key, "label": _month_title(key)} for key in available],
         "mode": mode,
         "scope": _totals(active),
-        "all_totals": _totals(blocks),
+        "all_totals": _totals(blocks, only_open=True),
         "stock": stock,
         "brands": v23.v20._material_brands(),
         "today_j": v23.v20._today_jalali(),
