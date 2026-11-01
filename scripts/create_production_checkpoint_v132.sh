@@ -172,8 +172,11 @@ SAFE CODE-ONLY ROLLBACK PRINCIPLE:
 If redesign only changes web application code and no schema/ledger semantics,
 restore the archived running image and original code, keeping the LIVE database.
 An older image against newer schema is not guaranteed safe; verify migrations
-and reversible schema compatibility first. Restoration may require recreating
-ONLY the web container, never database/caddy/bot for a code-only rollback.
+and reversible schema compatibility first. Production entrypoint.sh currently
+runs migrate, seed_base and ensure_admin whenever web container recreates.
+Inspect those actions before any code-only rollback; a restart is NOT by
+itself proof of zero database writes. Never roll back without first making
+a fresh current financial/stock snapshot and a new current DB dump.
 
 DB RESTORE IS DESTRUCTIVE:
 Never restore the old SQL dump into the active production DB without a separate
@@ -182,6 +185,10 @@ and explicit authorization; doing so discards business transactions after
 this checkpoint. Prefer revertable schema migrations and business-safe data
 forward-repairs for any changes that modify production quantities/ledgers.
 DO NOT automate SQL restores just because the user dislikes a redesign.
+
+SCOPE: This is a complete ERP application checkpoint for code/data recovery,
+not a full VPS disaster-recovery image. The host OS, unrelated services and
+Caddy TLS certificate data volume are not archived here.
 TXT
 printf 'CHECKPOINT_FINISHED_UTC=%s\n' "$(date -u --iso-8601=seconds)" > "$STAGING/FINISHED.txt"
 (
