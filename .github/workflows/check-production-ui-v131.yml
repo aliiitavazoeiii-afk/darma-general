@@ -1,0 +1,102 @@
+name: V131 production workspace UI safe release
+
+on:
+  push:
+    branches:
+      - v131-production-monthly-workspace-ui
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test-production-ui:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: darma
+          POSTGRES_USER: darma
+          POSTGRES_PASSWORD: darma
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U darma"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_NAME: darma
+      DB_USER: darma
+      DB_PASSWORD: darma
+      DJANGO_SETTINGS_MODULE: config.settings
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+      - name: Syntax, templates and unchanged database schema
+        run: |
+          python -m compileall -q core/material_report_ui_v131.py core/test_production_workspace_v131.py
+          sh -n server_production_ui_v131.sh
+          python manage.py check
+          python manage.py makemigrations --check --dry-run
+          python - <<'PY'
+          import django
+          django.setup()
+          from django.template.loader import get_template
+          get_template('core/material_report_v131.html')
+          print('V131_TEMPLATE_OK')
+          PY
+      - name: Isolated Django functional and read-only tests
+        run: |
+          python - <<'PY'
+          import django
+          django.setup()
+          from django.test import override_settings
+          from django.core.management import call_command
+          with override_settings(MIGRATION_MODULES={'core': None}):
+              call_command('test', 'core.test_production_workspace_v131',
+                           interactive=False, verbosity=2)
+          PY
+      - name: Verify strictly UI-only changed-file scope
+        run: |
+          python - <<'PY'
+          import subprocess
+          from pathlib import Path
+          base = 'ba41d6f0479f65b3a1d72084b6ba2836fc8228a9'
+          changed = set(subprocess.check_output(
+              ['git', 'diff', '--name-only', base + '..HEAD'], text=True
+          ).splitlines())
+          allowed = {
+              'core/material_report_ui_v131.py',
+              'templates/core/material_report_v131.html',
+              'core/static/core/production_workspace_v131.css',
+              'core/static/core/production_workspace_v131.js',
+              'core/urls.py',
+              'core/test_production_workspace_v131.py',
+              'core/management/commands/check_production_ui_v131.py',
+              '.github/workflows/check-production-ui-v131.yml',
+              'server_production_ui_v131.sh',
+          }
+          unexpected = changed - allowed
+          if unexpected:
+              raise SystemExit('Unexpected files: ' + repr(sorted(unexpected)))
+          protected = [
+              'core/material_report_v23.py', 'core/material_flow.py',
+              'core/material_color_apply_v123.py', 'core/final_services.py',
+              'core/capital_history_v87.py', 'core/inventory_valuation_v17.py',
+              'core/darma_cost_v55.py', 'core/models.py',
+          ]
+          for path in protected:
+              if Path(path).exists() and path in changed:
+                  raise SystemExit('Protected logic changed: ' + path)
+          print('V131_ONLY_UI_AND_READ_ONLY_GET_FILES_CHANGED')
+          PY
