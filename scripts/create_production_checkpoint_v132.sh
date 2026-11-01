@@ -183,12 +183,12 @@ this checkpoint. Prefer revertable schema migrations and business-safe data
 forward-repairs for any changes that modify production quantities/ledgers.
 DO NOT automate SQL restores just because the user dislikes a redesign.
 TXT
+printf 'CHECKPOINT_FINISHED_UTC=%s\n' "$(date -u --iso-8601=seconds)" > "$STAGING/FINISHED.txt"
 (
   cd "$STAGING"
   find . -type f ! -name SHA256SUMS.txt -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS.txt
   sha256sum --check --status SHA256SUMS.txt
 )
-printf 'CHECKPOINT_FINISHED_UTC=%s\n' "$(date -u --iso-8601=seconds)" > "$STAGING/FINISHED.txt"
 mv "$STAGING" "$CHECKPOINT"
 STAGING=
 DONE=1
