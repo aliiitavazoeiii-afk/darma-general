@@ -1,0 +1,235 @@
+{% extends 'base.html' %}{% load jalali static %}
+{% block title %}تولید | DARMA{% endblock %}
+{% block content %}
+{% include 'core/_mobile_shell.html' %}
+<link rel="stylesheet" href="{% static 'core/production_workspace_v131.css' %}">
+<div class="prod131">
+  <header class="prod131-head">
+    <div>
+      <div class="page-kicker">مدیریت تولید دارما</div>
+      <h1 class="page-title mb-1">تولید و تحویل خیاط</h1>
+      <p class="prod131-muted mb-0">هر کد پارچه در یک ردیف؛ جزئیات سایز و تحویل فقط هنگام باز کردن ردیف.</p>
+    </div>
+    <form method="post" class="prod131-create">{% csrf_token %}
+      <input type="hidden" name="date" value="{{ today_j }}">
+      <input name="title" class="form-control" placeholder="عنوان صورت جدید (اختیاری)" aria-label="عنوان صورت جدید">
+      <select name="brand" class="form-select" aria-label="برند" required>
+        {% for brand in brands %}<option value="{{ brand.id }}" {% if brand.name == 'دارما' %}selected{% endif %}>{{ brand.name }}</option>{% endfor %}
+      </select>
+      <button type="submit" class="btn btn-primary">+ صورت جدید</button>
+    </form>
+  </header>
+
+  <section class="prod131-overview" aria-label="گزارش جامع تمام تولیدها">
+    <div class="prod131-section-head">
+      <div><h2>گزارش جامع کارهای در جریان</h2><p>کدهای ناتمام و تحویل‌های اعمال‌نشده از تمام ماه‌ها</p></div>
+      <div class="prod131-stock">
+        <span>پارچه نزد خیاط <strong>{{ stock.fabric_kg|floatformat:2 }} کیلو</strong></span>
+        <span>کش نزد خیاط <strong>{{ stock.elastic_kg|floatformat:2 }} کیلو</strong></span>
+      </div>
+    </div>
+    <div class="prod131-stats">
+      <div><span>کدهای در جریان</span><strong class="num">{{ all_totals.rolls|groupnum }}</strong></div>
+      <div><span>وزن ثبت‌شده</span><strong class="num">{{ all_totals.weight|floatformat:2 }} <small>کیلو</small></strong></div>
+      <div><span>کل برش</span><strong class="num">{{ all_totals.cut|groupnum }}</strong></div>
+      <div><span>تحویل ثبت‌شده</span><strong class="num">{{ all_totals.entered|groupnum }}</strong></div>
+      <div><span>مانده تحویل</span><strong class="num">{{ all_totals.remaining|groupnum }}</strong></div>
+      <div><span>میانگین برش</span><strong class="num">{{ all_totals.average_cut|groupnum }}</strong></div>
+    </div>
+    <p class="prod131-footnote">این گزارش شامل کدهایی است که هنوز تحویل، همگام‌سازی یا مصرف مواد آن‌ها تکمیل نشده است. موجودی فیزیکی پارچه و کش نزد خیاط مستقل از فهرست کدها نمایش داده می‌شود.</p>
+  </section>
+
+  <section class="prod131-work" aria-label="جدول ماه و طاقه‌ها">
+    <div class="prod131-work-top">
+      <div>
+        <div class="page-kicker">جزئیات تولید</div>
+        <h2>{% if mode == 'open' %}کارهای ناتمام تمام ماه‌ها{% else %}صورت {{ month_title }}{% endif %}</h2>
+      </div>
+      <div class="prod131-tabs">
+        <a class="{% if mode == 'month' %}selected{% endif %}" href="?report_month={{ month|urlencode }}">صورت ماه</a>
+        <a class="{% if mode == 'open' %}selected{% endif %}" href="?mode=open">کارهای باز <span>{{ open_count|groupnum }}</span></a>
+      </div>
+    </div>
+    <div class="prod131-toolbar">
+      <label>
+        <span>ماه تولید</span>
+        <select class="form-select" id="prod131-month">
+          {% for item in months %}<option value="{{ item.key }}" {% if item.key == month %}selected{% endif %}>{{ item.label }}</option>{% endfor %}
+        </select>
+      </label>
+      <label class="prod131-search">
+        <span>جست‌وجوی رنگ، کد پارچه یا عنوان صورت</span>
+        <input type="search" class="form-control" id="prod131-search" placeholder="مثلاً صورتی یا P8" autocomplete="off">
+      </label>
+      <div class="prod131-month-summary">در این نما: <b>{{ scope.rolls|groupnum }}</b> ردیف · <b>{{ scope.cut|groupnum }}</b> برش · <b>{{ scope.remaining|groupnum }}</b> مانده</div>
+    </div>
+
+    {% for editor in editors %}
+    <form id="{{ editor.form_id }}" method="post" action="{% url 'material_block_save' editor.obj.id %}" class="prod131-hidden-form">
+      {% csrf_token %}
+      <input type="hidden" name="date" value="{{ editor.date_j }}">
+      <input type="hidden" name="title" value="{{ editor.obj.title }}">
+      <input type="hidden" name="brand" value="{{ editor.obj.brand.id }}">
+      <input type="hidden" name="note" value="{{ editor.obj.note }}">
+      <input type="hidden" name="active_material_keys" value="{{ editor.active_keys_csv }}">
+      {% for field in editor.hidden_fields %}<input type="hidden" name="{{ field.name }}" value="{{ field.value }}">{% endfor %}
+      {% for field in editor.delivery_fields %}<input type="hidden" name="{{ field.name }}" value="{{ field.value }}">{% endfor %}
+    </form>
+    {% endfor %}
+
+    <div class="prod131-filter-metrics" id="prod131-filter-metrics" hidden aria-live="polite"></div>
+    <div class="prod131-table-wrap">
+      <table class="prod131-table" id="prod131-table">
+        <thead>
+          <tr>
+            <th scope="col">رنگ و کد پارچه</th>
+            <th scope="col">وزن</th>
+            <th scope="col">برش</th>
+            <th scope="col">تحویل</th>
+            <th scope="col">مانده</th>
+            <th scope="col">بهای هر عدد</th>
+            <th scope="col">وضعیت</th>
+            <th scope="col"></th>
+          </tr>
+        </thead>
+        {% for editor in editors %}
+          {% for row in editor.rows %}
+          <tbody class="prod131-group" data-search="{{ row.search }}" data-block="{{ editor.obj.id }}" data-key="{{ row.key }}" data-weight="{{ row.weight }}" data-cut="{{ row.cut }}" data-entered="{{ row.entered }}" data-remaining="{{ row.remaining }}" data-unit-cost="{{ row.unit_cost }}">
+            <tr class="prod131-main" {% if forloop.first %}id="block-{{ editor.obj.id }}"{% endif %}>
+              <td>
+                <div class="prod131-code"><strong>{% if row.code %}{{ row.code }}{% else %}بدون کد{% endif %}</strong><span>{{ row.color }}</span></div>
+                <small class="prod131-small">{{ editor.date_j }} · صورت {{ editor.obj.id }}</small>
+              </td>
+              <td class="prod131-num">{{ row.weight|default:'—' }}</td>
+              <td class="prod131-num">{{ row.cut|groupnum }}</td>
+              <td class="prod131-num">{{ row.entered|groupnum }}</td>
+              <td class="prod131-num prod131-remain">{{ row.remaining|groupnum }}</td>
+              <td class="prod131-num">{{ row.unit_cost|default:'—' }}</td>
+              <td>
+                {% if row.dirty_stock %}<span class="prod131-state pending">در انتظار اعمال</span>{% else %}<span class="prod131-state ok">تحویل هماهنگ</span>{% endif %}
+                {% if row.material_applied %}<small class="prod131-mat-state">مصرف مواد اعمال شده</small>{% else %}<small class="prod131-mat-state">مصرف مواد اعمال نشده</small>{% endif %}
+              </td>
+              <td><button type="button" class="prod131-toggle" aria-expanded="false" aria-label="باز کردن جزئیات {{ row.color }} {{ row.code }}">جزئیات <span>⌄</span></button></td>
+            </tr>
+            <tr class="prod131-detail" hidden><td colspan="8">
+              <div class="prod131-detail-panel">
+                <div class="prod131-detail-header">
+                  <div><h3>{{ row.color }} {% if row.code %}{{ row.code }}{% endif %}</h3>
+                    <p>برش {{ row.cut|groupnum }} · تحویل {{ row.entered|groupnum }} · مانده {{ row.remaining|groupnum }} · اعمال‌شده {{ row.applied|groupnum }}</p></div>
+                  <button type="button" class="prod131-close" aria-label="بستن جزئیات">×</button>
+                </div>
+                <div class="prod131-fields">
+                  {% for field in row.fields %}
+                    {% if field.field_key != 'wage' and field.field_key != 'cost' %}
+                    <label class="prod131-field">
+                      <span>{{ field.label }}</span>
+                      {% if field.type == 'elastic16' or field.type == 'elastic25' %}
+                        <select class="form-select" name="{{ field.name }}" form="{{ editor.form_id }}">
+                          {% for choice_key,choice_label in field.choices %}<option value="{{ choice_key }}" {% if field.value == choice_key %}selected{% endif %}>{{ choice_label }}</option>{% endfor %}
+                        </select>
+                      {% else %}
+                        <input class="form-control{% if field.type != 'text' %} ltr{% endif %}" form="{{ editor.form_id }}"
+                            name="{{ field.name }}" value="{{ field.value }}" data-field="{{ field.field_key }}"
+                            {% if field.type != 'text' %}inputmode="decimal"{% endif %}
+                            {% if field.field_key == 'fabric_code' %}data-new-code="1"{% endif %}>
+                      {% endif %}
+                    </label>
+                    {% endif %}
+                  {% endfor %}
+                </div>
+                <div class="prod131-size-head">
+                  <div><h4>تحویل شورت به تفکیک سایز</h4><p>برای هر سایز سه نوبت تحویل؛ جمع تمام نوبت‌ها مبنای همگام‌سازی موجودی است.</p></div>
+                  <span>بهای محاسباتی هر عدد: <b>{{ row.unit_cost|default:'۰' }} تومان</b></span>
+                </div>
+                <div class="prod131-size-table-wrap">
+                  <table class="prod131-sizes">
+                    <thead><tr><th>سایز</th><th>تحویل ۱</th><th>تحویل ۲</th><th>تحویل ۳</th></tr></thead>
+                    <tbody>
+                      {% for size in row.sizes %}
+                      <tr><th>{{ size.label }}</th>
+                        {% for part in size.parts %}
+                        <td><input class="form-control ltr prod131-delivery" inputmode="numeric"
+                          form="{{ editor.form_id }}" name="{{ part.name }}" value="{{ part.value }}" placeholder="۰"
+                          aria-label="{{ row.color }} {{ size.label }} نوبت {{ part.index }}"></td>
+                        {% endfor %}
+                      </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
+                {% if forloop.first %}
+                <details class="prod131-sheet-options">
+                  <summary>عنوان، تاریخ و مدل‌های این صورت</summary>
+                  <div class="prod131-sheet-grid">
+                    <label><span>عنوان صورت</span><input class="form-control prod131-meta" data-meta="title" data-form="{{ editor.form_id }}" value="{{ editor.obj.title }}"></label>
+                    <label><span>تاریخ صورت</span><input class="form-control prod131-meta ltr" data-meta="date" data-form="{{ editor.form_id }}" value="{{ editor.date_j }}"></label>
+                    <label><span>یادداشت صورت</span><input class="form-control prod131-meta" data-meta="note" data-form="{{ editor.form_id }}" value="{{ editor.obj.note }}"></label>
+                    {% if editor.add_model_choices %}
+                    <label><span>مدل دیگر به صورت اضافه شود</span>
+                      <select class="form-select" name="add_material_key" form="{{ editor.form_id }}">
+                        <option value="">انتخاب...</option>
+                        {% for key,label in editor.add_model_choices %}<option value="{{ key }}">{{ label }}</option>{% endfor %}
+                      </select>
+                    </label>
+                    {% endif %}
+                  </div>
+                  {% if editor.add_model_choices %}
+                    <button class="btn btn-outline-light btn-sm" type="submit" form="{{ editor.form_id }}" formaction="{% url 'material_block_add_model' editor.obj.id %}">افزودن مدل انتخاب‌شده</button>
+                  {% endif %}
+                </details>
+                {% endif %}
+                <div class="prod131-actions">
+                  <div class="prod131-action-note">
+                    <strong>این ردیف متعلق به صورت {{ editor.obj.id }} است.</strong>
+                    <span>ثبت تحویل، تغییراتِ ذخیره‌شده و اعمال‌نشده تمام رنگ‌های همین صورت را همگام می‌کند؛ موجودی و حساب خیاط با مسیر فعلی ثبت می‌شوند.</span>
+                  </div>
+                  <div class="prod131-buttons">
+                    <button class="btn btn-outline-light" type="submit" form="{{ editor.form_id }}">فقط ذخیره اطلاعات</button>
+                    <button class="btn btn-success prod131-open-dest" type="button" data-dialog="prod131-dialog-{{ editor.obj.id }}-{{ row.key }}">ثبت تحویل و انتخاب محل</button>
+                  </div>
+                </div>
+                <div class="prod131-material-panel">
+                  <div><strong>مصرف مواد اولیه</strong><p>این عملیات مستقل از تحویل محصول است و با همان منطق فعلی مواد نزد خیاط را اعمال می‌کند.</p></div>
+                  <div class="prod131-material-buttons">
+                    <button type="submit" class="btn btn-outline-warning btn-sm" form="{{ editor.form_id }}"
+                      name="material_color_key" value="{{ row.key }}"
+                      formaction="{% url 'material_block_apply_color' editor.obj.id %}"
+                      data-confirm="مصرف پارچه و کش این رنگ با موجودی نزد خیاط همگام شود؟">اعمال مصرف همین رنگ</button>
+                    <button type="submit" class="btn btn-outline-warning btn-sm" form="{{ editor.form_id }}"
+                      formaction="{% url 'material_block_apply' editor.obj.id %}"
+                      data-confirm="مصرف مواد تمام رنگ‌های این صورت همگام شود؟">اعمال مصرف کل صورت</button>
+                  </div>
+                </div>
+                <dialog class="prod131-dialog" id="prod131-dialog-{{ editor.obj.id }}-{{ row.key }}">
+                  <h3>تحویل به کجا اضافه شود؟</h3>
+                  <p>فقط اختلاف تعدادهای اعمال‌نشده این صورت ثبت می‌شود. انتخاب مقصد، تحویل‌های قبلی را جابه‌جا نمی‌کند.</p>
+                  <div class="prod131-dialog-buttons">
+                    <button type="submit" class="btn btn-primary" form="{{ editor.form_id }}"
+                      name="delivery_destination" value="home"
+                      formaction="{% url 'material_block_apply_output' editor.obj.id %}">خانه</button>
+                    {% if editor.brand == 'دارما' %}<button type="submit" class="btn btn-success" form="{{ editor.form_id }}"
+                      name="delivery_destination" value="khorshid"
+                      formaction="{% url 'material_block_apply_output' editor.obj.id %}">خورشید</button>{% endif %}
+                  </div>
+                  <button type="button" class="btn btn-outline-light prod131-dialog-close">انصراف</button>
+                </dialog>
+              </div>
+            </td></tr>
+          </tbody>
+          {% endfor %}
+        {% empty %}
+        <tbody class="prod131-no-sheets"><tr><td colspan="8">در این ماه هنوز صورتی ثبت نشده است. از «صورت جدید» استفاده کن.</td></tr></tbody>
+        {% endfor %}
+      </table>
+      <div class="prod131-no-results" id="prod131-no-results" hidden>کدی با این جست‌وجو پیدا نشد؛ رنگ یا کد دیگری وارد کن.</div>
+    </div>
+    <footer class="prod131-bottom">
+      <span>دکمه ذخیره به‌تنهایی موجودی یا مزد را تغییر نمی‌دهد. ثبت تحویل، مقصد را حتماً از تو می‌پرسد.</span>
+      <span>برای صورت‌های قدیمی، تاریخچه کامل در پایگاه داده دست‌نخورده می‌ماند.</span>
+    </footer>
+  </section>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="{% static 'core/production_workspace_v131.js' %}"></script>
+{% endblock %}
