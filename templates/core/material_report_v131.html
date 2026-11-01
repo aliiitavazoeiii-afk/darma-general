@@ -22,21 +22,21 @@
 
   <section class="prod131-overview" aria-label="گزارش جامع تمام تولیدها">
     <div class="prod131-section-head">
-      <div><h2>گزارش جامع تولید</h2><p>از تمام صورت‌های ثبت‌شده، مستقل از ماه جاری</p></div>
+      <div><h2>گزارش جامع کارهای در جریان</h2><p>کدهای ناتمام و تحویل‌های اعمال‌نشده از تمام ماه‌ها</p></div>
       <div class="prod131-stock">
         <span>پارچه نزد خیاط <strong>{{ stock.fabric_kg|floatformat:2 }} کیلو</strong></span>
         <span>کش نزد خیاط <strong>{{ stock.elastic_kg|floatformat:2 }} کیلو</strong></span>
       </div>
     </div>
     <div class="prod131-stats">
-      <div><span>ردیف‌های پارچه</span><strong class="num">{{ all_totals.rolls|groupnum }}</strong></div>
+      <div><span>کدهای در جریان</span><strong class="num">{{ all_totals.rolls|groupnum }}</strong></div>
       <div><span>وزن ثبت‌شده</span><strong class="num">{{ all_totals.weight|floatformat:2 }} <small>کیلو</small></strong></div>
       <div><span>کل برش</span><strong class="num">{{ all_totals.cut|groupnum }}</strong></div>
       <div><span>تحویل ثبت‌شده</span><strong class="num">{{ all_totals.entered|groupnum }}</strong></div>
       <div><span>مانده تحویل</span><strong class="num">{{ all_totals.remaining|groupnum }}</strong></div>
       <div><span>میانگین برش</span><strong class="num">{{ all_totals.average_cut|groupnum }}</strong></div>
     </div>
-    <p class="prod131-footnote">ارقام برش و تحویل از صورت‌های ثبت‌شده خوانده می‌شوند؛ موجودی فیزیکی مواد نزد خیاط جداگانه نمایش داده شده است. «تحویل ثبت‌شده» با «اعمال‌شده به موجودی» یکسان نیست.</p>
+    <p class="prod131-footnote">این گزارش شامل کدهایی است که هنوز تحویل، همگام‌سازی یا مصرف مواد آن‌ها تکمیل نشده است. موجودی فیزیکی پارچه و کش نزد خیاط مستقل از فهرست کدها نمایش داده می‌شود.</p>
   </section>
 
   <section class="prod131-work" aria-label="جدول ماه و طاقه‌ها">
@@ -77,6 +77,7 @@
     </form>
     {% endfor %}
 
+    <div class="prod131-filter-metrics" id="prod131-filter-metrics" hidden aria-live="polite"></div>
     <div class="prod131-table-wrap">
       <table class="prod131-table" id="prod131-table">
         <thead>
@@ -93,7 +94,7 @@
         </thead>
         {% for editor in editors %}
           {% for row in editor.rows %}
-          <tbody class="prod131-group" data-search="{{ row.search }}" data-block="{{ editor.obj.id }}" data-key="{{ row.key }}">
+          <tbody class="prod131-group" data-search="{{ row.search }}" data-block="{{ editor.obj.id }}" data-key="{{ row.key }}" data-weight="{{ row.weight }}" data-cut="{{ row.cut }}" data-entered="{{ row.entered }}" data-remaining="{{ row.remaining }}" data-unit-cost="{{ row.unit_cost }}">
             <tr class="prod131-main" {% if forloop.first %}id="block-{{ editor.obj.id }}"{% endif %}>
               <td>
                 <div class="prod131-code"><strong>{% if row.code %}{{ row.code }}{% else %}بدون کد{% endif %}</strong><span>{{ row.color }}</span></div>
