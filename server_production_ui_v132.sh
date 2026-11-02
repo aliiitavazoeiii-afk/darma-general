@@ -14,7 +14,7 @@ git diff --cached --quiet -- . ':(exclude)Caddyfile' || fail "Unexpected staged 
 git diff --quiet "$BASE"..HEAD -- core/models.py core/migrations core/material_report_v23.py core/material_report_v22.py core/material_report_v20.py core/material_flow.py core/material_color_apply_v123.py core/capital_history_v87.py core/inventory_valuation_v17.py core/business_tools_v21.py core/finance.py core/darma_cost_v55.py || fail "Protected business logic modified"
 for file in $(git diff --name-only "$BASE"..HEAD); do
   case "$file" in
-    core/urls.py|core/material_report_ui_v131.py|core/management/commands/check_production_ui_v131.py|core/test_production_workspace_v131.py|core/static/core/production_workspace_v131.css|core/static/core/production_workspace_v131.js|templates/core/material_report_v131.html|server_production_ui_v132.sh) ;;
+    core/urls.py|core/material_report_ui_v131.py|core/management/commands/check_production_ui_v131.py|core/test_production_workspace_v131.py|core/static/core/production_workspace_v131.css|core/static/core/production_workspace_v131.js|templates/core/material_report_v131.html|.github/workflows/check-production-ui-v132.yml|server_production_ui_v132.sh) ;;
     *) fail "Unexpected changed file: $file" ;;
   esac
 done
