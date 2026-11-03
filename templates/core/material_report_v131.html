@@ -120,7 +120,7 @@
         </thead>
         {% for editor in editors %}
           {% for row in editor.rows %}
-          <tbody class="prod131-group" data-search="{{ row.search }}" data-color="{{ row.key }}" data-block="{{ editor.obj.id }}" data-key="{{ row.key }}" data-weight="{{ row.weight }}" data-cut="{{ row.cut }}" data-entered="{{ row.entered }}" data-remaining="{{ row.remaining }}" data-surplus="{{ row.surplus }}" data-unit-cost="{{ row.unit_cost }}">
+          <tbody class="prod131-group" data-search="{{ row.search }}" data-color="{{ row.key }}" data-block="{{ editor.obj.id }}" data-key="{{ row.key }}" data-weight="{{ row.weight }}" data-cut="{{ row.cut }}" data-entered="{{ row.entered }}" data-remaining="{{ row.remaining }}" data-surplus="{{ row.surplus }}" data-unit-cost="{{ row.unit_cost }}" data-cost-total="{{ row.cost_total }}">
             <tr class="prod131-main" {% if forloop.first %}id="block-{{ editor.obj.id }}"{% endif %}>
               <td>
                 <div class="prod131-code"><strong>{% if row.code %}{{ row.code }}{% else %}بدون کد{% endif %}</strong><span>{{ row.color }}</span></div>
