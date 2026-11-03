@@ -71,7 +71,8 @@ def _totals(blocks, only_open=False):
     total = {"rolls": 0, "weight": Decimal("0"), "cut": 0,
              "entered": 0, "applied": 0, "remaining": 0, "surplus": 0,
              "open_rolls": 0, "average_cut": 0, "cost_total": 0,
-             "cost_cut": 0, "average_unit_cost": 0}
+             "cost_cut": 0, "average_unit_cost": 0,
+             "yield_cut": 0, "yield_weight": Decimal("0"), "yield_per_20kg": 0}
     for block in blocks:
         raw_applied = {
             row.material_key for row in block.stock_consumptions.all()
@@ -92,11 +93,18 @@ def _totals(blocks, only_open=False):
             total["remaining"] += roll["remaining"]
             total["surplus"] += roll["surplus"]
             total["cost_total"] += roll["cost_total"]
+            if roll["weight"] > 0 and roll["cut"] > 0:
+                total["yield_cut"] += roll["cut"]
+                total["yield_weight"] += roll["weight"]
             if roll["cut"] > 0:
                 total["cost_cut"] += roll["cut"]
             total["open_rolls"] += int(roll["cut"] > roll["entered"])
     if total["rolls"]:
         total["average_cut"] = round(total["cut"] / total["rolls"])
+    if total["yield_weight"] > 0:
+        total["yield_per_20kg"] = v23.round_money(
+            Decimal(total["yield_cut"]) * Decimal("20") / total["yield_weight"]
+        )
     if total["cost_cut"]:
         total["average_unit_cost"] = v23.round_money(
             Decimal(total["cost_total"]) / Decimal(total["cost_cut"])
@@ -179,6 +187,11 @@ def _editor(block):
             "elastic16": raw.get("elastic16") or "",
             "elastic25": raw.get("elastic25") or "",
             "material_applied": key in consumed_keys,
+            "material_meaningful": bool(
+                str(raw.get("fabric_code") or "").strip()
+                or q(raw.get("weight")) > 0 or cut > 0 or entered > 0
+                or key in consumed_keys
+            ),
             "dirty_stock": entered != applied,
             "fields": fields,
             "sizes": [
