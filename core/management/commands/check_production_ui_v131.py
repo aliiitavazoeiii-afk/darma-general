@@ -37,13 +37,14 @@ class Command(BaseCommand):
             'value="khorshid"',
             'material_block_apply_color',
             'material_block_apply_output',
-            'material_block_apply',
             'material_block_save',
             'prod131-delivery',
             'prod131-group',
         ):
             if marker not in template:
                 raise RuntimeError(f"Missing V131 UI contract: {marker}")
+        if "اعمال مصرف کل صورت" in template:
+            raise RuntimeError("V133 must not expose whole-sheet consumption control")
         for marker in (
             "prod131-search", "prod131-toggle", "prod131-open-dest",
             "initialCode", "formaction", "data-field", "2.5",
@@ -51,9 +52,9 @@ class Command(BaseCommand):
             if marker not in script:
                 raise RuntimeError(f"Missing V131 JS contract: {marker}")
         self.stdout.write("MONTHLY ROW UI=ON")
-        self.stdout.write("COLOR/CODE SEARCH=ON")
+        self.stdout.write("COLOR/CODE FILTER AND PER-MONTH ARCHIVE=ON")
         self.stdout.write("THREE DELIVERY INPUTS PER SIZE=V23 UNCHANGED")
         self.stdout.write("WAREHOUSE CHOICE=V23 UNCHANGED")
-        self.stdout.write("PER-COLOR AND WHOLE-SHEET CONSUMPTION=V23 UNCHANGED")
+        self.stdout.write("PER-COLOR MATERIAL CONTROL=VISIBLE; WHOLE-SHEET BUTTON=HIDDEN")
         self.stdout.write("DATABASE WRITES=NONE")
         self.stdout.write(self.style.SUCCESS("V131 PRODUCTION UI READ-ONLY CONTRACT CHECK OK"))
