@@ -213,6 +213,57 @@ class ProductionWorkspaceV131Tests(TestCase):
         self.assertContains(response, "data-cost-total=")
         self.assertContains(response, "میانگین بهای تمام‌شده هر شورت")
 
+
+    def test_weight_adjusted_20kg_yield_excludes_missing_or_zero_weight(self):
+        # 684 pieces from 17.73kg is better yield than 760 from 20kg.
+        raw = self.block.input_data
+        raw["pink"]["weight"] = "17.73"
+        raw["pink"]["cut"] = "684"
+        raw["white"]["weight"] = "20"
+        raw["white"]["cut"] = "760"
+        self.block.input_data = raw
+        self.block.save(update_fields=["input_data"])
+        totals = ui._totals([self.block])
+        expected = posting.round_money(
+            Decimal("1444") * Decimal("20") / Decimal("37.73")
+        )
+        self.assertEqual(totals["yield_per_20kg"], expected)
+        self.assertNotEqual(totals["yield_per_20kg"], totals["average_cut"])
+
+        # A roll with unknown weight must not distort normalized yield.
+        raw["white"]["weight"] = ""
+        self.block.input_data = raw
+        self.block.save(update_fields=["input_data"])
+        totals = ui._totals([self.block])
+        self.assertEqual(
+            totals["yield_per_20kg"],
+            posting.round_money(Decimal("684") * Decimal("20") / Decimal("17.73"))
+        )
+
+    def test_material_status_filters_use_fabric_consumption_not_delivery_sync(self):
+        from pathlib import Path
+        from django.conf import settings
+        MaterialReportConsumption.objects.create(
+            block=self.block, kind="fabric", material_key="pink",
+            quantity=Decimal("17.73"), variant=""
+        )
+        response = self.client.get(reverse("material_report"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'data-material-filter="all"')
+        self.assertContains(response, 'data-material-filter="unapplied"')
+        self.assertContains(response, 'data-material-filter="applied"')
+        self.assertContains(response, 'data-material-status="applied"')
+        self.assertContains(response, 'data-material-status="unapplied"')
+        self.assertNotContains(response, "تحویل هماهنگ")
+        self.assertContains(response, "بازده برش معادل ۲۰ کیلو")
+        self.assertContains(response, "همه ماه‌های ثبت‌شده")
+        rows = ui._editor(self.block)["rows"]
+        self.assertTrue(next(x for x in rows if x["key"] == "pink")["material_applied"])
+        self.assertFalse(next(x for x in rows if x["key"] == "white")["material_applied"])
+        script = (Path(settings.BASE_DIR) / "core/static/core/production_workspace_v131.js").read_text("utf-8")
+        for marker in ("selectedMaterial", "matchesMaterial", "validWeight", "validCut", "materialMeaningful"):
+            self.assertIn(marker, script)
+
     def test_surplus_not_clamped_away_in_visual_row(self):
         self.block.output_data["pink"]["m"] = "790"
         self.block.save(update_fields=["output_data"])
