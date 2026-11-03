@@ -59,12 +59,28 @@
           <strong>{{ month.label }}</strong>
           <small>{{ month.count }} تراکنش</small>
         </div>
-        <div class="history-month-total">
-          <small>جمع این ماه</small>
-          <strong class="money">{{ month.total|groupnum }}</strong>
-          <span>تومان</span>
+        <div class="history-month-stats">
+          <div class="history-month-metric history-month-total">
+            <small>جمع این ماه</small>
+            <strong class="money">{{ month.total|groupnum }}</strong>
+            <span>تومان</span>
+          </div>
+          <div class="history-month-metric history-month-average">
+            <small>میانگین خرج روزانه</small>
+            <strong class="money">{{ month.daily_average|groupnum }}</strong>
+            <span>تومان در روز · {{ month.days_in_month }} روز</span>
+          </div>
         </div>
         <span class="history-month-chevron">⌄</span>
+        <div class="history-month-categories" aria-label="جمع هزینه‌های دسته‌بندی‌شده این ماه">
+          {% for category in month.category_totals %}
+          <span class="history-month-category">
+            <span>{{ category.name }}</span>
+            <strong class="money">{{ category.total|groupnum }}</strong>
+            <small>تومان</small>
+          </span>
+          {% endfor %}
+        </div>
       </summary>
       <div class="history-month-body day-groups">
         {% include 'expense_tracker/_expense_day_groups.html' with day_groups=month.day_groups %}
