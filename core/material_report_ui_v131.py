@@ -164,6 +164,8 @@ def _editor(block):
         applied = int(out_row["applied_total"])
         fields = field_map[key]
         fields_by_key = {f["field_key"]: f for f in fields}
+        wage = v23.v20._wage_for_pieces(cut, v23.v20._dozen_wage()) if cut else 0
+        batch_cost = v23.calculate_model_cost(key, raw, wage) if cut else {}
         rows.append({
             "key": key,
             "color": v23._material_label(key),
@@ -172,6 +174,7 @@ def _editor(block):
             "cut": cut, "entered": entered, "applied": applied,
             "remaining": max(0, cut - entered),
             "surplus": max(0, entered - cut),
+            "cost_total": int(batch_cost.get("total_cost") or 0),
             "unit_cost": fields_by_key["cost"]["value"],
             "elastic16": raw.get("elastic16") or "",
             "elastic25": raw.get("elastic25") or "",
