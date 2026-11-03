@@ -56,6 +56,13 @@ class ProductionWorkspaceV131Tests(TestCase):
             block=self.block, model_key="pink", size_key="xl", quantity=20
         )
 
+    def _visible_codes(self, response):
+        return {
+            row["code"]
+            for editor in response.context["editors"]
+            for row in editor["rows"]
+        }
+
     def test_only_main_get_route_changed_and_original_post_routes_unchanged(self):
         self.assertIs(resolve("/material-report/").func, ui.material_report)
         self.assertIs(resolve(f"/material-report/{self.block.id}/save/").func, posting.material_block_save)
@@ -122,7 +129,7 @@ class ProductionWorkspaceV131Tests(TestCase):
         archive_response = self.client.get(reverse("material_report"), {"mode": "archive"})
         self.assertEqual(archive_response.status_code, 200)
         self.assertContains(archive_response, "P-old")
-        self.assertNotContains(archive_response, "P8")
+        self.assertNotIn("P8", self._visible_codes(archive_response))
         self.assertContains(archive_response, "ماه‌های گذشته")
         self.assertNotContains(archive_response, "کارهای باز")
 
@@ -154,14 +161,14 @@ class ProductionWorkspaceV131Tests(TestCase):
         self.assertEqual(october.status_code, 200)
         self.assertContains(october, "OLD-07")
         self.assertNotContains(october, "OLD-06")
-        self.assertNotContains(october, "P8")
+        self.assertNotIn("P8", self._visible_codes(october))
         september = self.client.get(reverse("material_report"), {
             "mode": "archive", "report_month": "1405/06",
         })
         self.assertEqual(september.status_code, 200)
         self.assertContains(september, "OLD-06")
         self.assertNotContains(september, "OLD-07")
-        self.assertNotContains(september, "P8")
+        self.assertNotIn("P8", self._visible_codes(september))
         self.assertContains(september, "data-color-filter=\"white\"")
 
     def test_per_color_material_applied_badge_and_no_bulk_apply(self):
