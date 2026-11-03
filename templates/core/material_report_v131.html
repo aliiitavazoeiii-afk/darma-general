@@ -34,11 +34,11 @@
       <div><span>کل برش</span><strong class="num">{{ all_totals.cut|groupnum }}</strong></div>
       <div><span>تحویل ثبت‌شده</span><strong class="num">{{ all_totals.entered|groupnum }}</strong></div>
       <div><span>مانده تحویل</span><strong class="num">{{ all_totals.remaining|groupnum }}</strong></div>
-      <div><span>میانگین برش</span><strong class="num">{{ all_totals.average_cut|groupnum }}</strong></div>
+      <div><span>بازده برش معادل ۲۰ کیلو</span><strong class="num">{% if all_totals.yield_per_20kg %}{{ all_totals.yield_per_20kg|groupnum }}{% else %}—{% endif %}</strong></div>
       <div class="prod131-cost-kpi"><span>میانگین بهای تمام‌شده هر شورت</span><strong class="num">{{ all_totals.average_unit_cost|groupnum }} <small>تومان</small></strong></div>
       <div class="prod131-cost-kpi"><span>هزینه برآوردی کل تولید</span><strong class="num">{{ all_totals.cost_total|groupnum }} <small>تومان</small></strong></div>
     </div>
-    <p class="prod131-footnote">بهای تولید بر اساس قیمت زنده پارچه و کش ثبت‌شده در مواد اولیه، مانده کش و مزد خیاط محاسبه می‌شود؛ میانگین بر مبنای تعداد برش وزن‌دهی شده است. این ارقام ارزش موجودی یا سود حسابداری را تغییر نمی‌دهند.</p>
+    <p class="prod131-footnote">این دو شاخص هزینه مربوط به <strong>همه ماه‌های ثبت‌شده</strong> هستند، نه فقط ماه انتخابی. هزینه کل = پارچه × فی زنده + کش مصرفی × فی زنده + مزد خیاطِ برش‌ها؛ میانگین هر عدد = جمع همین هزینه‌ها ÷ کل برش‌ها. قیمت پارچه ابتدا از موجودی نزد خیاط و در صورت نبود قیمت معتبر از انبار خوانده می‌شود؛ فی کش از موجودی نزد خیاط است. بازده ۲۰ کیلو فقط از کدهای دارای وزن و برش معتبر حساب می‌شود. این محاسبه برآوردی است و سرمایه یا موجودی حسابداری را تغییر نمی‌دهد.</p>
   </section>
 
   <section class="prod131-work" aria-label="جدول ماه و طاقه‌ها">
@@ -77,6 +77,12 @@
         <input type="search" class="form-control" id="prod131-search" placeholder="مثلاً صورتی یا P8" autocomplete="off">
       </label>
       <div class="prod131-month-summary">در این ماه: <b>{{ scope.rolls|groupnum }}</b> ردیف · <b>{{ scope.cut|groupnum }}</b> برش · <b>{{ scope.remaining|groupnum }}</b> مانده</div>
+    </div>
+    <div class="prod131-status-filter" role="group" aria-label="فیلتر وضعیت مصرف مواد">
+      <span>مصرف مواد:</span>
+      <button type="button" class="prod131-status-choice selected" data-material-filter="all" aria-pressed="true">همه</button>
+      <button type="button" class="prod131-status-choice" data-material-filter="unapplied" aria-pressed="false">اعمال‌نشده</button>
+      <button type="button" class="prod131-status-choice" data-material-filter="applied" aria-pressed="false">اعمال‌شده</button>
     </div>
     <div class="prod131-color-filter" role="group" aria-label="فیلتر رنگ صورت‌های {{ month_title }}">
       <button type="button" class="prod131-color-choice selected" data-color-filter="all" aria-pressed="true">همه رنگ‌ها</button>
@@ -120,7 +126,7 @@
         </thead>
         {% for editor in editors %}
           {% for row in editor.rows %}
-          <tbody class="prod131-group" data-search="{{ row.search }}" data-color="{{ row.key }}" data-block="{{ editor.obj.id }}" data-key="{{ row.key }}" data-weight="{{ row.weight }}" data-cut="{{ row.cut }}" data-entered="{{ row.entered }}" data-remaining="{{ row.remaining }}" data-surplus="{{ row.surplus }}" data-unit-cost="{{ row.unit_cost }}" data-cost-total="{{ row.cost_total }}">
+          <tbody class="prod131-group" data-search="{{ row.search }}" data-color="{{ row.key }}" data-material-status="{% if row.material_applied %}applied{% else %}unapplied{% endif %}" data-material-meaningful="{% if row.material_meaningful %}1{% else %}0{% endif %}" data-block="{{ editor.obj.id }}" data-key="{{ row.key }}" data-weight="{{ row.weight }}" data-cut="{{ row.cut }}" data-entered="{{ row.entered }}" data-remaining="{{ row.remaining }}" data-surplus="{{ row.surplus }}" data-unit-cost="{{ row.unit_cost }}" data-cost-total="{{ row.cost_total }}">
             <tr class="prod131-main" {% if forloop.first %}id="block-{{ editor.obj.id }}"{% endif %}>
               <td>
                 <div class="prod131-code"><strong>{% if row.code %}{{ row.code }}{% else %}بدون کد{% endif %}</strong><span>{{ row.color }}</span></div>
@@ -132,7 +138,7 @@
               <td class="prod131-num prod131-remain {% if row.surplus > 0 %}is-surplus{% elif row.remaining > 0 %}is-pending{% else %}is-zero{% endif %}">{% if row.surplus > 0 %}+{{ row.surplus|groupnum }}{% else %}{{ row.remaining|groupnum }}{% endif %}</td>
               <td class="prod131-num">{{ row.unit_cost|default:'—' }}</td>
               <td>
-                {% if row.dirty_stock %}<span class="prod131-state pending">در انتظار اعمال</span>{% else %}<span class="prod131-state ok">تحویل هماهنگ</span>{% endif %}
+                {% if row.dirty_stock %}<span class="prod131-state pending" title="تحویل در این صورت ثبت شده، اما هنوز به موجودی خانه یا خورشید همگام نشده است">تحویل منتظر ثبت در انبار</span>{% endif %}
                 {% if row.material_applied %}<span class="prod131-mat-state is-applied">مصرف مواد اعمال‌شده</span>{% else %}<span class="prod131-mat-state is-unapplied">مصرف مواد اعمال‌نشده</span>{% endif %}
               </td>
               <td><button type="button" class="prod131-toggle" aria-expanded="false" aria-label="باز کردن جزئیات {{ row.color }} {{ row.code }}">جزئیات <span>⌄</span></button></td>
