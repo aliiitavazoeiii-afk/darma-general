@@ -9,7 +9,7 @@ from django.urls import resolve, reverse
 from core import material_report_ui_v131 as ui, material_report_v23 as posting
 from core.models import (
     AppSetting, Brand, BusinessPayment, Color, ExcelManualRow, MaterialReportBlock,
-    MaterialReportOutputApplied, RawMaterialStock, Size, StockBalance, StockLocation
+    MaterialReportOutputApplied, MaterialReportConsumption, RawMaterialStock, Size, StockBalance, StockLocation
 )
 
 
@@ -119,9 +119,12 @@ class ProductionWorkspaceV131Tests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "P8")
         self.assertNotContains(response, "P-old")
-        open_response = self.client.get(reverse("material_report"), {"mode": "open"})
-        self.assertEqual(open_response.status_code, 200)
-        self.assertContains(open_response, "P-old")
+        archive_response = self.client.get(reverse("material_report"), {"mode": "archive"})
+        self.assertEqual(archive_response.status_code, 200)
+        self.assertContains(archive_response, "P-old")
+        self.assertNotContains(archive_response, "P8")
+        self.assertContains(archive_response, "ماه‌های گذشته")
+        self.assertNotContains(archive_response, "کارهای باز")
 
     def test_empty_new_sheet_allows_each_base_color_and_preserves_schema(self):
         new = MaterialReportBlock.objects.create(
@@ -133,3 +136,82 @@ class ProductionWorkspaceV131Tests(TestCase):
         self.assertEqual({x["key"] for x in editor["rows"]}, set(posting.BASE_KEYS))
         self.assertEqual(len(editor["rows"]), 5)
         self.assertEqual(len(editor["hidden_fields"]), 0)
+
+    def test_months_are_isolated_not_one_combined_previous_sheet_list(self):
+        MaterialReportBlock.objects.create(
+            date=date(2026, 10, 1), title="October", brand=self.brand,
+            input_data={"pink": {"fabric_code": "OLD-07", "weight": "20", "cut": "700"}},
+            output_data={},
+        )
+        MaterialReportBlock.objects.create(
+            date=date(2026, 9, 1), title="September", brand=self.brand,
+            input_data={"white": {"fabric_code": "OLD-06", "weight": "20", "cut": "700"}},
+            output_data={},
+        )
+        october = self.client.get(reverse("material_report"), {
+            "mode": "archive", "report_month": "1405/07",
+        })
+        self.assertEqual(october.status_code, 200)
+        self.assertContains(october, "OLD-07")
+        self.assertNotContains(october, "OLD-06")
+        self.assertNotContains(october, "P8")
+        september = self.client.get(reverse("material_report"), {
+            "mode": "archive", "report_month": "1405/06",
+        })
+        self.assertEqual(september.status_code, 200)
+        self.assertContains(september, "OLD-06")
+        self.assertNotContains(september, "OLD-07")
+        self.assertNotContains(september, "P8")
+        self.assertContains(september, "data-color-filter=\"white\"")
+
+    def test_per_color_material_applied_badge_and_no_bulk_apply(self):
+        MaterialReportConsumption.objects.create(
+            block=self.block, kind="fabric", material_key="pink",
+            quantity=Decimal("20"), variant=""
+        )
+        response = self.client.get(reverse("material_report"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "prod131-mat-state is-applied")
+        self.assertContains(response, "prod131-mat-state is-unapplied")
+        self.assertContains(response, "اعمال مصرف همین رنگ")
+        self.assertNotContains(response, "اعمال مصرف کل صورت")
+        self.assertContains(response, "data-surplus=")
+
+    def test_live_fabric_elastic_and_wage_cost_in_total_and_color_report(self):
+        stocks = [
+            ("fabric", "pink", "", "20", 2_000_000),
+            ("elastic", "pink", "16", "10", 2_400_000),
+            ("elastic", "pink", "25", "10", 2_400_000),
+        ]
+        for kind, key, variant, quantity, unit_price in stocks:
+            RawMaterialStock.objects.create(
+                kind=kind, material_key=key, variant=variant,
+                location="tailor", title="test-"+key, quantity=Decimal(quantity),
+                unit_price=unit_price,
+            )
+        posting._reset_request_caches()
+        rolls = ui._roll_entries(self.block)
+        pink = next(row for row in rolls if row["code"] == "P8")
+        expected_wage = posting.v20._wage_for_pieces(760, 110000)
+        expected = 20*2_000_000 + 5*2_400_000 + expected_wage
+        self.assertEqual(pink["cost_total"], expected)
+        self.assertEqual(pink["cost_per_piece"], posting.round_money(Decimal(expected)/760))
+        total = ui._totals([self.block])
+        self.assertEqual(total["cut"], 1515)
+        self.assertEqual(total["cost_total"], sum(row["cost_total"] for row in rolls))
+        self.assertEqual(total["average_unit_cost"], posting.round_money(Decimal(total["cost_total"])/1515))
+        response = self.client.get(reverse("material_report"))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["all_totals"]["cost_total"], total["cost_total"])
+        self.assertContains(response, "data-cost-total=")
+        self.assertContains(response, "میانگین بهای تمام‌شده هر شورت")
+
+    def test_surplus_not_clamped_away_in_visual_row(self):
+        self.block.output_data["pink"]["m"] = "790"
+        self.block.save(update_fields=["output_data"])
+        rows = ui._editor(self.block)["rows"]
+        pink = next(row for row in rows if row["key"] == "pink")
+        self.assertEqual(pink["remaining"], 0)
+        self.assertEqual(pink["surplus"], 50)
+        response = self.client.get(reverse("material_report"))
+        self.assertContains(response, "is-surplus")
