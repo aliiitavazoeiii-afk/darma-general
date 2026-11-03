@@ -74,6 +74,15 @@ def _filtered_expenses(request):
     return qs, category_id, query
 
 
+def _jalali_month_day_count(year, month):
+    start = jdatetime.date(year, month, 1)
+    if month == 12:
+        next_month = jdatetime.date(year + 1, 1, 1)
+    else:
+        next_month = jdatetime.date(year, month + 1, 1)
+    return (next_month.togregorian() - start.togregorian()).days
+
+
 def _historical_month_groups(rows, today):
     grouped = OrderedDict()
     for expense in rows:
@@ -87,14 +96,27 @@ def _historical_month_groups(rows, today):
                 "total": 0,
                 "count": 0,
                 "expenses": [],
+                "category_totals_map": {},
             }
         group = grouped[key]
-        group["total"] += int(expense.amount or 0)
+        amount = int(expense.amount or 0)
+        group["total"] += amount
         group["count"] += 1
         group["expenses"].append(expense)
+        category = group["category_totals_map"].setdefault(
+            expense.category_id,
+            {"name": expense.category.name, "total": 0},
+        )
+        category["total"] += amount
 
     result = []
     for group in grouped.values():
+        group["category_totals"] = sorted(
+            group.pop("category_totals_map").values(),
+            key=lambda item: (-item["total"], item["name"]),
+        )
+        group["days_in_month"] = _jalali_month_day_count(group["year"], group["month"])
+        group["daily_average"] = int(round(group["total"] / group["days_in_month"]))
         group["day_groups"] = base_views._group_expenses_by_day(
             group["expenses"],
             today=today,
