@@ -49,7 +49,11 @@ def _roll_entries(block):
             max(0, v23.v20._int(out.get(size)))
             for size, _ in v23._output_sizes_for_block(block)
         )
+        wage = v23.v20._wage_for_pieces(cut, v23.v20._dozen_wage()) if cut else 0
+        breakdown = v23.calculate_model_cost(key, raw, wage) if cut else {}
         entries.append({
+            "cost_total": int(breakdown.get("total_cost") or 0),
+            "cost_per_piece": int(breakdown.get("unit_cost") or 0),
             "key": key,
             "color": v23._material_label(key),
             "code": str(raw.get("fabric_code") or "").strip(),
@@ -58,14 +62,16 @@ def _roll_entries(block):
             "entered": entered,
             "applied": applied.get(key, 0),
             "remaining": max(0, cut - entered),
+            "surplus": max(0, entered - cut),
         })
     return entries
 
 
 def _totals(blocks, only_open=False):
     total = {"rolls": 0, "weight": Decimal("0"), "cut": 0,
-             "entered": 0, "applied": 0, "remaining": 0, "open_rolls": 0,
-             "average_cut": 0}
+             "entered": 0, "applied": 0, "remaining": 0, "surplus": 0,
+             "open_rolls": 0, "average_cut": 0, "cost_total": 0,
+             "cost_cut": 0, "average_unit_cost": 0}
     for block in blocks:
         raw_applied = {
             row.material_key for row in block.stock_consumptions.all()
@@ -84,9 +90,17 @@ def _totals(blocks, only_open=False):
             total["entered"] += roll["entered"]
             total["applied"] += roll["applied"]
             total["remaining"] += roll["remaining"]
+            total["surplus"] += roll["surplus"]
+            total["cost_total"] += roll["cost_total"]
+            if roll["cut"] > 0:
+                total["cost_cut"] += roll["cut"]
             total["open_rolls"] += int(roll["cut"] > roll["entered"])
     if total["rolls"]:
         total["average_cut"] = round(total["cut"] / total["rolls"])
+    if total["cost_cut"]:
+        total["average_unit_cost"] = v23.round_money(
+            Decimal(total["cost_total"]) / Decimal(total["cost_cut"])
+        )
     return total
 
 
@@ -110,7 +124,10 @@ def _editor(block):
         row.model_key for row in block.output_applications.all()
         if int(row.quantity or 0) > 0
     }
-    consumed_keys = {row.material_key for row in block.stock_consumptions.all()}
+    consumed_keys = {
+        row.material_key for row in block.stock_consumptions.all()
+        if row.kind == FABRIC and q(row.quantity) > 0
+    }
     visible = []
     for key in keys:
         raw = (block.input_data or {}).get(key) or {}
@@ -154,6 +171,7 @@ def _editor(block):
             "weight": raw.get("weight") or "",
             "cut": cut, "entered": entered, "applied": applied,
             "remaining": max(0, cut - entered),
+            "surplus": max(0, entered - cut),
             "unit_cost": fields_by_key["cost"]["value"],
             "elastic16": raw.get("elastic16") or "",
             "elastic25": raw.get("elastic25") or "",
@@ -210,15 +228,28 @@ def material_report(request):
     current = v92._jalali_month_context()
     current_key = current["key"]
     available = sorted({current_key, *(_month_key(b.date) for b in blocks)}, reverse=True)
-    requested = str(request.GET.get("report_month") or current_key)
-    month = requested if requested in available and requested <= current_key else current_key
-    mode = "open" if request.GET.get("mode") == "open" else "month"
-    if mode == "open":
-        active = [b for b in blocks if v92._block_operational_status(b)]
+    previous_months = [key for key in available if key < current_key]
+    mode = "archive" if request.GET.get("mode") in {"archive", "open"} else "month"
+    requested = str(request.GET.get("report_month") or "")
+    if mode == "archive":
+        # Each archived month is strictly isolated; never combine old sheets.
+        month = requested if requested in previous_months else (
+            previous_months[0] if previous_months else current_key
+        )
     else:
-        active = [b for b in blocks if _month_key(b.date) == month]
+        month = current_key
+    active = [b for b in blocks if _month_key(b.date) == month]
 
     editors = [_editor(b) for b in active]
+    colors = {}
+    for editor in editors:
+        for row in editor["rows"]:
+            # Do not offer empty legacy base-color placeholders as filters.
+            if row["code"] or row["cut"] or row["entered"] or q(row["weight"]) > 0:
+                colors[row["key"]] = row["color"]
+    color_filters = [
+        {"key": key, "label": label} for key, label in colors.items()
+    ]
     tailor = RawMaterialStock.objects.filter(active=True, location=TAILOR)
     stock = {
         "fabric_kg": tailor.filter(kind=FABRIC).aggregate(v=Sum("quantity"))["v"] or Decimal("0"),
@@ -230,9 +261,11 @@ def material_report(request):
         "month_title": _month_title(month),
         "current_month": current_key,
         "months": [{"key": key, "label": _month_title(key)} for key in available],
+        "previous_months": [{"key": key, "label": _month_title(key)} for key in previous_months],
+        "color_filters": color_filters,
         "mode": mode,
         "scope": _totals(active),
-        "all_totals": _totals(blocks, only_open=True),
+        "all_totals": _totals(blocks),
         "stock": stock,
         "brands": v23.v20._material_brands(),
         "today_j": v23.v20._today_jalali(),
