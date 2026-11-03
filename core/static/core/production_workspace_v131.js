@@ -19,41 +19,48 @@
   };
   const format = n => Math.round(n).toLocaleString('fa-IR');
 
+  const colorChoices = Array.from(document.querySelectorAll('.prod131-color-choice'));
+  let selectedColor = 'all';
+
   function visibleRows() {
     let shown = 0;
     const query = normalize(search?.value);
-    const summary = {weight:0, cut:0, entered:0, remaining:0, costWeighted:0, costCut:0};
+    const summary = {
+      weight: 0, cut: 0, entered: 0, remaining: 0, surplus: 0,
+      costTotal: 0, costCut: 0
+    };
     groups.forEach(group => {
-      const matches = !query || normalize(group.dataset.search).includes(query);
+      const matchesColor = selectedColor === 'all' || group.dataset.color === selectedColor;
+      const matchesSearch = !query || normalize(group.dataset.search).includes(query);
+      const matches = matchesColor && matchesSearch;
       group.hidden = !matches;
       if (!matches) return;
-      shown++;
-      const weight = number(group.dataset.weight), cut = number(group.dataset.cut);
-      const unitCost = number(group.dataset.unitCost);
-      summary.weight += weight;
+      shown += 1;
+      summary.weight += number(group.dataset.weight);
+      const cut = number(group.dataset.cut);
       summary.cut += cut;
       summary.entered += number(group.dataset.entered);
       summary.remaining += number(group.dataset.remaining);
-      if (cut > 0 && unitCost > 0) {
-        summary.costCut += cut;
-        summary.costWeighted += cut * unitCost;
-      }
+      summary.surplus += number(group.dataset.surplus);
+      summary.costTotal += number(group.dataset.costTotal);
+      if (cut > 0) summary.costCut += cut;
     });
     if (noResults) noResults.hidden = shown > 0;
     const metrics = document.getElementById('prod131-filter-metrics');
     if (metrics) {
-      metrics.hidden = !query;
-      if (query) {
+      const filtered = selectedColor !== 'all' || Boolean(query);
+      metrics.hidden = !filtered;
+      if (filtered) {
         const parts = [
-          ['کدهای پیدا شده', format(shown)],
-          ['وزن کل', summary.weight.toLocaleString('fa-IR', {maximumFractionDigits:2}) + ' کیلو'],
-          ['برش', format(summary.cut)],
-          ['تحویل', format(summary.entered)],
-          ['مانده', format(summary.remaining)],
+          ['کدهای این رنگ / جست‌وجو', format(shown)],
+          ['وزن کل پارچه', summary.weight.toLocaleString('fa-IR', {maximumFractionDigits:2}) + ' کیلو'],
+          ['مجموع برش', format(summary.cut)],
+          ['کل تحویل ثبت‌شده', format(summary.entered)],
+          ['مانده تحویل', format(summary.remaining)],
           ['میانگین برش', shown ? format(summary.cut / shown) : '۰'],
-          ['میانگین بهای تولید', summary.costCut ? format(summary.costWeighted / summary.costCut) + ' تومان' : '—'],
+          ['میانگین بهای هر عدد', summary.costCut ? format(summary.costTotal / summary.costCut) + ' تومان' : '—'],
+          ['هزینه کل برش‌ها', format(summary.costTotal) + ' تومان'],
         ];
-        // Only static labels + numeric values derived from validated read-only data attrs.
         metrics.replaceChildren(...parts.map(([label, value]) => {
           const node = document.createElement('div');
           const caption = document.createElement('span');
@@ -66,10 +73,24 @@
       }
     }
   }
+  colorChoices.forEach(button => {
+    button.addEventListener('click', () => {
+      selectedColor = button.dataset.colorFilter || 'all';
+      colorChoices.forEach(choice => {
+        const active = choice === button;
+        choice.classList.toggle('selected', active);
+        choice.setAttribute('aria-pressed', String(active));
+      });
+      visibleRows();
+    });
+  });
   search?.addEventListener('input', visibleRows);
   month?.addEventListener('change', () => {
     const value = month.value;
-    if (value) window.location.assign('?report_month=' + encodeURIComponent(value));
+    const archived = month.dataset.mode === 'archive';
+    if (value) window.location.assign(
+      (archived ? '?mode=archive&report_month=' : '?report_month=') + encodeURIComponent(value)
+    );
   });
 
   function toggle(group, open) {
@@ -120,11 +141,22 @@
         const taken = Array.from(group.querySelectorAll('input.prod131-delivery'))
           .reduce((sum, field) => sum + Math.max(0, number(field.value)), 0);
         const amountCells = group.querySelectorAll('.prod131-main .prod131-num');
+        const remaining = Math.max(0, cut - taken);
+        const surplus = Math.max(0, taken - cut);
         if (amountCells.length >= 4) {
           amountCells[1].textContent = format(cut);
           amountCells[2].textContent = format(taken);
-          amountCells[3].textContent = format(Math.max(0, cut - taken));
+          const balance = amountCells[3];
+          balance.textContent = surplus ? '+' + format(surplus) : format(remaining);
+          balance.classList.toggle('is-pending', remaining > 0);
+          balance.classList.toggle('is-surplus', surplus > 0);
+          balance.classList.toggle('is-zero', remaining === 0 && surplus === 0);
         }
+        group.dataset.cut = String(cut);
+        group.dataset.entered = String(taken);
+        group.dataset.remaining = String(remaining);
+        group.dataset.surplus = String(surplus);
+        visibleRows();
         const summary = group.querySelector('.prod131-detail-header p');
         if (summary) {
           const original = summary.textContent || '';
