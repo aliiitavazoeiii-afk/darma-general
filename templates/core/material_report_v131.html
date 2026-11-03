@@ -76,13 +76,13 @@
         <span>جست‌وجوی رنگ یا کد پارچه</span>
         <input type="search" class="form-control" id="prod131-search" placeholder="مثلاً صورتی یا P8" autocomplete="off">
       </label>
-      <div class="prod131-month-summary">در این ماه: <b>{{ scope.rolls|groupnum }}</b> ردیف · <b>{{ scope.cut|groupnum }}</b> برش · <b>{{ scope.remaining|groupnum }}</b> مانده</div>
-    </div>
     <div class="prod131-status-filter" role="group" aria-label="فیلتر وضعیت مصرف مواد">
       <span>مصرف مواد:</span>
       <button type="button" class="prod131-status-choice selected" data-material-filter="all" aria-pressed="true">همه</button>
       <button type="button" class="prod131-status-choice" data-material-filter="unapplied" aria-pressed="false">اعمال‌نشده</button>
       <button type="button" class="prod131-status-choice" data-material-filter="applied" aria-pressed="false">اعمال‌شده</button>
+    </div>
+      <div class="prod131-month-summary">در این ماه: <b>{{ scope.rolls|groupnum }}</b> ردیف · <b>{{ scope.cut|groupnum }}</b> برش · <b>{{ scope.remaining|groupnum }}</b> مانده</div>
     </div>
     <div class="prod131-color-filter" role="group" aria-label="فیلتر رنگ صورت‌های {{ month_title }}">
       <button type="button" class="prod131-color-choice selected" data-color-filter="all" aria-pressed="true">همه رنگ‌ها</button>
