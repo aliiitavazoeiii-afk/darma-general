@@ -1,0 +1,49 @@
+name: V135 Darma favicon safe release
+on:
+  push:
+    branches:
+      - v135-darma-browser-favicon
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  favicon:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Scope and non-invasive deployment syntax
+        run: |
+          bash -n server_darma_favicon_v135.sh
+          python3 - <<'PY'
+          from pathlib import Path
+          import base64
+          import re
+          import subprocess
+          import xml.etree.ElementTree as ET
+
+          base='0355e7648b1db5b03aaf5bb14d8e7b6d7f1a1a96'
+          changed=set(subprocess.check_output(
+            ['git','diff','--name-only',base+'..HEAD'],text=True
+          ).splitlines())
+          allowed={
+            'templates/base.html',
+            'static/core/darma-favicon-v135.svg',
+            'server_darma_favicon_v135.sh',
+            '.github/workflows/check-favicon-v135.yml',
+          }
+          assert changed == allowed, changed.symmetric_difference(allowed)
+          template=Path('templates/base.html').read_text('utf-8')
+          assert template.count('darma-favicon-v135.svg')==1
+          assert 'rel="icon" type="image/svg+xml"' in template
+          path=Path('static/core/darma-favicon-v135.svg')
+          root=ET.parse(path).getroot()
+          assert root.tag.endswith('svg')
+          image=root.find('.//{http://www.w3.org/2000/svg}image')
+          assert image is not None
+          embedded=image.attrib['href']
+          assert embedded.startswith('data:image/png;base64,')
+          assert base64.b64decode(embedded.split(',',1)[1])==Path('static/core/darma-logo-v73.png').read_bytes()
+          print('V135_DARMA_FAVICON_SOURCE_AND_SCOPE_OK')
+          PY
