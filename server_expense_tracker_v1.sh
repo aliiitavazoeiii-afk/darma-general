@@ -19,7 +19,7 @@ set +a
 
 cd "$MAIN_DIR"
 docker compose config -q || fail "main compose invalid"
-docker compose up -d db web || fail "main db/web start failed"
+docker compose up -d --no-recreate db web || fail "main db/web start failed"
 
 DB_CONTAINER=$(docker compose ps -q db)
 [ -n "$DB_CONTAINER" ] || fail "main PostgreSQL container was not found"
