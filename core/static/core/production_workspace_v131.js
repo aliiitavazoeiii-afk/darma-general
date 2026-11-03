@@ -20,25 +20,36 @@
   const format = n => Math.round(n).toLocaleString('fa-IR');
 
   const colorChoices = Array.from(document.querySelectorAll('.prod131-color-choice'));
+  const materialChoices = Array.from(document.querySelectorAll('.prod131-status-choice'));
   let selectedColor = 'all';
+  let selectedMaterial = 'all';
 
   function visibleRows() {
     let shown = 0;
     const query = normalize(search?.value);
     const summary = {
       weight: 0, cut: 0, entered: 0, remaining: 0, surplus: 0,
-      costTotal: 0, costCut: 0
+      costTotal: 0, costCut: 0, validWeight: 0, validCut: 0
     };
     groups.forEach(group => {
       const matchesColor = selectedColor === 'all' || group.dataset.color === selectedColor;
       const matchesSearch = !query || normalize(group.dataset.search).includes(query);
-      const matches = matchesColor && matchesSearch;
+      const matchesMaterial = selectedMaterial === 'all' || (
+        group.dataset.materialStatus === selectedMaterial &&
+        group.dataset.materialMeaningful === '1'
+      );
+      const matches = matchesColor && matchesSearch && matchesMaterial;
       group.hidden = !matches;
       if (!matches) return;
       shown += 1;
-      summary.weight += number(group.dataset.weight);
-      const cut = number(group.dataset.cut);
+      const weight = Math.max(0, number(group.dataset.weight));
+      const cut = Math.max(0, number(group.dataset.cut));
+      summary.weight += weight;
       summary.cut += cut;
+      if (weight > 0 && cut > 0) {
+        summary.validWeight += weight;
+        summary.validCut += cut;
+      }
       summary.entered += number(group.dataset.entered);
       summary.remaining += number(group.dataset.remaining);
       summary.surplus += number(group.dataset.surplus);
@@ -48,7 +59,7 @@
     if (noResults) noResults.hidden = shown > 0;
     const metrics = document.getElementById('prod131-filter-metrics');
     if (metrics) {
-      const filtered = selectedColor !== 'all' || Boolean(query);
+      const filtered = selectedColor !== 'all' || selectedMaterial !== 'all' || Boolean(query);
       metrics.hidden = !filtered;
       if (filtered) {
         const parts = [
@@ -57,7 +68,7 @@
           ['مجموع برش', format(summary.cut)],
           ['کل تحویل ثبت‌شده', format(summary.entered)],
           ['مانده تحویل', format(summary.remaining)],
-          ['میانگین برش', shown ? format(summary.cut / shown) : '۰'],
+          ['بازده معادل ۲۰ کیلو', summary.validWeight ? format(summary.validCut * 20 / summary.validWeight) + ' عدد' : '—'],
           ['میانگین بهای هر عدد', summary.costCut ? format(summary.costTotal / summary.costCut) + ' تومان' : '—'],
           ['هزینه کل برش‌ها', format(summary.costTotal) + ' تومان'],
         ];
@@ -73,6 +84,17 @@
       }
     }
   }
+  materialChoices.forEach(button => {
+    button.addEventListener('click', () => {
+      selectedMaterial = button.dataset.materialFilter || 'all';
+      materialChoices.forEach(choice => {
+        const active = choice === button;
+        choice.classList.toggle('selected', active);
+        choice.setAttribute('aria-pressed', String(active));
+      });
+      visibleRows();
+    });
+  });
   colorChoices.forEach(button => {
     button.addEventListener('click', () => {
       selectedColor = button.dataset.colorFilter || 'all';
