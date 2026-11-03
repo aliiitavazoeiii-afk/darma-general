@@ -108,3 +108,13 @@
 .prod131-cost-kpi strong{font-size:1.08rem}
 .prod131-table>thead th:first-child{padding-right:14px}
 .prod131-detail>td{text-align:right!important}
+
+/* V134: quiet material-consumption filters share color search without a new card */
+.prod131-status-filter{display:flex;align-items:center;flex-wrap:wrap;gap:7px;margin:-4px 0 13px;color:#b6c6d6;font-size:.74rem}
+.prod131-status-filter>span{margin-left:5px;font-weight:750}
+.prod131-status-choice{cursor:pointer;border:1px solid var(--p-line);background:rgba(255,255,255,.025);color:#bdccda;border-radius:9px;padding:7px 13px;font-family:inherit;font-size:.74rem;font-weight:750;white-space:nowrap}
+.prod131-status-choice.selected{color:#f8fafc;background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.24)}
+.prod131-status-choice[data-material-filter=unapplied].selected{color:#ffb0b0;background:rgba(230,52,52,.12);border-color:rgba(242,88,88,.3)}
+.prod131-status-choice[data-material-filter=applied].selected{color:#9cf0bc;background:rgba(22,163,95,.12);border-color:rgba(36,197,124,.32)}
+.prod131-state.pending{font-size:.65rem;white-space:normal;max-width:170px;line-height:1.45}
+.prod131-footnote strong{color:#e6f3fa;font-weight:800}
