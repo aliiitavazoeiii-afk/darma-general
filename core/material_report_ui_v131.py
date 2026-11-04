@@ -34,6 +34,7 @@ def _roll_entries(block):
     applied = defaultdict(int)
     for record in block.output_applications.all():
         applied[record.model_key] += max(0, int(record.quantity or 0))
+    dozen_wage = v23.v20._dozen_wage()
     for key in v23._active_model_keys(block):
         raw = (block.input_data or {}).get(key) or {}
         out = (block.output_data or {}).get(key) or {}
@@ -50,9 +51,22 @@ def _roll_entries(block):
             max(0, v23.v20._int(out.get(size)))
             for size, _ in v23._output_sizes_for_block(block)
         )
-        wage = v23.v20._wage_for_pieces(cut, v23.v20._dozen_wage()) if cut else 0
+        wage = v23.v20._wage_for_pieces(cut, dozen_wage) if cut else 0
         breakdown = v23.calculate_model_cost(key, raw, wage) if cut else {}
+        elastic16_used = v23.used_elastic(raw, "elastic16", "remain16") if cut else Decimal("0")
+        elastic25_used = v23.used_elastic(raw, "elastic25", "remain25") if cut else Decimal("0")
+        incomplete_cost = cut > 0 and (
+            (q(raw.get("weight")) > 0 and not breakdown.get("fabric_price"))
+            or (elastic16_used > 0 and not breakdown.get("elastic16_price"))
+            or (elastic25_used > 0 and not breakdown.get("elastic25_price"))
+        )
         entries.append({
+            "fabric_cost": int(breakdown.get("fabric_cost") or 0),
+            "elastic_cost": int(breakdown.get("elastic_cost") or 0),
+            "labor_cost": int(breakdown.get("labor_cost") or 0),
+            "elastic16_used": elastic16_used,
+            "elastic25_used": elastic25_used,
+            "cost_incomplete": incomplete_cost,
             "cost_total": int(breakdown.get("total_cost") or 0),
             "cost_per_piece": int(breakdown.get("unit_cost") or 0),
             "key": key,
@@ -191,6 +205,10 @@ def _editor(block):
             "elastic16": raw.get("elastic16") or "",
             "elastic25": raw.get("elastic25") or "",
             "material_applied": key in consumed_keys,
+            "production_meaningful": bool(
+                v23._values_have_input(raw) or v23._values_have_output(out)
+                or applied > 0 or key in consumed_keys
+            ),
             "material_meaningful": bool(
                 str(raw.get("fabric_code") or "").strip()
                 or q(raw.get("weight")) > 0 or cut > 0 or entered > 0
@@ -307,6 +325,7 @@ def material_report(request):
         "fabric_kg": tailor.filter(kind=FABRIC).aggregate(v=Sum("quantity"))["v"] or Decimal("0"),
         "elastic_kg": tailor.filter(kind=ELASTIC).aggregate(v=Sum("quantity"))["v"] or Decimal("0"),
     }
+    month_scope = _totals(active)
     return render(request, "core/material_report_v131.html", {
         "editors": editors,
         "month": month,
@@ -316,8 +335,7 @@ def material_report(request):
         "previous_months": [{"key": key, "label": _month_title(key)} for key in previous_months],
         "color_filters": color_filters,
         "mode": mode,
-        "scope": _totals(active),
-        "all_totals": _totals(blocks),
+        "scope": month_scope,
         "stock": stock,
         "brands": v23.v20._material_brands(),
         "new_sheet_colors": v23._material_candidates(v23.BASE_KEYS),
