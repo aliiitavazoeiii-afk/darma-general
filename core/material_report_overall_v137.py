@@ -12,6 +12,7 @@ from django.shortcuts import render
 
 from . import material_report_ui_v131 as ui
 from . import material_report_v23 as v23
+from . import material_report_v92 as v92
 from .material_flow import ELASTIC, FABRIC, TAILOR, WAREHOUSE, q
 from .models import MaterialReportBlock, RawMaterialStock
 
@@ -130,8 +131,11 @@ def build_overall_report(blocks):
 
         for roll in ui._roll_entries(block):
             key = roll["key"]
-            all_color_keys.add(key)
-            color = colors.setdefault(key, _empty(roll["color"]))
+            group_key = (block.brand.name, key)
+            all_color_keys.add(group_key)
+            color = colors.setdefault(group_key, _empty(
+                f"{block.brand.name} · {roll['color']}"
+            ))
             material_applied = key in fabric_keys
             saved = saved_outputs.get(key) or {}
             pending = 0
@@ -215,5 +219,5 @@ def production_overall(request):
     return render(request, "core/material_report_overall_v137.html", {
         "report": report,
         "stock": stock,
-        "current_month": ui._month_key(blocks[0].date) if blocks else "",
+        "current_month": v92._jalali_month_context()["key"],
     })
