@@ -15,6 +15,7 @@ from django.shortcuts import redirect, render
 from . import material_report_v23 as v23
 from . import material_report_v92 as v92
 from .material_flow import ELASTIC, FABRIC, TAILOR, q
+from .material_cost_v23 import used_elastic
 from .models import MaterialReportBlock, RawMaterialStock
 
 
@@ -53,8 +54,8 @@ def _roll_entries(block):
         )
         wage = v23.v20._wage_for_pieces(cut, dozen_wage) if cut else 0
         breakdown = v23.calculate_model_cost(key, raw, wage) if cut else {}
-        elastic16_used = v23.used_elastic(raw, "elastic16", "remain16") if cut else Decimal("0")
-        elastic25_used = v23.used_elastic(raw, "elastic25", "remain25") if cut else Decimal("0")
+        elastic16_used = used_elastic(raw, "elastic16", "remain16") if cut else Decimal("0")
+        elastic25_used = used_elastic(raw, "elastic25", "remain25") if cut else Decimal("0")
         incomplete_cost = cut > 0 and (
             (q(raw.get("weight")) > 0 and not breakdown.get("fabric_price"))
             or (elastic16_used > 0 and not breakdown.get("elastic16_price"))
