@@ -211,7 +211,7 @@ class ProductionWorkspaceV131Tests(TestCase):
         self.assertEqual(total["average_unit_cost"], posting.round_money(Decimal(total["cost_total"])/1515))
         response = self.client.get(reverse("material_report"))
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.context["all_totals"]["cost_total"], total["cost_total"])
+        self.assertEqual(response.context["scope"]["cost_total"], total["cost_total"])
         self.assertContains(response, "data-cost-total=")
         self.assertContains(response, "میانگین بهای تمام‌شده هر شورت")
 
