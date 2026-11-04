@@ -258,7 +258,7 @@ class ProductionWorkspaceV131Tests(TestCase):
         self.assertContains(response, 'data-material-status="unapplied"')
         self.assertNotContains(response, "تحویل هماهنگ")
         self.assertContains(response, "بازده برش معادل ۲۰ کیلو")
-        self.assertContains(response, "همه ماه‌های ثبت‌شده")
+        self.assertContains(response, "محدوده: همه رنگ‌ها")
         rows = ui._editor(self.block)["rows"]
         self.assertTrue(next(x for x in rows if x["key"] == "pink")["material_applied"])
         self.assertFalse(next(x for x in rows if x["key"] == "white")["material_applied"])
