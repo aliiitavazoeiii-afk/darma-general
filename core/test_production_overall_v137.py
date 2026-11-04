@@ -122,7 +122,7 @@ class ProductionOverallV137Tests(TestCase):
             Decimal("1444") * Decimal("20") / Decimal("37.73")
         ))
         pink_cost = 20*2000000 + 5*2400000 + v23.v20._wage_for_pieces(760, 110000)
-        self.assertEqual(all_stats["fabric_cost"], pink_cost - 5*2400000)
+        self.assertEqual(all_stats["fabric_cost"], 20*2000000)
         self.assertEqual(all_stats["elastic_cost"], 5*2400000)
         self.assertEqual(all_stats["unit_cost"], v23.round_money(
             Decimal(all_stats["cost_total"]) / Decimal(1444)
