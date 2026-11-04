@@ -1,0 +1,180 @@
+{% extends 'base.html' %}{% load jalali static %}
+{% block title %}گزارش کلی تولید | DARMA{% endblock %}
+{% block content %}
+{% include 'core/_mobile_shell.html' %}
+<link rel="stylesheet" href="{% static 'core/production_workspace_v131.css' %}">
+<link rel="stylesheet" href="{% static 'core/production_overall_v137.css' %}">
+<main class="prod137" dir="rtl">
+  <header class="prod137-hero">
+    <div class="prod137-hero-top">
+      <a class="prod137-back" href="{% url 'material_report' %}">← بازگشت به مدیریت تولید</a>
+      <button type="button" class="prod137-print" onclick="window.print()">چاپ گزارش</button>
+    </div>
+    <div class="prod137-kicker">DARMA / PRODUCTION INTELLIGENCE</div>
+    <h1>گزارش کلی تولید</h1>
+    <p>تصویر یکپارچه تمام صورت‌های ثبت‌شده، ماه‌های گذشته و ماه جاری؛ مستقل از فیلترهای صفحه مدیریت تولید.</p>
+    <div class="prod137-scope"><span>تمام دوره‌ها</span><span>اطلاعات صرفاً خواندنی</span><span>بهای مواد با قیمت جاری</span></div>
+  </header>
+
+  <section class="prod137-section" aria-label="شاخص‌های اصلی تولید">
+    <div class="prod137-section-title">
+      <div><h2>وضعیت کل تولید</h2><p>از اولین صورت تا آخرین صورت ثبت‌شده</p></div>
+      <span class="prod137-caption">تمامی برندهای ثبت‌شده در صورت‌های تولید</span>
+    </div>
+    <div class="prod137-kpis">
+      <article class="prod137-kpi"><span>کل صورت‌ها</span><strong>{{ report.all.sheets|groupnum }}</strong><small>صورت ثبت‌شده</small></article>
+      <article class="prod137-kpi"><span>کدهای تولید</span><strong>{{ report.all.rolls|groupnum }}</strong><small>{{ report.all.color_count|groupnum }} رنگ / مدل متمایز</small></article>
+      <article class="prod137-kpi"><span>وزن کل پارچه ثبت‌شده</span><strong>{{ report.all.weight|floatformat:2 }}</strong><small>کیلوگرم</small></article>
+      <article class="prod137-kpi"><span>کل برش</span><strong>{{ report.all.cut|groupnum }}</strong><small>عدد</small></article>
+      <article class="prod137-kpi"><span>کل تحویل ثبت‌شده</span><strong>{{ report.all.entered|groupnum }}</strong><small>عدد، مستقل از ثبت در انبار</small></article>
+      <article class="prod137-kpi"><span>تحویل اعمال‌شده به موجودی</span><strong>{{ report.all.applied|groupnum }}</strong><small>بر مبنای سوابق همگام‌سازی</small></article>
+      <article class="prod137-kpi prod137-kpi-warn"><span>مانده برشِ تحویل‌نشده</span><strong>{{ report.all.remaining|groupnum }}</strong><small>جمع مانده‌های مثبت هر کد</small></article>
+      <article class="prod137-kpi"><span>مازاد تحویل نسبت به برش</span><strong>{{ report.all.surplus|groupnum }}</strong><small>جمع مازادهای مثبت هر کد</small></article>
+      <article class="prod137-kpi"><span>بازده برش معادل ۲۰ کیلو</span><strong>{% if report.all.valid_yield_weight %}{{ report.all.yield20|groupnum }}{% else %}—{% endif %}</strong><small>فقط کدهای دارای وزن و برش معتبر</small></article>
+      <article class="prod137-kpi"><span>میانگین بهای هر عدد</span><strong>{{ report.all.unit_cost|groupnum }}</strong><small>تومان · برآورد قیمت امروز</small></article>
+      <article class="prod137-kpi prod137-kpi-cost"><span>هزینه برآوردی کل تولید</span><strong>{{ report.all.cost_total|groupnum }}</strong><small>تومان · هزینه تمام برش‌های ثبت‌شده</small></article>
+      <article class="prod137-kpi"><span>کدهای نیازمند پیگیری</span><strong>{{ report.all.open_codes|groupnum }}</strong><small>مانده، مصرف یا همگام‌سازی باز</small></article>
+    </div>
+  </section>
+
+  <section class="prod137-section" aria-label="آنالیز هزینه">
+    <div class="prod137-section-title">
+      <div><h2>آناتومی بهای تمام‌شده</h2><p>تفکیک هزینه‌های محاسبه‌شده برای کل برش‌ها</p></div>
+      <span class="prod137-caption">به تومان، با نرخ فعلی مواد اولیه</span>
+    </div>
+    <div class="prod137-costs">
+      <article><span>پارچه</span><strong>{{ report.all.fabric_cost|groupnum }}</strong><small>مجموع وزن پارچه × نرخ هر رنگ</small></article>
+      <article><span>کش ۱۶ و ۲۵</span><strong>{{ report.all.elastic_cost|groupnum }}</strong><small>مصرف واقعی محاسبه‌شده پس از مانده کش</small></article>
+      <article><span>مزد دوخت برش‌ها</span><strong>{{ report.all.labor_cost|groupnum }}</strong><small>طبق نرخ فعلی مزد هر دوجین</small></article>
+    </div>
+    {% if report.all.cost_total %}
+    <div class="prod137-costbar" role="img" aria-label="سهم پارچه، کش و مزد در هزینه کل">
+      <div style="width:{% widthratio report.all.fabric_cost report.all.cost_total 100 %}%" class="prod137-costbar-fabric"></div>
+      <div style="width:{% widthratio report.all.elastic_cost report.all.cost_total 100 %}%" class="prod137-costbar-elastic"></div>
+      <div style="width:{% widthratio report.all.labor_cost report.all.cost_total 100 %}%" class="prod137-costbar-wage"></div>
+    </div>
+    {% endif %}
+    <div class="prod137-legend"><span><i class="fabric"></i> پارچه</span><span><i class="elastic"></i> کش</span><span><i class="wage"></i> مزد</span></div>
+    <div class="prod137-method">
+      <strong>روش محاسبه</strong>
+      <p>هر صورت بر اساس وزن و رنگ پارچه، مقدار کش ۱۶ و ۲۵ مصرفی و مزد خیاطِ تعداد برش محاسبه می‌شود. میانگین بهای هر عدد = مجموع هزینه‌ها ÷ کل برش‌ها. هزینه‌ها با قیمت فعلی مواد اولیه دوباره برآورد می‌شوند، بنابراین گزارش تاریخی بهای خرید یا ارزش دارایی در سرمایه نیست.</p>
+      <div class="prod137-quality">
+        <span>کدهای دارای قیمت مواد ناقص <b>{{ report.all.incomplete_cost|groupnum }}</b></span>
+        <span>کدهای دارای برش بدون وزن پارچه <b>{{ report.all.missing_weight|groupnum }}</b></span>
+      </div>
+    </div>
+  </section>
+
+  <section class="prod137-section" aria-label="مانده و همگام‌سازی">
+    <div class="prod137-section-title"><div><h2>کنترل عملیات تولید</h2><p>تشخیص دقیق اینکه چه کاری هنوز به رسیدگی نیاز دارد</p></div></div>
+    <div class="prod137-operation-grid">
+      <article><span>مصرف مواد اعمال‌شده</span><strong>{{ report.all.material_applied|groupnum }}</strong><small>کد با مصرف مثبت پارچه ثبت‌شده</small></article>
+      <article><span>مصرف مواد اعمال‌نشده</span><strong>{{ report.all.material_pending|groupnum }}</strong><small>کدهای تولیدِ بدون مصرف مثبت پارچه</small></article>
+      <article><span>تحویل ثبت‌شده، اعمال‌نشده</span><strong>{{ report.all.unsynced|groupnum }}</strong><small>اختلاف مثبت به تفکیک کد و سایز</small></article>
+      <article><span>اصلاح کاهشیِ معوق</span><strong>{{ report.all.reverse_due|groupnum }}</strong><small>اعمال‌شده بیش از تحویل ثبت‌شده، در سطح سایز</small></article>
+      <article><span>کش ۱۶ مصرفی</span><strong>{{ report.all.elastic16|floatformat:2 }}</strong><small>کیلوگرم</small></article>
+      <article><span>کش ۲۵ مصرفی</span><strong>{{ report.all.elastic25|floatformat:2 }}</strong><small>کیلوگرم</small></article>
+    </div>
+  </section>
+
+  <section class="prod137-section" aria-label="موجودی مواد اولیه">
+    <div class="prod137-section-title"><div><h2>موجودی فعلی مواد اولیه</h2><p>عکس لحظه‌ای موجودی؛ مستقل از تاریخ صورت‌های تولید</p></div><span class="prod137-caption">مقادیر موجود در RawMaterialStock</span></div>
+    <div class="prod137-stock-grid">
+      <article><span>پارچه نزد خیاط</span><strong>{{ stock.tailor_fabric|floatformat:2 }}</strong><small>کیلوگرم</small></article>
+      <article><span>کش نزد خیاط</span><strong>{{ stock.tailor_elastic|floatformat:2 }}</strong><small>کیلوگرم</small></article>
+      <article><span>پارچه در انبار</span><strong>{{ stock.warehouse_fabric|floatformat:2 }}</strong><small>کیلوگرم</small></article>
+      <article><span>کش در انبار</span><strong>{{ stock.warehouse_elastic|floatformat:2 }}</strong><small>کیلوگرم</small></article>
+    </div>
+  </section>
+
+  <section class="prod137-section" aria-label="روند ماهانه">
+    <div class="prod137-section-title"><div><h2>روند تولید ماهانه</h2><p>مقایسه تعداد برش در تمام ماه‌های دارای صورت ثبت‌شده</p></div><span class="prod137-caption">هر ستون متناسب با بیشترین ماه محاسبه می‌شود</span></div>
+    <div class="prod137-month-graph">
+      {% for item in report.monthly_chart %}
+      <div class="prod137-month-item">
+        <div class="prod137-graph-label"><span>{{ item.name }}</span><b>{{ item.cut|groupnum }} برش</b></div>
+        <div class="prod137-track"><span style="width:{{ item.bar }}%"></span></div>
+        <div class="prod137-graph-note">{{ item.rolls|groupnum }} کد · {{ item.weight|floatformat:1 }} کیلو · بازده {% if item.valid_yield_weight %}{{ item.yield20|groupnum }}{% else %}—{% endif %} / ۲۰ کیلو</div>
+      </div>
+      {% empty %}
+      <div class="prod137-empty">هنوز اطلاعاتی برای تحلیل ماهانه وجود ندارد.</div>
+      {% endfor %}
+    </div>
+    <div class="prod137-table-wrap">
+      <table class="prod137-table">
+        <thead><tr><th>ماه</th><th>صورت</th><th>کد</th><th>پارچه (کیلو)</th><th>برش</th><th>تحویل</th><th>مانده</th><th>بازده / ۲۰کیلو</th><th>فی هر عدد (تومان)</th><th>هزینه برآوردی (تومان)</th><th></th></tr></thead>
+        <tbody>
+        {% for item in report.monthly %}
+          <tr><td class="prod137-strong">{{ item.name }}</td><td>{{ item.sheets|groupnum }}</td><td>{{ item.rolls|groupnum }}</td><td>{{ item.weight|floatformat:2 }}</td><td>{{ item.cut|groupnum }}</td><td>{{ item.entered|groupnum }}</td><td class="prod137-red">{{ item.remaining|groupnum }}</td><td>{% if item.valid_yield_weight %}{{ item.yield20|groupnum }}{% else %}—{% endif %}</td><td>{{ item.unit_cost|groupnum }}</td><td>{{ item.cost_total|groupnum }}</td><td><a href="{% url 'material_report' %}{% if item.key == current_month %}?report_month={{ item.key|urlencode }}{% else %}?mode=archive&amp;report_month={{ item.key|urlencode }}{% endif %}">صورت‌های ماه</a></td></tr>
+        {% empty %}
+          <tr><td colspan="11">اطلاعات تولیدی ثبت نشده است.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="prod137-section" aria-label="مقایسه رنگ‌ها">
+    <div class="prod137-section-title"><div><h2>مقایسه رنگ‌ها و مدل‌ها</h2><p>هزینه و بازده واقعی هر گروه؛ برندهای متفاوت با هم ادغام نشده‌اند</p></div><span class="prod137-caption">رتبه‌بندی بر اساس تعداد برش</span></div>
+    <div class="prod137-table-wrap">
+      <table class="prod137-table">
+        <thead><tr><th>رنگ / مدل</th><th>کدها</th><th>وزن</th><th>برش</th><th>تحویل</th><th>مانده</th><th>بازده / ۲۰کیلو</th><th>میانگین فی عدد</th><th>هزینه کل</th><th>مصرف اعمال‌نشده</th></tr></thead>
+        <tbody>
+        {% for item in report.colors %}
+          <tr><td class="prod137-strong">{{ item.name }}</td><td>{{ item.rolls|groupnum }}</td><td>{{ item.weight|floatformat:2 }}</td><td>{{ item.cut|groupnum }}</td><td>{{ item.entered|groupnum }}</td><td class="prod137-red">{{ item.remaining|groupnum }}</td><td>{% if item.valid_yield_weight %}{{ item.yield20|groupnum }}{% else %}—{% endif %}</td><td>{{ item.unit_cost|groupnum }}</td><td>{{ item.cost_total|groupnum }}</td><td>{% if item.material_pending %}<span class="prod137-bad">{{ item.material_pending|groupnum }}</span>{% else %}<span class="prod137-good">۰</span>{% endif %}</td></tr>
+        {% empty %}
+          <tr><td colspan="10">هنوز رنگی با تولید ثبت‌شده وجود ندارد.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <div class="prod137-two-cols">
+    <section class="prod137-section" aria-label="تحویل به تفکیک سایز">
+      <div class="prod137-section-title"><div><h2>تحویل به تفکیک سایز</h2><p>جمع ثبت‌شده و همگام‌شده در تمام صورت‌ها</p></div></div>
+      <div class="prod137-table-wrap">
+        <table class="prod137-table">
+          <thead><tr><th>سایز</th><th>ثبت‌شده</th><th>اعمال‌شده</th><th>معوق</th></tr></thead>
+          <tbody>{% for item in report.sizes %}
+            <tr><td class="prod137-strong">{{ item.name }}</td><td>{{ item.entered|groupnum }}</td><td>{{ item.applied|groupnum }}</td><td class="prod137-red">{{ item.pending|groupnum }}</td></tr>
+          {% empty %}<tr><td colspan="4">اطلاعاتی وجود ندارد.</td></tr>{% endfor %}</tbody>
+        </table>
+      </div>
+    </section>
+    <section class="prod137-section" aria-label="مقاصد تحویل">
+      <div class="prod137-section-title"><div><h2>مقاصد تحویل اعمال‌شده</h2><p>فقط از ریز ثبت مقصد، نه حدس بر اساس موجودی امروز</p></div></div>
+      <div class="prod137-dest"><div><span>خانه</span><strong>{{ report.destinations.home|groupnum }}</strong></div><div><span>خورشید</span><strong>{{ report.destinations.khorshid|groupnum }}</strong></div><div><span>سایر مقاصد</span><strong>{{ report.destinations.other|groupnum }}</strong></div><div><span>سوابق قدیمی بدون مقصد مشخص</span><strong>{{ report.destinations.legacy_unknown|groupnum }}</strong></div></div>
+      <p class="prod137-note">تحویل‌های قدیمی بدون ریز تخصیص مقصد را به اشتباه به خانه یا خورشید نسبت نداده‌ایم. این اعداد گردش اعمال تولیدند، نه موجودی فعلی انبارها.</p>
+    </section>
+  </div>
+
+  <section class="prod137-section" aria-label="موارد نیازمند پیگیری">
+    <div class="prod137-section-title"><div><h2>فهرست پیگیری تولید</h2><p>۱۵ کد اول بر اساس مجموع مانده تحویل و اختلاف همگام‌سازی</p></div><span class="prod137-caption">در مجموع {{ report.followup_total|groupnum }} مورد دارای وضعیت باز</span></div>
+    <div class="prod137-table-wrap">
+      <table class="prod137-table">
+        <thead><tr><th>ماه</th><th>رنگ</th><th>کد پارچه</th><th>مانده تحویل</th><th>تحویل در انتظار انبار</th><th>اصلاح کاهشی</th><th>مصرف مواد</th><th></th></tr></thead>
+        <tbody>
+          {% for item in report.followups %}
+          <tr>
+            <td>{{ item.month }}</td><td class="prod137-strong">{{ item.color }}</td><td>{{ item.code }}</td>
+            <td class="prod137-red">{{ item.remaining|groupnum }}</td>
+            <td>{% if item.unsynced %}<span class="prod137-bad">{{ item.unsynced|groupnum }}</span>{% else %}۰{% endif %}</td>
+            <td>{{ item.reverse_due|groupnum }}</td>
+            <td>{% if item.material_applied %}<span class="prod137-good">اعمال‌شده</span>{% else %}<span class="prod137-bad">اعمال‌نشده</span>{% endif %}</td>
+            <td><a href="{% url 'material_report' %}{% if item.month_key == current_month %}?report_month={{ item.month_key|urlencode }}{% else %}?mode=archive&amp;report_month={{ item.month_key|urlencode }}{% endif %}#block-{{ item.block_id }}">مشاهده صورت</a></td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="8">هیچ کد نیازمند پیگیری وجود ندارد.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer class="prod137-footer">
+    <p>گزارش فقط برای تحلیل تهیه شده و هیچ حساب، موجودی، دستمزد یا صورت تولیدی را تغییر نمی‌دهد. برای ثبت و اعمال عملیات به صفحه مدیریت تولید مراجعه کن.</p>
+    <a href="{% url 'material_report' %}">بازگشت به تولید</a>
+  </footer>
+</main>
+{% endblock %}
