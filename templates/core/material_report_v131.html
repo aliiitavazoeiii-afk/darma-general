@@ -16,6 +16,10 @@
       <select name="brand" class="form-select" aria-label="برند" required>
         {% for brand in brands %}<option value="{{ brand.id }}" {% if brand.name == 'دارما' %}selected{% endif %}>{{ brand.name }}</option>{% endfor %}
       </select>
+      <select name="initial_material_key" class="form-select prod131-create-color" aria-label="رنگ صورت جدید" required>
+        <option value="" selected disabled>انتخاب رنگ پارچه…</option>
+        {% for key,label in new_sheet_colors %}<option value="{{ key }}">{{ label }}</option>{% endfor %}
+      </select>
       <button type="submit" class="btn btn-primary">+ صورت جدید</button>
     </form>
   </header>
@@ -102,6 +106,7 @@
       {% for field in editor.hidden_fields %}<input type="hidden" name="{{ field.name }}" value="{{ field.value }}">{% endfor %}
       {% for field in editor.delivery_fields %}<input type="hidden" name="{{ field.name }}" value="{{ field.value }}">{% endfor %}
     </form>
+    <form id="prod131-delete-form-{{ editor.obj.id }}" method="post" action="{% url 'material_block_delete' editor.obj.id %}" class="prod131-hidden-form">{% csrf_token %}</form>
     {% endfor %}
 
     <div class="prod131-filter-metrics" id="prod131-filter-metrics" hidden aria-live="polite"></div>
@@ -209,6 +214,18 @@
                     <button class="btn btn-outline-light btn-sm" type="submit" form="{{ editor.form_id }}" formaction="{% url 'material_block_add_model' editor.obj.id %}">افزودن مدل انتخاب‌شده</button>
                   {% endif %}
                 </details>
+                {% if editor.deletable %}
+                <div class="prod131-sheet-delete">
+                  <span>حذف کل صورت {{ editor.obj.id }} (همه رنگ‌ها و اطلاعات ثبت‌شده این صورت)</span>
+                  <button class="btn btn-sm btn-outline-danger" type="submit" form="prod131-delete-form-{{ editor.obj.id }}"
+                    onclick="return window.confirm('همه رنگ‌ها، برش‌ها و اطلاعات این صورت حذف می‌شود. این کار قابل بازگشت نیست. مطمئنی؟')">حذف کل صورت</button>
+                </div>
+                {% else %}
+                <div class="prod131-sheet-delete is-locked">
+                  <span>حذف این صورت مسدود است، چون مصرف مواد یا تحویل محصول آن قبلاً در موجودی اعمال شده است.</span>
+                  <button class="btn btn-sm btn-outline-secondary" type="button" disabled title="برای جلوگیری از اختلال موجودی، حذف صورت دارای عملیات اعمال‌شده مجاز نیست">حذف صورت غیرفعال</button>
+                </div>
+                {% endif %}
                 {% endif %}
                 <div class="prod131-actions">
                   <div class="prod131-action-note">

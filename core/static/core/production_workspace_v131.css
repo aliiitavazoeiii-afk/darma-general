@@ -118,3 +118,12 @@
 .prod131-status-choice[data-material-filter=applied].selected{color:#9cf0bc;background:rgba(22,163,95,.12);border-color:rgba(36,197,124,.32)}
 .prod131-state.pending{font-size:.65rem;white-space:normal;max-width:170px;line-height:1.45}
 .prod131-footnote strong{color:#e6f3fa;font-weight:800}
+
+/* V135: selected-color creation and safe whole-sheet deletion */
+.prod131-create .prod131-create-color{min-width:175px;width:185px;max-width:100%}
+.prod131-sheet-delete{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 14px;padding:11px 13px;border:1px solid rgba(241,104,104,.22);background:rgba(206,50,50,.04);border-radius:11px}
+.prod131-sheet-delete>span{font-size:.72rem;color:#e1bcc0}
+.prod131-sheet-delete .btn{font-weight:750}
+.prod131-sheet-delete.is-locked{border-color:rgba(255,255,255,.10);background:rgba(255,255,255,.025)}
+.prod131-sheet-delete.is-locked>span{color:#a9bccb}
+@media(max-width:760px){.prod131-create .prod131-create-color{flex:1 1 160px;min-width:160px;width:auto}.prod131-sheet-delete .btn{flex:1 1 100%}}
