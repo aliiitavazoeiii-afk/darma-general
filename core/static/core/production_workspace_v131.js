@@ -24,11 +24,22 @@
   let selectedColor = 'all';
   let selectedMaterial = 'all';
 
+  const scopedMetric = (key, value, unit) => {
+    const el = document.querySelector('[data-scope-metric="' + key + '"]');
+    if (!el) return;
+    el.textContent = value;
+    if (unit) {
+      const small = document.createElement('small');
+      small.textContent = ' ' + unit;
+      el.append(small);
+    }
+  };
+
   function visibleRows() {
     let shown = 0;
     const query = normalize(search?.value);
     const summary = {
-      weight: 0, cut: 0, entered: 0, remaining: 0, surplus: 0,
+      rolls: 0, weight: 0, cut: 0, entered: 0, remaining: 0, surplus: 0,
       costTotal: 0, costCut: 0, validWeight: 0, validCut: 0
     };
     groups.forEach(group => {
@@ -41,48 +52,54 @@
       const matches = matchesColor && matchesSearch && matchesMaterial;
       group.hidden = !matches;
       if (!matches) return;
-      shown += 1;
+      shown++;
       const weight = Math.max(0, number(group.dataset.weight));
       const cut = Math.max(0, number(group.dataset.cut));
+      const entered = Math.max(0, number(group.dataset.entered));
+      const countable = group.dataset.countable === '1' || weight > 0 || cut > 0 || entered > 0;
+      // Empty draft-color editors appear in the table but are not production.
+      if (!countable) return;
+      summary.rolls++;
       summary.weight += weight;
       summary.cut += cut;
-      if (weight > 0 && cut > 0) {
-        summary.validWeight += weight;
-        summary.validCut += cut;
-      }
-      summary.entered += number(group.dataset.entered);
+      summary.entered += entered;
       summary.remaining += number(group.dataset.remaining);
       summary.surplus += number(group.dataset.surplus);
       summary.costTotal += number(group.dataset.costTotal);
       if (cut > 0) summary.costCut += cut;
+      if (cut > 0 && weight > 0) {
+        summary.validCut += cut;
+        summary.validWeight += weight;
+      }
     });
     if (noResults) noResults.hidden = shown > 0;
-    const metrics = document.getElementById('prod131-filter-metrics');
-    if (metrics) {
-      const filtered = selectedColor !== 'all' || selectedMaterial !== 'all' || Boolean(query);
-      metrics.hidden = !filtered;
-      if (filtered) {
-        const parts = [
-          ['کدهای این رنگ / جست‌وجو', format(shown)],
-          ['وزن کل پارچه', summary.weight.toLocaleString('fa-IR', {maximumFractionDigits:2}) + ' کیلو'],
-          ['مجموع برش', format(summary.cut)],
-          ['کل تحویل ثبت‌شده', format(summary.entered)],
-          ['مانده تحویل', format(summary.remaining)],
-          ['بازده معادل ۲۰ کیلو', summary.validWeight ? format(summary.validCut * 20 / summary.validWeight) + ' عدد' : '—'],
-          ['میانگین بهای هر عدد', summary.costCut ? format(summary.costTotal / summary.costCut) + ' تومان' : '—'],
-          ['هزینه کل برش‌ها', format(summary.costTotal) + ' تومان'],
-        ];
-        metrics.replaceChildren(...parts.map(([label, value]) => {
-          const node = document.createElement('div');
-          const caption = document.createElement('span');
-          const amount = document.createElement('b');
-          caption.textContent = label;
-          amount.textContent = value;
-          node.append(caption, amount);
-          return node;
-        }));
-      }
-    }
+
+    // The cards above the table always describe this exact filtered view.
+    scopedMetric('rolls', format(summary.rolls));
+    scopedMetric('weight', summary.weight.toLocaleString('fa-IR', {
+      minimumFractionDigits: 2, maximumFractionDigits: 2
+    }), 'کیلو');
+    scopedMetric('cut', format(summary.cut));
+    scopedMetric('entered', format(summary.entered));
+    scopedMetric('remaining', format(summary.remaining));
+    scopedMetric('yield', summary.validWeight
+      ? format(summary.validCut * 20 / summary.validWeight) : '—');
+    scopedMetric('average_cost', summary.costCut
+      ? format(summary.costTotal / summary.costCut) : '—', 'تومان');
+    scopedMetric('total_cost', format(summary.costTotal), 'تومان');
+
+    const rowCount = document.getElementById('prod137-row-count');
+    const cutCount = document.getElementById('prod137-cut-count');
+    if (rowCount) rowCount.textContent = format(summary.rolls);
+    if (cutCount) cutCount.textContent = format(summary.cut);
+    const colorLabel = selectedColor === 'all' ? 'همه رنگ‌ها'
+      : (colorChoices.find(button => button.dataset.colorFilter === selectedColor)?.textContent || selectedColor).trim();
+    const materialLabel = selectedMaterial === 'applied' ? 'مصرف اعمال‌شده'
+      : selectedMaterial === 'unapplied' ? 'مصرف اعمال‌نشده' : 'همه وضعیت‌های مصرف';
+    const descriptor = document.getElementById('prod137-filter-description');
+    if (descriptor) descriptor.textContent = 'محدوده: ' + colorLabel + '، ' +
+      materialLabel + (search?.value?.trim() ? '، جست‌وجوی «' + search.value.trim() + '»' : '') +
+      ' در ماه انتخاب‌شده.';
   }
   materialChoices.forEach(button => {
     button.addEventListener('click', () => {
