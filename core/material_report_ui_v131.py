@@ -7,9 +7,10 @@ from collections import defaultdict
 from decimal import Decimal
 
 import jdatetime
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Sum
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 
 from . import material_report_v23 as v23
 from . import material_report_v92 as v92
@@ -147,7 +148,10 @@ def _editor(block):
     # operator can choose pink/white/black without opening a different page.
     # After any row is filled, unused base colors disappear on the next load.
     if not visible:
-        visible = [key for key in keys if key in v23.BASE_KEYS]
+        initial_key = str(((block.input_data or {}).get("_meta") or {}).get("initial_material_key") or "")
+        visible = [initial_key] if initial_key in keys else [
+            key for key in keys if key in v23.BASE_KEYS
+        ]
     # An explicitly added extra model must remain editable even while blank.
     for key in v23._meta_keys(block.input_data):
         if key not in v23.BASE_KEYS and key in keys and key not in visible:
@@ -221,6 +225,10 @@ def _editor(block):
         "visible_count": len(rows),
         "brand": block.brand.name,
         "material_applied": view["materials_applied"],
+        "deletable": (
+            not block.stock_consumptions.exists()
+            and not block.output_applications.filter(quantity__gt=0).exists()
+        ),
         "has_output": view["output_applied"] > 0,
         "output_applied": view["output_applied"],
         "output_pending": view["output_pending"],
@@ -232,8 +240,36 @@ def _editor(block):
 @login_required
 def material_report(request):
     if request.method == "POST":
-        # Preserve V23 creation, transaction and redirects verbatim.
-        return v23.material_report(request)
+        # Older cached forms still follow the original V23 creation route.
+        # New forms only add a presentation hint to V23's blank-sheet schema.
+        v23._reset_request_caches()
+        key = str(request.POST.get("initial_material_key") or "").strip()
+        if not key:
+            return v23.material_report(request)
+        try:
+            allowed = dict(v23._material_candidates(v23.BASE_KEYS))
+            if key not in allowed:
+                raise ValueError("رنگ انتخاب‌شده معتبر نیست؛ رنگی از فهرست انتخاب کن.")
+            brand = v23._selected_brand(request)
+            input_data = v23._blank_input_data()
+            input_data["_meta"]["initial_material_key"] = key
+            if key not in input_data["_meta"]["active_material_keys"]:
+                input_data["_meta"]["active_material_keys"].append(key)
+                input_data[key] = {}
+            block = MaterialReportBlock.objects.create(
+                date=v23.parse_jalali_date(request.POST.get("date") or v23.v20._today_jalali()),
+                title=(request.POST.get("title") or "").strip(),
+                brand=brand,
+                input_data=input_data,
+                output_data=v23._blank_output_data_for_brand(brand),
+            )
+            messages.success(
+                request, f"صورت جدید با رنگ آغازین «{allowed[key]}» ساخته شد؛ موجودی تغییری نکرد."
+            )
+            return redirect(f"/material-report/#block-{block.id}")
+        except Exception as exc:
+            messages.error(request, str(exc))
+            return redirect("material_report")
 
     v23._reset_request_caches()
     blocks = list(
@@ -284,6 +320,7 @@ def material_report(request):
         "all_totals": _totals(blocks),
         "stock": stock,
         "brands": v23.v20._material_brands(),
+        "new_sheet_colors": v23._material_candidates(v23.BASE_KEYS),
         "today_j": v23.v20._today_jalali(),
         "open_count": sum(bool(v92._block_operational_status(b)) for b in blocks),
     })
