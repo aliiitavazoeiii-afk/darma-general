@@ -69,6 +69,8 @@ class ProductionWorkspaceV131Tests(TestCase):
         self.assertIs(resolve(f"/material-report/{self.block.id}/apply/").func, posting.material_block_apply_materials)
         self.assertIs(resolve(f"/material-report/{self.block.id}/apply-color/").func, posting.material_block_apply_color)
         self.assertIs(resolve(f"/material-report/{self.block.id}/apply-output/").func, posting.material_block_apply_output)
+        from core import material_report_v20 as legacy
+        self.assertIs(resolve(f"/material-report/{self.block.id}/delete/").func, legacy.material_block_delete)
 
     def test_two_fabric_codes_same_sheet_without_losing_other_color_fields(self):
         editor = ui._editor(self.block)
@@ -263,6 +265,88 @@ class ProductionWorkspaceV131Tests(TestCase):
         script = (Path(settings.BASE_DIR) / "core/static/core/production_workspace_v131.js").read_text("utf-8")
         for marker in ("selectedMaterial", "matchesMaterial", "validWeight", "validCut", "materialMeaningful"):
             self.assertIn(marker, script)
+
+
+    def test_new_sheet_color_chooser_creates_only_selected_blank_editor(self):
+        brand = self.brand
+        for key in ("black", "white", "navy", "pink", "cream"):
+            with self.subTest(key=key):
+                before = MaterialReportBlock.objects.count()
+                response = self.client.post(reverse("material_report"), {
+                    "brand": str(brand.pk), "title": f"Selected {key}",
+                    "date": "1405/08/13", "initial_material_key": key,
+                })
+                self.assertEqual(response.status_code, 302)
+                self.assertEqual(MaterialReportBlock.objects.count(), before + 1)
+                new = MaterialReportBlock.objects.latest("pk")
+                self.assertEqual(new.input_data["_meta"]["initial_material_key"], key)
+                self.assertEqual(len(ui._editor(new)["rows"]), 1)
+                self.assertEqual(ui._editor(new)["rows"][0]["key"], key)
+                self.assertFalse(new.stock_consumptions.exists())
+                self.assertFalse(new.output_applications.exists())
+                self.assertIn(f"#block-{new.pk}", response.url)
+
+    def test_new_sheet_color_chooser_lists_material_catalog_and_rejects_bad_keys(self):
+        RawMaterialStock.objects.create(
+            kind="fabric", material_key="teal", variant="", location="tailor",
+            title="فیروزه‌ای", quantity=Decimal("20"), unit_price=2100000,
+        )
+        response = self.client.get(reverse("material_report"))
+        self.assertContains(response, 'name="initial_material_key"')
+        self.assertContains(response, '<option value="pink">صورتی</option>', html=False)
+        self.assertContains(response, '<option value="teal">', html=False)
+        self.assertContains(response, 'prod131-create-color')
+        response = self.client.post(reverse("material_report"), {
+            "brand": str(self.brand.pk), "date": "1405/08/13",
+            "initial_material_key": "teal",
+        })
+        self.assertEqual(response.status_code, 302)
+        new = MaterialReportBlock.objects.latest("pk")
+        self.assertEqual(ui._editor(new)["rows"][0]["key"], "teal")
+        self.assertEqual(len(ui._editor(new)["rows"]), 1)
+        self.assertIn("teal", new.input_data["_meta"]["active_material_keys"])
+
+        count = MaterialReportBlock.objects.count()
+        failed = self.client.post(reverse("material_report"), {
+            "brand": str(self.brand.pk), "date": "1405/08/13",
+            "initial_material_key": "unrecognized-material-unsafe",
+        })
+        self.assertEqual(failed.status_code, 302)
+        self.assertEqual(MaterialReportBlock.objects.count(), count)
+
+    def test_delete_unapplied_whole_sheet_and_protect_applied_material_or_output(self):
+        from core import material_report_v20 as legacy
+        self.assertIs(resolve(reverse("material_block_delete", args=[self.block.pk])).func, legacy.material_block_delete)
+        blank = MaterialReportBlock.objects.create(
+            date=date(2026, 10, 25), brand=self.brand, title="Wrong black",
+            input_data={"_meta": {"active_material_keys": list(posting.BASE_KEYS),
+                                   "initial_material_key": "black"}},
+            output_data=posting._blank_output_data_for_brand(self.brand),
+        )
+        response = self.client.get(reverse("material_report"))
+        self.assertContains(response, f'form="prod131-delete-form-{blank.pk}"')
+        self.assertContains(response, "حذف کل صورت")
+        before_stock = list(StockBalance.objects.values_list("pk", "qty"))
+        deleted = self.client.post(reverse("material_block_delete", args=[blank.pk]))
+        self.assertEqual(deleted.status_code, 302)
+        self.assertFalse(MaterialReportBlock.objects.filter(pk=blank.pk).exists())
+        self.assertEqual(before_stock, list(StockBalance.objects.values_list("pk", "qty")))
+
+        # Existing applied delivery must never be silently reversed or deleted.
+        protected = self.client.post(reverse("material_block_delete", args=[self.block.pk]))
+        self.assertEqual(protected.status_code, 302)
+        self.assertTrue(MaterialReportBlock.objects.filter(pk=self.block.pk).exists())
+        self.assertEqual(self.block.output_applications.filter(quantity__gt=0).count(), 2)
+
+        material = MaterialReportConsumption.objects.create(
+            block=self.block, kind="fabric", material_key="pink",
+            quantity=Decimal("20"), variant="",
+        )
+        editor = ui._editor(self.block)
+        self.assertFalse(editor["deletable"])
+        blocked = self.client.post(reverse("material_block_delete", args=[self.block.pk]))
+        self.assertEqual(blocked.status_code, 302)
+        self.assertTrue(MaterialReportConsumption.objects.filter(pk=material.pk).exists())
 
     def test_surplus_not_clamped_away_in_visual_row(self):
         self.block.output_data["pink"]["m"] = "790"
