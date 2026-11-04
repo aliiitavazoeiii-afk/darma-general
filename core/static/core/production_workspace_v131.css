@@ -127,3 +127,10 @@
 .prod131-sheet-delete.is-locked{border-color:rgba(255,255,255,.10);background:rgba(255,255,255,.025)}
 .prod131-sheet-delete.is-locked>span{color:#a9bccb}
 @media(max-width:760px){.prod131-create .prod131-create-color{flex:1 1 160px;min-width:160px;width:auto}.prod131-sheet-delete .btn{flex:1 1 100%}}
+
+/* V137: inline entry to all-history analytics; compact filtered current-month subtitle */
+.prod137-all-link{align-self:center;display:inline-flex;align-items:center;gap:12px;border:1px solid rgba(143,194,225,.25);border-radius:11px;padding:10px 15px;background:rgba(77,144,193,.10);color:#c6e7fd;text-decoration:none;font-size:.78rem;font-weight:820;white-space:nowrap}
+.prod137-all-link:hover,.prod137-overview-link:hover{color:#fff;background:rgba(77,144,193,.19)}
+.prod137-overview-link{font-size:.75rem;color:#c2e3fa;padding:8px 11px;border:1px solid rgba(142,197,230,.16);background:rgba(142,197,230,.04);text-decoration:none;border-radius:9px}
+#prod137-filter-description{color:#d1e5f2}
+@media(max-width:760px){.prod137-all-link{flex:1 1 auto;justify-content:center}.prod137-overview-link{width:100%;text-align:center}}
