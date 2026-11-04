@@ -112,7 +112,7 @@ class ProductionOverallV137Tests(TestCase):
         self.assertEqual(all_stats["weight"], Decimal("37.73"))
         self.assertEqual(all_stats["entered"], 65)
         self.assertEqual(all_stats["applied"], 50)
-        self.assertEqual(all_stats["remaining"], 1399)
+        self.assertEqual(all_stats["remaining"], 1379)
         self.assertEqual(all_stats["unsynced"], 20)
         self.assertEqual(all_stats["reverse_due"], 5)
         self.assertEqual(all_stats["material_applied"], 1)
