@@ -16,6 +16,11 @@ document.addEventListener('DOMContentLoaded',function(){
       node.textContent='گزارش فروش و سرمایه؛ مدیریت حساب‌ها به بخش مالی و ابزار منتقل شده است.';
     }
   });
+  // V141: put the compact, initially closed Tapsi analytics card next to
+  // «گزارش‌های تحلیلی» / «کالای سرمایه‌ای», not as a full-width new domain.
+  const tapsiFold=document.getElementById('comprehensive-tapsi-shop');
+  const secondary=document.querySelector('.v76-secondary-grid');
+  if(tapsiFold&&secondary) secondary.appendChild(tapsiFold);
 });
 </script>
 {% endblock %}
