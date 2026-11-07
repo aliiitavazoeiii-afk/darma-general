@@ -261,3 +261,92 @@ def reverse_tapsi_order(order):
             )
     obj.delete()
     return len(items)
+
+
+def tapsi_pricing_rows(on_date, size_names, darma_pack_qtys):
+    """Two independent pricing blocks sharing the exact existing product catalog."""
+    catalog = current_catalog(on_date)
+    by_pack = defaultdict(list)
+    individual = []
+    for product in catalog:
+        sizes = {entry["name"]: entry for entry in product["sizes"]}
+        cells = [
+            {"name": size, "id": sizes[size]["id"], "price": sizes[size]["price"], "active": True}
+            if size in sizes else {"name": size, "active": False}
+            for size in size_names
+        ]
+        individual.append({**product, "cells": cells})
+        if product["brand"] == "دارما":
+            by_pack[int(product["pack_qty"])].append(product)
+
+    bulk = []
+    for pack_qty in darma_pack_qtys:
+        products = by_pack.get(int(pack_qty), [])
+        cells = []
+        for size in size_names:
+            values = [
+                entry["price"]
+                for product in products for entry in product["sizes"]
+                if entry["name"] == size
+            ]
+            mixed = len(set(values)) > 1
+            cells.append({
+                "name": size, "active": bool(values),
+                "price": values[0] if values and not mixed else "",
+                "mixed": mixed,
+            })
+        bulk.append({"pack_qty": pack_qty, "products": len(products), "cells": cells})
+    return {"individual": individual, "bulk": bulk, "size_names": size_names}
+
+
+@transaction.atomic
+def save_tapsi_product_prices(product, effective_from, post):
+    products = list(
+        ProductSize.objects.filter(product=product, active=True, product__active=True)
+        .select_related("size")
+    )
+    if not products:
+        raise ValueError("این محصول سایز فعال ندارد.")
+    updates = []
+    for ps in products:
+        raw = str(post.get(f"price_{ps.pk}") or "").strip()
+        if not raw:
+            continue
+        price = positive_int(raw, f"قیمت {product.code}/{ps.size.name}")
+        updates.append((ps, price))
+    if not updates:
+        raise ValueError("حداقل قیمت یک سایز را وارد کن.")
+    for ps, price in updates:
+        TapsiPriceRule.objects.update_or_create(
+            product_size=ps, effective_from=effective_from,
+            defaults={"price": price},
+        )
+    return len(updates)
+
+
+@transaction.atomic
+def save_tapsi_bulk_darma(pack_qty, effective_from, post):
+    product_sizes = list(
+        ProductSize.objects.filter(
+            product__brand__name="دارما", product__pack_qty=int(pack_qty),
+            product__active=True, active=True, size__name__in=DARMA_PACK_SIZES,
+        ).select_related("size")
+    )
+    if not product_sizes:
+        raise ValueError("برای این تعداد پک، محصول دارمای فعالی پیدا نشد.")
+    group = defaultdict(list)
+    for ps in product_sizes:
+        group[ps.size.name].append(ps)
+    updates = []
+    for size, rows in group.items():
+        value = str(post.get(f"price_{size}") or "").strip()
+        if not value:
+            raise ValueError(f"قیمت گروهی سایز {size} را وارد کن.")
+        price = positive_int(value, f"قیمت گروهی سایز {size}")
+        updates.extend((ps, price) for ps in rows)
+    for ps, price in updates:
+        TapsiPriceRule.objects.update_or_create(
+            product_size=ps, effective_from=effective_from,
+            defaults={"price": price},
+        )
+    return {"sizes": len(group), "rows": len(updates), "products": len({ps.product_id for ps, _ in updates})}
