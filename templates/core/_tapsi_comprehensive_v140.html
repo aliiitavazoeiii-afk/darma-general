@@ -1,0 +1,77 @@
+{% load jalali %}
+<section id="comprehensive-tapsi-shop" class="v76-domain mt-4 mb-4">
+  <div class="v76-domain-head">
+    <div><h3 class="v76-domain-title mb-0">تپسی‌شاپ · گزارش پلتفرم</h3>
+      <div class="v76-domain-sub">همان بازه انتخاب‌شده در گزارش جامع؛ فروش، تعداد، سود و هزینه‌ها مستقل از دیجی‌کالا</div></div>
+    <span class="v76-domain-kicker">TAPSI</span>
+  </div>
+  <div class="v76-domain-body">
+    <div class="tapsi-report-kpis">
+      <div><span>تعداد سفارش</span><strong>{{ tapsi_period.total.orders|groupnum }}</strong></div>
+      <div><span>کالا / پک فروخته‌شده</span><strong>{{ tapsi_period.total.packs|groupnum }}</strong></div>
+      <div><span>شورت فروخته‌شده</span><strong>{{ tapsi_period.total.shorts|groupnum }}</strong></div>
+      <div><span>فروش کل</span><strong class="money">{{ tapsi_period.total.gross|groupnum }}</strong></div>
+      <div><span>هزینه تمام‌شده کالا</span><strong class="money">{{ tapsi_period.total.cogs|groupnum }}</strong></div>
+      <div><span>هزینه تپسی‌شاپ (کل)</span><strong class="money">{{ tapsi_period.total.fee|groupnum }}</strong></div>
+      <div><span>کمیسیون ۱۵٪ شامل مالیات</span><strong class="money">{{ tapsi_period.total.commission|groupnum }}</strong></div>
+      <div><span>ارسال و بسته‌بندی</span><strong class="money">{{ tapsi_period.total.shipping|groupnum }}</strong></div>
+      <div><span>هزینه تخفیف دستی</span><strong class="money">{{ tapsi_period.total.discount|groupnum }}</strong></div>
+      <div><span>سود خالص</span><strong class="money {% if tapsi_period.total.profit < 0 %}text-danger{% else %}text-success{% endif %}">{{ tapsi_period.total.profit|groupnum }}</strong></div>
+    </div>
+    <div class="tapsi-receivable-note mt-3">
+      <span>طلب خالص فعلی از تپسی‌شاپ (همه سفارش‌های ثبت‌شده، بدون اعمال تسویه):</span>
+      <strong class="money">{{ tapsi_receivable|groupnum }} تومان</strong>
+      <small>این عدد در سرمایه کل لحاظ شده، ولی به حساب بانک یا طلب دیجی‌کالا اضافه نشده است. تا زمان راه‌اندازی تسویه‌ها، سفارش‌ها پرداخت‌نشده فرض می‌شوند.</small>
+    </div>
+
+    <h4 class="mt-4 mb-2">فروش و سود تپسی به تفکیک سایز</h4>
+    <div class="table-responsive">
+      <table class="table table-sm table-vcenter mb-0 tapsi-report-table">
+        <thead><tr><th>سایز</th><th>تعداد کالا</th><th>تعداد شورت</th><th>فروش</th><th>بهای کالا</th><th>هزینه تپسی</th><th>سود</th></tr></thead>
+        <tbody>
+          {% for item in tapsi_period.by_size %}
+          <tr><td><strong>{{ item.size }}</strong></td><td>{{ item.packs|groupnum }}</td><td>{{ item.shorts|groupnum }}</td>
+            <td class="money">{{ item.gross|groupnum }}</td><td class="money">{{ item.cogs|groupnum }}</td>
+            <td class="money">{{ item.fee|groupnum }}</td><td class="money {% if item.profit < 0 %}text-danger{% else %}text-success{% endif %}">{{ item.profit|groupnum }}</td></tr>
+          {% empty %}<tr><td colspan="7" class="text-secondary p-3">در این بازه سفارشی ثبت نشده است.</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <h4 class="mt-4 mb-2">سود هر کد و سایز در تپسی‌شاپ</h4>
+    <div class="table-responsive">
+      <table class="table table-sm table-vcenter mb-0 tapsi-report-table">
+        <thead><tr><th>کد و عنوان محصول</th><th>برند</th><th>سایز</th><th>تعداد کالا</th><th>تعداد شورت</th><th>فروش</th><th>بهای کالا</th><th>کمیسیون</th><th>سهم ارسال</th><th>سهم تخفیف</th><th>سود</th></tr></thead>
+        <tbody>
+          {% for item in tapsi_period.rows %}
+          <tr>
+            <td><strong>{{ item.code }}</strong><span class="tapsi-report-sub">{{ item.title }}</span></td>
+            <td>{{ item.brand }}</td><td>{{ item.size }}</td>
+            <td>{{ item.packs|groupnum }}</td><td>{{ item.shorts|groupnum }}</td>
+            <td class="money">{{ item.gross|groupnum }}</td><td class="money">{{ item.cogs|groupnum }}</td>
+            <td class="money">{{ item.commission|groupnum }}</td>
+            <td class="money">{{ item.shipping|groupnum }}</td>
+            <td class="money">{{ item.discount|groupnum }}</td>
+            <td class="money {% if item.profit < 0 %}text-danger{% else %}text-success{% endif %}">{{ item.profit|groupnum }}</td>
+          </tr>
+          {% empty %}<tr><td colspan="11" class="text-secondary p-3">برای این بازه فروش تپسی‌شاپ ثبت نشده است.</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p class="text-secondary small mt-3 mb-0">هزینه ارسال و تخفیف هر سفارش متناسب با مبلغ فروش اقلام همان سفارش به کدها تخصیص یافته؛ مجموع هزینه و سود ردیف‌ها دقیقاً با جمع سفارش‌ها برابر است. قیمت تمام‌شده از اسنپ‌شات همان زمان فروش خوانده می‌شود.</p>
+  </div>
+</section>
+<style>
+.tapsi-report-kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px}
+.tapsi-report-kpis>div{padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.025);min-width:0}
+.tapsi-report-kpis span{display:block;font-size:.7rem;color:#9fafc4}
+.tapsi-report-kpis strong{display:block;font-size:1rem;margin-top:7px}
+.tapsi-report-table{min-width:850px;font-size:.76rem}.tapsi-report-table th{white-space:nowrap;color:#aebfcf;font-weight:760}
+.tapsi-report-table td{vertical-align:middle}
+.tapsi-report-sub{display:block;color:#9babbc;font-size:.68rem;max-width:240px;margin-top:5px}
+.tapsi-receivable-note{border:1px solid rgba(133,165,200,.24);border-radius:11px;background:rgba(106,155,205,.045);padding:12px;display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.tapsi-receivable-note>span{font-size:.73rem;color:#c2d2e2}.tapsi-receivable-note>strong{font-size:1.02rem}
+.tapsi-receivable-note>small{display:block;width:100%;color:#8eacbd;line-height:1.6}
+@media(max-width:950px){.tapsi-report-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:600px){.tapsi-report-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style>
