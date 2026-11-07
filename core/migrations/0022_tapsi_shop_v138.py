@@ -53,6 +53,8 @@ class Migration(migrations.Migration):
                 ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
                 ("quantity", models.PositiveIntegerField(validators=[django.core.validators.MinValueValidator(1)])),
                 ("item", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name="stock_allocations", to="core.tapsiorderitem")),
+                ("brand", models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to="core.brand")),
+                ("size", models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to="core.size")),
                 ("color", models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to="core.color")),
                 ("location", models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to="core.stocklocation")),
             ],
