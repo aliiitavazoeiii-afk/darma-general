@@ -170,6 +170,10 @@ class TapsiShopV138Tests(TestCase):
 
     def test_invalid_price_or_composition_rolls_back_without_stock_or_order(self):
         TapsiPriceRule.objects.filter(product_size=self.ps_l).delete()
+        # Neither an independent Tapsi price nor the canonical Digikala
+        # baseline exists: the request must still be rejected atomically.
+        self.ps_l.default_sale_price = 0
+        self.ps_l.save(update_fields=["default_sale_price"])
         with self.assertRaisesMessage(ValueError, "ابتدا قیمت تپسی‌شاپ"):
             create_tapsi_order(self.day, [(self.ps_m.id, 1), (self.ps_l.id, 1)])
         self.assertFalse(TapsiOrder.objects.exists())
@@ -330,7 +334,9 @@ class TapsiShopV138Tests(TestCase):
         self.assertEqual(total["receivable"], total["gross"] - total["fee"])
         page = self.client.get(reverse("report"), {"period": "today"})
         self.assertEqual(page.status_code, 200)
-        self.assertContains(page, "تپسی‌شاپ · گزارش پلتفرم")
+        self.assertContains(page, 'id="comprehensive-tapsi-shop"')
+        self.assertContains(page, 'class="v76-fold tapsi-comprehensive-fold"')
+        self.assertContains(page, "گزارش تپسی‌شاپ")
         self.assertContains(page, "سود هر کد و سایز در تپسی‌شاپ")
         self.assertEqual(page.context["tapsi_period"]["total"]["profit"], total["profit"])
         self.assertEqual(page.context["overall"]["gross"], total["gross"])
@@ -348,3 +354,85 @@ class TapsiShopV138Tests(TestCase):
         self.assertNotContains(report_only, reverse("tapsi_order_delete", args=[self.day.pk, order.pk]))
         editing = self.client.get(reverse("tapsi_order_entry", args=[self.day.pk]))
         self.assertContains(editing, reverse("tapsi_order_delete", args=[self.day.pk, order.pk]))
+
+    def test_v141_brand_new_10_white_pack_sizes_selectable_and_price_snapshotted(self):
+        from core.tapsi_shop_v138 import initial_catalog_prices
+        product = ProductCode.objects.create(
+            brand=self.brand, code="03", title="پک ۰۳ ده تایی سفید",
+            pack_qty=10, active=True,
+        )
+        white = Color.objects.create(name="سفید")
+        ProductComposition.objects.create(product=product, color=white, qty=10)
+        ps_m = ProductSize.objects.create(
+            product=product, size=self.size_m, active=True,
+            default_sale_price=1600000,
+        )
+        ps_l = ProductSize.objects.create(
+            product=product, size=self.size_l, active=True,
+            default_sale_price=1750000,
+        )
+        self.assertFalse(TapsiPriceRule.objects.filter(product_size__in=[ps_m, ps_l]).exists())
+        catalog = current_catalog(self.day.date)
+        row = next(x for x in catalog if x["id"] == product.id)
+        self.assertEqual(
+            {x["name"]: x["price"] for x in row["sizes"]},
+            {"M": 1600000, "L": 1750000},
+        )
+        page = self.client.get(reverse("tapsi_order_entry", args=[self.day.id]))
+        self.assertEqual(page.status_code, 200)
+        self.assertContains(page, "پک ۰۳ ده تایی سفید")
+        self.assertContains(page, 'id="tapsi-product-size"')
+        self.assertContains(page, "خلاصه فروش امروز تپسی‌شاپ")
+        self.assertContains(page, "سفارش‌های ثبت‌شده این روز")
+        self.assertContains(page, 'id="tapsi-order-create"')
+        response = self.client.post(reverse("tapsi_order_create", args=[self.day.id]), {
+            "product_size_id": [str(ps_m.pk)],
+            "quantity": ["1"],
+            "discount_cost": "0",
+        })
+        self.assertEqual(response.status_code, 302)
+        item = TapsiOrderItem.objects.get(product_size=ps_m)
+        self.assertEqual(item.unit_price, 1600000)
+        self.assertEqual(item.pack_qty, 10)
+        self.assertEqual(TapsiPriceRule.objects.get(product_size=ps_m).price, 1600000)
+        self.assertEqual(
+            StockBalance.objects.get(
+                brand=self.brand, size=self.size_m, color=white, location=self.home
+            ).qty, -10,
+        )
+        ps_m.default_sale_price = 2200000
+        ps_m.save(update_fields=["default_sale_price"])
+        self.assertEqual(item.unit_price, 1600000)
+        self.assertEqual(initial_catalog_prices([ps_m], self.day.date)[ps_m.pk], 1600000)
+        self.assertEqual(sale_price_for(ps_m, self.day.date), 2200000)
+        self.assertEqual(
+            next(x for x in current_catalog(self.day.date) if x["id"] == product.id)["sizes"][0]["price"],
+            1600000,
+        )
+
+    def test_v141_clean_three_card_layout_history_alignment_and_fold(self):
+        page = self.client.get(reverse("tapsi_order_entry", args=[self.day.id]))
+        self.assertContains(page, 'class="card glass-card mb-3 tapsi-overview-card"')
+        self.assertContains(page, 'id="tapsi-shop"')
+        self.assertContains(page, 'id="tapsi-order-history"')
+        self.assertContains(page, "مبلغ فروش کالا")
+        self.assertContains(page, "هزینه کل تپسی‌شاپ")
+        self.assertContains(page, "ارسال و بسته‌بندی")
+        self.assertContains(page, "بهای تمام‌شده کالا")
+        self.assertContains(page, "سود فروش")
+        self.assertNotContains(page, "سود تخمینی تپسی")
+        self.assertContains(page, "tapsi-orders-table")
+        self.assertContains(page, 'class="tapsi-num"')
+        body = page.content.decode("utf-8")
+        self.assertLess(body.index("خلاصه فروش امروز تپسی‌شاپ"),
+                        body.index("ثبت سفارش تپسی‌شاپ"))
+        self.assertLess(body.index("ثبت سفارش تپسی‌شاپ"),
+                        body.index("سفارش‌های ثبت‌شده این روز"))
+        script = (Path(settings.BASE_DIR) / "core/static/core/tapsi_shop_v138.js").read_text("utf-8")
+        self.assertIn("opt.disabled = false", script)
+        self.assertIn("tapsi-preview-fee", script)
+        self.assertNotIn('tapsi-preview-commission', script)
+        report = self.client.get(reverse("report"), {"period":"today"})
+        self.assertContains(report, 'id="comprehensive-tapsi-shop"')
+        self.assertContains(report, 'class="v76-fold tapsi-comprehensive-fold"')
+        self.assertNotContains(report, "تپسی‌شاپ · گزارش پلتفرم")
