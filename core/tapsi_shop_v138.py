@@ -71,6 +71,26 @@ def tapsi_price_for(product_size, on_date):
     return effective_prices([ps_id], on_date).get(ps_id, 0)
 
 
+def initial_catalog_prices(product_sizes, on_date):
+    """Read-only price for a newly added SKU before its first Tapsi-specific rule.
+
+    An explicit Tapsi rule always wins. Otherwise use the existing canonical
+    Digikala/manual product-size sale price as the initial default. The order
+    snapshots the chosen price at registration; Tapsi price edits never mutate
+    Digikala rules or past orders. This avoids making a new active size
+    unselectable just because it was added after the one-time V140 price seed.
+    """
+    from .sale_price_v60 import sale_price_for
+    entries = list(product_sizes)
+    result = effective_prices([ps.pk for ps in entries], on_date)
+    for ps in entries:
+        if result.get(ps.pk, 0) <= 0:
+            original = int(sale_price_for(ps, on_date) or 0)
+            if original > 0:
+                result[ps.pk] = original
+    return result
+
+
 def current_catalog(on_date):
     """Use exact shared product codes and titles; prices are Tapsi-exclusive."""
     products = list(
@@ -82,11 +102,14 @@ def current_catalog(on_date):
         ).order_by("brand__name", "code", "id")
     )
     ids = [ps.pk for product in products for ps in product.sizes.all()]
-    prices = effective_prices(ids, on_date)
+    prices = initial_catalog_prices(
+        [ps for product in products for ps in product.sizes.all()], on_date
+    )
     catalog = []
     for product in products:
         sizes = [
-            {"id": ps.pk, "name": ps.size.name, "price": prices.get(ps.pk, 0)}
+            {"id": ps.pk, "name": ps.size.name, "price": prices.get(ps.pk, 0),
+             "active": bool(ps.active)}
             for ps in product.sizes.all()
         ]
         if not sizes:
@@ -167,7 +190,7 @@ def create_tapsi_order(day, pairs, discount_cost=0, note=""):
     if len(product_sizes) != len(amounts):
         raise ValueError("یکی از محصولات یا سایزهای سفارش غیرفعال یا نامعتبر است.")
 
-    prices = effective_prices(amounts, day.date)
+    prices = initial_catalog_prices(product_sizes.values(), day.date)
     compositions = {}
     for ps_id, ps in product_sizes.items():
         if prices.get(ps_id, 0) <= 0:
