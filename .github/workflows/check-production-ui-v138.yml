@@ -1,0 +1,90 @@
+name: V138 production UI on Takvin recovery
+on:
+  push:
+    branches:
+      - v138-production-inline-save-no-navigation
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  production-ui:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: darma
+          POSTGRES_USER: darma
+          POSTGRES_PASSWORD: darma
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U darma"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_NAME: darma
+      DB_USER: darma
+      DB_PASSWORD: darma
+      DJANGO_SETTINGS_MODULE: config.settings
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Dependencies
+        run: pip install -r requirements.txt
+      - name: Scope, syntax and templates
+        run: |
+          python -m compileall -q core/material_report_ui_v131.py core/material_report_overall_v137.py core/production_inline_v138.py core/test_production_workspace_v131.py core/test_production_overall_v137.py core/test_production_inline_v138.py core/management/commands/check_production_ui_v131.py
+          node --check core/static/core/production_workspace_v131.js
+          bash -n server_production_ui_v138.sh
+          python manage.py check
+          python manage.py makemigrations --check --dry-run
+          python - <<'PY'
+          import django
+          django.setup()
+          from django.template.loader import get_template
+          get_template('core/material_report_v131.html')
+          get_template('core/material_report_overall_v137.html')
+          print('V138_TEMPLATE_OK')
+          PY
+      - name: Isolated production UI functional tests
+        run: |
+          python - <<'PY'
+          import django
+          django.setup()
+          from django.test import override_settings
+          from django.core.management import call_command
+          with override_settings(MIGRATION_MODULES={'core': None}, STORAGES={'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'}}):
+              call_command('test','core.test_production_workspace_v131','core.test_production_overall_v137','core.test_production_inline_v138',interactive=False,verbosity=2)
+          PY
+      - name: Confirm Takvin recovery source and all other business logic unchanged
+        run: |
+          python - <<'PY'
+          import subprocess
+          base='6159185a2fd69ecaea87bdf7a3fd6c22dc493912'
+          files=set(subprocess.check_output(['git','diff','--name-only',base+'..HEAD'],text=True).splitlines())
+          allowed={
+            'core/urls.py','core/production_inline_v138.py',
+            'core/management/commands/check_production_ui_v131.py',
+            'core/test_production_inline_v138.py',
+            'core/static/core/production_workspace_v131.css',
+            'core/static/core/production_workspace_v131.js',
+            'templates/core/material_report_v131.html',
+            'server_production_ui_v138.sh',
+            '.github/workflows/check-production-ui-v138.yml'
+          }
+          assert not files-allowed, files-allowed
+          protected=['core/models.py','core/material_report_v23.py','core/material_flow.py','core/capital_history_v87.py','core/inventory_valuation_v17.py','core/business_tools_v21.py']
+          assert not any(path in files for path in protected)
+          assert not any(path.startswith('core/migrations/') for path in files)
+          print('V138_UI_ONLY_TAKVIN_RECOVERY_PRESERVED')
+          PY
