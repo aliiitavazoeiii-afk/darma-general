@@ -35,6 +35,7 @@ from .novani_cost_v59 import novani_cost_for
 from .report_v5 import _raw_material_context
 from .self_spend_v62 import SELF_PAYEE, capital_accounts_queryset, is_self_tracking_row
 from .takvin_pricing_v17 import takvin_cost_for
+from .tapsi_shop_v138 import tapsi_receivable_total, tapsi_period_metrics
 
 
 def current_account_breakdown():
@@ -68,6 +69,9 @@ def current_capital_breakdown():
     raw = _raw_material_context()
     materials_total = int(raw["materials_total"] or 0)
     digikala_receivable = int(digikala_receivable_total() or 0)
+    # Tapsi orders generate a separate unpaid net claim. This is NOT a bank
+    # payment and is never added to the Digikala or manual accounts ledgers.
+    tapsi_receivable = int(tapsi_receivable_total() or 0)
     debt_row = ExcelManualSetting.objects.filter(key="takvin_debt").first()
     takvin_debt = int(debt_row.value or 0) if debt_row else 0
     inventory_total = finished_total + materials_total
@@ -76,6 +80,7 @@ def current_capital_breakdown():
         accounts_total
         + inventory_total
         + digikala_receivable
+        + tapsi_receivable
         - takvin_debt
         + assets_total
     )
@@ -86,6 +91,7 @@ def current_capital_breakdown():
         "materials_total": int(materials_total),
         "inventory_total": int(inventory_total),
         "digikala_receivable": int(digikala_receivable),
+        "tapsi_receivable": int(tapsi_receivable),
         "takvin_debt": int(takvin_debt),
         "dia_gallery_receivable": int(dia_receivable),
         "capital_total": int(total),
@@ -109,6 +115,13 @@ def _dia_profit_after(as_of):
     if as_of >= today:
         return 0
     return int(dia_gallery_period_metrics(as_of + timedelta(days=1), today)["total"]["profit"] or 0)
+
+
+def _tapsi_profit_after(as_of):
+    today = date.today()
+    if as_of >= today:
+        return 0
+    return int(tapsi_period_metrics(as_of + timedelta(days=1), today)["total"]["profit"])
 
 
 def _inventory_adjustment_unit_cost(row):
@@ -244,6 +257,7 @@ def capital_as_of(as_of):
     parts = {
         "sales_profit": _regular_sales_profit_after(as_of),
         "dia_profit": _dia_profit_after(as_of),
+        "tapsi_profit": _tapsi_profit_after(as_of),
         "self_spend": _self_spend_after(as_of),
         "material_purchase_difference": _material_purchase_capital_after(as_of),
         "inventory_adjustment": _inventory_adjustment_capital_after(as_of),
