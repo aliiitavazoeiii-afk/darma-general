@@ -352,3 +352,108 @@ def save_tapsi_bulk_darma(pack_qty, effective_from, post):
             defaults={"price": price},
         )
     return {"sizes": len(group), "rows": len(updates), "products": len({ps.product_id for ps, _ in updates})}
+
+
+# V140: financial recognition is derived from recorded Tapsi orders, not a
+# mutable manual account row. Until settlements are implemented every order is
+# treated as unpaid; NEVER also add this receivable to a manual bank/account row.
+def tapsi_receivable_total():
+    orders = TapsiOrder.objects.prefetch_related("items").all()
+    return sum(int(order_metrics(order)["gross"] - order_metrics(order)["fee"]) for order in orders)
+
+
+def _allocate_fee(amount, item_gross_values):
+    """Distribute order-level charges to product sizes without rounding drift."""
+    amount = int(amount)
+    gross = sum(item_gross_values)
+    if not item_gross_values:
+        return []
+    if not gross:
+        return [0] * (len(item_gross_values) - 1) + [amount]
+    shares = [amount * int(value) // gross for value in item_gross_values[:-1]]
+    return shares + [amount - sum(shares)]
+
+
+def tapsi_period_metrics(start, end):
+    """Per-platform financial ledger for one reporting interval.
+
+    Per-code and per-size profit includes its proportional share of the
+    order-level shipping and manual discount; values sum EXACTLY to order profit.
+    No new side-effects: all snapshots originate in the immutable order items.
+    """
+    orders = list(
+        TapsiOrder.objects.filter(day__date__gte=start, day__date__lte=end)
+        .select_related("day")
+        .prefetch_related(
+            "items__product_size__product__brand",
+            "items__product_size__size",
+        )
+        .order_by("day__date", "id")
+    )
+    totals = {
+        "orders": len(orders), "gross": 0, "commission": 0,
+        "shipping": 0, "discount": 0, "fee": 0, "cogs": 0,
+        "profit": 0, "shorts": 0, "packs": 0, "receivable": 0,
+    }
+    group = {}
+    by_date = defaultdict(lambda: {"gross": 0, "profit": 0, "shorts": 0, "packs": 0})
+    for order in orders:
+        metrics = order_metrics(order)
+        for k in ("gross", "commission", "shipping", "discount", "fee", "cogs", "profit", "shorts", "packs"):
+            totals[k] += int(metrics[k])
+        totals["receivable"] += metrics["gross"] - metrics["fee"]
+        by_date[order.day.date]["gross"] += metrics["gross"]
+        by_date[order.day.date]["profit"] += metrics["profit"]
+        by_date[order.day.date]["shorts"] += metrics["shorts"]
+        by_date[order.day.date]["packs"] += metrics["packs"]
+        items = list(order.items.all())
+        grosses = [int(it.unit_price) * int(it.quantity) for it in items]
+        commission_parts = _allocate_fee(metrics["commission"], grosses)
+        shipping_parts = _allocate_fee(metrics["shipping"], grosses)
+        discount_parts = _allocate_fee(metrics["discount"], grosses)
+        for i, item in enumerate(items):
+            ps = item.product_size
+            key = int(ps.pk)
+            if key not in group:
+                group[key] = {
+                    "product_size_id": key,
+                    "brand": ps.product.brand.name,
+                    "code": item.code_snapshot or ps.product.code,
+                    "title": item.title_snapshot or ps.product.title or ps.product.code,
+                    "size": ps.size.name,
+                    "packs": 0, "shorts": 0, "gross": 0, "cogs": 0,
+                    "commission": 0, "shipping": 0, "discount": 0,
+                    "fee": 0, "profit": 0,
+                }
+            row = group[key]
+            item_gross = grosses[i]
+            item_cogs = int(item.unit_cost) * int(item.pack_qty) * int(item.quantity)
+            fees = commission_parts[i] + shipping_parts[i] + discount_parts[i]
+            row["gross"] += item_gross
+            row["cogs"] += item_cogs
+            row["packs"] += int(item.quantity)
+            row["shorts"] += int(item.pack_qty) * int(item.quantity)
+            row["commission"] += commission_parts[i]
+            row["shipping"] += shipping_parts[i]
+            row["discount"] += discount_parts[i]
+            row["fee"] += fees
+            row["profit"] += item_gross - item_cogs - fees
+    rows = sorted(group.values(), key=lambda row: (row["brand"], row["code"], row["size"]))
+    # Guard against loss or double recognition when an order has multiple items.
+    if sum(row["profit"] for row in rows) != totals["profit"]:
+        raise RuntimeError("Tapsi profit reconciliation failed")
+    if sum(row["fee"] for row in rows) != totals["fee"]:
+        raise RuntimeError("Tapsi cost reconciliation failed")
+    size_rows = defaultdict(lambda: {
+        "packs": 0, "shorts": 0, "gross": 0, "cogs": 0, "fee": 0, "profit": 0,
+    })
+    for row in rows:
+        dest = size_rows[row["size"]]
+        for key in dest:
+            dest[key] += row[key]
+    return {
+        "total": totals,
+        "rows": rows,
+        "by_size": [{"size": name, **values} for name, values in sorted(size_rows.items())],
+        "by_date": dict(by_date),
+    }
