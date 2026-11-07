@@ -198,9 +198,10 @@ class TapsiShopV138Tests(TestCase):
         page = self.client.get(reverse("daily_report", args=[self.day.id]))
         self.assertEqual(page.status_code, 200)
         self.assertContains(page, "فروش تپسی‌شاپ")
-        self.assertContains(page, 'id="tapsi-shop-catalog"')
-        self.assertTrue(any(row["title"] == "شورت زنانه 330 مجموعه سعدعلی" for row in page.context["tapsi_catalog"]))
-        self.assertContains(page, 'name="discount_cost"')
+        entry = self.client.get(reverse("tapsi_order_entry", args=[self.day.id]))
+        self.assertContains(entry, 'id="tapsi-shop-catalog"')
+        self.assertTrue(any(row["title"] == "شورت زنانه 330 مجموعه سعدعلی" for row in entry.context["tapsi_catalog"]))
+        self.assertContains(entry, 'name="discount_cost"')
         submit = self.client.post(reverse("tapsi_order_create", args=[self.day.id]), {
             "product_size_id": [str(self.ps_m.pk), str(self.ps_l.pk)],
             "quantity": ["1", "1"], "discount_cost": "75000", "note": "ref 0123",
@@ -263,7 +264,7 @@ class TapsiShopV138Tests(TestCase):
         self.assertContains(edit, 'id="tapsi-order-create"')
         self.assertContains(edit, 'id="tapsi-product-query"')
         self.assertContains(edit, 'name="discount_cost"')
-        self.assertContains(edit, "شورت زنانه 330 مجموعه سعدعلی")
+        self.assertTrue(any(x["title"] == "شورت زنانه 330 مجموعه سعدعلی" for x in edit.context["tapsi_catalog"]))
         self.assertContains(edit, "بازگشت به گزارش روز")
 
     def test_v140_seed_current_digikala_prices_only_where_tapsi_missing(self):
