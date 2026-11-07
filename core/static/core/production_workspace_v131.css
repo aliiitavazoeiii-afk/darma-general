@@ -134,3 +134,10 @@
 .prod137-overview-link{font-size:.75rem;color:#c2e3fa;padding:8px 11px;border:1px solid rgba(142,197,230,.16);background:rgba(142,197,230,.04);text-decoration:none;border-radius:9px}
 #prod137-filter-description{color:#d1e5f2}
 @media(max-width:760px){.prod137-all-link{flex:1 1 auto;justify-content:center}.prod137-overview-link{width:100%;text-align:center}}
+
+/* V138: anchored, non-blocking save feedback — never changes the editor layout. */
+#prod138-save-toast{position:fixed;z-index:2100;left:22px;bottom:20px;max-width:min(460px,calc(100vw - 24px));background:#103b32;color:#e9fff3;border:1px solid rgba(73,209,141,.45);box-shadow:0 12px 40px rgba(0,0,0,.38);border-radius:12px;padding:13px 16px;font-size:.77rem;font-weight:750;line-height:1.85;direction:rtl;pointer-events:none}
+#prod138-save-toast[data-kind="error"]{background:#482423;color:#fff1ec;border-color:rgba(255,149,128,.55)}
+#prod138-save-toast[hidden]{display:none!important}
+.prod131-hidden-form[data-inline-url] button:disabled,.prod131-buttons .btn:disabled{opacity:.6;cursor:wait}
+@media(max-width:760px){#prod138-save-toast{left:12px;right:12px;max-width:none;bottom:12px}}
