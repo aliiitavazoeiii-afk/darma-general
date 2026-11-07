@@ -1,0 +1,97 @@
+{% load jalali %}
+<section id="tapsi-pricing-panel" class="mt-4">
+  <div class="pc-panel-head">
+    <div><h3 class="pc-section-title">تپسی‌شاپ</h3><div class="text-secondary small mt-1">کدها، عنوان‌ها و سایزها مشترک با کاتالوگ فعلی؛ قیمت‌ها کاملاً مستقل از دیجی‌کالا. مبلغ به تومان.</div></div>
+    <span class="badge bg-transparent border">قیمت معتبر از تاریخ ثبت‌شده</span>
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-header"><div class="fw-bold">ویرایش گروهی قیمت فروش دارما · تپسی‌شاپ</div></div>
+    <div class="card-body p-0">
+      <div class="pricing-scroll">
+        <div class="pricing-table">
+          <div class="pricing-grid-head tapsi-bulk">
+            <div>پک</div><div>از تاریخ</div>
+            {% for size in tapsi_sizes %}<div class="text-center">{{ size }}</div>{% endfor %}<div></div>
+          </div>
+          {% for row in tapsi_bulk_rows %}
+          <form method="post" class="pricing-row tapsi-bulk">
+            {% csrf_token %}<input type="hidden" name="action" value="tapsi_bulk_darma_prices">
+            <input type="hidden" name="pack_qty" value="{{ row.pack_qty }}">
+            <div class="price-code">پک {{ row.pack_qty }} تایی</div>
+            <div><input class="form-control jalali-date ltr" name="effective_from" value="{{ tapsi_effective_j }}" required></div>
+            {% for cell in row.cells %}
+              <div class="price-cell">
+                {% if cell.active %}
+                <input class="form-control money-input" inputmode="numeric" name="price_{{ cell.name }}"
+                  value="{{ cell.price }}" {% if cell.mixed %}placeholder="قیمت‌ها متفاوت"{% endif %} required>
+                {% else %}<div class="price-empty">—</div>{% endif %}
+              </div>
+            {% endfor %}
+            <div><button type="submit" class="btn btn-primary w-100" {% if not row.products %}disabled{% endif %}>ثبت گروهی</button></div>
+          </form>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <div class="fw-bold">قیمت مستقل هر کد · تپسی‌شاپ</div>
+      <input type="search" class="form-control tapsi-pricing-search" id="tapsi-pricing-search"
+        placeholder="جست‌وجوی کد، عنوان یا برند…" aria-label="جست‌وجوی قیمت تپسی‌شاپ" autocomplete="off">
+    </div>
+    <div class="card-body p-0">
+      <div class="pricing-scroll">
+        <div class="pricing-table">
+          <div class="pricing-grid-head tapsi-code">
+            <div>کد و عنوان کالا</div><div>پک</div><div>از تاریخ</div>
+            {% for size in tapsi_sizes %}<div class="text-center">{{ size }}</div>{% endfor %}<div></div>
+          </div>
+          {% for row in tapsi_price_rows %}
+          <form method="post" class="pricing-row tapsi-code tapsi-price-product" data-search="{{ row.brand }} {{ row.code }} {{ row.title }}">
+            {% csrf_token %}<input type="hidden" name="action" value="tapsi_product_prices">
+            <input type="hidden" name="product_id" value="{{ row.id }}">
+            <div class="tapsi-pricing-code"><strong>{{ row.code }}</strong><span>{{ row.brand }} · {{ row.title }}</span></div>
+            <div class="price-pack">{{ row.pack_qty }}</div>
+            <div><input class="form-control jalali-date ltr" name="effective_from" value="{{ tapsi_effective_j }}" required></div>
+            {% for cell in row.cells %}
+              <div class="price-cell">
+                {% if cell.active %}
+                <input class="form-control money-input" inputmode="numeric" name="price_{{ cell.id }}"
+                  value="{% if cell.price %}{{ cell.price }}{% endif %}" placeholder="تعریف نشده">
+                {% else %}<div class="price-empty">—</div>{% endif %}
+              </div>
+            {% endfor %}
+            <div><button type="submit" class="btn btn-outline-primary w-100">ثبت قیمت</button></div>
+          </form>
+          {% empty %}
+          <div class="empty-state">محصول فعالِ دارای سایز در کاتالوگ وجود ندارد.</div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="text-secondary small mt-2">قیمت‌های تپسی‌شاپ از صفر و مستقل تعریف می‌شوند. سفارش فقط زمانی ثبت می‌شود که قیمت همان کد و سایز مشخص شده باشد؛ تغییر قیمت‌های بعدی سفارش‌های قبلی را تغییر نمی‌دهد.</p>
+</section>
+<style>
+.pricing-grid-head.tapsi-bulk,.pricing-row.tapsi-bulk{grid-template-columns:130px 150px repeat(7,115px) 118px}
+.pricing-grid-head.tapsi-code,.pricing-row.tapsi-code{grid-template-columns:230px 65px 145px repeat(7,115px) 110px}
+.tapsi-pricing-code{display:flex;flex-direction:column;gap:4px;overflow:hidden}
+.tapsi-pricing-code strong{font-weight:850;font-size:.85rem;direction:ltr;text-align:right}
+.tapsi-pricing-code span{color:#96acbe;font-size:.67rem;line-height:1.35;white-space:normal}
+.tapsi-pricing-search{max-width:300px}
+.tapsi-price-product[hidden]{display:none!important}
+</style>
+<script>
+(() => {
+  const input=document.getElementById('tapsi-pricing-search');
+  const rows=[...document.querySelectorAll('.tapsi-price-product')];
+  const norm=v=>String(v||'').replace(/[ي]/g,'ی').replace(/[ك]/g,'ک').toLowerCase();
+  input?.addEventListener('input',()=>{
+    const q=norm(input.value.trim());
+    rows.forEach(row=>{row.hidden=!!q&&!norm(row.dataset.search).includes(q)});
+  });
+})();
+</script>
