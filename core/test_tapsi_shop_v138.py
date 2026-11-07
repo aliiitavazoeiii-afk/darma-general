@@ -78,6 +78,24 @@ class TapsiShopV138Tests(TestCase):
         self.assertEqual(next(x["price"] for x in p["sizes"] if x["name"] == "M"), 900000)
         self.assertEqual(sale_price_for(self.ps_m, self.day.date), dg_price)
 
+    def test_anbaresh_mirrored_products_are_excluded_from_tapsi(self):
+        mirror_brand = Brand.objects.create(name="انبارش")
+        mirror = ProductCode.objects.create(
+            brand=mirror_brand, code="330", title="آینه فروش دارما", pack_qty=3
+        )
+        mirror_ps = ProductSize.objects.create(product=mirror, size=self.size_m, active=True)
+        ProductComposition.objects.create(product=mirror, color=self.black, qty=1)
+        ProductComposition.objects.create(product=mirror, color=self.pink, qty=2)
+        TapsiPriceRule.objects.create(
+            product_size=mirror_ps, effective_from=self.day.date, price=500000
+        )
+        catalog = current_catalog(self.day.date)
+        self.assertEqual(len([r for r in catalog if r["code"] == "330"]), 1)
+        with self.assertRaisesMessage(ValueError, "غیرفعال یا نامعتبر"):
+            create_tapsi_order(self.day, [(mirror_ps.id, 1)])
+        self.assertFalse(TapsiOrder.objects.exists())
+        self.assertFalse(StockBalance.objects.filter(brand=mirror_brand).exists())
+
     def test_two_products_one_order_exactly_one_shipping_plus_manual_discount(self):
         order = create_tapsi_order(self.day, [(self.ps_m.pk, 1), (self.ps_l.pk, 2)], discount_cost=25000)
         metrics = order_metrics(order)
@@ -134,6 +152,9 @@ class TapsiShopV138Tests(TestCase):
         order = create_tapsi_order(self.day, [(self.ps_m.id, 1)])
         ProductComposition.objects.filter(product=self.product).update(qty=1)
         ProductComposition.objects.filter(product=self.product, color=self.black).update(qty=3)
+        # Even a later product-brand edit cannot redirect historical stock reversal.
+        self.product.brand = Brand.objects.create(name="Novani")
+        self.product.save(update_fields=["brand"])
         reverse_tapsi_order(order)
         self.assertEqual(self._balance(self.size_m, self.black), 100)
         self.assertEqual(self._balance(self.size_m, self.pink), 100)
