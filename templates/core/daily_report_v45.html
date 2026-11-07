@@ -61,4 +61,6 @@
   </tbody><tfoot><tr class="fw-bold"><td colspan="2">جمع Dia Gallery</td><td class="text-center num">{{ dia_gallery.total.shorts|groupnum }}</td><td></td><td class="money">{{ dia_gallery.total.gross|groupnum }}</td><td class="money">{{ dia_gallery.total.cogs|groupnum }}</td><td class="money {% if dia_gallery.total.profit >= 0 %}text-success{% else %}text-danger{% endif %}">{{ dia_gallery.total.profit|groupnum }}</td></tr></tfoot></table></div>
 </div>
 {% endif %}
+
+{% include 'core/_tapsi_shop_daily_v138.html' %}
 {% endblock %}
