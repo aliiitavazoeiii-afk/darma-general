@@ -411,6 +411,7 @@ class TapsiShopV138Tests(TestCase):
         )
 
     def test_v141_clean_three_card_layout_history_alignment_and_fold(self):
+        create_tapsi_order(self.day, [(self.ps_m.id, 1)])
         page = self.client.get(reverse("tapsi_order_entry", args=[self.day.id]))
         self.assertContains(page, 'class="card glass-card mb-3 tapsi-overview-card"')
         self.assertContains(page, 'id="tapsi-shop"')
