@@ -75,6 +75,7 @@ def current_catalog(on_date):
     """Use exact shared product codes and titles; prices are Tapsi-exclusive."""
     products = list(
         ProductCode.objects.filter(active=True, brand__active=True)
+        .exclude(brand__name="انبارش")  # manual-sale mirror of physical Darma, not an independent Digikala SKU
         .select_related("brand")
         .prefetch_related(
             Prefetch("sizes", queryset=ProductSize.objects.filter(active=True).select_related("size").order_by("size__sort_order", "size__id"))
@@ -159,6 +160,7 @@ def create_tapsi_order(day, pairs, discount_cost=0, note=""):
     product_sizes = {
         ps.pk: ps
         for ps in ProductSize.objects.filter(pk__in=amounts, active=True, product__active=True)
+        .exclude(product__brand__name="انبارش")
         .select_related("product__brand", "size")
     }
     if len(product_sizes) != len(amounts):
