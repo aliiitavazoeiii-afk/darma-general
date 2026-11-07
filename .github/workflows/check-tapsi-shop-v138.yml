@@ -1,0 +1,98 @@
+name: V138 Tapsi Shop channel, pricing, inventory and daily report
+on:
+  push:
+    branches:
+      - v138-tapsi-shop-daily-orders
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  tapsi-shop:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: darma
+          POSTGRES_USER: darma
+          POSTGRES_PASSWORD: darma
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U darma"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_NAME: darma
+      DB_USER: darma
+      DB_PASSWORD: darma
+      DJANGO_SETTINGS_MODULE: config.settings
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Dependencies
+        run: pip install -r requirements.txt
+      - name: Syntax, JS, migrations, Django and templates
+        run: |
+          python -m compileall -q core/tapsi_shop_v138.py core/tapsi_views_v138.py core/test_tapsi_shop_v138.py core/models.py core/product_center_v93.py core/daily_report_v8.py core/daily_report_actions_v21.py core/daily_views.py
+          node --check core/static/core/tapsi_shop_v138.js
+          bash -n server_tapsi_shop_v138.sh
+          python manage.py check
+          python manage.py makemigrations --check --dry-run
+          python - <<'PY'
+          import django
+          django.setup()
+          from django.template.loader import get_template
+          for path in ['core/_tapsi_shop_daily_v138.html','core/_tapsi_pricing_v138.html','core/daily_report_v45.html','core/settings_products_v93.html','core/sale_brand_v45.html']:
+              get_template(path)
+          print('V138_TEMPLATES_COMPILE_OK')
+          PY
+      - name: Apply real migrations to clean PostgreSQL
+        run: |
+          python manage.py migrate --noinput
+          python manage.py showmigrations core
+      - name: Isolated regression tests (including older production UI)
+        run: |
+          python - <<'PY'
+          import django
+          django.setup()
+          from django.test import override_settings
+          from django.core.management import call_command
+          with override_settings(MIGRATION_MODULES={'core': None}, STORAGES={'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'}}):
+              call_command('test','core.test_tapsi_shop_v138','core.test_production_workspace_v131','core.test_production_overall_v137',interactive=False,verbosity=2)
+          PY
+      - name: Source scope and protected accounting contracts
+        run: |
+          python - <<'PY'
+          import subprocess
+          base='6159185a2fd69ecaea87bdf7a3fd6c22dc493912'
+          files=set(subprocess.check_output(['git','diff','--name-only',base+'..HEAD'],text=True).splitlines())
+          allowed={
+            '.github/workflows/check-tapsi-shop-v138.yml',
+            'core/models.py','core/migrations/0022_tapsi_shop_v138.py',
+            'core/tapsi_shop_v138.py','core/tapsi_views_v138.py','core/test_tapsi_shop_v138.py',
+            'core/product_center_v93.py','core/daily_report_v8.py','core/daily_views.py',
+            'core/daily_report_actions_v21.py','core/urls.py',
+            'templates/core/_tapsi_shop_daily_v138.html','templates/core/_tapsi_pricing_v138.html',
+            'templates/core/_product_center_pricing_v93.html',
+            'templates/core/daily_report_v45.html','templates/core/sale_brand_v45.html',
+            'templates/core/daily_report_v21.html',
+            'core/static/core/tapsi_shop_v138.js','core/static/core/tapsi_shop_v138.css',
+            'server_tapsi_shop_v138.sh',
+          }
+          assert not files-allowed, sorted(files-allowed)
+          assert 'core/finance.py' not in files
+          assert 'core/final_services.py' not in files
+          assert 'core/sale_price_v60.py' not in files
+          assert not any(x.startswith('core/migrations/') and x!='core/migrations/0022_tapsi_shop_v138.py' for x in files)
+          print('V138_NO_DIGIKALA_PRICING_OR_LEGACY_FINANCE_CHANGES')
+          PY
