@@ -407,6 +407,10 @@ class TapsiOrderItem(models.Model):
         constraints = [models.UniqueConstraint(fields=["order", "product_size"], name="uniq_tapsi_order_product_size")]
         ordering = ["id"]
 
+    @property
+    def gross_sales(self):
+        return int(self.unit_price or 0) * int(self.quantity or 0)
+
 
 class TapsiStockAllocation(models.Model):
     item = models.ForeignKey(TapsiOrderItem, on_delete=models.CASCADE, related_name="stock_allocations")
