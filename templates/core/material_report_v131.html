@@ -2,7 +2,8 @@
 {% block title %}تولید | DARMA{% endblock %}
 {% block content %}
 {% include 'core/_mobile_shell.html' %}
-<link rel="stylesheet" href="{% static 'core/production_workspace_v131.css' %}">
+<link rel="stylesheet" href="{% static 'core/production_workspace_v131.css' %}?v=138">
+<div id="prod138-save-toast" role="status" aria-live="polite" aria-atomic="true" hidden></div>
 <div class="prod131">
   <header class="prod131-head">
     <div>
@@ -97,7 +98,7 @@
     </div>
 
     {% for editor in editors %}
-    <form id="{{ editor.form_id }}" method="post" action="{% url 'material_block_save' editor.obj.id %}" class="prod131-hidden-form">
+    <form id="{{ editor.form_id }}" method="post" action="{% url 'material_block_save' editor.obj.id %}" data-inline-url="{% url 'material_block_inline' editor.obj.id %}" class="prod131-hidden-form">
       {% csrf_token %}
       <input type="hidden" name="date" value="{{ editor.date_j }}">
       <input type="hidden" name="title" value="{{ editor.obj.title }}">
@@ -279,5 +280,5 @@
 </div>
 {% endblock %}
 {% block scripts %}
-<script src="{% static 'core/production_workspace_v131.js' %}"></script>
+<script src="{% static 'core/production_workspace_v131.js' %}?v=138"></script>
 {% endblock %}
