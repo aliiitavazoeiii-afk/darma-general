@@ -10,6 +10,7 @@ from core import material_report_ui_v131 as ui
 from core import material_report_v23 as posting
 from core import material_report_v20 as legacy
 from core import material_report_overall_v137 as overall
+from core import production_inline_v138 as inline
 
 
 class Command(BaseCommand):
@@ -26,6 +27,8 @@ class Command(BaseCommand):
             "material_block_add_model": posting.material_block_add_model,
             "material_block_delete": legacy.material_block_delete,
         }
+        if resolve(reverse("material_block_inline", args=[123])).func is not inline.material_block_inline_action:
+            raise RuntimeError("V138 inline editor route mismatch")
         if resolve(reverse("material_production_overall")).func is not overall.production_overall:
             raise RuntimeError("V137 all-history GET route mismatch")
         if resolve(reverse("material_report")).func is not ui.material_report:
@@ -57,6 +60,8 @@ class Command(BaseCommand):
             'data-scope-metric="average_cost"',
             'data-countable=',
             'material_production_overall',
+            'data-inline-url=',
+            'prod138-save-toast',
         ):
             if marker not in template:
                 raise RuntimeError(f"Missing V131 UI contract: {marker}")
@@ -75,7 +80,9 @@ class Command(BaseCommand):
         self.stdout.write("PER-COLOR MATERIAL CONTROL=VISIBLE; WHOLE-SHEET BUTTON=HIDDEN")
         self.stdout.write("NEW-SHEET COLOR SELECTOR=VALIDATED")
         self.stdout.write("WHOLE-SHEET DELETE=EXISTING INVENTORY-SAFE V20 PATH")
-        for marker in ("selectedColor", "selectedMaterial", "matchesMaterial", "scopedMetric", "validWeight"):
+        for marker in ("selectedColor", "selectedMaterial", "matchesMaterial", "scopedMetric", "validWeight",
+                       "event.preventDefault()", "new FormData(form)", "fetch(inlineUrl",
+                       "inlineUpdateRow", "pendingInlineRequest"):
             if marker not in script:
                 raise RuntimeError(f"V137 selected-month reactive KPI missing: {marker}")
         for marker in ("ماهانه", "مقایسه رنگ‌ها", "material_report", "report.monthly",
@@ -86,5 +93,7 @@ class Command(BaseCommand):
             raise RuntimeError("V137 overall dashboard styles missing")
         self.stdout.write("SELECTED-MONTH KPIS FOLLOW ALL ACTIVE FILTERS=ON")
         self.stdout.write("SEPARATE COMPLETE READ-ONLY ALL-TIME PRODUCTION REPORT=ON")
+        self.stdout.write("V138 NO-REFRESH SAVE AND DELIVERY=ON")
+        self.stdout.write("EXISTING V23 INVENTORY/WAGE HANDLERS=UNCHANGED")
         self.stdout.write("DATABASE WRITES=NONE")
         self.stdout.write(self.style.SUCCESS("V131 PRODUCTION UI READ-ONLY CONTRACT CHECK OK"))
