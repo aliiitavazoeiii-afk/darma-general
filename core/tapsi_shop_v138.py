@@ -132,7 +132,8 @@ def _deduct_item(item, compositions, home):
         balance.qty -= pieces
         balance.save(update_fields=["qty"])
         TapsiStockAllocation.objects.create(
-            item=item, color=comp.color, quantity=pieces, location=home,
+            item=item, brand=ps.product.brand, size=ps.size,
+            color=comp.color, quantity=pieces, location=home,
         )
         InventoryMovement.objects.create(
             movement_type=InventoryMovement.SALE,
@@ -238,7 +239,7 @@ def reverse_tapsi_order(order):
     obj = TapsiOrder.objects.select_for_update().get(pk=order.pk if hasattr(order, "pk") else order)
     items = list(
         obj.items.select_related("product_size__product__brand", "product_size__size")
-        .prefetch_related("stock_allocations__color", "stock_allocations__location")
+        .prefetch_related("stock_allocations__brand", "stock_allocations__size", "stock_allocations__color", "stock_allocations__location")
         .order_by("pk")
     )
     for item in items:
@@ -250,14 +251,13 @@ def reverse_tapsi_order(order):
     for item in items:
         for alloc in item.stock_allocations.all():
             bal = _locked_home_balance(
-                item.product_size.product.brand, item.product_size.size,
-                alloc.color, alloc.location,
+                alloc.brand, alloc.size, alloc.color, alloc.location,
             )
             bal.qty += int(alloc.quantity)
             bal.save(update_fields=["qty"])
             InventoryMovement.objects.create(
                 movement_type=InventoryMovement.ADJUST,
-                brand=item.product_size.product.brand, size=item.product_size.size,
+                brand=alloc.brand, size=alloc.size,
                 color=alloc.color, location=alloc.location,
                 delta=int(alloc.quantity), reference=f"tapsi-item:{item.pk}:reverse",
             )
