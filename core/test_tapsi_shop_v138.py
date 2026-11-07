@@ -249,3 +249,94 @@ class TapsiShopV138Tests(TestCase):
             "core/static/core/tapsi_shop_v138.css",
         ):
             self.assertTrue((Path(settings.BASE_DIR) / path).is_file())
+
+    def test_v140_tapsi_entry_in_header_and_report_is_read_only(self):
+        daily = self.client.get(reverse("daily_report", args=[self.day.id]))
+        self.assertEqual(daily.status_code, 200)
+        self.assertContains(daily, 'href="' + reverse("tapsi_order_entry", args=[self.day.id]) + '"')
+        self.assertContains(daily, "گزارش فروش تپسی‌شاپ")
+        self.assertNotContains(daily, 'id="tapsi-order-create"')
+        self.assertNotContains(daily, 'id="tapsi-product-query"')
+        self.assertNotContains(daily, 'name="discount_cost"')
+        edit = self.client.get(reverse("tapsi_order_entry", args=[self.day.id]))
+        self.assertEqual(edit.status_code, 200)
+        self.assertContains(edit, 'id="tapsi-order-create"')
+        self.assertContains(edit, 'id="tapsi-product-query"')
+        self.assertContains(edit, 'name="discount_cost"')
+        self.assertContains(edit, "شورت زنانه 330 مجموعه سعدعلی")
+        self.assertContains(edit, "بازگشت به گزارش روز")
+
+    def test_v140_seed_current_digikala_prices_only_where_tapsi_missing(self):
+        from django.core.management import call_command
+        from io import StringIO
+        before = sale_price_for(self.ps_m, self.day.date)
+        # M already independent, L unpriced to test one-time import.
+        TapsiPriceRule.objects.filter(product_size=self.ps_l).delete()
+        dry = StringIO()
+        call_command("seed_tapsi_prices_v140", dry_run=True, stdout=dry)
+        self.assertEqual(tapsi_price_for(self.ps_l, self.day.date), 0)
+        output = StringIO()
+        call_command("seed_tapsi_prices_v140", stdout=output)
+        self.assertEqual(tapsi_price_for(self.ps_m, self.day.date), 900000)
+        self.assertEqual(tapsi_price_for(self.ps_l, self.day.date), 550000)
+        self.assertEqual(sale_price_for(self.ps_m, self.day.date), before)
+        self.assertIn("TAPSI_SEED_V140", output.getvalue())
+        rows_before = list(TapsiPriceRule.objects.values_list("pk", "price"))
+        call_command("seed_tapsi_prices_v140", stdout=StringIO())
+        self.assertEqual(rows_before, list(TapsiPriceRule.objects.values_list("pk", "price")))
+
+    def test_v140_capital_recognizes_net_receivable_not_profit_twice(self):
+        from core.capital_history_v87 import current_capital_breakdown, capital_as_of
+        from core.tapsi_shop_v138 import tapsi_receivable_total
+        from datetime import timedelta
+        before = current_capital_breakdown()
+        order = create_tapsi_order(self.day, [(self.ps_m.id, 1), (self.ps_l.id, 2)], discount_cost=25000)
+        m = order_metrics(order)
+        after = current_capital_breakdown()
+        self.assertEqual(tapsi_receivable_total(), m["gross"] - m["fee"])
+        self.assertEqual(after["tapsi_receivable"], m["gross"] - m["fee"])
+        # Home inventory value decreases by exact accounting cost at today's date.
+        self.assertEqual(
+            before["finished_inventory_total"] - after["finished_inventory_total"],
+            m["cogs"],
+        )
+        self.assertEqual(after["capital_total"] - before["capital_total"], m["profit"])
+        historical = capital_as_of(self.day.date - timedelta(days=1))
+        self.assertEqual(historical["delta_parts"]["tapsi_profit"], m["profit"])
+        self.assertEqual(historical["capital_total"], before["capital_total"])
+        reverse_tapsi_order(order)
+        self.assertEqual(tapsi_receivable_total(), 0)
+        self.assertEqual(current_capital_breakdown()["capital_total"], before["capital_total"])
+
+    def test_v140_comprehensive_tapsi_code_size_ledger_reconciles_fees_and_profit(self):
+        from core.tapsi_shop_v138 import tapsi_period_metrics
+        create_tapsi_order(self.day, [(self.ps_m.id, 1), (self.ps_l.id, 2)], discount_cost=25000)
+        ledger = tapsi_period_metrics(self.day.date, self.day.date)
+        total = ledger["total"]
+        rows = ledger["rows"]
+        self.assertEqual(total["orders"], 1)
+        self.assertEqual(total["fee"], 600000)
+        self.assertEqual(sum(row["fee"] for row in rows), total["fee"])
+        self.assertEqual(sum(row["commission"] for row in rows), 435000)
+        self.assertEqual(sum(row["shipping"] for row in rows), 140000)
+        self.assertEqual(sum(row["discount"] for row in rows), 25000)
+        self.assertEqual(sum(row["profit"] for row in rows), total["profit"])
+        self.assertEqual(sum(row["packs"] for row in ledger["by_size"]), 3)
+        self.assertEqual(total["receivable"], total["gross"] - total["fee"])
+        page = self.client.get(reverse("report"), {"period": "today"})
+        self.assertEqual(page.status_code, 200)
+        self.assertContains(page, "تپسی‌شاپ · گزارش پلتفرم")
+        self.assertContains(page, "سود هر کد و سایز در تپسی‌شاپ")
+        self.assertEqual(page.context["tapsi_period"]["total"]["profit"], total["profit"])
+        self.assertEqual(page.context["overall"]["gross"], total["gross"])
+        self.assertEqual(page.context["overall"]["profit"], total["profit"])
+        self.assertEqual(page.context["overall"]["digikala_fee"], 0)
+
+    def test_v140_report_summary_has_no_create_or_delete_button(self):
+        order = create_tapsi_order(self.day, [(self.ps_m.pk, 1)])
+        daily = self.client.get(reverse("daily_report", args=[self.day.pk]))
+        self.assertContains(daily, f"سفارش #{order.pk}")
+        self.assertContains(daily, "گزارش فروش تپسی‌شاپ")
+        self.assertNotContains(daily, reverse("tapsi_order_delete", args=[self.day.pk, order.pk]))
+        editing = self.client.get(reverse("tapsi_order_entry", args=[self.day.pk]))
+        self.assertContains(editing, reverse("tapsi_order_delete", args=[self.day.pk, order.pk]))
