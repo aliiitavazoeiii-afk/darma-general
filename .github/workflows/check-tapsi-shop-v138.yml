@@ -56,8 +56,12 @@ jobs:
               get_template(path)
           print('V138_TEMPLATES_COMPILE_OK')
           PY
-      - name: Apply real migrations to clean PostgreSQL
+      - name: Apply real migrations to clean PostgreSQL with required historical seed
         run: |
+          # This repository's 0013 data migration assumes Darma and HOME already
+          # exist in the operational database. Preserve that historical contract.
+          python manage.py migrate core 0012 --noinput
+          python manage.py shell -c "from core.models import Brand, StockLocation; Brand.objects.get_or_create(name='دارما'); StockLocation.objects.get_or_create(key='home', defaults={'title':'خانه'}); print('LEGACY_PRECONDITIONS_SEEDED')"
           python manage.py migrate --noinput
           python manage.py showmigrations core
       - name: Isolated regression tests (including older production UI)
