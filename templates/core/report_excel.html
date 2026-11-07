@@ -22,7 +22,7 @@
 </div>
 
 <div class="d-flex align-items-center justify-content-between mb-3 mt-5 gap-2"><div><div class="page-kicker">همان منطق شیت کالا</div><h2 class="page-title mb-0">سرمایه، موجودی و حساب اشخاص</h2></div><span class="badge badge-soft-orange px-3 py-2 text-nowrap">ورود دستی</span></div>
-<div class="capital-hero card mb-4"><div class="card-body"><div><div class="capital-label">سرمایه کل</div><div class="capital-number money">{{ capital_total|groupnum }} <small>تومان</small></div><div class="capital-formula">حساب‌ها + موجودی کالا + طلب دیجی‌کالا − بدهی تکوین</div></div><div class="capital-side"><div><span>حساب بانک و اشخاص</span><strong class="money">{{ accounts_total|groupnum }}</strong></div><div><span>موجودی کالا</span><strong class="money">{{ inventory_total|groupnum }}</strong></div></div></div></div>
+<div class="capital-hero card mb-4"><div class="card-body"><div><div class="capital-label">سرمایه کل</div><div class="capital-number money">{{ capital_total|groupnum }} <small>تومان</small></div><div class="capital-formula">حساب‌ها + موجودی کالا و مواد اولیه + طلب دیجی‌کالا + طلب تپسی‌شاپ − بدهی تکوین + دارایی‌های دیگر</div></div><div class="capital-side"><div><span>حساب بانک و اشخاص</span><strong class="money">{{ accounts_total|groupnum }}</strong></div><div><span>موجودی کالا</span><strong class="money">{{ inventory_total|groupnum }}</strong></div></div></div></div>
 
 <div class="row g-2 g-md-3 mb-4">
 <div class="col-6 col-md-3"><div class="card h-100"><div class="card-body"><div class="subheader">حساب بانک</div><div class="kpi money mt-2">{{ accounts_total|groupnum }}</div><div class="text-secondary">ریز حساب‌ها + اشخاص</div></div></div></div>
