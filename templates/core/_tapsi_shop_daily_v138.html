@@ -1,0 +1,107 @@
+{% load jalali static %}
+<section id="tapsi-shop" class="card glass-card mt-4 mb-4 tapsi-root">
+  <div class="card-header d-flex justify-content-between align-items-center gap-2 flex-wrap">
+    <div>
+      <h3 class="card-title mb-1">فروش تپسی‌شاپ</h3>
+      <div class="text-secondary small">جست‌وجوی همان کدها و عنوان‌های کاتالوگ دیجی‌کالا · انتخاب سایز · ثبت چند قلم در یک سفارش</div>
+    </div>
+    <a class="btn btn-sm btn-outline-light" href="{% url 'settings_products' %}?section=pricing&amp;brand=darma#tapsi-pricing-panel">قیمت‌گذاری تپسی‌شاپ</a>
+  </div>
+  <div class="card-body">
+    <div class="tapsi-kpis mb-4">
+      <div><span>سفارش‌های این روز</span><strong>{{ tapsi_summary.total.orders|groupnum }}</strong></div>
+      <div><span>فروش کالا</span><strong class="money">{{ tapsi_summary.total.gross|groupnum }}</strong></div>
+      <div><span>کمیسیون ۱۵٪ (شامل مالیات)</span><strong class="money">{{ tapsi_summary.total.commission|groupnum }}</strong></div>
+      <div><span>ارسال و بسته‌بندی</span><strong class="money">{{ tapsi_summary.total.shipping|groupnum }}</strong></div>
+      <div><span>هزینه تخفیف دستی</span><strong class="money">{{ tapsi_summary.total.discount|groupnum }}</strong></div>
+      <div><span>سود تخمینی تپسی</span><strong class="money">{{ tapsi_summary.total.profit|groupnum }}</strong></div>
+    </div>
+
+    <form method="post" action="{% url 'tapsi_order_create' day.id %}" id="tapsi-order-create" class="tapsi-create">
+      {% csrf_token %}
+      <div class="tapsi-picker-row">
+        <label class="tapsi-product-search">
+          <span>جست‌وجوی محصول (کد یا عنوان)</span>
+          <input class="form-control" id="tapsi-product-query" type="search"
+            placeholder="مثلاً ۳۳۰ یا شورت زنانه راه‌راه" autocomplete="off">
+          <div id="tapsi-product-results" class="tapsi-suggestions" hidden></div>
+        </label>
+        <label>
+          <span>سایز</span>
+          <select class="form-select" id="tapsi-product-size" disabled><option value="">اول محصول را انتخاب کن</option></select>
+        </label>
+        <label class="tapsi-quantity">
+          <span>تعداد کالا / پک</span>
+          <input type="number" class="form-control" id="tapsi-product-qty" min="1" max="10000" value="1" inputmode="numeric">
+        </label>
+        <button class="btn btn-outline-primary" type="button" id="tapsi-add-item" disabled>+ افزودن به سفارش</button>
+      </div>
+      <div class="tapsi-selected" id="tapsi-selected-product" aria-live="polite">محصولی انتخاب نشده است.</div>
+      <div class="tapsi-cart-wrap">
+        <table class="table table-sm tapsi-cart mb-0">
+          <thead><tr><th>محصول / سایز</th><th>تعداد</th><th>فی فروش</th><th>جمع</th><th></th></tr></thead>
+          <tbody id="tapsi-cart-body"><tr class="tapsi-empty"><td colspan="5">ابتدا کد و سایز را انتخاب و به سفارش اضافه کن.</td></tr></tbody>
+        </table>
+      </div>
+      <div class="tapsi-order-bottom mt-3">
+        <label><span>هزینه تخفیف (دستی، تومان)</span>
+          <input class="form-control money-input" type="text" name="discount_cost" id="tapsi-discount-cost" value="0" inputmode="numeric" autocomplete="off">
+        </label>
+        <label><span>یادداشت سفارش (اختیاری)</span>
+          <input class="form-control" name="note" maxlength="300" placeholder="مثلاً شماره سفارش تپسی">
+        </label>
+      </div>
+      <div class="tapsi-preview mt-3" aria-live="polite">
+        <div><span>مبلغ کالاها</span><strong id="tapsi-preview-gross">۰</strong></div>
+        <div><span>کمیسیون ۱۵٪</span><strong id="tapsi-preview-commission">۰</strong></div>
+        <div><span>ارسال فقط یک‌بار</span><strong>۱۴۰٬۰۰۰</strong></div>
+        <div><span>هزینه تخفیف</span><strong id="tapsi-preview-discount">۰</strong></div>
+        <div><span>دریافتی پس از هزینه‌ها (بدون بهای کالا)</span><strong id="tapsi-preview-net">۰</strong></div>
+      </div>
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3">
+        <span class="text-secondary small">۱۵٪ شامل مالیات ارزش افزوده است؛ مالیات دیگری به آن اضافه نمی‌شود. موجودی از خانه کم می‌شود و برداشت هر رنگ ثبت می‌ماند.</span>
+        <button class="btn btn-success" type="submit" id="tapsi-save-order" disabled>ثبت این سفارش تپسی‌شاپ</button>
+      </div>
+    </form>
+  </div>
+
+  {% if tapsi_summary.rows %}
+  <div class="card-footer p-3">
+    <h4 class="mb-3">سفارش‌های ثبت‌شده این روز</h4>
+    {% for order in tapsi_summary.rows %}
+    <div class="tapsi-order-record mb-3">
+      <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+        <div><strong>سفارش #{{ order.obj.id }}</strong>
+        <span class="text-secondary small me-2">{{ order.items|length }} قلم · {{ order.packs|groupnum }} پک</span>
+        {% if order.obj.note %}<span class="text-secondary small me-2">{{ order.obj.note }}</span>{% endif %}</div>
+        <form method="post" action="{% url 'tapsi_order_delete' day.id order.obj.id %}" class="m-0">
+          {% csrf_token %}
+          <button class="btn btn-sm btn-outline-danger" type="submit" onclick="return confirm('این سفارش تپسی حذف شود؟ تمام برداشت‌های همین سفارش از موجودی خانه برگشت داده می‌شوند.')">حذف سفارش</button>
+        </form>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-sm mb-2">
+          <thead><tr><th>کد / عنوان</th><th>سایز</th><th>تعداد پک</th><th>فی ثبت‌شده</th><th>فروش</th></tr></thead>
+          <tbody>{% for item in order.items %}
+            <tr><td><strong>{{ item.code_snapshot }}</strong><span class="text-secondary small me-2">{{ item.title_snapshot }}</span></td>
+              <td>{{ item.product_size.size.name }}</td><td>{{ item.quantity|groupnum }}</td>
+              <td class="money">{{ item.unit_price|groupnum }}</td><td class="money">{{ item.total_gross_display|default:"" }}</td></tr>
+          {% endfor %}</tbody>
+        </table>
+      </div>
+      <div class="tapsi-order-figures">
+        <span>فروش <b class="money">{{ order.gross|groupnum }}</b></span>
+        <span>کمیسیون <b class="money">{{ order.commission|groupnum }}</b></span>
+        <span>ارسال <b class="money">{{ order.shipping|groupnum }}</b></span>
+        <span>تخفیف <b class="money">{{ order.discount|groupnum }}</b></span>
+        <span>بهای کالا <b class="money">{{ order.cogs|groupnum }}</b></span>
+        <span>سود <b class="money {% if order.profit >= 0 %}text-success{% else %}text-danger{% endif %}">{{ order.profit|groupnum }}</b></span>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</section>
+{{ tapsi_catalog|json_script:"tapsi-shop-catalog" }}
+<link rel="stylesheet" href="{% static 'core/tapsi_shop_v138.css' %}">
+<script defer src="{% static 'core/tapsi_shop_v138.js' %}"></script>
