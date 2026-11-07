@@ -35,7 +35,10 @@
     add.disabled = !item || !item.price || numeric(qty.value) < 1;
     if (chosen) {
       selected.textContent = chosen.brand + " · " + chosen.code + " · " + chosen.title
-        + " · پک " + chosen.pack_qty + " تایی";
+        + " · پک " + chosen.pack_qty + " تایی"
+        + (item ? (item.price > 0
+            ? " · سایز " + item.name + " · " + totalMoney(item.price) + " تومان"
+            : " · برای این سایز هنوز قیمت فروش ثبت نشده است") : "");
     }
   };
   const choose = product => {
@@ -47,13 +50,15 @@
     product.sizes.forEach(entry => {
       const opt = document.createElement("option");
       opt.value = String(entry.id);
-      opt.disabled = !entry.price;
+      // Keep all ACTIVE product sizes selectable so a missing channel price
+      // never makes the whole size selector inaccessible.
+      opt.disabled = false;
       opt.textContent = entry.name + (entry.price ? " · " + totalMoney(entry.price) + " تومان" : " · قیمت تعریف نشده");
       size.append(opt);
     });
-    const first = product.sizes.find(x => x.price > 0);
+    const first = product.sizes.find(x => x.price > 0) || product.sizes[0];
     if (first) size.value = String(first.id);
-    size.disabled = !first;
+    size.disabled = !product.sizes.length;
     refreshSelection();
   };
   query?.addEventListener("input", () => {
@@ -95,12 +100,15 @@
       title.textContent = item.code + " · " + item.title + " / " + item.size;
       const amount = document.createElement("td");
       amount.textContent = totalMoney(item.quantity);
+      amount.className = "tapsi-num";
       const unit = document.createElement("td");
       unit.textContent = totalMoney(item.price);
+      unit.className = "tapsi-num";
       const total = document.createElement("td");
       const cost = item.price * item.quantity;
       gross += cost;
       total.textContent = totalMoney(cost);
+      total.className = "tapsi-num";
       const remove = document.createElement("td");
       const button = document.createElement("button");
       button.type = "button"; button.className="btn btn-sm btn-outline-danger";
@@ -127,8 +135,7 @@
     const discountCost=numeric(discount?.value);
     const shipping=cart.size ? 140000 : 0;
     $("tapsi-preview-gross").textContent=totalMoney(gross);
-    $("tapsi-preview-commission").textContent=totalMoney(commission);
-    $("tapsi-preview-discount").textContent=totalMoney(discountCost);
+    $("tapsi-preview-fee").textContent=totalMoney(commission+shipping+discountCost);
     $("tapsi-preview-net").textContent=totalMoney(gross-commission-shipping-discountCost);
   };
   add?.addEventListener("click", () => {
