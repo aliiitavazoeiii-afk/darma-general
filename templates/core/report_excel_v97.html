@@ -1,4 +1,5 @@
 {% extends 'core/report_excel_v96.html' %}
+{% block content %}{{ block.super }}{% include 'core/_tapsi_comprehensive_v140.html' %}{% endblock %}
 {% block scripts %}{{ block.super }}
 <script>
 document.addEventListener('DOMContentLoaded',function(){
