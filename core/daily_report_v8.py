@@ -8,7 +8,7 @@ from .dia_gallery_v45 import dia_gallery_day_metrics
 from .finance import sale_line_metrics
 from .models import SaleDay, SaleLine
 from .telegram_inventory_alerts_v20 import notify_after_daily_report
-from .tapsi_shop_v138 import current_catalog as tapsi_current_catalog, tapsi_day_summary
+from .tapsi_shop_v138 import tapsi_day_summary
 
 
 PRIMARY_REPORT_BRANDS = ("تکوین", "دارما")
@@ -324,5 +324,4 @@ def daily_report(request, day_id):
         "dia_gallery": dia_gallery,
         "color_size_matrix": color_size_matrix,
         "tapsi_summary": tapsi_summary,
-        "tapsi_catalog": tapsi_current_catalog(day.date),
     })
