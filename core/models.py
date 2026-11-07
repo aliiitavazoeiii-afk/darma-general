@@ -367,3 +367,52 @@ from .wholesale_models_v119 import WholesaleCustomer, WholesaleInvoice, Wholesal
 
 # Color-scoped material stock use, independent of finished-goods deliveries.
 from .material_color_models_v123 import MaterialReportColorUse  # noqa: E402,F401
+
+
+# V138 — Tapsi Shop channel. The existing Digikala SaleLine and price rules
+# remain untouched. Shipping belongs to the order, not individual lines.
+class TapsiPriceRule(models.Model):
+    product_size = models.ForeignKey(ProductSize, on_delete=models.PROTECT, related_name="tapsi_price_rules")
+    effective_from = models.DateField(db_index=True)
+    price = models.PositiveBigIntegerField()
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["product_size", "effective_from"], name="uniq_tapsi_price_date")]
+        ordering = ["-effective_from", "-id"]
+
+
+class TapsiOrder(models.Model):
+    day = models.ForeignKey(SaleDay, on_delete=models.CASCADE, related_name="tapsi_orders")
+    shipping_fee = models.PositiveBigIntegerField(default=140000)
+    commission_percent = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal("15.00"))
+    discount_cost = models.PositiveBigIntegerField(default=0)
+    note = models.CharField(max_length=300, blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-id"]
+
+
+class TapsiOrderItem(models.Model):
+    order = models.ForeignKey(TapsiOrder, on_delete=models.CASCADE, related_name="items")
+    product_size = models.ForeignKey(ProductSize, on_delete=models.PROTECT)
+    quantity = models.PositiveIntegerField(validators=[MinValueValidator(1)])
+    unit_price = models.PositiveBigIntegerField()
+    unit_cost = models.PositiveBigIntegerField(default=0)
+    pack_qty = models.PositiveIntegerField(default=1)
+    code_snapshot = models.CharField(max_length=50, blank=True, default="")
+    title_snapshot = models.CharField(max_length=160, blank=True, default="")
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["order", "product_size"], name="uniq_tapsi_order_product_size")]
+        ordering = ["id"]
+
+
+class TapsiStockAllocation(models.Model):
+    item = models.ForeignKey(TapsiOrderItem, on_delete=models.CASCADE, related_name="stock_allocations")
+    color = models.ForeignKey(Color, on_delete=models.PROTECT)
+    quantity = models.PositiveIntegerField(validators=[MinValueValidator(1)])
+    location = models.ForeignKey(StockLocation, on_delete=models.PROTECT)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["item", "color", "location"], name="uniq_tapsi_item_color_location")]
