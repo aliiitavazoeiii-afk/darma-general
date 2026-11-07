@@ -52,7 +52,7 @@ jobs:
           import django
           django.setup()
           from django.template.loader import get_template
-          for path in ['core/_tapsi_order_entry_v140.html','core/_tapsi_report_daily_v140.html','core/tapsi_order_entry_v140.html','core/_tapsi_comprehensive_v140.html','core/_tapsi_pricing_v138.html','core/daily_report_v45.html','core/settings_products_v93.html','core/report_excel_v97.html']:
+          for path in ['core/_tapsi_order_entry_v140.html','core/_tapsi_report_daily_v140.html','core/tapsi_order_entry_v140.html','core/tapsi_order_report_v140.html','core/_tapsi_comprehensive_v140.html','core/_tapsi_pricing_v138.html','core/daily_report_v45.html','core/settings_products_v93.html','core/report_excel_v97.html']:
               get_template(path)
           from django.urls import reverse
           assert reverse('material_block_inline', args=[7]) == '/material-report/7/inline/'
@@ -92,6 +92,7 @@ jobs:
             'templates/core/report_excel.html','templates/core/report_excel_v97.html',
             'templates/core/_tapsi_order_entry_v140.html','templates/core/_tapsi_report_daily_v140.html',
             'templates/core/_tapsi_comprehensive_v140.html','templates/core/tapsi_order_entry_v140.html',
+            'templates/core/tapsi_order_report_v140.html',
             'server_tapsi_shop_v140.sh',
           }
           assert not (files-allowed), sorted(files-allowed)
