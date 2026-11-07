@@ -202,6 +202,16 @@ def create_tapsi_order(day, pairs, discount_cost=0, note=""):
             )
         compositions[ps_id] = comps
 
+    # Materialize only missing Tapsi prices on first successful order.
+    # This freezes the imported/default price independently of future Digikala
+    # repricing. transaction.atomic rolls this back if stock posting fails.
+    missing = set(amounts) - set(effective_prices(amounts, day.date))
+    for ps_id in missing:
+        TapsiPriceRule.objects.get_or_create(
+            product_size=product_sizes[ps_id], effective_from=day.date,
+            defaults={"price": prices[ps_id]},
+        )
+
     home = StockLocation.objects.get(key=StockLocation.HOME)
     order = TapsiOrder.objects.create(
         day=day, shipping_fee=SHIPPING_PER_ORDER,
