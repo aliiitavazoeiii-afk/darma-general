@@ -15,6 +15,7 @@ from .finance_excel_v9 import digikala_ledger_total
 from .models import ExcelManualRow, ExcelManualSetting, SaleLine
 from .report_v5 import _raw_material_context, manual_report_action as legacy_manual_report_action
 from .self_spend_v62 import is_self_tracking_row
+from .tapsi_shop_v138 import tapsi_period_metrics
 
 
 @login_required
@@ -58,6 +59,15 @@ def report(request):
             for size_name, qty in sizes.items():
                 color_sales[color_name][size_name] += int(qty or 0)
 
+    # Independent platform sales become part of consolidated results ONCE.
+    tapsi_period = tapsi_period_metrics(start, end)
+    tapsi_total_metrics = {**tapsi_period["total"], "digikala_fee": 0}
+    if tapsi_period["total"]["orders"]:
+        _add_metrics(brand_totals["تپسی‌شاپ"], tapsi_total_metrics)
+        _add_metrics(overall, tapsi_total_metrics)
+        for row in tapsi_period["by_size"]:
+            _add_metrics(brand_sizes["تپسی‌شاپ"][row["size"]], {**row, "digikala_fee": 0})
+
     for values in brand_totals.values():
         _finish_metrics(values)
     for size_map in brand_sizes.values():
@@ -66,8 +76,9 @@ def report(request):
     _finish_metrics(overall)
 
     brands_view = []
-    for brand_name in ["تکوین", "دارما", "انبارش", "Dia Gallery"]:
-        sizes = ["M", "L", "XL", "XXL"] if brand_name == "تکوین" else DISPLAY_SIZES
+    for brand_name in ["تکوین", "دارما", "انبارش", "Dia Gallery", "تپسی‌شاپ"]:
+        sizes = (["M", "L", "XL", "XXL"] if brand_name == "تکوین" else
+                 ([r["size"] for r in tapsi_period["by_size"]] if brand_name == "تپسی‌شاپ" else DISPLAY_SIZES))
         brands_view.append({
             "name": brand_name,
             "total": brand_totals[brand_name],
@@ -108,6 +119,7 @@ def report(request):
     takvin_debt = int(current_capital["takvin_debt"])
     digikala_receivable = int(current_capital["digikala_receivable"])
     dia_gallery_receivable = int(current_capital["dia_gallery_receivable"])
+    tapsi_receivable = int(current_capital["tapsi_receivable"])
 
     raw = _raw_material_context()
     historical_capital = capital_as_of(end)
@@ -139,6 +151,8 @@ def report(request):
         "digikala_base_receivable": digikala_base,
         "digikala_ledger_total": digikala_ledger,
         "dia_gallery_receivable": dia_gallery_receivable,
+        "tapsi_receivable": tapsi_receivable,
+        "tapsi_period": tapsi_period,
         "dia_gallery": dia_gallery,
     }
     context.update(raw)
