@@ -6,6 +6,7 @@ from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
 
 from . import pricing_v60
+from . import tapsi_shop_v138 as tapsi
 from . import settings_rules_v17 as rules_v17
 from .dateutils import format_jalali, parse_jalali_date
 from .models import AppSetting, ProductCode, ProductSize, TakvinCostRule
@@ -284,6 +285,24 @@ def _schedule_takvin_bulk(pack_qty, effective_from, post):
 
 def _handle_pricing_post(request):
     action = request.POST.get("action") or ""
+    if action == "tapsi_bulk_darma_prices":
+        pack_qty = _money(request.POST.get("pack_qty"))
+        effective_from = parse_jalali_date(
+            request.POST.get("effective_from") or format_jalali(date.today())
+        )
+        result = tapsi.save_tapsi_bulk_darma(pack_qty, effective_from, request.POST)
+        messages.success(request, f"قیمت گروهی تپسی‌شاپ پک {pack_qty} برای {result['products']} کد دارما ثبت شد؛ دیجی‌کالا بدون تغییر است.")
+        return "darma"
+
+    if action == "tapsi_product_prices":
+        product = get_object_or_404(ProductCode, pk=request.POST.get("product_id"), active=True)
+        effective_from = parse_jalali_date(
+            request.POST.get("effective_from") or format_jalali(date.today())
+        )
+        count = tapsi.save_tapsi_product_prices(product, effective_from, request.POST)
+        messages.success(request, f"قیمت تپسی‌شاپ {product.code} برای {count} سایز ثبت شد؛ قیمت‌های دیجی‌کالا دست‌نخورده‌اند.")
+        return "darma"
+
     if action == "bulk_darma_prices":
         pack_qty = pricing_v60._int(request.POST.get("pack_qty"))
         effective_from = parse_jalali_date(
@@ -353,7 +372,8 @@ def settings_products(request):
         except Exception as exc:
             messages.error(request, str(exc))
         suffix = f"?section=pricing&brand={pricing_brand}" if pricing_brand else "?section=pricing"
-        return redirect(f"/settings/products/{suffix}")
+        anchor = "#tapsi-pricing-panel" if action.startswith("tapsi_") else ""
+        return redirect(f"/settings/products/{suffix}{anchor}")
 
     rules_context = _rules_context()
     products = list(
@@ -363,8 +383,18 @@ def settings_products(request):
         .order_by("brand__name", "code")
     )
 
+    tapsi_prices = tapsi.tapsi_pricing_rows(
+        date.today(),
+        tuple(dict.fromkeys(["S", *DARMA_PRICE_SIZES])),
+        tuple(row["pack_qty"] for row in pricing_v60._pricing_rows()),
+    ) if section == "pricing" else {"individual": [], "bulk": [], "size_names": []}
+
     context = {
         **rules_context,
+        "tapsi_price_rows": tapsi_prices["individual"],
+        "tapsi_bulk_rows": tapsi_prices["bulk"],
+        "tapsi_sizes": tapsi_prices["size_names"],
+        "tapsi_effective_j": format_jalali(date.today()),
         "section": section,
         "pricing_brand": pricing_brand,
         "products": products,
