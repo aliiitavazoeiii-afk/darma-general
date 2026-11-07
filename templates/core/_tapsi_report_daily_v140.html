@@ -1,0 +1,50 @@
+{% load jalali %}
+<section id="tapsi-shop-report" class="card glass-card mt-4 mb-4">
+  <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+    <div><h3 class="card-title mb-1">گزارش فروش تپسی‌شاپ</h3>
+      <div class="text-secondary small">فقط گزارش سفارش‌های ثبت‌شده همین روز؛ ثبت سفارش از دکمه بالای صورت روزانه انجام می‌شود.</div></div>
+  </div>
+  <div class="card-body">
+    <div class="tapsi-kpis">
+      <div><span>سفارش‌ها</span><strong>{{ tapsi_summary.total.orders|groupnum }}</strong></div>
+      <div><span>تعداد کالا / پک</span><strong>{{ tapsi_summary.total.packs|groupnum }}</strong></div>
+      <div><span>تعداد شورت</span><strong>{{ tapsi_summary.total.shorts|groupnum }}</strong></div>
+      <div><span>فروش کل</span><strong class="money">{{ tapsi_summary.total.gross|groupnum }}</strong></div>
+      <div><span>بهای تمام‌شده کالا</span><strong class="money">{{ tapsi_summary.total.cogs|groupnum }}</strong></div>
+      <div><span>هزینه تپسی (کمیسیون، ارسال، تخفیف)</span><strong class="money">{{ tapsi_summary.total.fee|groupnum }}</strong></div>
+      <div><span>کمیسیون ۱۵٪ شامل مالیات</span><strong class="money">{{ tapsi_summary.total.commission|groupnum }}</strong></div>
+      <div><span>ارسال سفارش‌ها</span><strong class="money">{{ tapsi_summary.total.shipping|groupnum }}</strong></div>
+      <div><span>هزینه تخفیف دستی</span><strong class="money">{{ tapsi_summary.total.discount|groupnum }}</strong></div>
+      <div><span>سود خالص فروش تپسی</span><strong class="money {% if tapsi_summary.total.profit < 0 %}text-danger{% else %}text-success{% endif %}">{{ tapsi_summary.total.profit|groupnum }}</strong></div>
+    </div>
+  </div>
+  {% if tapsi_summary.rows %}
+  <div class="card-footer p-3">
+    {% for order in tapsi_summary.rows %}
+    <div class="tapsi-order-record mb-3">
+      <div class="d-flex flex-wrap justify-content-between gap-2 align-items-center mb-2">
+        <strong>سفارش #{{ order.obj.id }}</strong><span class="text-secondary small">{{ order.items|length }} کد / سایز · {{ order.packs|groupnum }} پک</span>
+      </div>
+      <div class="table-responsive"><table class="table table-sm mb-2">
+        <thead><tr><th>کد / عنوان</th><th>سایز</th><th>تعداد</th><th>فی</th><th>فروش</th><th>بهای کالا</th></tr></thead>
+        <tbody>{% for item in order.items %}<tr>
+          <td><strong>{{ item.code_snapshot }}</strong><span class="text-secondary small me-2">{{ item.title_snapshot }}</span></td>
+          <td>{{ item.product_size.size.name }}</td><td>{{ item.quantity|groupnum }}</td>
+          <td class="money">{{ item.unit_price|groupnum }}</td><td class="money">{{ item.gross_sales|groupnum }}</td>
+          <td class="money">{{ item.unit_cost|groupnum }} × {{ item.pack_qty|groupnum }} × {{ item.quantity|groupnum }}</td>
+        </tr>{% endfor %}</tbody>
+      </table></div>
+      <div class="tapsi-order-figures">
+        <span>فروش <b class="money">{{ order.gross|groupnum }}</b></span>
+        <span>کمیسیون <b class="money">{{ order.commission|groupnum }}</b></span>
+        <span>ارسال <b class="money">{{ order.shipping|groupnum }}</b></span>
+        <span>تخفیف <b class="money">{{ order.discount|groupnum }}</b></span>
+        <span>هزینه کالا <b class="money">{{ order.cogs|groupnum }}</b></span>
+        <span>سود <b class="money {% if order.profit < 0 %}text-danger{% else %}text-success{% endif %}">{{ order.profit|groupnum }}</b></span>
+      </div>
+    </div>{% endfor %}
+  </div>{% else %}
+  <div class="card-footer text-secondary small p-3">برای این روز سفارش تپسی ثبت نشده است.</div>
+  {% endif %}
+</section>
+{% load static %}<link rel="stylesheet" href="{% static 'core/tapsi_shop_v138.css' %}">
