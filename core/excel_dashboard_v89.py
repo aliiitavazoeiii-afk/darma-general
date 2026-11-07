@@ -11,6 +11,7 @@ from .dia_gallery_v45 import dia_gallery_period_metrics
 from .excel_dashboard import EXCEL_TAKVIN_PREFIX, _add_metrics, _empty_metrics, _finish_metrics
 from .finance import sale_line_metrics
 from .models import MaterialReportBlock, SaleDay, SaleLine, TakvinPurchase
+from .tapsi_shop_v138 import tapsi_period_metrics
 
 
 @login_required
@@ -24,6 +25,7 @@ def dashboard(request):
         ):
             _add_metrics(today_metrics, sale_line_metrics(line))
     _add_metrics(today_metrics, dia_gallery_period_metrics(today, today)["total"])
+    _add_metrics(today_metrics, {**tapsi_period_metrics(today, today)["total"], "digikala_fee": 0})
     _finish_metrics(today_metrics)
 
     tj = jdatetime.date.fromgregorian(date=today)
@@ -35,12 +37,13 @@ def dashboard(request):
     for line in month_lines:
         _add_metrics(month_metrics, sale_line_metrics(line))
     _add_metrics(month_metrics, dia_gallery_period_metrics(month_start, today)["total"])
+    _add_metrics(month_metrics, {**tapsi_period_metrics(month_start, today)["total"], "digikala_fee": 0})
     _finish_metrics(month_metrics)
 
     # V89: show the latest 30 dates that actually contain recorded sales.
     chart_days = list(
         SaleDay.objects.filter(date__lte=today)
-        .filter(Q(lines__quantity__gt=0) | Q(dia_gallery_sales__quantity__gt=0))
+        .filter(Q(lines__quantity__gt=0) | Q(dia_gallery_sales__quantity__gt=0) | Q(tapsi_orders__isnull=False))
         .distinct()
         .order_by("-date")[:30]
     )
@@ -66,6 +69,10 @@ def dashboard(request):
             daily[row["date"]]["gross"] += int(row["gross"] or 0)
             daily[row["date"]]["profit"] += int(row["profit"] or 0)
             daily[row["date"]]["shorts"] += int(row["shorts"] or 0)
+        for day_date, metrics in tapsi_period_metrics(chart_start, chart_end)["by_date"].items():
+            daily[day_date]["gross"] += int(metrics["gross"])
+            daily[day_date]["profit"] += int(metrics["profit"])
+            daily[day_date]["shorts"] += int(metrics["shorts"])
 
     chart_labels, chart_sales, chart_profit, chart_shorts = [], [], [], []
     for day in chart_days:
