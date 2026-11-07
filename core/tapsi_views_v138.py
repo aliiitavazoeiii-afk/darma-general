@@ -12,6 +12,17 @@ from .tapsi_shop_v138 import create_tapsi_order, reverse_tapsi_order
 
 
 @login_required
+def order_report(request, day_id):
+    """Read-only daily Tapsi report; never display order-entry controls."""
+    day = get_object_or_404(SaleDay, pk=day_id)
+    return render(request, "core/tapsi_order_report_v140.html", {
+        "day": day,
+        "jalali_date": format_jalali(day.date),
+        "tapsi_summary": tapsi_day_summary(day),
+    })
+
+
+@login_required
 def order_entry(request, day_id):
     day = get_object_or_404(SaleDay, pk=day_id)
     return render(request, "core/tapsi_order_entry_v140.html", {
