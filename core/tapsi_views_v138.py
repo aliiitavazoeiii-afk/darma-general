@@ -2,11 +2,24 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
-from django.shortcuts import get_object_or_404, redirect
+from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
+from .dateutils import format_jalali
+from .tapsi_shop_v138 import current_catalog, tapsi_day_summary
 
 from .models import SaleDay, TapsiOrder
 from .tapsi_shop_v138 import create_tapsi_order, reverse_tapsi_order
+
+
+@login_required
+def order_entry(request, day_id):
+    day = get_object_or_404(SaleDay, pk=day_id)
+    return render(request, "core/tapsi_order_entry_v140.html", {
+        "day": day,
+        "jalali_date": format_jalali(day.date),
+        "tapsi_catalog": current_catalog(day.date),
+        "tapsi_summary": tapsi_day_summary(day),
+    })
 
 
 @login_required
@@ -17,7 +30,7 @@ def order_create(request, day_id):
     qtys = request.POST.getlist("quantity")
     if len(ids) != len(qtys) or not ids:
         messages.error(request, "محصول و تعداد هر قلم سفارش باید مشخص باشد.")
-        return redirect(f"/sales/{day.pk}/report/#tapsi-shop")
+        return redirect("tapsi_order_entry", day_id=day.pk)
     try:
         order = create_tapsi_order(
             day, list(zip(ids, qtys)),
@@ -27,7 +40,7 @@ def order_create(request, day_id):
         messages.success(request, f"سفارش تپسی‌شاپ شماره {order.pk} ثبت شد؛ ارسال ۱۴۰٬۰۰۰ تومان فقط یک‌بار محاسبه شد.")
     except Exception as exc:
         messages.error(request, f"سفارش تپسی ثبت نشد و هیچ موجودی تغییر نکرد: {exc}")
-    return redirect(f"/sales/{day.pk}/report/#tapsi-shop")
+    return redirect("tapsi_order_entry", day_id=day.pk)
 
 
 @login_required
@@ -40,4 +53,4 @@ def order_delete(request, day_id, order_id):
         messages.success(request, "سفارش تپسی حذف شد؛ موجودی همان رنگ‌ها و سایزهای برداشت‌شده برگشت.")
     except Exception as exc:
         messages.error(request, f"حذف سفارش انجام نشد؛ هیچ موجودی به‌صورت ناقص تغییر نکرد: {exc}")
-    return redirect(f"/sales/{day.pk}/report/#tapsi-shop")
+    return redirect("tapsi_order_entry", day_id=day.pk)
