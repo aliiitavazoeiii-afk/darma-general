@@ -66,6 +66,7 @@ urlpatterns = [
     path("sales/select/<int:jy>/<int:jm>/<int:jd>/", daily_views.select_sale_day, name="select_sale_day"),
     path("sales/<int:day_id>/", sale_brand_v19.sale_brand, name="sale_brand"),
     path("sales/<int:day_id>/dia-gallery/", dia_gallery_v45.dia_gallery_sales, name="dia_gallery_sales"),
+    path("sales/<int:day_id>/tapsi/", tapsi_views_v138.order_entry, name="tapsi_order_entry"),
     path("sales/<int:day_id>/tapsi/create/", tapsi_views_v138.order_create, name="tapsi_order_create"),
     path("sales/<int:day_id>/tapsi/<int:order_id>/delete/", tapsi_views_v138.order_delete, name="tapsi_order_delete"),
     path("sales/<int:day_id>/report/", daily_report_v8.daily_report, name="daily_report"),
