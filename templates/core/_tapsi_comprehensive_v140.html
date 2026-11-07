@@ -1,11 +1,11 @@
 {% load jalali %}
-<section id="comprehensive-tapsi-shop" class="v76-domain mt-4 mb-4">
-  <div class="v76-domain-head">
-    <div><h3 class="v76-domain-title mb-0">تپسی‌شاپ · گزارش پلتفرم</h3>
-      <div class="v76-domain-sub">همان بازه انتخاب‌شده در گزارش جامع؛ فروش، تعداد، سود و هزینه‌ها مستقل از دیجی‌کالا</div></div>
-    <span class="v76-domain-kicker">TAPSI</span>
-  </div>
-  <div class="v76-domain-body">
+<details id="comprehensive-tapsi-shop" class="v76-fold tapsi-comprehensive-fold">
+  <summary>
+    <span><span class="v76-fold-title">گزارش تپسی‌شاپ</span>
+      <span class="v76-fold-sub">سفارش‌ها، فروش، هزینه‌ها و سود · {{ tapsi_period.total.orders|groupnum }} سفارش در این بازه</span></span>
+    <span class="v76-fold-arrow">‹</span>
+  </summary>
+  <div class="v76-fold-body">
     <div class="tapsi-report-kpis">
       <div><span>تعداد سفارش</span><strong>{{ tapsi_period.total.orders|groupnum }}</strong></div>
       <div><span>کالا / پک فروخته‌شده</span><strong>{{ tapsi_period.total.packs|groupnum }}</strong></div>
@@ -60,8 +60,12 @@
     </div>
     <p class="text-secondary small mt-3 mb-0">هزینه ارسال و تخفیف هر سفارش متناسب با مبلغ فروش اقلام همان سفارش به کدها تخصیص یافته؛ مجموع هزینه و سود ردیف‌ها دقیقاً با جمع سفارش‌ها برابر است. قیمت تمام‌شده از اسنپ‌شات همان زمان فروش خوانده می‌شود.</p>
   </div>
-</section>
+</details>
 <style>
+.tapsi-comprehensive-fold{width:100%;max-width:510px;margin:0}
+.tapsi-comprehensive-fold[open],.v76-secondary-grid>.tapsi-comprehensive-fold{max-width:none}
+.tapsi-comprehensive-fold .v76-fold-sub{max-width:310px}
+.tapsi-comprehensive-fold[open]>.v76-fold-body{overflow:hidden}
 .tapsi-report-kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px}
 .tapsi-report-kpis>div{padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.025);min-width:0}
 .tapsi-report-kpis span{display:block;font-size:.7rem;color:#9fafc4}
