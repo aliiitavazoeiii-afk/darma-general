@@ -4,6 +4,7 @@ from django.shortcuts import redirect, render
 from django.views.decorators.http import require_POST
 
 from .capital_history_v87 import current_account_breakdown
+from .tapsi_shop_v138 import tapsi_receivable_total
 from .finance_excel_v9 import digikala_ledger_total, digikala_receivable_total
 from .finance_overview_v104 import finance_kpis
 from .models import BusinessPayment, ExcelManualRow, ExcelManualSetting
@@ -37,6 +38,7 @@ def _finance_account_context():
     account_breakdown = current_account_breakdown()
     accounts_total = int(account_breakdown["accounts_total"])
     dia_gallery_receivable = int(account_breakdown["dia_gallery_receivable"])
+    tapsi_receivable = int(tapsi_receivable_total())
 
     return {
         "accounts_rows": accounts_rows,
@@ -47,6 +49,7 @@ def _finance_account_context():
         "digikala_base_receivable": digikala_base,
         "digikala_ledger_total": digikala_ledger,
         "dia_gallery_receivable": dia_gallery_receivable,
+        "tapsi_receivable": tapsi_receivable,
     }
 
 
