@@ -85,7 +85,7 @@
           <tbody>{% for item in order.items %}
             <tr><td><strong>{{ item.code_snapshot }}</strong><span class="text-secondary small me-2">{{ item.title_snapshot }}</span></td>
               <td>{{ item.product_size.size.name }}</td><td>{{ item.quantity|groupnum }}</td>
-              <td class="money">{{ item.unit_price|groupnum }}</td><td class="money">{{ item.total_gross_display|default:"" }}</td></tr>
+              <td class="money">{{ item.unit_price|groupnum }}</td><td class="money">{{ item.gross_sales|groupnum }}</td></tr>
           {% endfor %}</tbody>
         </table>
       </div>
