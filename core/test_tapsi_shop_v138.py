@@ -178,7 +178,7 @@ class TapsiShopV138Tests(TestCase):
         self.assertEqual(page.status_code, 200)
         self.assertContains(page, "فروش تپسی‌شاپ")
         self.assertContains(page, 'id="tapsi-shop-catalog"')
-        self.assertContains(page, "شورت زنانه 330 مجموعه سعدعلی")
+        self.assertTrue(any(row["title"] == "شورت زنانه 330 مجموعه سعدعلی" for row in page.context["tapsi_catalog"]))
         self.assertContains(page, 'name="discount_cost"')
         submit = self.client.post(reverse("tapsi_order_create", args=[self.day.id]), {
             "product_size_id": [str(self.ps_m.pk), str(self.ps_l.pk)],
