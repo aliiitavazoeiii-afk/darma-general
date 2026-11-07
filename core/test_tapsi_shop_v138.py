@@ -380,7 +380,9 @@ class TapsiShopV138Tests(TestCase):
         )
         page = self.client.get(reverse("tapsi_order_entry", args=[self.day.id]))
         self.assertEqual(page.status_code, 200)
-        self.assertContains(page, "پک ۰۳ ده تایی سفید")
+        self.assertEqual(row["title"], "پک ۰۳ ده تایی سفید")
+        # Django json_script escapes non-ASCII JSON values by design;
+        # verify the loaded catalog, not the escaped HTML representation.
         self.assertContains(page, 'id="tapsi-product-size"')
         self.assertContains(page, "خلاصه فروش امروز تپسی‌شاپ")
         self.assertContains(page, "سفارش‌های ثبت‌شده این روز")
@@ -425,10 +427,14 @@ class TapsiShopV138Tests(TestCase):
         self.assertContains(page, "tapsi-orders-table")
         self.assertContains(page, 'class="tapsi-num"')
         body = page.content.decode("utf-8")
-        self.assertLess(body.index("خلاصه فروش امروز تپسی‌شاپ"),
-                        body.index("ثبت سفارش تپسی‌شاپ"))
-        self.assertLess(body.index("ثبت سفارش تپسی‌شاپ"),
-                        body.index("سفارش‌های ثبت‌شده این روز"))
+        self.assertLess(
+            body.index('class="card glass-card mb-3 tapsi-overview-card"'),
+            body.index('id="tapsi-shop"'),
+        )
+        self.assertLess(
+            body.index('id="tapsi-shop"'),
+            body.index('id="tapsi-order-history"'),
+        )
         script = (Path(settings.BASE_DIR) / "core/static/core/tapsi_shop_v138.js").read_text("utf-8")
         self.assertIn("opt.disabled = false", script)
         self.assertIn("tapsi-preview-fee", script)
