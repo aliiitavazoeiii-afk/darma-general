@@ -414,6 +414,8 @@ class TapsiOrderItem(models.Model):
 
 class TapsiStockAllocation(models.Model):
     item = models.ForeignKey(TapsiOrderItem, on_delete=models.CASCADE, related_name="stock_allocations")
+    brand = models.ForeignKey(Brand, on_delete=models.PROTECT)
+    size = models.ForeignKey(Size, on_delete=models.PROTECT)
     color = models.ForeignKey(Color, on_delete=models.PROTECT)
     quantity = models.PositiveIntegerField(validators=[MinValueValidator(1)])
     location = models.ForeignKey(StockLocation, on_delete=models.PROTECT)
