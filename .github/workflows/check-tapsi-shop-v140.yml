@@ -87,7 +87,7 @@ jobs:
             'core/tapsi_shop_v138.py','core/tapsi_views_v138.py','core/test_tapsi_shop_v138.py',
             'core/report_v10.py','core/capital_history_v87.py','core/excel_dashboard_v89.py',
             'core/finance_center_v97.py', 'core/management/commands/seed_tapsi_prices_v140.py',
-            'core/urls.py','templates/core/daily_report_v45.html','templates/core/daily_report_v21.html',
+            'core/urls.py','core/daily_report_v8.py','templates/core/daily_report_v45.html','templates/core/daily_report_v21.html',
             'templates/core/sale_brand_v45.html', 'templates/core/finance_accounts_v97.html',
             'templates/core/report_excel.html','templates/core/report_excel_v97.html',
             'templates/core/_tapsi_order_entry_v140.html','templates/core/_tapsi_report_daily_v140.html',
