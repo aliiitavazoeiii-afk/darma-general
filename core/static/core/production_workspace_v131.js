@@ -262,5 +262,182 @@
     });
   });
 
+
+  // V138: send save and home/khorshid delivery to the existing V23 handlers
+  // through a JSON adapter. No navigation, no HTML replacement, no scroll-to.
+  // The open editor, focus, size inputs and all other unsaved entries survive.
+  const inlineToast = document.getElementById('prod138-save-toast');
+  let toastTimer = null;
+  let pendingInlineRequest = false;
+
+  function inlineNotice(message, kind) {
+    if (!inlineToast) return;
+    inlineToast.textContent = String(message || '');
+    inlineToast.dataset.kind = kind || 'ok';
+    inlineToast.hidden = false;
+    if (toastTimer) window.clearTimeout(toastTimer);
+    // Errors remain visible longer so ambiguous connectivity is not missed.
+    toastTimer = window.setTimeout(() => { inlineToast.hidden = true; },
+      kind === 'error' ? 9000 : 5200);
+  }
+
+  function inlineUpdateRow(group, state) {
+    if (!group || !state) return;
+    const props = {
+      search: state.search,
+      weight: state.weight,
+      cut: state.cut,
+      entered: state.entered,
+      remaining: state.remaining,
+      surplus: state.surplus,
+      costTotal: state.cost_total,
+      unitCost: state.unit_cost,
+      materialStatus: state.material_applied ? 'applied' : 'unapplied',
+      materialMeaningful: state.material_meaningful ? '1' : '0',
+      countable: state.production_meaningful ? '1' : '0'
+    };
+    Object.entries(props).forEach(([key, value]) => {
+      group.dataset[key] = String(value == null ? '' : value);
+    });
+
+    const cells = Array.from(group.querySelectorAll('.prod131-main > td'));
+    if (cells.length >= 7) {
+      const code = cells[0].querySelector('.prod131-code strong');
+      if (code) code.textContent = state.code || 'بدون کد';
+      cells[1].textContent = state.weight || '—';
+      cells[2].textContent = format(number(state.cut));
+      cells[3].textContent = format(number(state.entered));
+      const remaining = Number(state.remaining) || 0;
+      const surplus = Number(state.surplus) || 0;
+      cells[4].textContent = surplus ? '+' + format(surplus) : format(remaining);
+      cells[4].classList.toggle('is-pending', remaining > 0);
+      cells[4].classList.toggle('is-surplus', surplus > 0);
+      cells[4].classList.toggle('is-zero', remaining === 0 && surplus === 0);
+      cells[5].textContent = number(state.unit_cost) ? format(number(state.unit_cost)) : '—';
+
+      const status = cells[6];
+      const pending = status.querySelector('.prod131-state.pending');
+      if (state.dirty_stock) {
+        if (!pending) {
+          const badge = document.createElement('span');
+          badge.className = 'prod131-state pending';
+          badge.textContent = 'تحویل منتظر ثبت در انبار';
+          badge.title = 'تعداد ثبت‌شده هنوز به موجودی خانه یا خورشید اضافه نشده است';
+          status.prepend(badge);
+        }
+      } else {
+        pending?.remove();
+      }
+      const material = status.querySelector('.prod131-mat-state');
+      if (material) {
+        material.textContent = state.material_applied
+          ? 'مصرف مواد اعمال‌شده' : 'مصرف مواد اعمال‌نشده';
+        material.classList.toggle('is-applied', Boolean(state.material_applied));
+        material.classList.toggle('is-unapplied', !state.material_applied);
+      }
+    }
+    const heading = group.querySelector('.prod131-detail-header p');
+    if (heading) heading.textContent = 'برش ' + format(number(state.cut))
+      + ' · تحویل ' + format(number(state.entered))
+      + ' · مانده ' + format(number(state.remaining))
+      + ' · اعمال‌شده ' + format(number(state.applied));
+    const cost = group.querySelector('.prod131-size-head > span b');
+    if (cost) cost.textContent = format(number(state.unit_cost)) + ' تومان';
+  }
+
+  function lockSheetDelete(blockId) {
+    groups.filter(group => group.dataset.block === blockId).forEach(group => {
+      const section = group.querySelector('.prod131-sheet-delete');
+      if (!section || section.classList.contains('is-locked')) return;
+      section.classList.add('is-locked');
+      const button = section.querySelector('button');
+      if (button) {
+        button.disabled = true;
+        button.textContent = 'حذف صورت غیرفعال';
+        button.removeAttribute('onclick');
+      }
+      const note = section.querySelector('span');
+      if (note) note.textContent = 'حذف این صورت مسدود است، چون موجودی یا مواد اولیه آن اعمال شده است.';
+    });
+  }
+
+  document.querySelectorAll('form.prod131-hidden-form[data-inline-url]').forEach(form => {
+    // The existing V131 listener runs first (including important confirmations).
+    form.addEventListener('submit', async event => {
+      if (event.defaultPrevented) return;
+      const submitter = event.submitter;
+      const target = submitter?.getAttribute('formaction') || form.getAttribute('action') || '';
+      const isDelivery = target.includes('/apply-output/');
+      const isSave = !submitter?.getAttribute('formaction') && target.includes('/save/');
+      if (!isDelivery && !isSave) return; // Keep add-model/materials legacy behavior.
+
+      event.preventDefault(); // Never navigate or cause a page refresh.
+      if (pendingInlineRequest) {
+        inlineNotice('ثبت قبلی هنوز در حال انجام است؛ دوباره ارسال نکن.', 'error');
+        return;
+      }
+      const inlineUrl = form.dataset.inlineUrl;
+      if (!inlineUrl) {
+        inlineNotice('مسیر ذخیره بدون رفرش یافت نشد؛ هیچ درخواستی ارسال نشد.', 'error');
+        return;
+      }
+
+      const body = new FormData(form); // Also collects externally associated fields.
+      if (submitter?.name) body.append(submitter.name, submitter.value);
+      body.set('_inline_action', isDelivery ? 'apply-output' : 'save');
+      const fingerprint = JSON.stringify(Array.from(new FormData(form).entries()));
+      const blockId = form.id.replace('material-form-', '');
+      const buttons = Array.from(document.querySelectorAll(
+        'button[form="' + form.id + '"], .prod131-open-dest[data-dialog^="prod131-dialog-' + blockId + '-"]'
+      ));
+      pendingInlineRequest = true;
+      buttons.forEach(button => { button.disabled = true; });
+      try {
+        const response = await fetch(inlineUrl, {
+          method: 'POST',
+          body,
+          credentials: 'same-origin',
+          cache: 'no-store',
+          headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+        });
+        const type = response.headers.get('content-type') || '';
+        if (!type.includes('application/json')) {
+          throw new Error('پاسخ ورود یا اعتبارسنجی دریافت شد؛ نشست را بررسی کن. وضعیت ذخیره نامشخص است.');
+        }
+        const result = await response.json();
+        if (!response.ok || !result.ok) {
+          inlineNotice(result.message || 'ثبت انجام نشد؛ اطلاعات واردشده در فرم باقی مانده است.', 'error');
+          return;
+        }
+        const changedWhileSaving = fingerprint !== JSON.stringify(
+          Array.from(new FormData(form).entries()));
+        const rows = new Map((result.rows || []).map(row => [row.key, row]));
+        groups.filter(group => group.dataset.block === blockId).forEach(group => {
+          const state = rows.get(group.dataset.key);
+          if (state) inlineUpdateRow(group, state);
+          if (!changedWhileSaving) delete group.dataset.unsavedEdit;
+        });
+        if (!result.deletable) lockSheetDelete(blockId);
+        if (isDelivery) {
+          // Close the modal only after the server confirms stock + wage commit.
+          document.querySelectorAll('.prod131-dialog[open]').forEach(dialog => {
+            if (dialog.id.startsWith('prod131-dialog-' + blockId + '-')) dialog.close();
+          });
+        }
+        visibleRows(); // Update the existing KPI nodes, not the page.
+        inlineNotice(result.message || 'ثبت با موفقیت انجام شد.', 'ok');
+      } catch (error) {
+        // Never retry an uncertain stock mutation automatically.
+        inlineNotice(
+          'پاسخ سرور دریافت نشد. وضعیت ثبت نامشخص است؛ قبل از ارسال دوباره، موجودی یا سوابق تحویل را بررسی کن. '
+            + (error?.message || ''), 'error'
+        );
+      } finally {
+        pendingInlineRequest = false;
+        buttons.forEach(button => { button.disabled = false; });
+      }
+    });
+  });
+
   visibleRows();
 })();
