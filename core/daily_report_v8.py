@@ -8,6 +8,7 @@ from .dia_gallery_v45 import dia_gallery_day_metrics
 from .finance import sale_line_metrics
 from .models import SaleDay, SaleLine
 from .telegram_inventory_alerts_v20 import notify_after_daily_report
+from .tapsi_shop_v138 import current_catalog as tapsi_current_catalog, tapsi_day_summary
 
 
 PRIMARY_REPORT_BRANDS = ("تکوین", "دارما")
@@ -273,11 +274,20 @@ def daily_report(request, day_id):
             dia_values[key] += value
             total[key] += value
 
+    # Tapsi is a distinct sales channel, never a Digikala line or Digikala fee.
+    tapsi_summary = tapsi_day_summary(day)
+    tapsi_totals = tapsi_summary["total"]
+    if tapsi_totals["orders"]:
+        channel = by_brand["تپسی‌شاپ"]
+        for key in ("gross", "cogs", "profit", "shorts", "packs"):
+            channel[key] += tapsi_totals[key]
+            total[key] += tapsi_totals[key]
+
     for values in by_brand.values():
         values["margin"] = (values["profit"] / values["gross"] * 100) if values["gross"] else 0
     total["margin"] = (total["profit"] / total["gross"] * 100) if total["gross"] else 0
 
-    preferred = ["تکوین", "دارما", "انبارش", "Dia Gallery"]
+    preferred = ["تکوین", "دارما", "انبارش", "Dia Gallery", "تپسی‌شاپ"]
     ordered_brands = []
     for brand_name in preferred:
         if brand_name in by_brand:
@@ -313,4 +323,6 @@ def daily_report(request, day_id):
         "total": total,
         "dia_gallery": dia_gallery,
         "color_size_matrix": color_size_matrix,
+        "tapsi_summary": tapsi_summary,
+        "tapsi_catalog": tapsi_current_catalog(day.date),
     })
