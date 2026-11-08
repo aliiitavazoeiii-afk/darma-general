@@ -199,14 +199,17 @@ class TapsiShopV138Tests(TestCase):
         self.assertEqual(sale_price_for(self.ps_m, self.day.date), before)
 
     def test_daily_web_box_search_and_order_create_and_delete(self):
+        date_string = self.day.date.isoformat()
         page = self.client.get(reverse("daily_report", args=[self.day.id]))
         self.assertEqual(page.status_code, 200)
-        self.assertContains(page, "فروش تپسی‌شاپ")
-        entry = self.client.get(reverse("tapsi_order_entry", args=[self.day.id]))
-        self.assertContains(entry, 'id="tapsi-shop-catalog"')
+        self.assertNotContains(page, 'id="t142-entry"')
+        self.assertNotContains(page, reverse("tapsi_order_report", args=[self.day.id]))
+        entry = self.client.get(reverse("tapsi_home"), {"date": date_string})
+        self.assertContains(entry, 'id="t142-catalog"')
         self.assertTrue(any(row["title"] == "شورت زنانه 330 مجموعه سعدعلی" for row in entry.context["tapsi_catalog"]))
         self.assertContains(entry, 'name="discount_cost"')
-        submit = self.client.post(reverse("tapsi_order_create", args=[self.day.id]), {
+        submit = self.client.post(reverse("tapsi_hub_create"), {
+            "order_date": date_string,
             "product_size_id": [str(self.ps_m.pk), str(self.ps_l.pk)],
             "quantity": ["1", "1"], "discount_cost": "75000", "note": "ref 0123",
         })
@@ -215,25 +218,29 @@ class TapsiShopV138Tests(TestCase):
         order = TapsiOrder.objects.get()
         self.assertEqual(order.discount_cost, 75000)
         self.assertEqual(order.items.count(), 2)
-        report = self.client.get(reverse("daily_report", args=[self.day.id]))
-        self.assertEqual(report.context["tapsi_summary"]["total"]["orders"], 1)
-        self.assertEqual(report.context["total"]["gross"], 1900000)
-        self.assertEqual(report.context["total"]["digikala_fee"], 0)
-        self.assertEqual(report.context["total"]["profit"], order_metrics(order)["profit"])
-        deleted = self.client.post(reverse("tapsi_order_delete", args=[self.day.id, order.id]))
+        standalone = self.client.get(reverse("tapsi_home"), {"date": date_string})
+        self.assertEqual(standalone.context["tapsi_summary"]["total"]["orders"], 1)
+        daily = self.client.get(reverse("daily_report", args=[self.day.id]))
+        self.assertNotIn("tapsi_summary", daily.context)
+        self.assertEqual(daily.context["total"]["gross"], 0)
+        self.assertEqual(daily.context["total"]["profit"], 0)
+        deleted = self.client.post(reverse("tapsi_hub_delete", args=[order.id]))
         self.assertEqual(deleted.status_code, 302)
         self.assertFalse(TapsiOrder.objects.exists())
         self.assertEqual(self._balance(self.size_m, self.black), 100)
-
-    def test_sale_day_delete_undoes_tapsi_before_cascading_day(self):
+    def test_sale_day_delete_preserves_standalone_tapsi(self):
         order = create_tapsi_order(self.day, [(self.ps_m.pk, 1), (self.ps_l.pk, 1)])
-        deleted = delete_sale_day(self.day.id)
-        self.assertEqual(deleted["tapsi_orders"], 1)
-        self.assertFalse(SaleDay.objects.filter(pk=self.day.pk).exists())
-        self.assertFalse(TapsiOrder.objects.filter(pk=order.id).exists())
+        before_black = self._balance(self.size_m, self.black)
+        before_pink = self._balance(self.size_l, self.pink)
+        result = delete_sale_day(self.day.id)
+        self.assertTrue(result["day_retained_for_tapsi"])
+        self.assertTrue(SaleDay.objects.filter(pk=self.day.pk).exists())
+        self.assertTrue(TapsiOrder.objects.filter(pk=order.id).exists())
+        self.assertEqual(self._balance(self.size_m, self.black), before_black)
+        self.assertEqual(self._balance(self.size_l, self.pink), before_pink)
+        self.client.post(reverse("tapsi_hub_delete", args=[order.id]))
         self.assertEqual(self._balance(self.size_m, self.black), 100)
         self.assertEqual(self._balance(self.size_l, self.pink), 100)
-
     def test_catalog_price_route_and_static_ui_contract(self):
         page = self.client.get(reverse("settings_products"), {"section":"pricing", "brand":"darma"})
         self.assertEqual(page.status_code, 200)
@@ -255,26 +262,26 @@ class TapsiShopV138Tests(TestCase):
         ):
             self.assertTrue((Path(settings.BASE_DIR) / path).is_file())
 
-    def test_v140_tapsi_entry_in_header_and_report_is_read_only(self):
+    def test_v142_tapsi_is_not_in_daily_sales_navigation(self):
         daily = self.client.get(reverse("daily_report", args=[self.day.id]))
         self.assertEqual(daily.status_code, 200)
-        self.assertContains(daily, 'href="' + reverse("tapsi_order_report", args=[self.day.id]) + '"')
-        self.assertNotContains(daily, 'id="tapsi-shop-report"')
-        report_only = self.client.get(reverse("tapsi_order_report", args=[self.day.id]))
-        self.assertEqual(report_only.status_code, 200)
-        self.assertContains(report_only, "گزارش فروش تپسی‌شاپ")
-        self.assertNotContains(report_only, 'id="tapsi-order-create"')
-        self.assertNotContains(daily, 'id="tapsi-order-create"')
-        self.assertNotContains(daily, 'id="tapsi-product-query"')
+        self.assertNotContains(daily, reverse("tapsi_order_report", args=[self.day.id]))
+        self.assertNotContains(daily, 'id="t142-entry"')
+        self.assertNotContains(daily, 'id="t142-query"')
         self.assertNotContains(daily, 'name="discount_cost"')
-        edit = self.client.get(reverse("tapsi_order_entry", args=[self.day.id]))
-        self.assertEqual(edit.status_code, 200)
-        self.assertContains(edit, 'id="tapsi-order-create"')
-        self.assertContains(edit, 'id="tapsi-product-query"')
-        self.assertContains(edit, 'name="discount_cost"')
-        self.assertTrue(any(x["title"] == "شورت زنانه 330 مجموعه سعدعلی" for x in edit.context["tapsi_catalog"]))
-        self.assertContains(edit, "بازگشت به گزارش روز")
-
+        chooser = self.client.get(reverse("sale_brand", args=[self.day.id]))
+        self.assertNotContains(chooser, reverse("tapsi_order_entry", args=[self.day.id]))
+        redirected = self.client.get(reverse("tapsi_order_entry", args=[self.day.id]))
+        self.assertEqual(redirected.status_code, 302)
+        self.assertTrue(redirected.url.startswith(reverse("tapsi_home")))
+        report_redirect = self.client.get(reverse("tapsi_order_report", args=[self.day.id]))
+        self.assertEqual(report_redirect.status_code, 302)
+        entry = self.client.get(reverse("tapsi_home"), {"date": self.day.date.isoformat()})
+        self.assertContains(entry, 'id="t142-order-form"')
+        self.assertContains(entry, 'id="t142-query"')
+        self.assertContains(entry, 'name="discount_cost"')
+        self.assertContains(entry, 'href="' + reverse("tapsi_home") + '"')
+        self.assertTrue(any(x["title"] == "شورت زنانه 330 مجموعه سعدعلی" for x in entry.context["tapsi_catalog"]))
     def test_v140_seed_current_digikala_prices_only_where_tapsi_missing(self):
         from django.core.management import call_command
         from io import StringIO
@@ -343,18 +350,16 @@ class TapsiShopV138Tests(TestCase):
         self.assertEqual(page.context["overall"]["profit"], total["profit"])
         self.assertEqual(page.context["overall"]["digikala_fee"], 0)
 
-    def test_v140_report_summary_has_no_create_or_delete_button(self):
+    def test_v142_orders_only_managed_inside_standalone_workspace(self):
         order = create_tapsi_order(self.day, [(self.ps_m.pk, 1)])
         daily = self.client.get(reverse("daily_report", args=[self.day.pk]))
         self.assertNotContains(daily, f"سفارش #{order.pk}")
-        self.assertNotContains(daily, 'id="tapsi-shop-report"')
-        report_only = self.client.get(reverse("tapsi_order_report", args=[self.day.pk]))
-        self.assertContains(report_only, f"سفارش #{order.pk}")
-        self.assertContains(report_only, "گزارش فروش تپسی‌شاپ")
-        self.assertNotContains(report_only, reverse("tapsi_order_delete", args=[self.day.pk, order.pk]))
-        editing = self.client.get(reverse("tapsi_order_entry", args=[self.day.pk]))
-        self.assertContains(editing, reverse("tapsi_order_delete", args=[self.day.pk, order.pk]))
-
+        self.assertNotContains(daily, 'id="t142-history"')
+        report_legacy = self.client.get(reverse("tapsi_order_report", args=[self.day.pk]))
+        self.assertRedirects(report_legacy, reverse("tapsi_home") + "?date=" + self.day.date.isoformat(), fetch_redirect_response=False)
+        workspace = self.client.get(reverse("tapsi_home"), {"date": self.day.date.isoformat()})
+        self.assertContains(workspace, f"سفارش #{order.pk}")
+        self.assertContains(workspace, reverse("tapsi_hub_delete", args=[order.pk]))
     def test_v141_brand_new_10_white_pack_sizes_selectable_and_price_snapshotted(self):
         from core.tapsi_shop_v138 import initial_catalog_prices
         product = ProductCode.objects.create(
@@ -378,16 +383,17 @@ class TapsiShopV138Tests(TestCase):
             {x["name"]: x["price"] for x in row["sizes"]},
             {"M": 1600000, "L": 1750000},
         )
-        page = self.client.get(reverse("tapsi_order_entry", args=[self.day.id]))
+        page = self.client.get(reverse("tapsi_home"), {"date": self.day.date.isoformat()})
         self.assertEqual(page.status_code, 200)
         self.assertEqual(row["title"], "پک ۰۳ ده تایی سفید")
         # Django json_script escapes non-ASCII JSON values by design;
         # verify the loaded catalog, not the escaped HTML representation.
-        self.assertContains(page, 'id="tapsi-product-size"')
-        self.assertContains(page, "خلاصه فروش امروز تپسی‌شاپ")
-        self.assertContains(page, "سفارش‌های ثبت‌شده این روز")
-        self.assertContains(page, 'id="tapsi-order-create"')
-        response = self.client.post(reverse("tapsi_order_create", args=[self.day.id]), {
+        self.assertContains(page, 'id="t142-size"')
+        self.assertContains(page, "خلاصه امروزِ انتخاب‌شده")
+        self.assertContains(page, "سفارش‌های ثبت‌شده")
+        self.assertContains(page, 'id="t142-order-form"')
+        response = self.client.post(reverse("tapsi_hub_create"), {
+            "order_date": self.day.date.isoformat(),
             "product_size_id": [str(ps_m.pk)],
             "quantity": ["1"],
             "discount_cost": "0",
@@ -412,34 +418,46 @@ class TapsiShopV138Tests(TestCase):
             1600000,
         )
 
-    def test_v141_clean_three_card_layout_history_alignment_and_fold(self):
+    def test_v142_table_free_cards_and_comprehensive_fold(self):
         create_tapsi_order(self.day, [(self.ps_m.id, 1)])
-        page = self.client.get(reverse("tapsi_order_entry", args=[self.day.id]))
-        self.assertContains(page, 'class="card glass-card mb-3 tapsi-overview-card"')
-        self.assertContains(page, 'id="tapsi-shop"')
-        self.assertContains(page, 'id="tapsi-order-history"')
-        self.assertContains(page, "مبلغ فروش کالا")
-        self.assertContains(page, "هزینه کل تپسی‌شاپ")
-        self.assertContains(page, "ارسال و بسته‌بندی")
-        self.assertContains(page, "بهای تمام‌شده کالا")
+        page = self.client.get(reverse("tapsi_home"), {"date": self.day.date.isoformat()})
+        self.assertContains(page, 'class="t142-kpis"')
+        self.assertContains(page, 'id="t142-entry"')
+        self.assertContains(page, 'id="t142-history"')
+        self.assertContains(page, 'class="t142-history-item"')
+        self.assertContains(page, "فروش کالا")
+        self.assertContains(page, "هزینه‌های تپسی")
+        self.assertContains(page, "بهای تمام‌شده")
         self.assertContains(page, "سود فروش")
         self.assertNotContains(page, "سود تخمینی تپسی")
-        self.assertContains(page, "tapsi-orders-table")
-        self.assertContains(page, 'class="tapsi-num"')
+        self.assertNotContains(page, "tapsi-orders-table")
         body = page.content.decode("utf-8")
-        self.assertLess(
-            body.index('class="card glass-card mb-3 tapsi-overview-card"'),
-            body.index('id="tapsi-shop"'),
-        )
-        self.assertLess(
-            body.index('id="tapsi-shop"'),
-            body.index('id="tapsi-order-history"'),
-        )
-        script = (Path(settings.BASE_DIR) / "core/static/core/tapsi_shop_v138.js").read_text("utf-8")
-        self.assertIn("opt.disabled = false", script)
-        self.assertIn("tapsi-preview-fee", script)
-        self.assertNotIn('tapsi-preview-commission', script)
-        report = self.client.get(reverse("report"), {"period":"today"})
+        self.assertLess(body.index('class="t142-kpis"'), body.index('id="t142-entry"'))
+        self.assertLess(body.index('id="t142-entry"'), body.index('id="t142-history"'))
+        script = (Path(settings.BASE_DIR) / "core/static/core/tapsi_portal_v142.js").read_text("utf-8")
+        self.assertIn("t142-save", script)
+        self.assertIn("basket", script)
+        report = self.client.get(reverse("report"), {"period": "today"})
         self.assertContains(report, 'id="comprehensive-tapsi-shop"')
         self.assertContains(report, 'class="v76-fold tapsi-comprehensive-fold"')
-        self.assertNotContains(report, "تپسی‌شاپ · گزارش پلتفرم")
+
+    def test_v142_readonly_visit_does_not_create_day(self):
+        from datetime import timedelta
+        selected = self.day.date + timedelta(days=4)
+        self.assertFalse(SaleDay.objects.filter(date=selected).exists())
+        page = self.client.get(reverse("tapsi_home"), {"date": selected.isoformat()})
+        self.assertEqual(page.status_code, 200)
+        self.assertFalse(SaleDay.objects.filter(date=selected).exists())
+        self.assertEqual(page.context["tapsi_summary"]["total"]["orders"], 0)
+
+    def test_v142_failed_new_day_order_rolls_back_day_and_stock(self):
+        from datetime import timedelta
+        selected = self.day.date + timedelta(days=5)
+        bad = self.client.post(reverse("tapsi_hub_create"), {
+            "order_date": selected.isoformat(), "product_size_id": ["99999999"],
+            "quantity": ["1"], "discount_cost": "0",
+        })
+        self.assertEqual(bad.status_code, 302)
+        self.assertFalse(SaleDay.objects.filter(date=selected).exists())
+        self.assertFalse(TapsiOrder.objects.exists())
+        self.assertEqual(self._balance(self.size_m, self.black), 100)

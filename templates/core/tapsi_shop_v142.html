@@ -1,0 +1,132 @@
+{% extends 'base.html' %}{% load static jalali %}
+{% block title %}تپسی‌شاپ | دارما{% endblock %}
+{% block content %}
+{% include 'core/_mobile_shell.html' %}
+<link rel="stylesheet" href="{% static 'core/tapsi_portal_v142.css' %}">
+<div class="t142-page">
+  <header class="t142-header">
+    <div>
+      <div class="t142-eyebrow">فروش مستقل از صورت روزانه</div>
+      <h1 class="page-title mb-2">تپسی‌شاپ</h1>
+      <p class="t142-muted">هر سفارش را همین‌جا ثبت کن. موجودی خانه، بهای کالا، طلب تپسی و سرمایه با همان قواعد قبلی محاسبه می‌شوند.</p>
+    </div>
+    <div class="t142-datebox">
+      <div class="t142-date-title">سفارش‌های <strong>{{ jalali_date }}</strong>{% if is_today %}<span class="t142-today">امروز</span>{% endif %}</div>
+      <div class="t142-date-controls">
+        <a class="btn btn-sm btn-outline-light" href="{% url 'tapsi_home' %}?date={{ prev_date }}">روز قبل</a>
+        <form method="get" action="{% url 'tapsi_home' %}" class="t142-date-form">
+          <label for="t142-date-picker" class="visually-hidden">انتخاب تاریخ سفارش‌ها</label>
+          <input id="t142-date-picker" class="form-control" type="date" name="date" value="{{ iso_date }}" required>
+          <button class="btn btn-sm btn-outline-light" type="submit">نمایش</button>
+        </form>
+        <a class="btn btn-sm btn-outline-light" href="{% url 'tapsi_home' %}?date={{ next_date }}">روز بعد</a>
+        {% if not is_today %}<a class="btn btn-sm btn-primary" href="{% url 'tapsi_home' %}">امروز</a>{% endif %}
+      </div>
+    </div>
+  </header>
+
+  <section class="card glass-card t142-panel" aria-label="خلاصه تپسی‌شاپ در این روز">
+    <div class="card-body">
+      <div class="t142-section-heading"><h2>خلاصه امروزِ انتخاب‌شده</h2><span>مبالغ به تومان</span></div>
+      <div class="t142-kpis">
+        <div class="t142-kpi"><span>سفارش ثبت‌شده</span><strong class="num">{{ tapsi_summary.total.orders|groupnum }}</strong></div>
+        <div class="t142-kpi"><span>تعداد پک فروخته‌شده</span><strong class="num">{{ tapsi_summary.total.packs|groupnum }}</strong></div>
+        <div class="t142-kpi"><span>فروش کالا</span><strong class="money">{{ tapsi_summary.total.gross|groupnum }}</strong></div>
+        <div class="t142-kpi"><span>هزینه‌های تپسی</span><strong class="money">{{ tapsi_summary.total.fee|groupnum }}</strong></div>
+        <div class="t142-kpi"><span>بهای تمام‌شده</span><strong class="money">{{ tapsi_summary.total.cogs|groupnum }}</strong></div>
+        <div class="t142-kpi t142-kpi-profit"><span>سود فروش</span><strong class="money {% if tapsi_summary.total.profit < 0 %}text-danger{% else %}text-success{% endif %}">{{ tapsi_summary.total.profit|groupnum }}</strong></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card glass-card t142-panel" id="t142-entry" aria-label="ثبت سفارش جدید تپسی‌شاپ">
+    <div class="card-body">
+      <div class="t142-section-heading">
+        <div><h2>ثبت سفارش جدید</h2><p>کد کالا را پیدا کن، سایز و تعداد را انتخاب کن و به سفارش اضافه کن.</p></div>
+        <a class="btn btn-sm btn-outline-light" href="{% url 'settings_products' %}?section=pricing&amp;brand=darma#tapsi-pricing-panel">قیمت‌های تپسی</a>
+      </div>
+      <form id="t142-order-form" method="post" action="{% url 'tapsi_hub_create' %}">
+        {% csrf_token %}
+        <input type="hidden" name="order_date" value="{{ iso_date }}">
+        <div class="t142-picker">
+          <div class="t142-searchbox">
+            <label for="t142-query">جست‌وجوی کد یا نام محصول</label>
+            <input class="form-control" id="t142-query" placeholder="مثلاً 03 یا شورت زنانه" type="search" autocomplete="off">
+            <div id="t142-suggestions" class="t142-suggestions" hidden></div>
+          </div>
+          <div>
+            <label for="t142-size">سایز</label>
+            <select id="t142-size" class="form-select" disabled><option value="">ابتدا کالا را انتخاب کن</option></select>
+          </div>
+          <div>
+            <label for="t142-qty">تعداد پک</label>
+            <input class="form-control" id="t142-qty" type="number" min="1" max="10000" value="1" inputmode="numeric">
+          </div>
+          <button type="button" class="btn btn-primary" id="t142-add" disabled>افزودن به سفارش</button>
+        </div>
+        <div class="t142-selected" id="t142-selected" aria-live="polite">هنوز محصولی انتخاب نشده است.</div>
+        <div class="t142-basket">
+          <div class="t142-basket-head"><strong>اقلام این سفارش</strong><span id="t142-line-count">۰ قلم</span></div>
+          <div id="t142-lines" class="t142-lines" aria-live="polite">
+            <div class="t142-empty">کالایی به این سفارش اضافه نشده است.</div>
+          </div>
+        </div>
+        <div class="t142-extra">
+          <div><label for="t142-discount">هزینه تخفیف (تومان)</label><input class="form-control money-input" id="t142-discount" type="text" name="discount_cost" value="0" inputmode="numeric"></div>
+          <div><label for="t142-note">یادداشت / شماره سفارش</label><input class="form-control" id="t142-note" name="note" maxlength="300" placeholder="اختیاری؛ برای پیدا کردن سفارش بعداً"></div>
+        </div>
+        <div class="t142-preview">
+          <div><span>مبلغ اقلام</span><strong class="money" id="t142-gross">۰</strong></div>
+          <div><span>کمیسیون ۱۵٪ + ارسال + تخفیف</span><strong class="money" id="t142-fees">۰</strong></div>
+          <div><span>خالص طلب از تپسی</span><strong class="money" id="t142-net">۰</strong></div>
+        </div>
+        <div class="t142-savebar">
+          <p>ارسال هر سفارش ۱۴۰٬۰۰۰ تومان و فقط یک‌بار است. سود نهایی بعد از کسر بهای موجودی ثبت می‌شود.</p>
+          <button class="btn btn-success" id="t142-save" type="submit" disabled>ثبت نهایی سفارش</button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <section class="card glass-card t142-panel" id="t142-history" aria-label="تاریخچه سفارش‌های تپسی‌شاپ">
+    <div class="card-body">
+      <div class="t142-section-heading"><div><h2>سفارش‌های ثبت‌شده</h2><p>فقط سفارش‌های تاریخ انتخاب‌شده؛ برای مشاهده جزئیات هر سفارش آن را باز کن.</p></div><span>{{ tapsi_summary.total.orders|groupnum }} سفارش</span></div>
+      <div class="t142-history">
+        {% for order in tapsi_summary.rows %}
+          <details class="t142-order">
+            <summary>
+              <div class="t142-order-title"><strong>سفارش #{{ order.obj.id }}</strong><small>{{ order.packs|groupnum }} پک · {{ order.items|length }} قلم{% if order.obj.note %} · {{ order.obj.note|truncatechars:32 }}{% endif %}</small></div>
+              <div class="t142-order-numbers"><span>فروش <b class="money">{{ order.gross|groupnum }}</b></span><span>سود <b class="money {% if order.profit < 0 %}text-danger{% else %}text-success{% endif %}">{{ order.profit|groupnum }}</b></span></div><span class="t142-chevron" aria-hidden="true">⌄</span>
+            </summary>
+            <div class="t142-order-detail">
+              <div class="t142-history-items">
+                {% for item in order.items %}
+                  <div class="t142-history-item">
+                    <div class="t142-history-name"><strong>{{ item.code_snapshot }} · {{ item.title_snapshot }}</strong><small>سایز {{ item.product_size.size.name }} · {{ item.quantity|groupnum }} پک</small></div>
+                    <div><span>فی فروش</span><b class="money">{{ item.unit_price|groupnum }}</b></div>
+                    <div><span>جمع فروش</span><b class="money">{{ item.gross_sales|groupnum }}</b></div>
+                  </div>
+                {% endfor %}
+              </div>
+              <div class="t142-cost-grid">
+                <div><span>کمیسیون</span><b class="money">{{ order.commission|groupnum }}</b></div>
+                <div><span>ارسال</span><b class="money">{{ order.shipping|groupnum }}</b></div>
+                <div><span>تخفیف</span><b class="money">{{ order.discount|groupnum }}</b></div>
+                <div><span>جمع هزینه تپسی</span><b class="money">{{ order.fee|groupnum }}</b></div>
+                <div><span>بهای کالا</span><b class="money">{{ order.cogs|groupnum }}</b></div>
+                <div><span>سود سفارش</span><b class="money {% if order.profit < 0 %}text-danger{% else %}text-success{% endif %}">{{ order.profit|groupnum }}</b></div>
+              </div>
+              <form method="post" action="{% url 'tapsi_hub_delete' order.obj.id %}" class="t142-delete">{% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('این سفارش و اثر دقیق آن روی موجودی و سرمایه حذف شود؟')">حذف سفارش</button>
+              </form>
+            </div>
+          </details>
+        {% empty %}<p class="t142-empty">برای این تاریخ هنوز سفارش تپسی‌شاپ ثبت نشده است.</p>{% endfor %}
+      </div>
+    </div>
+  </section>
+  <p class="t142-footer-note">طلب کل ثبت‌شده تپسی‌شاپ: <strong class="money">{{ tapsi_receivable|groupnum }}</strong> تومان؛ به‌صورت مستقل در سرمایه کل منظور می‌شود. تا قبل از افزودن سیستم تسویه، این طلب پرداخت‌نشده فرض می‌شود.</p>
+</div>
+{{ tapsi_catalog|json_script:"t142-catalog" }}
+<script defer src="{% static 'core/tapsi_portal_v142.js' %}"></script>
+{% endblock %}

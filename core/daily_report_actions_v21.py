@@ -12,7 +12,6 @@ from .dia_gallery_v45 import sync_dia_gallery_sale
 from .finance import digikala_fee_for_unit
 from .finance_excel_v9 import sync_sale_receivable
 from .models import DiaGallerySale, SaleDay, SaleLine, TapsiOrder
-from .tapsi_shop_v138 import reverse_tapsi_order
 from .sale_inventory_v19 import sync_sale_inventory_v19
 from .variant_sale_v12 import VARIANT_PRODUCT_CODE, sync_variant_inventory
 
@@ -86,12 +85,13 @@ def _reverse_and_delete_dia_line(line):
 def delete_sale_day(day_id):
     """Atomically reverse every sale-owned effect of one SaleDay, then delete it.
 
-    Scope is deliberately limited to objects owned by the sales day: SaleLine,
-    DiaGallerySale and TapsiOrder. Expenses, payments, production, materials and manual stock
-    corrections merely sharing the same calendar date are not part of this action.
+    Only the daily sales channels (SaleLine and DiaGallerySale) are reversed.
+    Standalone Tapsi orders use the shared SaleDay date but must never be
+    reversed or cascaded by a daily-report deletion. Keep the day if they exist.
     """
     day = SaleDay.objects.select_for_update().get(pk=day_id)
     day_date = day.date
+    has_standalone_tapsi = TapsiOrder.objects.select_for_update().filter(day=day).exists()
 
     lines = list(
         SaleLine.objects.select_for_update()
@@ -119,22 +119,19 @@ def delete_sale_day(day_id):
         _reverse_and_delete_sale_line_for_day(line)
     for line in dia_lines:
         _reverse_and_delete_dia_line(line)
-    # Tapsi items use their own exact physical allocation records; never cascade
-    # delete a SaleDay before returning their stored color/size quantities.
-    tapsi_orders = list(TapsiOrder.objects.select_for_update().filter(day=day).order_by("id"))
-    for order in tapsi_orders:
-        reverse_tapsi_order(order)
-
-    if (SaleLine.objects.filter(day=day).exists() or DiaGallerySale.objects.filter(day=day).exists()
-            or TapsiOrder.objects.filter(day=day).exists()):
+    if SaleLine.objects.filter(day=day).exists() or DiaGallerySale.objects.filter(day=day).exists():
         raise SaleDayDeleteError("حذف صورت کامل نشد؛ هیچ تغییری ذخیره نشد.")
 
-    day.delete()
+    # Tapsi is now a standalone channel. Deleting the daily sheet must not
+    # cascade into its independent orders, stock allocations or receivable.
+    if not has_standalone_tapsi:
+        day.delete()
     return {
         "date": day_date,
         "sale_lines": normal_count,
         "dia_lines": dia_count,
-        "tapsi_orders": len(tapsi_orders),
+        "tapsi_orders": 0,
+        "day_retained_for_tapsi": has_standalone_tapsi,
     }
 
 
