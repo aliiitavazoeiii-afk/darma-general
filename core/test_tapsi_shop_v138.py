@@ -388,10 +388,10 @@ class TapsiShopV138Tests(TestCase):
         self.assertEqual(row["title"], "پک ۰۳ ده تایی سفید")
         # Django json_script escapes non-ASCII JSON values by design;
         # verify the loaded catalog, not the escaped HTML representation.
-        self.assertContains(page, 'id="tapsi-product-size"')
-        self.assertContains(page, "خلاصه فروش امروز تپسی‌شاپ")
-        self.assertContains(page, "سفارش‌های ثبت‌شده این روز")
-        self.assertContains(page, 'id="tapsi-order-create"')
+        self.assertContains(page, 'id="t142-size"')
+        self.assertContains(page, "خلاصه امروزِ انتخاب‌شده")
+        self.assertContains(page, "سفارش‌های ثبت‌شده")
+        self.assertContains(page, 'id="t142-order-form"')
         response = self.client.post(reverse("tapsi_hub_create"), {
             "order_date": self.day.date.isoformat(),
             "product_size_id": [str(ps_m.pk)],
