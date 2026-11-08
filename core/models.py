@@ -385,6 +385,8 @@ class TapsiOrder(models.Model):
     day = models.ForeignKey(SaleDay, on_delete=models.CASCADE, related_name="tapsi_orders")
     shipping_fee = models.PositiveBigIntegerField(default=140000)
     commission_percent = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal("15.00"))
+    # Historical orders retain zero VAT; new V143 orders snapshot 10% VAT on commission.
+    vat_percent = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal("0.00"))
     discount_cost = models.PositiveBigIntegerField(default=0)
     note = models.CharField(max_length=300, blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)

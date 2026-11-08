@@ -78,9 +78,10 @@
   }
   function render(){
     lines.replaceChildren();
-    let gross=0, count=0;
+    let gross=0, count=0, cogs=0;
     for(const item of basket.values()){
       gross += item.price * item.quantity;count+=item.quantity;
+      cogs += (item.unit_cost || 0) * item.pack_qty * item.quantity;
       const row=document.createElement("div");row.className="t142-line";
       const title=document.createElement("div");title.className="t142-line-title";
       const name=document.createElement("strong");name.textContent=item.code+" · "+item.title;
@@ -100,7 +101,15 @@
       empty.textContent="کالایی به این سفارش اضافه نشده است.";lines.append(empty);
     }
     el("t142-line-count").textContent=money(basket.size)+" قلم · "+money(count)+" پک";
-    const fee=Math.round(gross*0.15)+(basket.size?140000:0)+amount(discount.value);
+    const commission=Math.round(gross*0.15);
+    const vat=Math.round(commission*0.10);
+    const extras=(basket.size?140000:0)+amount(discount.value);
+    const fee=commission+vat+extras;
+    el("t143-entry-commission").textContent=money(commission);
+    el("t143-entry-vat").textContent=money(vat);
+    el("t143-entry-extras").textContent=money(extras);
+    el("t143-entry-cogs").textContent=money(cogs);
+    el("t143-entry-profit").textContent=money(gross-fee-cogs);
     el("t142-gross").textContent=money(gross);
     el("t142-fees").textContent=money(fee);
     el("t142-net").textContent=money(gross-fee);
@@ -112,7 +121,7 @@
     if(!chosen||!variant||variant.price<=0||count<1||count>10000) return;
     const id=String(variant.id), previous=basket.get(id);
     basket.set(id,{id,code:chosen.code,title:chosen.title,size:variant.name,
-      price:variant.price,quantity:(previous?.quantity||0)+count});
+      price:variant.price,unit_cost:variant.unit_cost||0,pack_qty:chosen.pack_qty,quantity:(previous?.quantity||0)+count});
     render();qty.value="1";viewSelection();query.focus();
   });
   discount.addEventListener("input",render);
