@@ -42,7 +42,8 @@ def _empty_summary():
         "rows": [],
         "total": {
             "orders": 0, "packs": 0, "shorts": 0, "gross": 0,
-            "commission": 0, "vat": 0, "shipping": 0, "discount": 0,
+            "commission": 0, "vat": 0, "insurance": 0, "infrastructure": 0,
+            "shipping": 0, "discount": 0,
             "fee": 0, "cogs": 0, "profit": 0,
         },
     }
