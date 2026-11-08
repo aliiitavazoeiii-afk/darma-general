@@ -139,10 +139,8 @@ def home(request):
 
 @login_required
 def calculator(request):
-    on_date = timezone.localdate()
-    return render(request, "core/tapsi_calculator_v144.html", {
-        "calc_catalog": _calculator_catalog(on_date, current_catalog(on_date)),
-    })
+    """Independent one-pack price quotation: no SKU search or database access."""
+    return render(request, "core/tapsi_calculator_v144.html")
 
 
 @login_required
