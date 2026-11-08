@@ -489,18 +489,29 @@ class TapsiShopV138Tests(TestCase):
         self.assertContains(page, reverse("tapsi_monthly"))
         calculator_page = self.client.get(reverse("tapsi_calculator"))
         self.assertContains(calculator_page, 'id="t143-calc-margin"')
-        self.assertContains(calculator_page, 'id="t144-calc-monthly"')
+        self.assertContains(calculator_page, 'id="t145-calc-cost"')
+        self.assertContains(calculator_page, 'id="t145-calc-price"')
+        self.assertContains(calculator_page, 'id="t145-calc-target"')
+        self.assertNotContains(calculator_page, 'id="t144-calc-monthly"')
+        self.assertNotContains(calculator_page, 'id="t143-calc-product"')
+        self.assertNotContains(calculator_page, 'id="t143-calc-size"')
+        self.assertNotContains(calculator_page, 'id="t143-calc-qty"')
+        self.assertNotContains(calculator_page, 'id="t143-calc-pack"')
         self.assertNotContains(calculator_page, 'id="t142-entry"')
         monthly_page = self.client.get(reverse("tapsi_monthly"))
         self.assertContains(monthly_page, 'id="t143-monthly"')
         self.assertNotContains(monthly_page, 'id="t142-entry"')
         self.assertEqual(self.client.get(reverse("tapsi_home"), {"date": "1405/13/01"}).status_code, 400)
         calculator = (Path(settings.BASE_DIR) / "core/static/core/tapsi_calculator_v143.js").read_text("utf-8")
-        self.assertIn("function calculateTarget", calculator)
-        self.assertIn("Math.round(commission*.10)", calculator)
-        self.assertIn("140000+promo", calculator)
-        self.assertIn("Math.round(gross*.015)", calculator)
-        self.assertIn("550000", calculator)
+        self.assertIn("function targetPrice", calculator)
+        self.assertIn("Math.round(commission * .10)", calculator)
+        self.assertIn("const shipping = 140000", calculator)
+        self.assertIn("Math.round(sale * .015)", calculator)
+        self.assertIn("Math.round(sale * .003)", calculator)
+        self.assertNotIn("550000", calculator)
+        self.assertNotIn("2200000", calculator)
+        self.assertNotIn("monthlyBill", calculator)
+        self.assertIn("function targetPrice", calculator)
 
     def test_v143_jalali_month_boundary_financial_summary(self):
         import jdatetime
@@ -603,6 +614,23 @@ class TapsiShopV138Tests(TestCase):
         self.assertFalse(TapsiOrder.objects.exists())
         self.assertEqual(stock, self._balance(self.size_m, self.black))
         self.assertEqual(rules, list(TapsiPriceRule.objects.values_list("id", "price")))
+
+    def test_v145_simple_calculator_only_does_not_query_catalog_or_change_data(self):
+        from django.test.utils import CaptureQueriesContext
+        from django.db import connection
+        before = list(TapsiPriceRule.objects.values_list("id", "price"))
+        with CaptureQueriesContext(connection) as sql:
+            page = self.client.get(reverse("tapsi_calculator"))
+        self.assertEqual(page.status_code, 200)
+        self.assertNotIn("calc_catalog", page.context)
+        self.assertContains(page, "بهای تمام‌شده کل محصول")
+        self.assertContains(page, "زیرساخت (۰٫۳٪ فروش)")
+        self.assertContains(page, "ارسال ثابت سفارش")
+        self.assertContains(page, "هزینه تخفیف دستی")
+        self.assertNotContains(page, "پیش‌بینی مبلغ فروش کل ماه")
+        self.assertNotContains(page, "کف ماهانه")
+        self.assertFalse(TapsiOrder.objects.exists())
+        self.assertEqual(before, list(TapsiPriceRule.objects.values_list("id", "price")))
 
     def test_v142_failed_new_day_order_rolls_back_day_and_stock(self):
         from datetime import timedelta
