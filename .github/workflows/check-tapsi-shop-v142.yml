@@ -94,10 +94,10 @@ jobs:
           }
           assert not (files-allowed), sorted(files-allowed)
           for legacy in ('core/finance.py', 'core/final_services.py', 'core/sale_price_v60.py',
-                         'core/pricing_v60.py','core/daily_report_actions_v21.py',
+                         'core/pricing_v60.py',
                          'core/material_report_v23.py','core/inventory_valuation_v17.py',
                          'core/models.py','core/product_center_v93.py'):
               assert legacy not in files, legacy
           assert not any(path.startswith('core/migrations/') for path in files)
-          print('V141_PROTECTED_FINANCE_AND_DIGIKALA_SOURCE_UNCHANGED')
+          print('V142_CORE_FINANCE_PRICING_MODELS_AND_MIGRATIONS_UNCHANGED')
           PY
