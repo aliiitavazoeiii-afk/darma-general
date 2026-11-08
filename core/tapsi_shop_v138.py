@@ -11,6 +11,7 @@ from decimal import Decimal, ROUND_HALF_UP
 from django.db import transaction
 from django.db.models import Prefetch
 
+from .tapsi_infrastructure_v144 import infrastructure_allocations
 from .darma_cost_v55 import darma_cost_for
 from .novani_cost_v59 import novani_cost_for
 from .takvin_pricing_v17 import takvin_cost_for
@@ -24,6 +25,8 @@ from .models import (
 COMMISSION_PERCENT = Decimal("15.00")
 VAT_ON_COMMISSION_PERCENT = Decimal("10.00")
 SHIPPING_PER_ORDER = 140_000
+INSURANCE_PERCENT = Decimal("1.50")
+INFRASTRUCTURE_PERCENT = Decimal("0.30")
 DARMA_PACK_SIZES = ("M", "L", "XL", "XXL", "3XL", "4XL")
 
 
@@ -218,6 +221,7 @@ def create_tapsi_order(day, pairs, discount_cost=0, note=""):
     order = TapsiOrder.objects.create(
         day=day, shipping_fee=SHIPPING_PER_ORDER,
         commission_percent=COMMISSION_PERCENT, vat_percent=VAT_ON_COMMISSION_PERCENT,
+        insurance_percent=INSURANCE_PERCENT, infrastructure_percent=INFRASTRUCTURE_PERCENT,
         discount_cost=discount_cost, note=note,
     )
     for ps_id, quantity in amounts.items():
@@ -231,7 +235,7 @@ def create_tapsi_order(day, pairs, discount_cost=0, note=""):
     return order
 
 
-def order_metrics(order):
+def order_metrics(order, *, infrastructure=None):
     items = list(order.items.all())
     gross = sum(int(item.unit_price) * int(item.quantity) for item in items)
     cogs = sum(int(item.unit_cost) * int(item.pack_qty) * int(item.quantity) for item in items)
@@ -239,11 +243,16 @@ def order_metrics(order):
     packs = sum(int(item.quantity) for item in items)
     commission = money(Decimal(gross) * Decimal(order.commission_percent) / Decimal(100))
     vat = money(Decimal(commission) * Decimal(order.vat_percent) / Decimal(100))
+    insurance = money(Decimal(gross) * Decimal(order.insurance_percent) / Decimal(100))
+    if infrastructure is None:
+        infrastructure = infrastructure_allocations([order]).get(order.pk, 0)
+    infrastructure = int(infrastructure)
     shipping = int(order.shipping_fee)
     discount = int(order.discount_cost)
-    fee = commission + vat + shipping + discount
+    fee = commission + vat + insurance + infrastructure + shipping + discount
     return {
-        "gross": gross, "commission": commission, "vat": vat, "shipping": shipping,
+        "gross": gross, "commission": commission, "vat": vat,
+        "insurance": insurance, "infrastructure": infrastructure, "shipping": shipping,
         "discount": discount, "fee": fee, "cogs": cogs,
         "profit": gross - fee - cogs, "shorts": shorts, "packs": packs,
     }
@@ -256,14 +265,15 @@ def tapsi_day_summary(day):
         ).order_by("-id")
     )
     aggregate = {
-        "gross": 0, "commission": 0, "vat": 0, "shipping": 0, "discount": 0,
-        "fee": 0, "cogs": 0, "profit": 0, "shorts": 0, "packs": 0,
-        "orders": len(orders),
+        "gross": 0, "commission": 0, "vat": 0, "insurance": 0, "infrastructure": 0,
+        "shipping": 0, "discount": 0, "fee": 0, "cogs": 0, "profit": 0,
+        "shorts": 0, "packs": 0, "orders": len(orders),
     }
+    allocated = infrastructure_allocations(orders)
     display = []
     for order in orders:
-        metrics = order_metrics(order)
-        for key in ("gross", "commission", "vat", "shipping", "discount", "fee", "cogs", "profit", "shorts", "packs"):
+        metrics = order_metrics(order, infrastructure=allocated.get(order.id, 0))
+        for key in ("gross", "commission", "vat", "insurance", "infrastructure", "shipping", "discount", "fee", "cogs", "profit", "shorts", "packs"):
             aggregate[key] += metrics[key]
         display.append({"obj": order, "items": list(order.items.all()), **metrics})
     return {"rows": display, "total": aggregate}
@@ -394,8 +404,10 @@ def save_tapsi_bulk_darma(pack_qty, effective_from, post):
 # mutable manual account row. Until settlements are implemented every order is
 # treated as unpaid; NEVER also add this receivable to a manual bank/account row.
 def tapsi_receivable_total():
-    orders = TapsiOrder.objects.prefetch_related("items").all()
-    return sum(int(order_metrics(order)["gross"] - order_metrics(order)["fee"]) for order in orders)
+    orders = list(TapsiOrder.objects.select_related("day").prefetch_related("items").all())
+    allocated = infrastructure_allocations(orders)
+    return sum(int(m["gross"] - m["fee"]) for order in orders
+               for m in [order_metrics(order, infrastructure=allocated.get(order.pk, 0))])
 
 
 def _allocate_fee(amount, item_gross_values):
@@ -428,14 +440,16 @@ def tapsi_period_metrics(start, end):
     )
     totals = {
         "orders": len(orders), "gross": 0, "commission": 0, "vat": 0,
+        "insurance": 0, "infrastructure": 0,
         "shipping": 0, "discount": 0, "fee": 0, "cogs": 0,
         "profit": 0, "shorts": 0, "packs": 0, "receivable": 0,
     }
     group = {}
     by_date = defaultdict(lambda: {"gross": 0, "profit": 0, "shorts": 0, "packs": 0})
+    allocated = infrastructure_allocations(orders)
     for order in orders:
-        metrics = order_metrics(order)
-        for k in ("gross", "commission", "vat", "shipping", "discount", "fee", "cogs", "profit", "shorts", "packs"):
+        metrics = order_metrics(order, infrastructure=allocated.get(order.id, 0))
+        for k in ("gross", "commission", "vat", "insurance", "infrastructure", "shipping", "discount", "fee", "cogs", "profit", "shorts", "packs"):
             totals[k] += int(metrics[k])
         totals["receivable"] += metrics["gross"] - metrics["fee"]
         by_date[order.day.date]["gross"] += metrics["gross"]
@@ -446,6 +460,8 @@ def tapsi_period_metrics(start, end):
         grosses = [int(it.unit_price) * int(it.quantity) for it in items]
         commission_parts = _allocate_fee(metrics["commission"], grosses)
         vat_parts = _allocate_fee(metrics["vat"], grosses)
+        insurance_parts = _allocate_fee(metrics["insurance"], grosses)
+        infrastructure_parts = _allocate_fee(metrics["infrastructure"], grosses)
         shipping_parts = _allocate_fee(metrics["shipping"], grosses)
         discount_parts = _allocate_fee(metrics["discount"], grosses)
         for i, item in enumerate(items):
@@ -459,19 +475,23 @@ def tapsi_period_metrics(start, end):
                     "title": item.title_snapshot or ps.product.title or ps.product.code,
                     "size": ps.size.name,
                     "packs": 0, "shorts": 0, "gross": 0, "cogs": 0,
-                    "commission": 0, "vat": 0, "shipping": 0, "discount": 0,
+                    "commission": 0, "vat": 0, "insurance": 0,
+                    "infrastructure": 0, "shipping": 0, "discount": 0,
                     "fee": 0, "profit": 0,
                 }
             row = group[key]
             item_gross = grosses[i]
             item_cogs = int(item.unit_cost) * int(item.pack_qty) * int(item.quantity)
-            fees = commission_parts[i] + vat_parts[i] + shipping_parts[i] + discount_parts[i]
+            fees = (commission_parts[i] + vat_parts[i] + insurance_parts[i]
+                    + infrastructure_parts[i] + shipping_parts[i] + discount_parts[i])
             row["gross"] += item_gross
             row["cogs"] += item_cogs
             row["packs"] += int(item.quantity)
             row["shorts"] += int(item.pack_qty) * int(item.quantity)
             row["commission"] += commission_parts[i]
             row["vat"] += vat_parts[i]
+            row["insurance"] += insurance_parts[i]
+            row["infrastructure"] += infrastructure_parts[i]
             row["shipping"] += shipping_parts[i]
             row["discount"] += discount_parts[i]
             row["fee"] += fees

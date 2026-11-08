@@ -1,118 +1,100 @@
-/* V143 isolated Tapsi calculator. No network or server mutations. */
+/* V144 standalone Tapsi quotation. Read-only, no DB updates. */
 (() => {
   "use strict";
-  const root = document.getElementById("t143-calculator");
-  const data = document.getElementById("t142-catalog");
-  if (!root || !data) return;
-  let catalog;
-  try { catalog=JSON.parse(data.textContent || "[]"); } catch (_) { return; }
-  const byId = id => document.getElementById("t143-" + id);
-  const product = byId("calc-product"), size = byId("calc-size");
-  const mode=byId("calc-mode"), pack=byId("calc-pack"),cost=byId("calc-cost");
-  const qty=byId("calc-qty"),discount=byId("calc-discount");
-  const price=byId("calc-price"),margin=byId("calc-margin");
-  const notice=byId("calc-notice");
-  const digits = v=>String(v??"").replace(/[۰-۹]/g,c=>String(c.charCodeAt(0)-1776))
+  const root=document.getElementById("t143-calculator");
+  const node=document.getElementById("t142-catalog");
+  if(!root||!node)return;
+  let catalog=[];
+  try{catalog=JSON.parse(node.textContent||"[]");}catch(_){return;}
+  const get=id=>document.getElementById("t143-"+id);
+  const product=get("calc-product"),size=get("calc-size"),mode=get("calc-mode");
+  const pack=get("calc-pack"),cost=get("calc-cost"),qty=get("calc-qty");
+  const price=get("calc-price"),margin=get("calc-margin"),discount=get("calc-discount");
+  const month=document.getElementById("t144-calc-monthly"),notice=get("calc-notice");
+  const normalize=v=>String(v??"").replace(/[۰-۹]/g,c=>String(c.charCodeAt(0)-1776))
     .replace(/[٠-٩]/g,c=>String(c.charCodeAt(0)-1632)).replace(/[٬,\s]/g,"");
-  const number = v=>Number(digits(v))||0;
-  const format = v=>new Intl.NumberFormat("fa-IR").format(Math.round(v));
-  function calc(salePrice, count, costOfGoods, promotion){
-    const gross=salePrice*count;
+  const val=v=>Number(normalize(v))||0;
+  const money=v=>new Intl.NumberFormat("fa-IR").format(Math.round(v));
+  function breakdown(unit,units,cogs,promo,forecast){
+    const gross=Math.round(unit*units);
     const commission=Math.round(gross*.15);
     const vat=Math.round(commission*.10);
-    const extras=140000+promotion;
-    const fee=commission+vat+extras;
-    const profit=gross-costOfGoods-fee;
-    return {gross,commission,vat,extras,fee,profit,
-      net:gross-fee,margin:gross>0?100*profit/gross:0};
+    const insurance=Math.round(gross*.015);
+    const projectedMonth=Math.max(gross,forecast);
+    const monthlyBill=Math.min(2200000,Math.max(550000,Math.round(projectedMonth*.003)));
+    const infrastructure=projectedMonth>0?Math.round(monthlyBill*gross/projectedMonth):monthlyBill;
+    const extras=140000+promo;
+    const net=gross-commission-vat-insurance-infrastructure-extras;
+    const profit=net-cogs;
+    return {gross,commission,vat,insurance,infrastructure,extras,net,profit,cogs,
+      margin:gross?profit/gross*100:0,monthlyBill,projectedMonth};
   }
-  function calculateTarget(target,count,cogs,promotion){
-    const t=target/100;
-    const denominator=1-.15*1.10-t;
-    if(denominator<=0||!Number.isFinite(denominator))return null;
-    let unit=Math.max(1,Math.ceil((cogs+140000+promotion)/denominator/count));
-    for(let i=0;i<64;i++){
-      if(calc(unit,count,cogs,promotion).margin + 1e-10>=target)return unit;
-      unit++;
+  function calculateTarget(target,units,cogs,promo,forecast){
+    // Unlike a simple 0.3% flat charge, the monthly floor/cap produces
+    // piecewise effective rates. Binary-search the exact rounded simulation.
+    let lo=1,hi=1000;
+    for(let i=0;i<60&&breakdown(hi,units,cogs,promo,forecast).margin<target;i++)hi*=2;
+    if(breakdown(hi,units,cogs,promo,forecast).margin<target)return null;
+    while(lo<hi){
+      const mid=Math.floor((lo+hi)/2);
+      if(breakdown(mid,units,cogs,promo,forecast).margin>=target)hi=mid;
+      else lo=mid+1;
     }
-    return unit;
+    return lo;
   }
-  function clearOutput(error){
-    notice.textContent=error;
-    root.querySelectorAll('[id^="t143-result-"]').forEach(e=>e.textContent="—");
+  const output=(name,value)=>{const e=document.getElementById("t144-result-"+name)||get("result-"+name);if(e)e.textContent=value;};
+  function invalid(message){
+    notice.textContent=message;
+    root.querySelectorAll('[id^="t143-result-"],[id^="t144-result-"]').forEach(e=>e.textContent="—");
   }
-  function show(){
-    const count=number(qty.value), unitCost=number(cost.value), packQty=number(pack.value);
-    const promotion=number(discount.value);
+  function render(){
+    const count=val(qty.value),inside=val(pack.value),unitCost=val(cost.value);
+    const promo=val(discount.value),forecast=val(month.value);
     const target=Number(String(margin.value).replace(",","."));
-    const valid=count>=1&&count<=10000&&packQty>=1&&packQty<=1000
-      &&unitCost>=0&&promotion>=0;
-    if(!valid){clearOutput("مقادیر تعداد، بهای کالا و تخفیف باید معتبر و غیرمنفی باشند.");return;}
-    const cogs=unitCost*packQty*count;
-    let unitPrice=number(price.value);
+    if(count<1||count>10000||inside<1||inside>1000||unitCost<0||promo<0||forecast<0){
+      invalid("تعداد و هزینه و فروش پیش‌بینی‌شده باید معتبر باشند.");return;
+    }
+    const cogs=count*inside*unitCost;
+    let selling=val(price.value);
     if(mode.value==="margin"){
-      if(!Number.isFinite(target)||target>=83.5||target < -100){
-        clearOutput("درصد سود هدف باید کمتر از ۸۳٫۵٪ باشد؛ هزینه‌های متغیر تپسی به‌تنهایی ۱۶٫۵٪ فروش هستند.");
-        return;
-      }
-      unitPrice=calculateTarget(target,count,cogs,promotion);
-      if(unitPrice===null){clearOutput("برای این درصد سود، قیمت قابل محاسبه نیست.");return;}
-      price.value=format(unitPrice);
-    }else if(unitPrice<=0){
-      clearOutput("قیمت فروش هر پک باید بیشتر از صفر باشد.");return;
-    }
-    const m=calc(unitPrice,count,cogs,promotion);
-    for(const [key,value] of Object.entries({gross:m.gross,cogs,commission:m.commission,
-      vat:m.vat,extras:m.extras,net:m.net,profit:m.profit})){
-      byId("result-"+key).textContent=format(value);
-    }
-    byId("result-margin").textContent=m.margin.toLocaleString("fa-IR",{maximumFractionDigits:2})+"٪";
-    byId("result-profit").classList.toggle("text-danger",m.profit<0);
-    byId("result-profit").classList.toggle("text-success",m.profit>=0);
-    notice.textContent=mode.value==="margin"
-      ? "قیمت پیشنهادی هر پک برای رسیدن به حاشیه سود هدف، با تمام هزینه‌های همین سفارش محاسبه شد."
-      : "درصد سود واقعی = سود خالص تقسیم بر فروش کل؛ این پیش‌نمایش هیچ قیمتی را ذخیره نمی‌کند.";
+      if(!Number.isFinite(target)||target>=82||target< -100){invalid("درصد سود هدف باید کمتر از ۸۲٪ و حداقل منفی ۱۰۰٪ باشد.");return;}
+      selling=calculateTarget(target,count,cogs,promo,forecast);
+      if(selling===null){invalid("این درصد سود با این ورودی‌ها قابل محاسبه نیست.");return;}
+      price.value=money(selling);
+    }else if(selling<=0){invalid("قیمت هر پک باید مثبت باشد.");return;}
+    const b=breakdown(selling,count,cogs,promo,forecast);
+    for(const key of ["gross","cogs","commission","vat","insurance","infrastructure","extras","net","profit"])output(key,money(b[key]));
+    output("margin",b.margin.toLocaleString("fa-IR",{maximumFractionDigits:2})+"٪");
+    const profit=get("result-profit");
+    profit.classList.toggle("text-danger",b.profit<0);profit.classList.toggle("text-success",b.profit>=0);
+    notice.textContent="پیش‌بینی کل فروش ماه "+money(b.projectedMonth)+" تومان؛ زیرساخت کل ماه "+money(b.monthlyBill)+" تومان. سهم این سفارش متناسب با فروش آن از کل فروش پیش‌بینی‌شده لحاظ شده است؛ سهم نهایی با فروش واقعی ماه تغییر می‌کند.";
   }
-  function chooseProduct(){
-    const selected=catalog.find(p=>String(p.id)===product.value);
+  function selectProduct(){
+    const p=catalog.find(v=>String(v.id)===product.value);
     size.replaceChildren();
-    if(!selected){
-      size.disabled=true;show();return;
+    if(!p){size.disabled=true;render();return;}
+    pack.value=p.pack_qty;
+    for(const item of p.sizes){
+      const opt=document.createElement("option");opt.value=item.id;opt.textContent=item.name+" · "+money(item.price)+" تومان";size.append(opt);
     }
-    pack.value=selected.pack_qty;
-    for(const variant of selected.sizes){
-      const option=document.createElement("option");option.value=variant.id;
-      option.textContent=variant.name+" · "+format(variant.price)+" تومان";size.append(option);
-    }
-    size.disabled=!selected.sizes.length;
-    chooseSize();
+    size.disabled=!p.sizes.length;selectSize();
   }
-  function chooseSize(){
-    const selected=catalog.find(p=>String(p.id)===product.value);
-    const variant=selected?.sizes.find(s=>String(s.id)===size.value);
-    if(variant){
-      cost.value=format(variant.unit_cost);
-      price.value=format(variant.price);
-    }
-    show();
+  function selectSize(){
+    const p=catalog.find(v=>String(v.id)===product.value);
+    const item=p?.sizes.find(v=>String(v.id)===size.value);
+    if(item){cost.value=money(item.unit_cost);price.value=money(item.price);}
+    render();
   }
-  for(const p of catalog){
-    const option=document.createElement("option");
-    option.value=p.id;option.textContent=p.code+" · "+p.title+" ("+p.brand+")";
-    product.append(option);
-  }
-  product.addEventListener("change",chooseProduct);
-  size.addEventListener("change",chooseSize);
+  for(const p of catalog){const o=document.createElement("option");o.value=p.id;o.textContent=p.code+" · "+p.title+" ("+p.brand+")";product.append(o);}
+  product.addEventListener("change",selectProduct);
+  size.addEventListener("change",selectSize);
   mode.addEventListener("change",()=>{
     const reverse=mode.value==="margin";
-    price.readOnly=reverse;
-    margin.readOnly=!reverse;
+    price.readOnly=reverse;margin.readOnly=!reverse;
     price.classList.toggle("t143-derived",reverse);
     margin.classList.toggle("t143-derived",!reverse);
-    show();
+    render();
   });
-  for(const field of [pack,cost,qty,discount,price,margin])field.addEventListener("input",show);
-  margin.readOnly=true;
-  margin.classList.add("t143-derived");
-  show();
+  for(const e of [pack,cost,qty,discount,price,margin,month])e.addEventListener("input",render);
+  margin.readOnly=true;margin.classList.add("t143-derived");render();
 })();

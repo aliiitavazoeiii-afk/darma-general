@@ -387,6 +387,9 @@ class TapsiOrder(models.Model):
     commission_percent = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal("15.00"))
     # Historical orders retain zero VAT; new V143 orders snapshot 10% VAT on commission.
     vat_percent = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal("0.00"))
+    # New V144 orders snapshot added charges. All older orders default to zero.
+    insurance_percent = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal("0.00"))
+    infrastructure_percent = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal("0.00"))
     discount_cost = models.PositiveBigIntegerField(default=0)
     note = models.CharField(max_length=300, blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
