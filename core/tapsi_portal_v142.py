@@ -131,6 +131,7 @@ def home(request):
         "prev_date": (on_date - timedelta(days=1)).isoformat(),
         "next_date": (on_date + timedelta(days=1)).isoformat(),
         "calc_catalog": _calculator_catalog(on_date, catalog),
+        "tapsi_catalog": catalog,
         "tapsi_summary": tapsi_day_summary(day) if day else _empty_summary(),
         "tapsi_receivable": tapsi_receivable_total(),
     })
