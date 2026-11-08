@@ -1,77 +1,71 @@
 {% extends 'base.html' %}{% load static jalali %}
-{% block title %}تپسی‌شاپ | DARMA{% endblock %}
+{% block title %}محاسبه‌گر قیمت تپسی‌شاپ | دارما{% endblock %}
 {% block content %}
 {% include 'core/_mobile_shell.html' %}
-<link rel="stylesheet" href="{% static 'core/tapsi_portal_v142.css' %}?v=144">
-<div class="t142-page">
-<header class="t142-header"><div><div class="t142-eyebrow">تپسی‌شاپ / صفحه مستقل</div><h1 class="page-title mb-2">محاسبه‌گر قیمت</h1><div class="t143-shortcuts"><a href="{% url 'tapsi_home' %}">سفارش‌های روز</a><a href="{% url 'tapsi_calculator' %}">محاسبه‌گر قیمت</a><a href="{% url 'tapsi_monthly' %}">گزارش ماهانه</a></div></div></header>
-  <section class="card glass-card t142-panel" id="t143-calculator" aria-label="محاسبه‌گر قیمت و حاشیه سود تپسی‌شاپ">
-    <div class="card-body">
-      <div class="t142-section-heading">
-        <div><h2>محاسبه‌گر قیمت تپسی‌شاپ</h2><p>بدون ثبت سفارش و بدون تغییر قیمت محصولات؛ بر اساس قیمت فروش یا درصد سود هدف محاسبه کن.</p></div>
-        <span>۱۵٪ کمیسیون + ۱۰٪ مالیاتِ کمیسیون + ۱۴۰٬۰۰۰ تومان ارسال</span>
-      </div>
-      <div class="t143-calc-grid">
-        <div class="t143-field t143-wide">
-          <label for="t143-calc-product">کد / محصول</label>
-          <select class="form-select" id="t143-calc-product"><option value="">برای دریافت قیمت و بهای تمام‌شده، کالا را انتخاب کن</option></select>
-        </div>
-        <div class="t143-field">
-          <label for="t143-calc-size">سایز</label>
-          <select class="form-select" id="t143-calc-size" disabled><option value="">سایز کالا</option></select>
-        </div>
-        <div class="t143-field">
-          <label for="t143-calc-mode">مبنای محاسبه</label>
-          <select class="form-select" id="t143-calc-mode">
-            <option value="price">قیمت فروش را وارد می‌کنم</option>
-            <option value="margin">درصد سود دلخواه را وارد می‌کنم</option>
-          </select>
-        </div>
-        <div class="t143-field">
-          <label for="t143-calc-pack">تعداد شورت داخل هر پک</label>
-          <input class="form-control" id="t143-calc-pack" type="number" min="1" max="1000" value="1" inputmode="numeric">
-        </div>
-        <div class="t143-field">
-          <label for="t143-calc-cost">بهای تمام‌شده هر شورت (تومان)</label>
-          <input class="form-control money-input" id="t143-calc-cost" inputmode="numeric" type="text" value="75000">
-        </div>
-        <div class="t143-field">
-          <label for="t143-calc-qty">تعداد پک در یک سفارش</label>
-          <input class="form-control" id="t143-calc-qty" type="number" min="1" max="10000" value="1" inputmode="numeric">
-        </div>
-        <div class="t143-field"><label for="t144-calc-monthly">پیش‌بینی مبلغ فروش کل ماه شمسی (تومان)</label>
-          <input class="form-control money-input" id="t144-calc-monthly" inputmode="numeric" type="text" value="200000000"></div>
-        <div class="t143-field">
-          <label for="t143-calc-discount">هزینه تخفیف سفارش (تومان)</label>
-          <input class="form-control money-input" id="t143-calc-discount" inputmode="numeric" type="text" value="0">
-        </div>
-        <div class="t143-field">
-          <label for="t143-calc-price">قیمت فروش هر پک (تومان)</label>
-          <input class="form-control money-input" id="t143-calc-price" inputmode="numeric" type="text" value="700000">
-        </div>
-        <div class="t143-field">
-          <label for="t143-calc-margin">درصد سود هدف از مبلغ فروش</label>
-          <input class="form-control" id="t143-calc-margin" inputmode="decimal" type="number" min="-100" max="83.49" step="0.1" value="20">
-        </div>
-      </div>
-      <p class="t143-assumption" id="t143-calc-notice">«درصد سود» یعنی سود خالص تقسیم بر مبلغ فروش؛ هزینه ارسال یک بار برای کل سفارش در نظر گرفته می‌شود.</p>
-      <div class="t143-calc-results">
-        <div><span>مبلغ کل فروش سفارش</span><strong class="money" id="t143-result-gross">—</strong></div>
-        <div><span>بهای کالا</span><strong class="money" id="t143-result-cogs">—</strong></div>
-        <div><span>کمیسیون ۱۵٪</span><strong class="money" id="t143-result-commission">—</strong></div>
-        <div><span>مالیات ۱۰٪ روی کمیسیون</span><strong class="money" id="t143-result-vat">—</strong></div>
-        <div><span>بیمه ۱٫۵٪ فروش</span><strong class="money" id="t144-result-insurance">—</strong></div>
-        <div><span>سهم زیرساخت ماهانه</span><strong class="money" id="t144-result-infrastructure">—</strong></div>
-        <div><span>ارسال + تخفیف</span><strong class="money" id="t143-result-extras">—</strong></div>
-        <div><span>خالص طلب از تپسی</span><strong class="money" id="t143-result-net">—</strong></div>
-        <div class="t143-result-profit"><span>سود خالص سفارش</span><strong class="money" id="t143-result-profit">—</strong></div>
-        <div class="t143-result-profit"><span>درصد سود واقعی</span><strong id="t143-result-margin">—</strong></div>
+<link rel="stylesheet" href="{% static 'core/tapsi_portal_v142.css' %}?v=145">
+<div class="t142-page t145-calc-page">
+  <header class="t142-header">
+    <div>
+      <div class="t142-eyebrow">تپسی‌شاپ / ابزار مستقل</div>
+      <h1 class="page-title mb-2">محاسبه‌گر قیمت</h1>
+      <div class="t143-shortcuts">
+        <a href="{% url 'tapsi_home' %}">سفارش‌های روز</a>
+        <a href="{% url 'tapsi_calculator' %}" aria-current="page">محاسبه‌گر قیمت</a>
+        <a href="{% url 'tapsi_monthly' %}">گزارش ماهانه</a>
       </div>
     </div>
-  </section>
+  </header>
 
-<p class="t142-footer-note">محاسبه‌گر مستقل و بدون تغییر در سفارش، قیمت‌گذاری یا موجودی است. هزینه واقعی زیرساخت ماه بر اساس کل فروش همان ماه و کف/سقف محاسبه می‌شود.</p>
+  <section id="t143-calculator" class="card glass-card t142-panel" aria-label="محاسبه‌گر ساده قیمت و سود تپسی‌شاپ">
+    <div class="card-body">
+      <div class="t142-section-heading">
+        <div><h2>قیمت فروش و سود یک محصول یا یک پک</h2><p>بهای تمام‌شده <strong>کل پک</strong> را خودت وارد کن؛ دیگر نیازی به انتخاب محصول، سایز یا تعداد شورت نیست.</p></div>
+      </div>
+      <div class="t145-fields">
+        <div class="t145-field t145-field-wide">
+          <label for="t143-calc-mode">مبنای محاسبه</label>
+          <select id="t143-calc-mode" class="form-select">
+            <option value="price">قیمت فروش را وارد می‌کنم؛ سود را حساب کن</option>
+            <option value="margin">درصد سود دلخواه را وارد می‌کنم؛ قیمت را حساب کن</option>
+          </select>
+        </div>
+        <div class="t145-field">
+          <label for="t145-calc-cost">بهای تمام‌شده کل محصول / پک (تومان)</label>
+          <input id="t145-calc-cost" type="text" inputmode="numeric" class="form-control money-input" value="300000" autocomplete="off">
+        </div>
+        <div class="t145-field" id="t145-price-wrap">
+          <label for="t145-calc-price">قیمت فروش محصول / پک (تومان)</label>
+          <input id="t145-calc-price" type="text" inputmode="numeric" class="form-control money-input" value="700000" autocomplete="off">
+        </div>
+        <div class="t145-field" id="t145-margin-wrap" hidden>
+          <label for="t145-calc-target">درصد سود دلخواه از قیمت فروش</label>
+          <input id="t145-calc-target" type="number" min="-100" max="81.69" step="0.1" class="form-control" value="20" inputmode="decimal">
+        </div>
+        <div class="t145-field">
+          <label for="t145-calc-discount">هزینه تخفیف سفارش (تومان)</label>
+          <input id="t145-calc-discount" type="text" inputmode="numeric" class="form-control money-input" value="0" autocomplete="off">
+        </div>
+      </div>
+      <p class="t143-assumption" id="t145-calc-message" aria-live="polite">
+        محاسبه برای فروش یک محصول / پک است. هزینه ارسال برای همین سفارش یک‌بار محاسبه می‌شود.
+      </p>
+      <div class="t145-results" aria-live="polite">
+        <div class="t145-result t145-primary"><span>قیمت فروش هر محصول / پک</span><strong class="money" id="t145-result-price">—</strong></div>
+        <div class="t145-result"><span>بهای تمام‌شده کل پک</span><strong class="money" id="t145-result-cost">—</strong></div>
+        <div class="t145-result"><span>کمیسیون تپسی (۱۵٪)</span><strong class="money" id="t145-result-commission">—</strong></div>
+        <div class="t145-result"><span>مالیات ارزش افزوده (۱۰٪ کمیسیون)</span><strong class="money" id="t145-result-vat">—</strong></div>
+        <div class="t145-result"><span>بیمه (۱٫۵٪ فروش)</span><strong class="money" id="t145-result-insurance">—</strong></div>
+        <div class="t145-result"><span>زیرساخت (۰٫۳٪ فروش)</span><strong class="money" id="t145-result-infrastructure">—</strong></div>
+        <div class="t145-result"><span>ارسال ثابت سفارش</span><strong class="money" id="t145-result-shipping">—</strong></div>
+        <div class="t145-result"><span>هزینه تخفیف دستی</span><strong class="money" id="t145-result-discount">—</strong></div>
+        <div class="t145-result"><span>جمع هزینه‌های تپسی</span><strong class="money" id="t145-result-fees">—</strong></div>
+        <div class="t145-result"><span>خالص مبلغ پس از هزینه‌های تپسی</span><strong class="money" id="t145-result-net">—</strong></div>
+        <div class="t145-result t145-profit"><span>سود خالص تو</span><strong class="money" id="t145-result-profit">—</strong></div>
+        <div class="t145-result t145-profit"><span>درصد سود از قیمت فروش</span><strong id="t145-result-margin">—</strong></div>
+      </div>
+      <p class="t145-footnote">در این محاسبه‌گر، هزینه زیرساخت فقط <strong>۰٫۳٪ فروش محصول</strong> است. کف و سقف صورتحساب زیرساخت مربوط به محاسبات مالی کل ماه است، نه قیمت‌گذاری یک محصول. این صفحه هیچ سفارشی ثبت یا ویرایش نمی‌کند.</p>
+    </div>
+  </section>
 </div>
-{{ calc_catalog|json_script:"t142-catalog" }}
-<script defer src="{% static 'core/tapsi_calculator_v143.js' %}?v=144"></script>
+<script defer src="{% static 'core/tapsi_calculator_v143.js' %}?v=145"></script>
 {% endblock %}

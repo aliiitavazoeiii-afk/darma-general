@@ -92,3 +92,20 @@
 .t143-month-day-date{font-weight:800}.t143-month-day b{color:#fff;margin-right:6px;font-size:.81rem}
 @media(max-width:980px){.t143-month-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}.t143-calc-grid,.t143-calc-results{grid-template-columns:repeat(2,minmax(0,1fr))}.t142-preview{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:600px){.t143-field.t143-wide{grid-column:1/-1}.t143-calc-grid{gap:10px}.t143-calc-results{gap:7px}.t143-calc-results>div{padding:10px}.t143-calc-results strong{font-size:.88rem}.t143-month-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.t143-month-kpis>div{padding:10px}.t143-month-day{grid-template-columns:1fr 1fr;gap:7px;padding:11px}.t143-month-day span:nth-child(n+3){display:flex;justify-content:space-between}.t143-month-controls{width:100%;justify-content:space-between}}
+
+/* V145: only the pricing worksheet; keep daily and monthly screens untouched. */
+.t145-calc-page{max-width:840px;margin-inline:auto}
+.t145-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-bottom:12px}
+.t145-field{min-width:0}
+.t145-field-wide{grid-column:1/-1}
+.t145-field[hidden]{display:none!important}
+.t145-field label{display:block;font-size:.8rem;color:#c5d2df;margin-bottom:7px}
+.t145-field .form-control,.t145-field .form-select{min-height:44px}
+.t145-results{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.t145-result{min-width:0;border:1px solid rgba(255,255,255,.09);border-radius:12px;padding:13px;background:rgba(255,255,255,.025)}
+.t145-result span{font-size:.74rem;color:#aebfcf;display:block;line-height:1.6}
+.t145-result strong{display:block;font-size:1.05rem;margin-top:6px;overflow-wrap:anywhere}
+.t145-result.t145-primary{border-color:rgba(251,151,9,.38);background:rgba(251,151,9,.075)}
+.t145-result.t145-profit{border-color:rgba(75,216,155,.3);background:rgba(75,216,155,.065)}
+.t145-footnote{font-size:.73rem;color:#aebfcf;line-height:1.9;margin:16px 2px 0}
+@media(max-width:600px){.t145-fields{grid-template-columns:1fr;gap:10px}.t145-results{gap:7px}.t145-result{padding:11px}.t145-result strong{font-size:.97rem}}
