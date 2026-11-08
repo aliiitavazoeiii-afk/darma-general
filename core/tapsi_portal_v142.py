@@ -127,6 +127,7 @@ def home(request):
         return HttpResponseBadRequest(str(exc))
     day = SaleDay.objects.filter(date=on_date).first()
     catalog = current_catalog(on_date)
+    calc_catalog = _calculator_catalog(on_date, catalog)
     return render(request, "core/tapsi_shop_v142.html", {
         "on_date": on_date,
         "iso_date": on_date.isoformat(),
@@ -135,7 +136,7 @@ def home(request):
         "prev_date": (on_date - timedelta(days=1)).isoformat(),
         "next_date": (on_date + timedelta(days=1)).isoformat(),
         "tapsi_catalog": catalog,
-        "calc_catalog": _calculator_catalog(on_date, catalog),
+        "calc_catalog": calc_catalog,
         "monthly": monthly,
         "tapsi_summary": tapsi_day_summary(day) if day else _empty_summary(),
         "tapsi_receivable": tapsi_receivable_total(),
