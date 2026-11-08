@@ -117,31 +117,40 @@ def _calculator_catalog(on_date, catalog):
 
 @login_required
 def home(request):
-    """Viewing a date must not create a SaleDay or mutate any economic ledger."""
+    """Only daily orders, inventory and receivable; no heavy monthly UI."""
     try:
         on_date = _date(request.GET.get("date"), default_today=True)
     except ValueError as exc:
         return HttpResponseBadRequest(str(exc))
-    try:
-        monthly = _month_report(request.GET.get("month"), on_date)
-    except ValueError as exc:
-        return HttpResponseBadRequest(str(exc))
     day = SaleDay.objects.filter(date=on_date).first()
     catalog = current_catalog(on_date)
-    calc_catalog = _calculator_catalog(on_date, catalog)
     return render(request, "core/tapsi_shop_v142.html", {
-        "on_date": on_date,
-        "iso_date": on_date.isoformat(),
+        "on_date": on_date, "iso_date": on_date.isoformat(),
         "jalali_date": format_jalali(on_date),
         "is_today": on_date == timezone.localdate(),
         "prev_date": (on_date - timedelta(days=1)).isoformat(),
         "next_date": (on_date + timedelta(days=1)).isoformat(),
-        "tapsi_catalog": catalog,
-        "calc_catalog": calc_catalog,
-        "monthly": monthly,
+        "calc_catalog": _calculator_catalog(on_date, catalog),
         "tapsi_summary": tapsi_day_summary(day) if day else _empty_summary(),
         "tapsi_receivable": tapsi_receivable_total(),
     })
+
+
+@login_required
+def calculator(request):
+    on_date = timezone.localdate()
+    return render(request, "core/tapsi_calculator_v144.html", {
+        "calc_catalog": _calculator_catalog(on_date, current_catalog(on_date)),
+    })
+
+
+@login_required
+def monthly(request):
+    try:
+        report = _month_report(request.GET.get("month"), timezone.localdate())
+    except ValueError as exc:
+        return HttpResponseBadRequest(str(exc))
+    return render(request, "core/tapsi_monthly_v144.html", {"monthly": report})
 
 
 @login_required
