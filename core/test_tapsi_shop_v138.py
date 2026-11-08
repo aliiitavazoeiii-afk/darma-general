@@ -488,7 +488,7 @@ class TapsiShopV138Tests(TestCase):
         self.assertContains(page, reverse("tapsi_calculator"))
         self.assertContains(page, reverse("tapsi_monthly"))
         calculator_page = self.client.get(reverse("tapsi_calculator"))
-        self.assertContains(calculator_page, 'id="t143-calc-margin"')
+        self.assertContains(calculator_page, 'id="t145-calc-target"')
         self.assertContains(calculator_page, 'id="t145-calc-cost"')
         self.assertContains(calculator_page, 'id="t145-calc-price"')
         self.assertContains(calculator_page, 'id="t145-calc-target"')
