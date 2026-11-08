@@ -36,7 +36,7 @@ def sale_calendar(request):
     cal = jalali_month_data(jy, jm)
     existing = {
         d.date: d
-        for d in SaleDay.objects.filter(date__gte=cal["first_g"], date__lt=cal["next_g"]).prefetch_related("lines", "dia_gallery_sales", "tapsi_orders")
+        for d in SaleDay.objects.filter(date__gte=cal["first_g"], date__lt=cal["next_g"]).prefetch_related("lines", "dia_gallery_sales")
     }
     for week in cal["weeks"]:
         for cell in week:
@@ -46,8 +46,7 @@ def sale_calendar(request):
             sale_day = existing.get(g)
             normal_sales = bool(sale_day and any(line.quantity > 0 for line in sale_day.lines.all()))
             dia_sales = bool(sale_day and any(line.quantity > 0 for line in sale_day.dia_gallery_sales.all()))
-            tapsi_sales = bool(sale_day and sale_day.tapsi_orders.all())
-            cell["has_sales"] = normal_sales or dia_sales or tapsi_sales
+            cell["has_sales"] = normal_sales or dia_sales
             cell["sale_day"] = sale_day
 
     return render(request, "core/sale_calendar.html", {
@@ -67,8 +66,7 @@ def sale_calendar(request):
 def select_sale_day(request, jy, jm, jd):
     g = jdatetime.date(jy, jm, jd).togregorian()
     day, _ = SaleDay.objects.get_or_create(date=g)
-    if (day.lines.filter(quantity__gt=0).exists() or day.dia_gallery_sales.filter(quantity__gt=0).exists()
-            or day.tapsi_orders.exists()):
+    if day.lines.filter(quantity__gt=0).exists() or day.dia_gallery_sales.filter(quantity__gt=0).exists():
         return redirect("daily_report", day_id=day.id)
     return redirect("sale_brand", day_id=day.id)
 
