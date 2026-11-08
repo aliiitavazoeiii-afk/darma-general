@@ -13,7 +13,10 @@
       <div><span>فروش کل</span><strong class="money">{{ tapsi_period.total.gross|groupnum }}</strong></div>
       <div><span>هزینه تمام‌شده کالا</span><strong class="money">{{ tapsi_period.total.cogs|groupnum }}</strong></div>
       <div><span>هزینه تپسی‌شاپ (کل)</span><strong class="money">{{ tapsi_period.total.fee|groupnum }}</strong></div>
-      <div><span>کمیسیون ۱۵٪ شامل مالیات</span><strong class="money">{{ tapsi_period.total.commission|groupnum }}</strong></div>
+      <div><span>کمیسیون ۱۵٪</span><strong class="money">{{ tapsi_period.total.commission|groupnum }}</strong></div>
+      <div><span>مالیات ارزش افزوده کمیسیون</span><strong class="money">{{ tapsi_period.total.vat|groupnum }}</strong></div>
+      <div><span>بیمه فروش (۱٫۵٪)</span><strong class="money">{{ tapsi_period.total.insurance|groupnum }}</strong></div>
+      <div><span>زیرساخت ماهانه</span><strong class="money">{{ tapsi_period.total.infrastructure|groupnum }}</strong></div>
       <div><span>ارسال و بسته‌بندی</span><strong class="money">{{ tapsi_period.total.shipping|groupnum }}</strong></div>
       <div><span>هزینه تخفیف دستی</span><strong class="money">{{ tapsi_period.total.discount|groupnum }}</strong></div>
       <div><span>سود خالص</span><strong class="money {% if tapsi_period.total.profit < 0 %}text-danger{% else %}text-success{% endif %}">{{ tapsi_period.total.profit|groupnum }}</strong></div>
@@ -58,7 +61,7 @@
         </tbody>
       </table>
     </div>
-    <p class="text-secondary small mt-3 mb-0">هزینه ارسال و تخفیف هر سفارش متناسب با مبلغ فروش اقلام همان سفارش به کدها تخصیص یافته؛ مجموع هزینه و سود ردیف‌ها دقیقاً با جمع سفارش‌ها برابر است. قیمت تمام‌شده از اسنپ‌شات همان زمان فروش خوانده می‌شود.</p>
+    <p class="text-secondary small mt-3 mb-0">هزینه کمیسیون، مالیات، بیمه، زیرساخت، ارسال و تخفیف هر سفارش متناسب با مبلغ فروش اقلام همان سفارش به کدها تخصیص یافته؛ مجموع هزینه و سود ردیف‌ها دقیقاً با جمع سفارش‌ها برابر است. قیمت تمام‌شده از اسنپ‌شات همان زمان فروش خوانده می‌شود.</p>
   </div>
 </details>
 <style>
