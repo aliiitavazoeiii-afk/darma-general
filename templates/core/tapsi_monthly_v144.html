@@ -10,9 +10,9 @@
       <div class="t142-section-heading">
         <div><h2>گزارش فروش ماهانه تپسی‌شاپ</h2><p>فقط سفارش‌های تپسی در ماه شمسی انتخاب‌شده؛ فروش، هزینه‌ها و سود از سفارش‌های ثبت‌شده محاسبه می‌شوند.</p></div>
         <div class="t143-month-controls">
-          <a class="btn btn-sm btn-outline-light" href="{% url 'tapsi_home' %}?date={{ iso_date }}&amp;month={{ monthly.month_prev|urlencode }}">ماه قبل</a>
+          <a class="btn btn-sm btn-outline-light" href="{% url 'tapsi_monthly' %}?month={{ monthly.month_prev|urlencode }}">ماه قبل</a>
           <strong>{{ monthly.month_title }}</strong>
-          <a class="btn btn-sm btn-outline-light" href="{% url 'tapsi_home' %}?date={{ iso_date }}&amp;month={{ monthly.month_next|urlencode }}">ماه بعد</a>
+          <a class="btn btn-sm btn-outline-light" href="{% url 'tapsi_monthly' %}?month={{ monthly.month_next|urlencode }}">ماه بعد</a>
         </div>
       </div>
       <div class="t143-month-kpis">
