@@ -1,6 +1,7 @@
 """Tapsi Shop — independent pricing and order ledger, without Digikala SaleLine side effects.
 
-Currency: toman. New V143 orders: 15% commission plus 10% VAT ON COMMISSION.\nHistorical orders: VAT = 0% to preserve their posted receivable/capital.
+Currency: toman. New V143 orders: 15% commission plus 10% VAT ON COMMISSION.
+Historical orders: VAT = 0% to preserve their posted receivable/capital.
 Delivery: 140,000 per order, irrespective of item count.
 Discount cost: manual fixed amount, no automatic discount-percentage logic.
 """
