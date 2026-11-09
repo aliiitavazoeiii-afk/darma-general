@@ -2,7 +2,7 @@
 {% block title %}تپسی‌شاپ | DARMA{% endblock %}
 {% block content %}
 {% include 'core/_mobile_shell.html' %}
-<link rel="stylesheet" href="{% static 'core/tapsi_portal_v142.css' %}?v=144">
+<link rel="stylesheet" href="{% static 'core/tapsi_portal_v142.css' %}?v=146">
 <div class="t142-page">
 <header class="t142-header"><div><div class="t142-eyebrow">تپسی‌شاپ / صفحه مستقل</div><h1 class="page-title mb-2">گزارش ماهانه</h1><div class="t143-shortcuts"><a href="{% url 'tapsi_home' %}">سفارش‌های روز</a><a href="{% url 'tapsi_calculator' %}">محاسبه‌گر قیمت</a><a href="{% url 'tapsi_monthly' %}">گزارش ماهانه</a></div></div></header>
   <section class="card glass-card t142-panel" id="t143-monthly" aria-label="گزارش مالی ماهانه تپسی‌شاپ">
@@ -15,18 +15,12 @@
           <a class="btn btn-sm btn-outline-light" href="{% url 'tapsi_monthly' %}?month={{ monthly.month_next|urlencode }}">ماه بعد</a>
         </div>
       </div>
-      <div class="t143-month-kpis">
+      <div class="t143-month-kpis" data-tapsi-monthly-summary="simple-v146">
         <div><span>تعداد سفارش</span><strong class="num">{{ monthly.total.orders|groupnum }}</strong></div>
         <div><span>تعداد پک</span><strong class="num">{{ monthly.total.packs|groupnum }}</strong></div>
         <div><span>فروش کل ماه</span><strong class="money">{{ monthly.total.gross|groupnum }}</strong></div>
-        <div><span>کمیسیون ۱۵٪</span><strong class="money">{{ monthly.total.commission|groupnum }}</strong></div>
-        <div><span>مالیات کمیسیون</span><strong class="money">{{ monthly.total.vat|groupnum }}</strong></div>
-        <div><span>بیمه ۱٫۵٪</span><strong class="money">{{ monthly.total.insurance|groupnum }}</strong></div>
-        <div><span>هزینه زیرساخت ماهانه</span><strong class="money">{{ monthly.total.infrastructure|groupnum }}</strong></div>
-        <div><span>هزینه ارسال</span><strong class="money">{{ monthly.total.shipping|groupnum }}</strong></div>
-        <div><span>تخفیف‌ها</span><strong class="money">{{ monthly.total.discount|groupnum }}</strong></div>
         <div><span>بهای تمام‌شده</span><strong class="money">{{ monthly.total.cogs|groupnum }}</strong></div>
-        <div><span>کل هزینه‌های تپسی</span><strong class="money">{{ monthly.total.fee|groupnum }}</strong></div>
+        <div><span>کل هزینه تپسی</span><strong class="money">{{ monthly.total.fee|groupnum }}</strong></div>
         <div class="t143-month-profit"><span>سود خالص ماه</span><strong class="money {% if monthly.total.profit < 0 %}text-danger{% else %}text-success{% endif %}">{{ monthly.total.profit|groupnum }}</strong></div>
       </div>
       <div class="t143-month-days">
@@ -45,6 +39,6 @@
     </div>
   </section>
 
-<p class="t142-footer-note">هزینه زیرساخت در هر ماه فقط یک‌بار ثبت محاسباتی می‌شود و به سفارش‌های آن ماه تخصیص می‌یابد. هیچ مبلغی دوباره از بانک کسر نمی‌شود.</p>
+<p class="t142-footer-note">هزینه زیرساخت در فروش‌ها فقط ۰٫۳٪ مبلغ هر سفارش است. جمع هزینه تپسی و سود ماه با همان منطق صفحه ثبت سفارش محاسبه می‌شود.</p>
 </div>
 {% endblock %}
