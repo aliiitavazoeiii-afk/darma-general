@@ -9,7 +9,7 @@ from collections import defaultdict
 from decimal import Decimal, ROUND_HALF_UP
 
 from django.db import transaction
-from django.db.models import Prefetch
+from django.db.models import Prefetch, Sum
 
 from .tapsi_infrastructure_v144 import infrastructure_allocations
 from .darma_cost_v55 import darma_cost_for
@@ -18,7 +18,7 @@ from .takvin_pricing_v17 import takvin_cost_for
 from .models import (
     InventoryMovement, ProductCode, ProductComposition, ProductSize, SaleDay,
     StockBalance, StockLocation, TapsiOrder, TapsiOrderItem,
-    TapsiPriceRule, TapsiStockAllocation,
+    TapsiPriceRule, TapsiStockAllocation, DigikalaSettlement,
 )
 
 
@@ -409,10 +409,19 @@ def save_tapsi_bulk_darma(pack_qty, effective_from, post):
 # mutable manual account row. Until settlements are implemented every order is
 # treated as unpaid; NEVER also add this receivable to a manual bank/account row.
 def tapsi_receivable_total():
+    """Unpaid Tapsi claim: earned net order receipts minus actual bank receipts.
+
+    Receipt rows are the settlement source of truth. Their Mellat credit is a
+    balance-sheet transfer, not new profit; NEVER count both assets.
+    """
     orders = list(TapsiOrder.objects.select_related("day").prefetch_related("items").all())
     allocated = infrastructure_allocations(orders)
-    return sum(int(m["gross"] - m["fee"]) for order in orders
-               for m in [order_metrics(order, infrastructure=allocated.get(order.pk, 0))])
+    earned = sum(int(m["gross"] - m["fee"]) for order in orders
+                 for m in [order_metrics(order, infrastructure=allocated.get(order.pk, 0))])
+    received = int(DigikalaSettlement.objects.filter(
+        source=DigikalaSettlement.SOURCE_TAPSI
+    ).aggregate(v=Sum("amount"))["v"] or 0)
+    return earned - received
 
 
 def _allocate_fee(amount, item_gross_values):

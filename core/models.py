@@ -163,6 +163,7 @@ class Account(models.Model):
     PEDRAM = "pedram"
     TAKVIN = "takvin"
     DIA_GALLERY = "dia_gallery"
+    TAPSI = "tapsi_shop"
     key = models.CharField(max_length=30, unique=True)
     title = models.CharField(max_length=100)
     opening_balance = models.BigIntegerField(default=0)

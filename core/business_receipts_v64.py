@@ -11,11 +11,12 @@ from .dateutils import format_jalali, parse_jalali_date
 from .dia_gallery_v45 import _dia_account, dia_gallery_receivable_total
 from .excel_views import _int
 from .finance_excel_v9 import digikala_receivable_total
-from .models import AccountEntry, DigikalaSettlement
+from .models import Account, AccountEntry, DigikalaSettlement
 
 
 SOURCE_DIGIKALA = DigikalaSettlement.SOURCE_DIGIKALA
 SOURCE_DIA_GALLERY = DigikalaSettlement.SOURCE_DIA_GALLERY
+SOURCE_TAPSI = DigikalaSettlement.SOURCE_TAPSI
 SOURCE_CHOICES = tuple(DigikalaSettlement.SOURCE_CHOICES)
 SOURCE_LABELS = dict(SOURCE_CHOICES)
 
@@ -31,19 +32,30 @@ def source_receivable(source):
     source = normalize_source(source)
     if source == SOURCE_DIGIKALA:
         return int(digikala_receivable_total())
-    return int(dia_gallery_receivable_total())
+    if source == SOURCE_DIA_GALLERY:
+        return int(dia_gallery_receivable_total())
+    from .tapsi_shop_v138 import tapsi_receivable_total
+    return int(tapsi_receivable_total())
 
 
 def _source_account(source, *, create=False):
     source = normalize_source(source)
     if source == SOURCE_DIGIKALA:
         return _digikala_account()
-    return _dia_account(create=create)
+    if source == SOURCE_DIA_GALLERY:
+        return _dia_account(create=create)
+    if create:
+        account, _ = Account.objects.get_or_create(
+            key=Account.TAPSI,
+            defaults={"title": "طلب تپسی‌شاپ", "opening_balance": 0},
+        )
+        return account
+    return Account.objects.filter(key=Account.TAPSI).first()
 
 
 def _reference(receipt, source=None):
     source = normalize_source(source or receipt.source)
-    suffix = "digikala" if source == SOURCE_DIGIKALA else "dia-gallery"
+    suffix = {SOURCE_DIGIKALA: "digikala", SOURCE_DIA_GALLERY: "dia-gallery", SOURCE_TAPSI: "tapsi-shop"}[source]
     return f"receipt:{receipt.id}:{suffix}"
 
 
@@ -73,6 +85,11 @@ def apply_receipt(receipt):
     if amount <= 0:
         raise ValueError("مبلغ دریافتی باید بیشتر از صفر باشد.")
     available = source_receivable(source)
+    if source == SOURCE_TAPSI:
+        # The just-saved receipt already appears in the derived outstanding
+        # claim, before its bank/ledger application. Add it back ONLY for
+        # this validation. The entire operation is inside transaction.atomic.
+        available += amount
     if amount > available:
         raise ValueError(
             f"مبلغ دریافتی نمی‌تواند بیشتر از طلب فعلی {SOURCE_LABELS[source]} باشد."
