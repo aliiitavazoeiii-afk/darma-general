@@ -288,6 +288,14 @@ def tapsi_day_summary(day):
 def reverse_tapsi_order(order):
     """Exact allocation reversal, never infer today's composition or pricing."""
     obj = TapsiOrder.objects.select_for_update().get(pk=order.pk if hasattr(order, "pk") else order)
+    if DigikalaSettlement.objects.filter(source=DigikalaSettlement.SOURCE_TAPSI).exists():
+        recorded = order_metrics(obj)
+        claim_from_order = int(recorded["gross"] - recorded["fee"])
+        if claim_from_order > tapsi_receivable_total():
+            raise ValueError(
+                "بخشی از طلب تپسی تسویه شده است. قبل از حذف این سفارش "
+                "دریافتی‌های مرتبط را اصلاح/برگردان تا طلب منفی نشود."
+            )
     items = list(
         obj.items.select_related("product_size__product__brand", "product_size__size")
         .prefetch_related("stock_allocations__brand", "stock_allocations__size", "stock_allocations__color", "stock_allocations__location")

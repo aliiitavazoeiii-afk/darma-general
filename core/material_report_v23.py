@@ -336,7 +336,19 @@ def _save_block_data(block, request, extra_key=None):
     block.delivery_wage = v20._wage_for_pieces(_output_total(block.output_data, brand, keys), dozen_wage)
     block.save()
     from .production_fabric_auto_v147 import sync_sheet_auto_fabric
-    sync_sheet_auto_fabric(block)
+    moved = sync_sheet_auto_fabric(block)
+    if moved:
+        # New tailor fabric may carry a different lot price from the old
+        # warehouse average. Recompute affected color costs from the *new*
+        # destination stock in this same atomic save.
+        reset_price_cache()
+        for key in moved:
+            values = block.input_data.get(key, {})
+            cut = max(0, v20._int(values.get("cut")))
+            wage = v20._wage_for_pieces(cut, dozen_wage) if cut else 0
+            result = calculate_model_cost(key, values, wage)
+            values["cost"] = str(result["unit_cost"]) if result["unit_cost"] else ""
+        block.save(update_fields=["input_data", "updated_at"])
     return block
 
 

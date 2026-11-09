@@ -84,6 +84,11 @@ def apply_receipt(receipt):
     amount = int(receipt.amount or 0)
     if amount <= 0:
         raise ValueError("مبلغ دریافتی باید بیشتر از صفر باشد.")
+    if source == SOURCE_TAPSI:
+        # Serialize concurrent Tapsi receipt submissions before calculating
+        # the claim. The receipt was already saved in this atomic transaction.
+        account = _source_account(source, create=True)
+        Account.objects.select_for_update().get(pk=account.pk)
     available = source_receivable(source)
     if source == SOURCE_TAPSI:
         # The just-saved receipt already appears in the derived outstanding

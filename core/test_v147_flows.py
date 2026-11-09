@@ -18,7 +18,7 @@ from core.models import (
 from core.production_fabric_auto_v147 import (
     sync_sheet_auto_fabric, reverse_sheet_auto_fabric,
 )
-from core.tapsi_shop_v138 import create_tapsi_order, tapsi_receivable_total
+from core.tapsi_shop_v138 import create_tapsi_order, tapsi_receivable_total, reverse_tapsi_order
 from core.business_tools_v14 import mellat_balance
 from core.capital_history_v87 import current_capital_breakdown
 
@@ -73,6 +73,19 @@ class TapsiReceiptsV147Tests(TestCase):
         self.assertEqual(tapsi_receivable_total(), earned)
         self.assertEqual(mellat_balance(), bank0)
         self.assertEqual(current_capital_breakdown()["capital_total"], capital0)
+
+    def test_cannot_delete_settled_sale_and_make_claim_negative(self):
+        amount = tapsi_receivable_total()
+        self.assertGreater(amount, 0)
+        posted = self.client.post(reverse("receipt_add"), {
+            "source": "tapsi", "date": format_jalali(self.day.date),
+            "amount": str(amount),
+        })
+        self.assertEqual(posted.status_code, 302)
+        self.assertEqual(tapsi_receivable_total(), 0)
+        with self.assertRaisesMessage(ValueError, "تسویه شده"):
+            reverse_tapsi_order(self.order)
+        self.assertTrue(TapsiOrder.objects.filter(pk=self.order.pk).exists())
 
     def test_receipt_more_than_unpaid_claim_rolls_back_everything(self):
         earned = tapsi_receivable_total()
