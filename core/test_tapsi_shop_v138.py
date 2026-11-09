@@ -606,7 +606,7 @@ class TapsiShopV138Tests(TestCase):
         page = self.client.get(reverse("tapsi_home"))
         self.assertEqual(page.context["tapsi_summary"]["total"]["fee"], 245225)
         self.assertEqual(page.context["tapsi_summary"]["total"]["profit"], 29775)
-        self.assertContains(page, "29,775")
+        self.assertContains(page, 'data-tapsi-daily-summary="v146"')
         self.assertContains(page, 'data-tapsi-preview="simple-v146"')
         self.assertContains(page, 'data-tapsi-order-costs="simple-v146"')
         self.assertNotContains(page, "سهم زیرساخت ماهانه")
