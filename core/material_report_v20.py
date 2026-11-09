@@ -458,8 +458,14 @@ def material_block_delete(request, block_id):
             raise ValueError("ابتدا اثر مواد اولیه این صورت را برگردان، سپس حذف کن.")
         if block.output_applications.filter(quantity__gt=0).exists():
             raise ValueError("این صورت قبلاً شورت به موجودی اضافه کرده؛ برای حفظ موجودی حذف آن مسدود است.")
-        block.delete()
-        messages.success(request, "صورت بدون اثر موجودی حذف شد.")
+        with transaction.atomic():
+            block = MaterialReportBlock.objects.select_for_update().get(pk=block.pk)
+            if block.stock_consumptions.exists() or block.output_applications.filter(quantity__gt=0).exists():
+                raise ValueError("صورت دارای مصرف یا تحویل ثبت‌شده است؛ ابتدا آثار آن را برگردان.")
+            from .production_fabric_auto_v147 import reverse_sheet_auto_fabric
+            reverse_sheet_auto_fabric(block)
+            block.delete()
+        messages.success(request, "صورت حذف شد و پارچه منتقل‌شده خودکار به انبار برگشت.")
         return redirect("material_report")
     except Exception as exc:
         messages.error(request, str(exc))

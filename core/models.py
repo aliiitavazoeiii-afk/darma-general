@@ -260,6 +260,24 @@ RawMaterialStock.LOCATION_CHOICES = [
 RawMaterialStock._meta.get_field("location").choices = RawMaterialStock.LOCATION_CHOICES
 
 
+class MaterialReportFabricTransfer(models.Model):
+    """Exact source-lot ledger for automatic FABRIC transfers on new production sheets."""
+    block = models.ForeignKey(MaterialReportBlock, on_delete=models.PROTECT, related_name="auto_fabric_transfers")
+    material_key = models.CharField(max_length=40)
+    source = models.ForeignKey(RawMaterialStock, on_delete=models.PROTECT, related_name="production_fabric_out")
+    tailor_stock = models.ForeignKey(RawMaterialStock, on_delete=models.PROTECT, related_name="production_fabric_in")
+    quantity = models.DecimalField(max_digits=14, decimal_places=3, default=Decimal("0.000"))
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["block", "material_key", "source"],
+                name="uniq_production_auto_fabric_source",
+            )
+        ]
+        ordering = ["id"]
+
+
 class MaterialReportConsumption(models.Model):
     block = models.ForeignKey(MaterialReportBlock, on_delete=models.CASCADE, related_name="stock_consumptions")
     kind = models.CharField(max_length=20, choices=RawMaterialStock.KIND_CHOICES)

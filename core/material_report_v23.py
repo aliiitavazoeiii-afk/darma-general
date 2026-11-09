@@ -321,10 +321,15 @@ def _save_block_data(block, request, extra_key=None):
     block.date = parse_jalali_date(request.POST.get("date") or format_jalali(block.date))
     block.title = (request.POST.get("title") or "").strip()
     block.note = (request.POST.get("note") or "").strip()
+    previous_meta = dict((block.input_data or {}).get("_meta") or {})
     block.input_data = _parse_input(request, keys, dozen_wage)
+    if previous_meta.get("auto_fabric_transfer_v147"):
+        block.input_data["_meta"]["auto_fabric_transfer_v147"] = True
     block.output_data = _parse_output(request, brand, keys)
     block.delivery_wage = v20._wage_for_pieces(_output_total(block.output_data, brand, keys), dozen_wage)
     block.save()
+    from .production_fabric_auto_v147 import sync_sheet_auto_fabric
+    sync_sheet_auto_fabric(block)
     return block
 
 
@@ -880,10 +885,16 @@ def material_report(request):
                 date=parse_jalali_date(request.POST.get("date") or v20._today_jalali()),
                 title=(request.POST.get("title") or "").strip(),
                 brand=brand,
-                input_data=_blank_input_data(),
+                input_data={
+                    **_blank_input_data(),
+                    "_meta": {
+                        **_blank_input_data()["_meta"],
+                        "auto_fabric_transfer_v147": brand.name == "دارما",
+                    },
+                },
                 output_data=_blank_output_data_for_brand(brand),
             )
-            messages.success(request, f"صورت جدید برای {brand.name} ساخته شد؛ هنوز هیچ اثری روی موجودی ندارد.")
+            messages.success(request, f"صورت جدید برای {brand.name} ساخته شد؛ انتقال پارچه هنگام ذخیره وزن انجام می‌شود (کش دستی است).")
             return redirect(f"/material-report/#block-{block.id}")
         except Exception as exc:
             messages.error(request, str(exc))

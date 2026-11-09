@@ -272,6 +272,8 @@ def material_report(request):
             brand = v23._selected_brand(request)
             input_data = v23._blank_input_data()
             input_data["_meta"]["initial_material_key"] = key
+            if brand.name == "دارما":
+                input_data["_meta"]["auto_fabric_transfer_v147"] = True
             if key not in input_data["_meta"]["active_material_keys"]:
                 input_data["_meta"]["active_material_keys"].append(key)
                 input_data[key] = {}
@@ -283,7 +285,7 @@ def material_report(request):
                 output_data=v23._blank_output_data_for_brand(brand),
             )
             messages.success(
-                request, f"صورت جدید با رنگ آغازین «{allowed[key]}» ساخته شد؛ موجودی تغییری نکرد."
+                request, f"صورت جدید با رنگ آغازین «{allowed[key]}» ساخته شد؛ وقتی وزن پارچه را ذخیره کنی از انبار به خیاط منتقل می‌شود. کش دستی است."
             )
             return redirect(f"/material-report/#block-{block.id}")
         except Exception as exc:
