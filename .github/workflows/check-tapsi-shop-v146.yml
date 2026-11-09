@@ -1,0 +1,112 @@
+name: V146 Tapsi order profit correction and uniform fee accounting
+on:
+  push:
+    branches:
+      - v146-tapsi-correct-order-fees
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  tapsi-shop:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: darma
+          POSTGRES_USER: darma
+          POSTGRES_PASSWORD: darma
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U darma"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_NAME: darma
+      DB_USER: darma
+      DB_PASSWORD: darma
+      DJANGO_SETTINGS_MODULE: config.settings
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Dependencies
+        run: pip install -r requirements.txt
+      - name: Syntax, JS, migrations, Django and templates
+        run: |
+          python -m compileall -q core/tapsi_shop_v138.py core/tapsi_infrastructure_v144.py core/tapsi_portal_v142.py core/test_tapsi_shop_v138.py
+          node --check core/static/core/tapsi_portal_v142.js
+          node --check core/static/core/tapsi_calculator_v143.js
+          bash -n server_tapsi_shop_v146.sh
+          python manage.py check
+          python manage.py makemigrations --check --dry-run
+          python - <<'PY'
+          import django
+          django.setup()
+          from django.template.loader import get_template
+          for path in ['core/tapsi_shop_v142.html','core/tapsi_calculator_v144.html','core/tapsi_monthly_v144.html','core/_tapsi_order_entry_v140.html','core/_tapsi_report_daily_v140.html','core/tapsi_order_entry_v140.html','core/tapsi_order_report_v140.html','core/_tapsi_comprehensive_v140.html','core/_tapsi_pricing_v138.html','core/daily_report_v45.html','core/settings_products_v93.html','core/report_excel_v97.html']:
+              get_template(path)
+          from django.urls import reverse
+          assert reverse('material_block_inline', args=[7]) == '/material-report/7/inline/'
+          assert reverse('tapsi_calculator') == '/tapsi-shop/calculator/'
+          assert reverse('tapsi_monthly') == '/tapsi-shop/monthly/'
+          print('V140_TEMPLATES_AND_PRODUCTION_INLINE_OK')
+          PY
+      - name: Apply real migrations to clean PostgreSQL with required historical seed
+        run: |
+          # This repository's 0013 data migration assumes Darma and HOME already
+          # exist in the operational database. Preserve that historical contract.
+          python manage.py migrate core 0012 --noinput
+          python manage.py shell -c "from core.models import Brand, StockLocation; Brand.objects.get_or_create(name='دارما'); StockLocation.objects.get_or_create(key='home', defaults={'title':'خانه'}); print('LEGACY_PRECONDITIONS_SEEDED')"
+          python manage.py migrate --noinput
+          python manage.py showmigrations core
+          python manage.py shell -c "from django.db.migrations.recorder import MigrationRecorder; assert MigrationRecorder.Migration.objects.filter(app='core',name='0024_tapsi_insurance_infrastructure_v144').exists()"
+          python manage.py shell -c "from django.db.migrations.recorder import MigrationRecorder; assert MigrationRecorder.Migration.objects.filter(app='core',name='0024_tapsi_insurance_infrastructure_v144').exists()"
+      - name: Isolated regression tests (including older production UI)
+        run: |
+          python - <<'PY'
+          import django
+          django.setup()
+          from django.test import override_settings
+          from django.core.management import call_command
+          with override_settings(MIGRATION_MODULES={'core': None}, STORAGES={'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'}}):
+              call_command('test','core.test_tapsi_shop_v138','core.test_production_workspace_v131','core.test_production_overall_v137','core.test_production_inline_v138',interactive=False,verbosity=2)
+          PY
+      - name: Source scope and protected Digikala, migration and production invariants
+        run: |
+          python - <<'PY'
+          import subprocess
+          base='2233d869667dc346f0909a37c66f383a48806074'
+          files=set(subprocess.check_output(['git','diff','--name-only',base+'..HEAD'],text=True).splitlines())
+          allowed={
+            '.github/workflows/check-tapsi-shop-v146.yml',
+            'core/tapsi_infrastructure_v144.py',
+            'core/tapsi_shop_v138.py',
+            'core/static/core/tapsi_portal_v142.js',
+            'templates/core/tapsi_shop_v142.html',
+            'core/static/core/tapsi_calculator_v143.js',
+            'templates/core/tapsi_calculator_v144.html',
+            'core/test_tapsi_shop_v138.py',
+            'templates/core/tapsi_monthly_v144.html',
+            'templates/core/finance_accounts_v97.html',
+            'templates/core/_tapsi_comprehensive_v140.html',
+            'server_tapsi_shop_v146.sh',
+          }
+          assert not (files-allowed), sorted(files-allowed)
+          for legacy in ('core/finance.py', 'core/final_services.py', 'core/sale_price_v60.py',
+                         'core/pricing_v60.py',
+                         'core/material_report_v23.py','core/inventory_valuation_v17.py',
+                         'core/product_center_v93.py'):
+              assert legacy not in files, legacy
+          assert not any(path.startswith('core/migrations/') for path in files)
+          print('V146_INVENTORY_MODELS_MIGRATIONS_AND_NON_TAPSI_ACCOUNTING_PROTECTED')
+          PY
