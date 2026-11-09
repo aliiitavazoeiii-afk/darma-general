@@ -646,7 +646,8 @@ class TapsiShopV138Tests(TestCase):
         accounts = self.client.get(reverse("finance_accounts"))
         self.assertContains(accounts, 'data-account-summary="tapsi"')
         hub = self.client.get(reverse("finance"))
-        self.assertContains(hub, 'data-finance-tapsi-receivable="v144"')
+        self.assertContains(hub, 'data-finance-kpi="tapsi"')
+        self.assertNotContains(hub, 'data-finance-tapsi-receivable="v144"')
 
     def test_v144_separate_pages_do_not_mutate_sales(self):
         stock = self._balance(self.size_m, self.black)
