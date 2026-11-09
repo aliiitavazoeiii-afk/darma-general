@@ -103,15 +103,16 @@ class TapsiShopV138Tests(TestCase):
         self.assertEqual(metrics["gross"], 2900000)
         self.assertEqual(metrics["commission"], 435000)
         self.assertEqual(metrics["shipping"], 140000)
-        self.assertEqual(metrics["discount"], 25000)
+        self.assertEqual(metrics["discount"], 2500)
+        self.assertEqual(order.discount_cost, 25000)
         self.assertEqual(metrics["vat"], 43500)
         self.assertEqual(metrics["insurance"], 43500)
-        self.assertEqual(metrics["infrastructure"], 550000)
-        self.assertEqual(metrics["fee"], 1237000)
+        self.assertEqual(metrics["infrastructure"], 8700)
+        self.assertEqual(metrics["fee"], 673200)
         self.assertEqual(metrics["packs"], 3)
         self.assertEqual(metrics["shorts"], 9)
         self.assertEqual(metrics["cogs"], 9 * int(darma_cost_for(self.day.date)))
-        self.assertEqual(metrics["profit"], 2900000 - 1237000 - metrics["cogs"])
+        self.assertEqual(metrics["profit"], 2900000 - 673200 - metrics["cogs"])
         self.assertEqual(COMMISSION_PERCENT, Decimal("15.00"))
         self.assertEqual(SHIPPING_PER_ORDER, 140000)
         # V143 snapshots the 10% VAT on the 15% sales commission.
@@ -128,7 +129,7 @@ class TapsiShopV138Tests(TestCase):
         self.assertEqual(summary["commission"], 285000)
         self.assertEqual(summary["vat"], 28500)
         self.assertEqual(summary["insurance"], 28500)
-        self.assertEqual(summary["infrastructure"], 550000)
+        self.assertEqual(summary["infrastructure"], 5700)
         self.assertEqual(summary["gross"], 1900000)
         self.assertEqual(summary["discount"], 0)
         self.assertNotEqual(a.id, b.id)
@@ -338,15 +339,15 @@ class TapsiShopV138Tests(TestCase):
         total = ledger["total"]
         rows = ledger["rows"]
         self.assertEqual(total["orders"], 1)
-        self.assertEqual(total["fee"], 1237000)
-        self.assertEqual(total["infrastructure"], 550000)
+        self.assertEqual(total["fee"], 673200)
+        self.assertEqual(total["infrastructure"], 8700)
         self.assertEqual(total["insurance"], 43500)
         self.assertEqual(total["vat"], 43500)
         self.assertEqual(sum(row["vat"] for row in rows), 43500)
         self.assertEqual(sum(row["fee"] for row in rows), total["fee"])
         self.assertEqual(sum(row["commission"] for row in rows), 435000)
         self.assertEqual(sum(row["shipping"] for row in rows), 140000)
-        self.assertEqual(sum(row["discount"] for row in rows), 25000)
+        self.assertEqual(sum(row["discount"] for row in rows), 2500)
         self.assertEqual(sum(row["profit"] for row in rows), total["profit"])
         self.assertEqual(sum(row["packs"] for row in ledger["by_size"]), 3)
         self.assertEqual(total["receivable"], total["gross"] - total["fee"])
@@ -508,6 +509,7 @@ class TapsiShopV138Tests(TestCase):
         self.assertIn("const shipping = 140000", calculator)
         self.assertIn("Math.round(sale * .015)", calculator)
         self.assertIn("Math.round(sale * .003)", calculator)
+        self.assertIn("Math.round(reduction * .10)", calculator)
         self.assertNotIn("550000", calculator)
         self.assertNotIn("2200000", calculator)
         self.assertNotIn("monthlyBill", calculator)
@@ -540,48 +542,89 @@ class TapsiShopV138Tests(TestCase):
         self.assertContains(later, "سود خالص ماه")
         self.assertContains(later, "فروش به تفکیک روز")
 
-    def test_v144_infrastructure_monthly_floor_once_and_separate_months(self):
+    def test_v146_infrastructure_is_only_point_three_percent_per_order(self):
         from datetime import timedelta
         from core.tapsi_infrastructure_v144 import infrastructure_allocations
         from core.tapsi_shop_v138 import tapsi_period_metrics, tapsi_receivable_total
         import jdatetime
         first = create_tapsi_order(self.day, [(self.ps_m.id, 1)])
         second = create_tapsi_order(self.day, [(self.ps_l.id, 1)])
-        amounts = infrastructure_allocations([first, second])
-        self.assertEqual(sum(amounts.values()), 550000)
-        self.assertEqual(tapsi_day_summary(self.day)["total"]["infrastructure"], 550000)
-        self.assertEqual(tapsi_receivable_total(),
-                         1900000 - tapsi_day_summary(self.day)["total"]["fee"])
-        # Filtering one day in a month must not charge the 550k floor twice.
+        shares = infrastructure_allocations([first, second])
+        self.assertEqual(shares[first.pk], 2700)
+        self.assertEqual(shares[second.pk], 3000)
+        self.assertEqual(sum(shares.values()), 5700)
+        daily = tapsi_day_summary(self.day)["total"]
+        self.assertEqual(daily["infrastructure"], 5700)
+        self.assertEqual(tapsi_receivable_total(), 1900000 - daily["fee"])
         other_date = self.day.date + timedelta(days=1)
         j1 = jdatetime.date.fromgregorian(date=self.day.date)
         j2 = jdatetime.date.fromgregorian(date=other_date)
         if (j1.year, j1.month) == (j2.year, j2.month):
             another_day = SaleDay.objects.create(date=other_date)
             third = create_tapsi_order(another_day, [(self.ps_m.id, 2)])
+            self.assertEqual(order_metrics(first)["infrastructure"], 2700)
             monthly = tapsi_period_metrics(self.day.date, other_date)
-            self.assertEqual(monthly["total"]["infrastructure"], 550000)
+            self.assertEqual(monthly["total"]["infrastructure"], 11100)
             self.assertEqual(
                 tapsi_period_metrics(self.day.date, self.day.date)["total"]["infrastructure"]
                 + tapsi_period_metrics(other_date, other_date)["total"]["infrastructure"],
-                550000,
+                11100,
             )
-            self.assertEqual(tapsi_day_summary(another_day)["total"]["orders"], 1)
 
-    def test_v144_infrastructure_cap_and_order_deletion_reallocation(self):
+    def test_v146_infrastructure_large_orders_have_no_hidden_cap_and_reverse_correctly(self):
         from core.tapsi_shop_v138 import tapsi_period_metrics
         a = create_tapsi_order(self.day, [(self.ps_m.id, 1000)])
         b = create_tapsi_order(self.day, [(self.ps_l.id, 1000)])
         totals = tapsi_period_metrics(self.day.date, self.day.date)["total"]
         self.assertEqual(totals["gross"], 1900000000)
-        self.assertEqual(totals["infrastructure"], 2200000)
+        self.assertEqual(totals["infrastructure"], 5700000)
         self.assertEqual(totals["insurance"], 28500000)
         reverse_tapsi_order(b)
         after = tapsi_period_metrics(self.day.date, self.day.date)["total"]
-        self.assertEqual(after["infrastructure"], 2200000)
+        self.assertEqual(after["infrastructure"], 2700000)
         reverse_tapsi_order(a)
         empty = tapsi_period_metrics(self.day.date, self.day.date)["total"]
         self.assertEqual(empty["infrastructure"], 0)
+
+    def test_v146_screenshot_one_order_575k_yields_positive_profit_not_monthly_floor(self):
+        TapsiPriceRule.objects.filter(product_size=self.ps_m).update(price=575000)
+        order = create_tapsi_order(self.day, [(self.ps_m.id, 1)])
+        item = order.items.get()
+        item.unit_cost = 100000
+        item.save(update_fields=["unit_cost"])
+        m = order_metrics(order)
+        self.assertEqual(m["gross"], 575000)
+        self.assertEqual(m["cogs"], 300000)
+        self.assertEqual(m["commission"], 86250)
+        self.assertEqual(m["vat"], 8625)
+        self.assertEqual(m["insurance"], 8625)
+        self.assertEqual(m["infrastructure"], 1725)
+        self.assertEqual(m["shipping"], 140000)
+        self.assertEqual(m["discount"], 0)
+        self.assertEqual(m["fee"], 245225)
+        self.assertEqual(m["profit"], 29775)
+        page = self.client.get(reverse("tapsi_home"))
+        self.assertEqual(page.context["tapsi_summary"]["total"]["fee"], 245225)
+        self.assertEqual(page.context["tapsi_summary"]["total"]["profit"], 29775)
+        self.assertContains(page, 'data-tapsi-daily-summary="v146"')
+        self.assertContains(page, 'data-tapsi-preview="simple-v146"')
+        self.assertContains(page, 'data-tapsi-order-costs="simple-v146"')
+        self.assertNotContains(page, "سهم زیرساخت ماهانه")
+
+    def test_v146_discount_fee_is_ten_percent_and_legacy_orders_keep_old_rate(self):
+        from core.tapsi_shop_v138 import tapsi_receivable_total
+        order = create_tapsi_order(self.day, [(self.ps_m.id, 1)], discount_cost=40000)
+        self.assertEqual(order.discount_cost, 40000)
+        m = order_metrics(order)
+        self.assertEqual(m["discount"], 4000)
+        self.assertEqual(m["fee"], 900000 * 15 // 100 + 13500 + 13500 + 2700 + 140000 + 4000)
+        order.infrastructure_percent = Decimal("0.00")
+        order.save(update_fields=["infrastructure_percent"])
+        legacy = order_metrics(order)
+        self.assertEqual(legacy["discount"], 40000)
+        self.assertEqual(legacy["infrastructure"], 0)
+        self.assertEqual(legacy["fee"] - m["fee"], 36000 - 2700)
+        self.assertEqual(tapsi_receivable_total(), legacy["gross"] - legacy["fee"])
 
     def test_v144_legacy_zero_fees_and_finance_claim(self):
         from core.capital_history_v87 import current_capital_breakdown
@@ -589,7 +632,7 @@ class TapsiShopV138Tests(TestCase):
         order = create_tapsi_order(self.day, [(self.ps_m.id, 1)])
         before = order_metrics(order)
         self.assertEqual(before["insurance"], 13500)
-        self.assertEqual(before["infrastructure"], 550000)
+        self.assertEqual(before["infrastructure"], 2700)
         self.assertEqual(order.insurance_percent, Decimal("1.50"))
         self.assertEqual(order.infrastructure_percent, Decimal("0.30"))
         order.insurance_percent = Decimal("0")
@@ -624,9 +667,9 @@ class TapsiShopV138Tests(TestCase):
         self.assertEqual(page.status_code, 200)
         self.assertNotIn("calc_catalog", page.context)
         self.assertContains(page, "بهای تمام‌شده کل محصول")
-        self.assertContains(page, "زیرساخت (۰٫۳٪ فروش)")
-        self.assertContains(page, "ارسال ثابت سفارش")
-        self.assertContains(page, "هزینه تخفیف دستی")
+        self.assertContains(page, "جمع هزینه تپسی")
+        self.assertContains(page, "۱۴۰ هزار تومان ارسال")
+        self.assertContains(page, "مبلغ تخفیف فروش")
         self.assertNotContains(page, "پیش‌بینی مبلغ فروش کل ماه")
         self.assertNotContains(page, "کف ماهانه")
         self.assertFalse(TapsiOrder.objects.exists())

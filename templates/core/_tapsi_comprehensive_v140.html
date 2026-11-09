@@ -16,9 +16,9 @@
       <div><span>کمیسیون ۱۵٪</span><strong class="money">{{ tapsi_period.total.commission|groupnum }}</strong></div>
       <div><span>مالیات ارزش افزوده کمیسیون</span><strong class="money">{{ tapsi_period.total.vat|groupnum }}</strong></div>
       <div><span>بیمه فروش (۱٫۵٪)</span><strong class="money">{{ tapsi_period.total.insurance|groupnum }}</strong></div>
-      <div><span>زیرساخت ماهانه</span><strong class="money">{{ tapsi_period.total.infrastructure|groupnum }}</strong></div>
+      <div><span>زیرساخت ۰٫۳٪ فروش</span><strong class="money">{{ tapsi_period.total.infrastructure|groupnum }}</strong></div>
       <div><span>ارسال و بسته‌بندی</span><strong class="money">{{ tapsi_period.total.shipping|groupnum }}</strong></div>
-      <div><span>هزینه تخفیف دستی</span><strong class="money">{{ tapsi_period.total.discount|groupnum }}</strong></div>
+      <div><span>هزینه مرتبط با تخفیف</span><strong class="money">{{ tapsi_period.total.discount|groupnum }}</strong></div>
       <div><span>سود خالص</span><strong class="money {% if tapsi_period.total.profit < 0 %}text-danger{% else %}text-success{% endif %}">{{ tapsi_period.total.profit|groupnum }}</strong></div>
     </div>
     <div class="tapsi-receivable-note mt-3">

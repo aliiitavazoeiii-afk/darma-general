@@ -3,7 +3,7 @@
 Currency: toman. New V143 orders: 15% commission plus 10% VAT ON COMMISSION.
 Historical orders: VAT = 0% to preserve their posted receivable/capital.
 Delivery: 140,000 per order, irrespective of item count.
-Discount cost: manual fixed amount, no automatic discount-percentage logic.
+Discount input: manual sale-discount amount. V144+ Tapsi platform fee is 10% of that amount.
 """
 from collections import defaultdict
 from decimal import Decimal, ROUND_HALF_UP
@@ -248,7 +248,12 @@ def order_metrics(order, *, infrastructure=None):
         infrastructure = infrastructure_allocations([order]).get(order.pk, 0)
     infrastructure = int(infrastructure)
     shipping = int(order.shipping_fee)
-    discount = int(order.discount_cost)
+    # V144+ records store the user-entered sale-discount amount, not the Tapsi
+    # charge. Tapsi's fee on that discount is 10%. Preserve historical V143
+    # accounting semantics for earlier orders that have no infrastructure rate.
+    entered_discount = int(order.discount_cost)
+    discount = (money(Decimal(entered_discount) * Decimal("0.10"))
+                if Decimal(order.infrastructure_percent) > 0 else entered_discount)
     fee = commission + vat + insurance + infrastructure + shipping + discount
     return {
         "gross": gross, "commission": commission, "vat": vat,
@@ -426,7 +431,8 @@ def tapsi_period_metrics(start, end):
     """Per-platform financial ledger for one reporting interval.
 
     Per-code and per-size profit includes its proportional share of the
-    order-level shipping and manual discount; values sum EXACTLY to order profit.
+    one-per-order shipping and 10% charge on the entered discount for V144+
+    orders; values sum EXACTLY to order profit.
     No new side-effects: all snapshots originate in the immutable order items.
     """
     orders = list(

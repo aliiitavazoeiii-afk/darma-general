@@ -101,21 +101,18 @@
       empty.textContent="کالایی به این سفارش اضافه نشده است.";lines.append(empty);
     }
     el("t142-line-count").textContent=money(basket.size)+" قلم · "+money(count)+" پک";
+    // Preview uses the same order percentages as the Django ledger.
     const commission=Math.round(gross*0.15);
     const vat=Math.round(commission*0.10);
     const insurance=Math.round(gross*0.015);
-    const extras=(basket.size?140000:0)+amount(discount.value);
-    const fee=commission+vat+insurance+extras;
-    el("t144-entry-insurance").textContent=money(insurance);
-    el("t144-entry-infrastructure").textContent=basket.size?"در گزارش ماه":"—";
-    el("t143-entry-commission").textContent=money(commission);
-    el("t143-entry-vat").textContent=money(vat);
-    el("t143-entry-extras").textContent=money(extras);
-    el("t143-entry-cogs").textContent=money(cogs);
-    el("t143-entry-profit").textContent=basket.size?money(gross-fee-cogs)+" (قبل از زیرساخت)":"۰";
+    const infrastructure=Math.round(gross*0.003);
+    const shipping=basket.size?140000:0; // exactly once per order
+    const discountFee=Math.round(amount(discount.value)*0.10);
+    const fee=commission+vat+insurance+infrastructure+shipping+discountFee;
     el("t142-gross").textContent=money(gross);
     el("t142-fees").textContent=money(fee);
-    el("t142-net").textContent=money(gross-fee);
+    el("t143-entry-cogs").textContent=money(cogs);
+    el("t143-entry-profit").textContent=money(gross-fee-cogs);
     save.disabled=!basket.size;
   }
   add.addEventListener("click",()=>{
