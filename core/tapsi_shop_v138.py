@@ -9,7 +9,7 @@ from collections import defaultdict
 from decimal import Decimal, ROUND_HALF_UP
 
 from django.db import transaction
-from django.db.models import Prefetch
+from django.db.models import Prefetch, Sum
 
 from .tapsi_infrastructure_v144 import infrastructure_allocations
 from .darma_cost_v55 import darma_cost_for
@@ -18,7 +18,7 @@ from .takvin_pricing_v17 import takvin_cost_for
 from .models import (
     InventoryMovement, ProductCode, ProductComposition, ProductSize, SaleDay,
     StockBalance, StockLocation, TapsiOrder, TapsiOrderItem,
-    TapsiPriceRule, TapsiStockAllocation,
+    TapsiPriceRule, TapsiStockAllocation, DigikalaSettlement,
 )
 
 
@@ -288,6 +288,14 @@ def tapsi_day_summary(day):
 def reverse_tapsi_order(order):
     """Exact allocation reversal, never infer today's composition or pricing."""
     obj = TapsiOrder.objects.select_for_update().get(pk=order.pk if hasattr(order, "pk") else order)
+    if DigikalaSettlement.objects.filter(source=DigikalaSettlement.SOURCE_TAPSI).exists():
+        recorded = order_metrics(obj)
+        claim_from_order = int(recorded["gross"] - recorded["fee"])
+        if claim_from_order > tapsi_receivable_total():
+            raise ValueError(
+                "بخشی از طلب تپسی تسویه شده است. قبل از حذف این سفارش "
+                "دریافتی‌های مرتبط را اصلاح/برگردان تا طلب منفی نشود."
+            )
     items = list(
         obj.items.select_related("product_size__product__brand", "product_size__size")
         .prefetch_related("stock_allocations__brand", "stock_allocations__size", "stock_allocations__color", "stock_allocations__location")
@@ -409,10 +417,19 @@ def save_tapsi_bulk_darma(pack_qty, effective_from, post):
 # mutable manual account row. Until settlements are implemented every order is
 # treated as unpaid; NEVER also add this receivable to a manual bank/account row.
 def tapsi_receivable_total():
+    """Unpaid Tapsi claim: earned net order receipts minus actual bank receipts.
+
+    Receipt rows are the settlement source of truth. Their Mellat credit is a
+    balance-sheet transfer, not new profit; NEVER count both assets.
+    """
     orders = list(TapsiOrder.objects.select_related("day").prefetch_related("items").all())
     allocated = infrastructure_allocations(orders)
-    return sum(int(m["gross"] - m["fee"]) for order in orders
-               for m in [order_metrics(order, infrastructure=allocated.get(order.pk, 0))])
+    earned = sum(int(m["gross"] - m["fee"]) for order in orders
+                 for m in [order_metrics(order, infrastructure=allocated.get(order.pk, 0))])
+    received = int(DigikalaSettlement.objects.filter(
+        source=DigikalaSettlement.SOURCE_TAPSI
+    ).aggregate(v=Sum("amount"))["v"] or 0)
+    return earned - received
 
 
 def _allocate_fee(amount, item_gross_values):

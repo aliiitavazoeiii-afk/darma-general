@@ -58,7 +58,7 @@ def finance_home(request):
     # V104: the hub keeps exactly three navigation cards and shows the same six
     # read-only balances as Payments above them, from one shared source.
     context = finance_kpis()
-    context["tapsi_receivable"] = int(tapsi_receivable_total())
+    # The compact KPI is already part of the shared Finance/Payments context.
     return render(request, "core/finance_center_v97.html", context)
 
 

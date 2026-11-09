@@ -58,9 +58,11 @@ class BankTransfer(models.Model):
 class DigikalaSettlement(models.Model):
     SOURCE_DIGIKALA = "digikala"
     SOURCE_DIA_GALLERY = "dia_gallery"
+    SOURCE_TAPSI = "tapsi"
     SOURCE_CHOICES = [
         (SOURCE_DIGIKALA, "دیجی‌کالا"),
         (SOURCE_DIA_GALLERY, "Dia Gallery"),
+        (SOURCE_TAPSI, "تپسی‌شاپ"),
     ]
     source = models.CharField(
         max_length=30,

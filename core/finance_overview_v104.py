@@ -6,6 +6,7 @@ prevents the Finance hub and Payments page from drifting apart.
 from . import business_tools_v21 as v21
 from .dia_gallery_v45 import dia_gallery_receivable_total
 from .finance_excel_v9 import digikala_receivable_total
+from .tapsi_shop_v138 import tapsi_receivable_total
 from .models import ExcelManualSetting
 from .payment_source_v63 import SOURCE_MOFID, source_balance
 
@@ -17,6 +18,7 @@ def finance_kpis():
         "mofid_balance": int(source_balance(SOURCE_MOFID) or 0),
         "digikala_receivable": int(digikala_receivable_total() or 0),
         "dia_gallery_receivable": int(dia_gallery_receivable_total() or 0),
+        "tapsi_receivable": int(tapsi_receivable_total() or 0),
         "tailor_balance": int(v21.tailor_balance() or 0),
         "takvin_debt": int(debt or 0),
     }
