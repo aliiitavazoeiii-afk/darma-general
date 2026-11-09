@@ -61,7 +61,7 @@ class Command(BaseCommand):
         if field.default != receipts.SOURCE_DIGIKALA:
             raise CommandError("V64 historical receipts no longer default to Digikala")
         choices = dict(field.choices)
-        if set(choices) != {receipts.SOURCE_DIGIKALA, receipts.SOURCE_DIA_GALLERY}:
+        if set(choices) != {receipts.SOURCE_DIGIKALA, receipts.SOURCE_DIA_GALLERY, receipts.SOURCE_TAPSI}:
             raise CommandError(f"V64 receipt sources are not exactly Digikala/Dia: {choices}")
 
         count_before = DigikalaSettlement.objects.count()
