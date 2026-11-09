@@ -6,15 +6,15 @@ cd /opt/darma-general
 BASE=a199825d78c509c0233f86ca0ca65ee9fe102236
 BRANCH=v147-tapsi-receipts-fabric-auto-transfer
 fail(){ echo "STOP: $*" >&2; exit 1; }
-echo "=== V147 TAPSI CORRECT 0.3 PERCENT FEES AND ORDER PROFIT ==="
+echo "=== V147 TAPSI RECEIPTS & NEW SHEET FABRIC AUTO TRANSFER ==="
 [[ "$(git branch --show-current)" == "$BRANCH" ]] || fail "Wrong branch"
-git merge-base --is-ancestor "$BASE" HEAD || fail "V144 accounting ancestor not preserved"
+git merge-base --is-ancestor "$BASE" HEAD || fail "V146 deployed ancestor not preserved"
 git diff --quiet -- . ':(exclude)Caddyfile' || fail "Unexpected local tracked source changes"
 git diff --cached --quiet -- . ':(exclude)Caddyfile' || fail "Unexpected staged changes"
-git diff --quiet "$BASE"..HEAD -- core/finance.py core/final_services.py core/sale_price_v60.py core/pricing_v60.py core/material_report_v23.py core/material_flow.py core/inventory_valuation_v17.py Caddyfile || fail "Protected existing business source modified"
+git diff --quiet "$BASE"..HEAD -- core/finance.py core/final_services.py core/sale_price_v60.py core/pricing_v60.py core/material_flow.py core/inventory_valuation_v17.py Caddyfile || fail "Protected existing business source modified"
 for file in $(git diff --name-only "$BASE"..HEAD); do
   case "$file" in
-    .github/workflows/check-tapsi-shop-v147.yml|core/models.py|core/models_final.py|core/migrations/0025_tapsi_receipts_auto_fabric_v147.py|core/business_receipts_v64.py|core/tapsi_shop_v138.py|core/finance_overview_v104.py|core/finance_center_v97.py|templates/core/_finance_kpis_v104.html|templates/core/finance_center_v97.html|templates/core/finance_accounts_v97.html|templates/core/payments_v22.html|core/material_report_v23.py|core/material_report_ui_v131.py|core/material_report_v20.py|core/production_fabric_auto_v147.py|core/test_v147_flows.py|core/test_tapsi_shop_v138.py|server_tapsi_shop_v147.sh) ;;
+    .github/workflows/check-tapsi-shop-v147.yml|core/models.py|core/models_final.py|core/migrations/0025_tapsi_receipts_auto_fabric_v147.py|core/business_receipts_v64.py|core/tapsi_shop_v138.py|core/finance_overview_v104.py|core/finance_center_v97.py|templates/core/_finance_kpis_v104.html|templates/core/finance_center_v97.html|templates/core/finance_accounts_v97.html|templates/core/payments_v22.html|core/material_report_v23.py|core/material_report_ui_v131.py|core/material_report_v20.py|core/production_fabric_auto_v147.py|core/test_v147_flows.py|core/test_tapsi_shop_v138.py|core/management/commands/check_multi_receipts_v64.py|server_tapsi_shop_v147.sh) ;;
     *) fail "Out-of-scope file: $file" ;;
   esac
 done
@@ -61,7 +61,7 @@ docker compose run --rm --entrypoint python web manage.py migrate core 0025_taps
 echo "=== SWITCH ONLY WEB CONTAINER ==="
 docker compose up -d --no-deps --no-build --force-recreate web || fail "Web restart failed"
 docker compose exec -T web python manage.py check || fail "Live Django check failed"
-docker compose exec -T web python manage.py shell -c "from django.db.migrations.recorder import MigrationRecorder; from core.models import TapsiOrder; from django.urls import reverse; assert reverse('tapsi_home')=='/tapsi-shop/'; assert reverse('tapsi_calculator')=='/tapsi-shop/calculator/'; assert reverse('tapsi_monthly')=='/tapsi-shop/monthly/'; assert MigrationRecorder.Migration.objects.filter(app='core',name='0024_tapsi_insurance_infrastructure_v144').exists(); print('V147_ACCOUNTING_AND_ROUTES=OK')" || fail "Live rates or routes invalid"
+docker compose exec -T web python manage.py shell -c "from django.db.migrations.recorder import MigrationRecorder; from core.models import TapsiOrder; from django.urls import reverse; assert reverse('tapsi_home')=='/tapsi-shop/'; assert reverse('tapsi_calculator')=='/tapsi-shop/calculator/'; assert reverse('tapsi_monthly')=='/tapsi-shop/monthly/'; assert MigrationRecorder.Migration.objects.filter(app='core',name='0025_tapsi_receipts_auto_fabric_v147').exists(); print('V147_ACCOUNTING_AND_ROUTES=OK')" || fail "Live rates or routes invalid"
 docker compose exec -T web python manage.py shell -c "$AUDIT" | grep -E "$PATTERN" > "$TMP/after" || fail "Live audit failed"
 diff -u "$TMP/before" "$TMP/after" || fail "Protected financial or stock data changed during deployment"
 docker compose exec -T web python manage.py shell -c "from core.models import TapsiOrder; print('COUNT='+str(TapsiOrder.objects.count()))" | grep '^COUNT=' > "$TMP/orders-after" || fail "Post-upgrade order count failed"
