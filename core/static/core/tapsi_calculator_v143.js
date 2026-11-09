@@ -25,12 +25,13 @@
     const insurance = Math.round(sale * .015);
     const infrastructure = Math.round(sale * .003);
     const shipping = 140000; // one order, even if its product is a multipack
-    const fees = commission + vat + insurance + infrastructure + shipping + reduction;
+    const discountFee = Math.round(reduction * .10);
+    const fees = commission + vat + insurance + infrastructure + shipping + discountFee;
     const net = sale - fees;
     const profit = net - cogs;
     return {
       price: sale, cost: cogs, commission, vat, insurance, infrastructure,
-      shipping, discount: reduction, fees, net, profit,
+      shipping, discount: discountFee, fees, net, profit,
       margin: sale > 0 ? (profit / sale) * 100 : 0,
     };
   }

@@ -2,7 +2,7 @@
 {% block title %}محاسبه‌گر قیمت تپسی‌شاپ | دارما{% endblock %}
 {% block content %}
 {% include 'core/_mobile_shell.html' %}
-<link rel="stylesheet" href="{% static 'core/tapsi_portal_v142.css' %}?v=145">
+<link rel="stylesheet" href="{% static 'core/tapsi_portal_v142.css' %}?v=146">
 <div class="t142-page t145-calc-page">
   <header class="t142-header">
     <div>
@@ -42,7 +42,7 @@
           <input id="t145-calc-target" type="number" min="-100" max="81.69" step="0.1" class="form-control" value="20" inputmode="decimal">
         </div>
         <div class="t145-field">
-          <label for="t145-calc-discount">هزینه تخفیف سفارش (تومان)</label>
+          <label for="t145-calc-discount">مبلغ تخفیف فروش (تومان) — هزینه تپسی ۱۰٪ آن</label>
           <input id="t145-calc-discount" type="text" inputmode="numeric" class="form-control money-input" value="0" autocomplete="off">
         </div>
       </div>
@@ -50,22 +50,14 @@
         محاسبه برای فروش یک محصول / پک است. هزینه ارسال برای همین سفارش یک‌بار محاسبه می‌شود.
       </p>
       <div class="t145-results" aria-live="polite">
-        <div class="t145-result t145-primary"><span>قیمت فروش هر محصول / پک</span><strong class="money" id="t145-result-price">—</strong></div>
-        <div class="t145-result"><span>بهای تمام‌شده کل پک</span><strong class="money" id="t145-result-cost">—</strong></div>
-        <div class="t145-result"><span>کمیسیون تپسی (۱۵٪)</span><strong class="money" id="t145-result-commission">—</strong></div>
-        <div class="t145-result"><span>مالیات ارزش افزوده (۱۰٪ کمیسیون)</span><strong class="money" id="t145-result-vat">—</strong></div>
-        <div class="t145-result"><span>بیمه (۱٫۵٪ فروش)</span><strong class="money" id="t145-result-insurance">—</strong></div>
-        <div class="t145-result"><span>زیرساخت (۰٫۳٪ فروش)</span><strong class="money" id="t145-result-infrastructure">—</strong></div>
-        <div class="t145-result"><span>ارسال ثابت سفارش</span><strong class="money" id="t145-result-shipping">—</strong></div>
-        <div class="t145-result"><span>هزینه تخفیف دستی</span><strong class="money" id="t145-result-discount">—</strong></div>
-        <div class="t145-result"><span>جمع هزینه‌های تپسی</span><strong class="money" id="t145-result-fees">—</strong></div>
-        <div class="t145-result"><span>خالص مبلغ پس از هزینه‌های تپسی</span><strong class="money" id="t145-result-net">—</strong></div>
+        <div class="t145-result t145-primary"><span>قیمت فروش محصول / پک</span><strong class="money" id="t145-result-price">—</strong></div>
+        <div class="t145-result"><span>جمع هزینه تپسی</span><strong class="money" id="t145-result-fees">—</strong></div>
         <div class="t145-result t145-profit"><span>سود خالص تو</span><strong class="money" id="t145-result-profit">—</strong></div>
         <div class="t145-result t145-profit"><span>درصد سود از قیمت فروش</span><strong id="t145-result-margin">—</strong></div>
       </div>
-      <p class="t145-footnote">در این محاسبه‌گر، هزینه زیرساخت فقط <strong>۰٫۳٪ فروش محصول</strong> است. کف و سقف صورتحساب زیرساخت مربوط به محاسبات مالی کل ماه است، نه قیمت‌گذاری یک محصول. این صفحه هیچ سفارشی ثبت یا ویرایش نمی‌کند.</p>
+      <p class="t145-footnote">برای هر سفارش، فقط ۰٫۳٪ فروش بابت زیرساخت و یک بار ۱۴۰ هزار تومان ارسال در نظر گرفته می‌شود؛ ۱۰٪ مبلغ تخفیف اعلام‌شده نیز به هزینه تپسی اضافه می‌شود. این صفحه فقط محاسبه می‌کند و سفارشی ثبت نمی‌کند.</p>
     </div>
   </section>
 </div>
-<script defer src="{% static 'core/tapsi_calculator_v143.js' %}?v=145"></script>
+<script defer src="{% static 'core/tapsi_calculator_v143.js' %}?v=146"></script>
 {% endblock %}

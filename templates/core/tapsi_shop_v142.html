@@ -2,13 +2,13 @@
 {% block title %}تپسی‌شاپ | دارما{% endblock %}
 {% block content %}
 {% include 'core/_mobile_shell.html' %}
-<link rel="stylesheet" href="{% static 'core/tapsi_portal_v142.css' %}?v=144">
+<link rel="stylesheet" href="{% static 'core/tapsi_portal_v142.css' %}?v=146">
 <div class="t142-page">
   <header class="t142-header">
     <div>
       <div class="t142-eyebrow">فروش مستقل از صورت روزانه</div>
       <h1 class="page-title mb-2">تپسی‌شاپ</h1>
-      <p class="t142-muted">ثبت سفارش‌های روز، مشاهده ریز هزینه‌ها و ثبت طلب خودکار؛ مستقل از فروش روزانه.</p>
+      <p class="t142-muted">ثبت سفارش روز و مشاهده مجموع هزینه تپسی و سود؛ مستقل از فروش روزانه.</p>
       <div class="t143-shortcuts"><a href="#t142-entry">ثبت سفارش</a><a href="{% url 'tapsi_calculator' %}">محاسبه‌گر قیمت</a><a href="{% url 'tapsi_monthly' %}">گزارش ماهانه</a></div>
     </div>
     <div class="t142-datebox">
@@ -73,23 +73,17 @@
           </div>
         </div>
         <div class="t142-extra">
-          <div><label for="t142-discount">هزینه تخفیف (تومان)</label><input class="form-control money-input" id="t142-discount" type="text" name="discount_cost" value="0" inputmode="numeric"></div>
+          <div><label for="t142-discount">مبلغ تخفیف فروش (تومان) — هزینه تپسی ۱۰٪ آن</label><input class="form-control money-input" id="t142-discount" type="text" name="discount_cost" value="0" inputmode="numeric"></div>
           <div><label for="t142-note">یادداشت / شماره سفارش</label><input class="form-control" id="t142-note" name="note" maxlength="300" placeholder="اختیاری؛ برای پیدا کردن سفارش بعداً"></div>
         </div>
-        <div class="t142-preview">
-          <div><span>مبلغ اقلام</span><strong class="money" id="t142-gross">۰</strong></div>
-          <div><span>کمیسیون ۱۵٪</span><strong class="money" id="t143-entry-commission">۰</strong></div>
-          <div><span>مالیات ۱۰٪ کمیسیون</span><strong class="money" id="t143-entry-vat">۰</strong></div>
-          <div><span>بیمه ۱٫۵٪ فروش</span><strong class="money" id="t144-entry-insurance">۰</strong></div>
-          <div><span>سهم زیرساخت ماهانه</span><strong id="t144-entry-infrastructure">—</strong></div>
-          <div><span>ارسال + تخفیف</span><strong class="money" id="t143-entry-extras">۰</strong></div>
-          <div><span>کل هزینه‌ها</span><strong class="money" id="t142-fees">۰</strong></div>
-          <div><span>خالص طلب از تپسی</span><strong class="money" id="t142-net">۰</strong></div>
-          <div><span>بهای کالا</span><strong class="money" id="t143-entry-cogs">۰</strong></div>
-          <div><span>سود محاسبه‌شده</span><strong class="money" id="t143-entry-profit">۰</strong></div>
+        <div class="t142-preview" data-tapsi-preview="simple-v146">
+          <div><span>مبلغ فروش سفارش</span><strong class="money" id="t142-gross">۰</strong></div>
+          <div><span>کل هزینه تپسی</span><strong class="money" id="t142-fees">۰</strong></div>
+          <div><span>بهای تمام‌شده کالا</span><strong class="money" id="t143-entry-cogs">۰</strong></div>
+          <div><span>سود خالص سفارش</span><strong class="money" id="t143-entry-profit">۰</strong></div>
         </div>
         <div class="t142-savebar">
-          <p>۱۵٪ کمیسیون، ۱۰٪ مالیاتِ کمیسیون، ۱٫۵٪ بیمه فروش، ارسال ثابت ۱۴۰٬۰۰۰ تومان و تخفیف اختیاری؛ سهم زیرساخت ماهانه پس از ثبت تخصیص داده می‌شود.</p>
+          <p>هزینه تپسی = ۱۵٪ کمیسیون + ۱۰٪ مالیات کمیسیون + ۱٫۵٪ بیمه + ۰٫۳٪ زیرساخت + ۱۴۰٬۰۰۰ تومان ارسال هر سفارش + ۱۰٪ مبلغ تخفیف واردشده.</p>
           <button class="btn btn-success" id="t142-save" type="submit" disabled>ثبت نهایی سفارش</button>
         </div>
       </form>
@@ -116,16 +110,11 @@
                   </div>
                 {% endfor %}
               </div>
-              <div class="t142-cost-grid">
-                <div><span>کمیسیون</span><b class="money">{{ order.commission|groupnum }}</b></div>
-                <div><span>مالیات ارزش افزوده کمیسیون</span><b class="money">{{ order.vat|groupnum }}</b></div>
-                <div><span>بیمه</span><b class="money">{{ order.insurance|groupnum }}</b></div>
-                <div><span>زیرساخت ماهانه</span><b class="money">{{ order.infrastructure|groupnum }}</b></div>
-                <div><span>ارسال</span><b class="money">{{ order.shipping|groupnum }}</b></div>
-                <div><span>تخفیف</span><b class="money">{{ order.discount|groupnum }}</b></div>
-                <div><span>جمع هزینه تپسی</span><b class="money">{{ order.fee|groupnum }}</b></div>
-                <div><span>بهای کالا</span><b class="money">{{ order.cogs|groupnum }}</b></div>
-                <div><span>سود سفارش</span><b class="money {% if order.profit < 0 %}text-danger{% else %}text-success{% endif %}">{{ order.profit|groupnum }}</b></div>
+              <div class="t142-cost-grid" data-tapsi-order-costs="simple-v146">
+                <div><span>فروش</span><b class="money">{{ order.gross|groupnum }}</b></div>
+                <div><span>کل هزینه تپسی</span><b class="money">{{ order.fee|groupnum }}</b></div>
+                <div><span>بهای تمام‌شده</span><b class="money">{{ order.cogs|groupnum }}</b></div>
+                <div><span>سود خالص</span><b class="money {% if order.profit < 0 %}text-danger{% else %}text-success{% endif %}">{{ order.profit|groupnum }}</b></div>
               </div>
               <form method="post" action="{% url 'tapsi_hub_delete' order.obj.id %}" class="t142-delete">{% csrf_token %}
                 <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('این سفارش و اثر دقیق آن روی موجودی و سرمایه حذف شود؟')">حذف سفارش</button>
@@ -139,5 +128,5 @@
   <p class="t142-footer-note">طلب کل ثبت‌شده تپسی‌شاپ: <strong class="money">{{ tapsi_receivable|groupnum }}</strong> تومان؛ به‌صورت مستقل در سرمایه کل منظور می‌شود. تا قبل از افزودن سیستم تسویه، این طلب پرداخت‌نشده فرض می‌شود.</p>
 </div>
 {{ calc_catalog|json_script:"t142-catalog" }}
-<script defer src="{% static 'core/tapsi_portal_v142.js' %}?v=144"></script>
+<script defer src="{% static 'core/tapsi_portal_v142.js' %}?v=146"></script>
 {% endblock %}
