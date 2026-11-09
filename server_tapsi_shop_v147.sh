@@ -14,7 +14,7 @@ git diff --cached --quiet -- . ':(exclude)Caddyfile' || fail "Unexpected staged 
 git diff --quiet "$BASE"..HEAD -- core/finance.py core/final_services.py core/sale_price_v60.py core/pricing_v60.py core/material_report_v23.py core/material_flow.py core/inventory_valuation_v17.py Caddyfile || fail "Protected existing business source modified"
 for file in $(git diff --name-only "$BASE"..HEAD); do
   case "$file" in
-    .github/workflows/check-tapsi-shop-v147.yml|core/models.py|core/models_final.py|core/migrations/0025_tapsi_receipts_auto_fabric_v147.py|core/business_receipts_v64.py|core/tapsi_shop_v138.py|core/finance_overview_v104.py|core/finance_center_v97.py|templates/core/_finance_kpis_v104.html|templates/core/finance_center_v97.html|templates/core/finance_accounts_v97.html|templates/core/payments_v22.html|core/material_report_v23.py|core/material_report_ui_v131.py|core/material_report_v20.py|core/production_fabric_auto_v147.py|core/test_v147_flows.py|server_tapsi_shop_v147.sh) ;;
+    .github/workflows/check-tapsi-shop-v147.yml|core/models.py|core/models_final.py|core/migrations/0025_tapsi_receipts_auto_fabric_v147.py|core/business_receipts_v64.py|core/tapsi_shop_v138.py|core/finance_overview_v104.py|core/finance_center_v97.py|templates/core/_finance_kpis_v104.html|templates/core/finance_center_v97.html|templates/core/finance_accounts_v97.html|templates/core/payments_v22.html|core/material_report_v23.py|core/material_report_ui_v131.py|core/material_report_v20.py|core/production_fabric_auto_v147.py|core/test_v147_flows.py|core/test_tapsi_shop_v138.py|server_tapsi_shop_v147.sh) ;;
     *) fail "Out-of-scope file: $file" ;;
   esac
 done

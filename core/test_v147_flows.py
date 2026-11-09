@@ -142,6 +142,20 @@ class ProductionFabricAutoV147Tests(TestCase):
         self.assertFalse(MaterialReportFabricTransfer.objects.exists())
         self.assertEqual(self._qty(WAREHOUSE, ELASTIC), Decimal("4"))
 
+    def test_cannot_switch_brand_after_real_fabric_transfer(self):
+        sync_sheet_auto_fabric(self.block)
+        other = Brand.objects.create(name="Novani")
+        response = self.client.post(reverse("material_block_save", args=[self.block.pk]), {
+            "brand": str(other.pk), "date": format_jalali(self.block.date),
+            "title": self.block.title, "in_black_weight": "3",
+            "active_material_keys": "black",
+        })
+        self.assertEqual(response.status_code, 302)
+        self.block.refresh_from_db()
+        self.assertEqual(self.block.brand_id, self.brand.pk)
+        self.assertEqual(self._qty(WAREHOUSE), Decimal("7"))
+        self.assertEqual(self._qty(TAILOR), Decimal("3"))
+
     def test_legacy_sheet_never_double_transfers(self):
         self.block.input_data["_meta"].pop("auto_fabric_transfer_v147")
         sync_sheet_auto_fabric(self.block)

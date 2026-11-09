@@ -100,6 +100,7 @@ jobs:
             'core/material_report_v23.py','core/material_report_ui_v131.py',
             'core/material_report_v20.py','core/production_fabric_auto_v147.py',
             'core/test_v147_flows.py',
+            'core/test_tapsi_shop_v138.py',
             'core/management/commands/check_multi_receipts_v64.py',
             'server_tapsi_shop_v147.sh',
           }

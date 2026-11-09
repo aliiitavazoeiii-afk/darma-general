@@ -310,6 +310,13 @@ def _selected_brand(request):
 
 
 def _set_block_brand(block, request):
+    selected = v20._selected_brand(request)
+    if (block.brand_id and block.brand_id != selected.id
+            and block.auto_fabric_transfers.exists()):
+        raise ValueError(
+            "این صورت انتقال خودکار پارچه دارد؛ قبل از تغییر برند باید "
+            "انتقال‌های وابسته به آن به‌صورت ایمن برگشت داده شوند."
+        )
     return v20._set_block_brand(block, request)
 
 
