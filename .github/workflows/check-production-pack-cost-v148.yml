@@ -1,0 +1,101 @@
+name: V148 read-only production color and pack costs
+on:
+  push:
+    branches:
+      - v148-production-pack-costs
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  production-pack-costs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: darma
+          POSTGRES_USER: darma
+          POSTGRES_PASSWORD: darma
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U darma"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_NAME: darma
+      DB_USER: darma
+      DB_PASSWORD: darma
+      DJANGO_SETTINGS_MODULE: config.settings
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Check syntax, migrations, URLs, and templates
+        run: |
+          python -m compileall -q core/production_pack_cost_v148.py core/test_production_pack_cost_v148.py
+          bash -n server_production_pack_cost_v148.sh
+          python manage.py check
+          python manage.py makemigrations --check --dry-run
+          python - <<'PY'
+          import django
+          django.setup()
+          from django.template.loader import get_template
+          from django.urls import reverse
+          for name in ['core/production_pack_costs_v148.html','core/material_report_v131.html','core/material_report_overall_v137.html']:
+              get_template(name)
+          assert reverse('production_pack_costs') == '/material-report/pack-costs/'
+          print('V148_TEMPLATES_URL=PASS')
+          PY
+      - name: Apply migrations to clean PostgreSQL
+        run: |
+          python manage.py migrate core 0012 --noinput
+          python manage.py shell -c "from core.models import Brand, StockLocation; Brand.objects.get_or_create(name='دارما'); StockLocation.objects.get_or_create(key='home', defaults={'title':'خانه'}); print('LEGACY_PRECONDITIONS_SEEDED')"
+          python manage.py migrate --noinput
+          python manage.py migrate --check --noinput
+          python manage.py shell -c "from django.db.migrations.recorder import MigrationRecorder; assert MigrationRecorder.Migration.objects.filter(app='core',name='0025_tapsi_receipts_auto_fabric_v147').exists(); print('V147_SCHEMA=OK')"
+      - name: Isolated production and accounting regressions
+        run: |
+          python - <<'PY'
+          import django
+          django.setup()
+          from django.test import override_settings
+          from django.core.management import call_command
+          with override_settings(MIGRATION_MODULES={'core': None}, STORAGES={'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'}}):
+              call_command('test','core.test_production_pack_cost_v148','core.test_production_overall_v137','core.test_production_workspace_v131','core.test_production_inline_v138','core.test_v147_flows','core.test_tapsi_shop_v138',interactive=False,verbosity=2)
+          PY
+      - name: Verify only read-only report files changed
+        run: |
+          python - <<'PY'
+          import subprocess
+          base='d49db327a46b2f5069dae4125579db0dd5e2e5e2'
+          files=set(subprocess.check_output(['git','diff','--name-only',base+'..HEAD'],text=True).splitlines())
+          allowed={
+              '.github/workflows/check-production-pack-cost-v148.yml',
+              'core/urls.py',
+              'core/production_pack_cost_v148.py',
+              'core/test_production_pack_cost_v148.py',
+              'templates/core/production_pack_costs_v148.html',
+              'templates/core/material_report_v131.html',
+              'templates/core/material_report_overall_v137.html',
+              'server_production_pack_cost_v148.sh',
+          }
+          assert not files-allowed, sorted(files-allowed)
+          assert not any(path.startswith('core/migrations/') for path in files)
+          for protected in ('core/models.py','core/material_report_v23.py',
+              'core/material_flow.py','core/tapsi_shop_v138.py',
+              'core/finance_center_v97.py','core/production_fabric_auto_v147.py',
+              'core/capital_history_v87.py','core/darma_cost_v55.py'):
+              assert protected not in files, protected
+          print('V148_READ_ONLY_SCOPE_NO_DB_CHANGES=PASS')
+          PY
