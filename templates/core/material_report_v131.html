@@ -11,6 +11,7 @@
       <h1 class="page-title mb-1">تولید و تحویل خیاط</h1>
       <p class="prod131-muted mb-0">هر کد پارچه در یک ردیف؛ جزئیات سایز و تحویل فقط هنگام باز کردن ردیف.</p>
     </div>
+    <a class="prod137-all-link" href="{% url 'production_pack_costs' %}"><span>بهای تمام‌شده</span><span aria-hidden="true">←</span></a>
     <a class="prod137-all-link" href="{% url 'material_production_overall' %}"><span>گزارش کلی</span><span aria-hidden="true">←</span></a>
     <form method="post" class="prod131-create">{% csrf_token %}
       <input type="hidden" name="date" value="{{ today_j }}">

@@ -1,0 +1,122 @@
+{% extends 'base.html' %}{% load jalali static %}
+{% block title %}بهای تمام‌شده محصولات | DARMA{% endblock %}
+{% block content %}
+{% include 'core/_mobile_shell.html' %}
+<style>
+.pc148{max-width:1450px;margin:0 auto;color:#f0f5fc}
+.pc148 header{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:22px}
+.pc148 h1{font-size:clamp(1.45rem,2.5vw,2.1rem);margin:0 0 7px;font-weight:900}
+.pc148 .muted{color:#a8bacb;font-size:.86rem;line-height:1.9}
+.pc148 .back{display:inline-flex;border:1px solid #34485f;padding:10px 15px;border-radius:12px;color:#c9d9e9;text-decoration:none}
+.pc148 .stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:18px}
+.pc148 .stat,.pc148 .panel{border:1px solid #273b51;background:linear-gradient(145deg,#11263e,#09182a);border-radius:16px}
+.pc148 .stat{padding:17px}.pc148 .stat span{font-size:.78rem;color:#adbed0;display:block}
+.pc148 .stat strong{display:block;font-size:1.5rem;line-height:1.6;font-weight:900}
+.pc148 .panel{padding:19px;margin-bottom:18px}
+.pc148 .panel h2{font-size:1.08rem;margin:0 0 8px;font-weight:900}
+.pc148 .controls{display:flex;gap:11px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin:15px 0}
+.pc148 input[type=search]{min-width:245px;max-width:380px;background:#172a40;color:white;border:1px solid #354960;border-radius:11px;padding:11px 13px;flex:1}
+.pc148 .table-wrap{overflow-x:auto}
+.pc148 table{width:100%;border-collapse:collapse;min-width:680px}
+.pc148 th{color:#b0c2d4;font-size:.79rem;font-weight:800;background:#14283c}
+.pc148 th,.pc148 td{text-align:right;padding:12px 11px;border-bottom:1px solid #253b52;vertical-align:middle}
+.pc148 tr:last-child td{border-bottom:0}.pc148 tbody tr:hover{background:rgba(148,180,210,.06)}
+.pc148 .code{font-weight:900;color:#f1f5fa;direction:ltr;display:inline-block;unicode-bidi:isolate}
+.pc148 .price{font-weight:900;font-variant-numeric:tabular-nums;color:#64ddb0;white-space:nowrap}
+.pc148 .missing{color:#f5b1a6}.pc148 .small{font-size:.76rem;color:#a9bed1;line-height:1.75}
+.pc148 .pill{display:inline-block;padding:4px 8px;border:1px solid #3b536b;border-radius:8px;font-size:.74rem;color:#bed0e0;margin:2px}
+.pc148 .warn{border-color:#855d41;color:#ffc89e}.pc148 .detail{color:#c6d5e4}
+.pc148 details{border:1px solid #31455d;border-radius:11px;background:#0b1c2e}
+.pc148 summary{list-style:none;cursor:pointer;padding:8px 12px;color:#e8eef7;font-weight:700;white-space:nowrap}
+.pc148 summary::-webkit-details-marker{display:none}
+.pc148 .detail-inner{padding:0 12px 12px;min-width:290px}
+.pc148 .detail-row{display:flex;gap:12px;justify-content:space-between;padding:7px 0;border-bottom:1px solid #20384d;font-size:.79rem}
+.pc148 .detail-row:last-child{border:0}
+.pc148 .note{padding:11px 14px;background:#13283b;border:1px solid #2d4762;border-radius:10px;color:#bed0e1;font-size:.79rem;line-height:2}
+.pc148 .empty{padding:25px;color:#aebed0;text-align:center}
+@media(max-width:680px){.pc148 .stats{grid-template-columns:1fr 1fr}.pc148 .stat:last-child{grid-column:span 2}.pc148 .panel{padding:11px}.pc148 th,.pc148 td{padding:10px 8px;font-size:.8rem}.pc148 input[type=search]{max-width:none;min-width:0;width:100%}}
+</style>
+<main class="pc148" dir="rtl">
+  <header>
+    <div>
+      <div class="page-kicker">گزارش هوشمند تولید دارما</div>
+      <h1>بهای تمام‌شده محصولات</h1>
+      <div class="muted">قیمت هر پک، بر اساس ترکیب واقعی رنگ‌های آن کد و میانگین بهای برش همان رنگ</div>
+    </div>
+    <a class="back" href="{% url 'material_report' %}">بازگشت به تولید</a>
+  </header>
+  <div class="stats">
+    <div class="stat"><span>ماه مبنای بررسی</span><strong>{{ month_title }}</strong></div>
+    <div class="stat"><span>کدهای دارای محاسبه کامل</span><strong>{{ products_ready|groupnum }} از {{ products_total|groupnum }}</strong></div>
+    <div class="stat"><span>کدهای نیازمند تکمیل داده</span><strong class="{% if products_missing %}missing{% endif %}">{{ products_missing|groupnum }}</strong></div>
+  </div>
+  <section class="panel">
+    <h2>قیمت تمام‌شده کدهای فروش</h2>
+    <div class="muted">یک عدد از هر رنگ مطابق ترکیب پک حساب می‌شود. اگر از یک رنگ دو عدد در پک باشد، هزینه همان رنگ دو بار اضافه می‌شود.</div>
+    <div class="controls">
+      <input id="pc148-search" type="search" placeholder="جست‌وجوی کد، رنگ یا عنوان محصول…" aria-label="جست‌وجوی محصول" autocomplete="off">
+      <span class="small">بهای هر پک مستقل از سایز است؛ چون هزینه‌های ثبت‌شده در صورت‌های تولید فعلی بر اساس رنگ محاسبه می‌شوند.</span>
+    </div>
+    <div class="table-wrap"><table data-pack-cost-report="v148">
+      <thead><tr><th>کد محصول</th><th>تعداد پک</th><th>ترکیب رنگ‌ها</th><th>بهای کل پک (تومان)</th><th>جزئیات</th></tr></thead>
+      <tbody>
+      {% for product in products %}
+      <tr data-pc148-product>
+        <td><span class="code">{{ product.code }}</span>{% if product.title %}<div class="small">{{ product.title }}</div>{% endif %}{% if product.sizes %}<div class="small">سایزها: {{ product.sizes|join:"، " }}</div>{% endif %}</td>
+        <td>{{ product.pack_qty|groupnum }}</td>
+        <td>{% for part in product.contents %}<span class="pill">{{ part.name }}{% if part.qty > 1 %} × {{ part.qty }}{% endif %}</span>{% empty %}<span class="missing">ترکیب رنگ ثبت نشده</span>{% endfor %}</td>
+        <td>{% if product.complete %}<strong class="price money">{{ product.cost|groupnum }}</strong>{% else %}<span class="missing">قابل محاسبه نیست</span>{% endif %}</td>
+        <td>
+          <details>
+            <summary>ریز محاسبه <span aria-hidden="true">⌄</span></summary>
+            <div class="detail-inner">
+              {% for part in product.contents %}
+              <div class="detail-row">
+                <span>{{ part.name }} × {{ part.qty }}</span>
+                <span>{% if part.subtotal is not None %}<b class="money">{{ part.subtotal|groupnum }}</b><div class="small">هر عدد {{ part.unit_cost|groupnum }} · {{ part.month }}{% if part.older %} (ماه قبل){% endif %}</div>{% else %}<span class="missing">{% if part.incomplete %}اطلاعات هزینه ناقص{% else %}فاقد صورت برش{% endif %}</span>{% endif %}</span>
+              </div>
+              {% endfor %}
+              {% for warning in product.missing %}<div class="detail-row missing">{{ warning }}</div>{% endfor %}
+            </div>
+          </details>
+        </td>
+      </tr>
+      {% empty %}<tr><td colspan="5" class="empty">هیچ کد فعال دارما با سایزبندی فروش ثبت نشده است.</td></tr>{% endfor %}
+      </tbody>
+    </table></div>
+    <p class="small" id="pc148-empty" hidden>محصولی با این جست‌وجو پیدا نشد.</p>
+  </section>
+  <section class="panel">
+    <h2>میانگین بهای هر رنگ و ماه مبنای آن</h2>
+    <div class="table-wrap"><table data-color-cost-report="v148">
+      <thead><tr><th>رنگ</th><th>تعداد برش‌های مبنا</th><th>طاقه / صورت</th><th>ماه انتخاب‌شده</th><th>بهای هر شورت (تومان)</th></tr></thead>
+      <tbody>
+      {% for color in colors %}
+      <tr><td>{{ color.color }}</td><td>{{ color.cut|groupnum }}</td><td>{{ color.rolls|groupnum }}</td><td>{{ color.month_title }}{% if color.older %}<span class="pill warn">ماه قبل</span>{% endif %}</td><td>{% if color.available %}<strong class="price money">{{ color.unit_cost|groupnum }}</strong>{% else %}<span class="missing">داده هزینه ناقص</span>{% endif %}</td></tr>
+      {% empty %}<tr><td colspan="5" class="empty">هنوز صورت برش قابل استفاده برای رنگ‌های این محصولات وجود ندارد.</td></tr>{% endfor %}
+      </tbody>
+    </table></div>
+  </section>
+  <div class="note">
+    <strong>مبنای محاسبه:</strong> هزینه پارچه + کش مصرفی + مزد خیاط در تمام صورت‌های یک رنگ، تقسیم بر مجموع تعداد برش همان رنگ؛ یعنی میانگین وزنی، نه میانگین ساده طاقه‌ها. اگر رنگی در ماه جاری برش نخورده باشد، آخرین ماه قبلی که برش داشته استفاده می‌شود و ماهش کنار قیمت می‌آید. قیمت مواد طبق نرخ فعلی گزارش تولید است؛ نه الزاماً هزینه خرید تاریخی. این گزارش فقط خواندنی است و قیمت فروش، بهای حسابداری، موجودی و سرمایه را تغییر نمی‌دهد.
+  </div>
+</main>
+<script>
+(function(){
+  const search=document.getElementById('pc148-search');
+  const rows=Array.from(document.querySelectorAll('[data-pc148-product]'));
+  const empty=document.getElementById('pc148-empty');
+  if(!search)return;
+  search.addEventListener('input',function(){
+    const query=this.value.trim().toLocaleLowerCase('fa');
+    let shown=0;
+    rows.forEach(function(row){
+      const match=!query||row.textContent.toLocaleLowerCase('fa').includes(query);
+      row.hidden=!match;
+      if(match)shown++;
+    });
+    if(empty)empty.hidden=!query||shown>0;
+  });
+})();
+</script>
+{% endblock %}
