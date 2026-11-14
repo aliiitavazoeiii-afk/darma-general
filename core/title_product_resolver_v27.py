@@ -90,10 +90,30 @@ def _exact_matches(brand_name: str, key: str):
     ]
 
 
+def _title_matches(brand_name: str, key: str):
+    """Resolve a user-defined *model label* as well as the canonical product code.
+
+    ProductCode.title is the display title from the product-definition form.
+    It can differ from ProductCode.code (e.g. code 'bear', title 'bear-01').
+    Match only the *entire* model fragment after «مدل», never a fuzzy
+    substring; a collision must fail closed instead of deducting wrong stock.
+    """
+    return [
+        product
+        for product in ProductCode.objects.select_related("brand").filter(
+            brand__name=brand_name,
+            active=True,
+        ).exclude(title="")
+        if _compact_code(product.title) == key
+    ]
+
+
 def resolve_product_from_title(title: str):
     """Resolve ProductCode exclusively from Digikala title text.
 
-    Seller-code metadata never participates. When the title explicitly names
+    Seller-code metadata never participates. Match the model fragment against
+    the configured product code first; when no code matches, accept an exact,
+    unambiguous configured product title. When the title explicitly names
     Darma/Takvin, resolution is confined to that brand. Some real Digikala rows
     omit the brand word (for example «مدل 400»); in that case the model text may
     still resolve only when it identifies exactly one active marketplace product
@@ -118,7 +138,10 @@ def resolve_product_from_title(title: str):
         if aliased:
             return aliased
         matches = _exact_matches(explicit_brand, key)
-        return matches[0] if len(matches) == 1 else None
+        if matches:
+            return matches[0] if len(matches) == 1 else None
+        titles = _title_matches(explicit_brand, key)
+        return titles[0] if len(titles) == 1 else None
 
     # No brand word in title: still title-only. Accept only a unique model match
     # across the two marketplace brands; seller code remains completely ignored.
@@ -134,4 +157,16 @@ def resolve_product_from_title(title: str):
                 candidates.append(product)
                 seen_ids.add(product.id)
 
-    return candidates[0] if len(candidates) == 1 else None
+    if candidates:
+        return candidates[0] if len(candidates) == 1 else None
+
+    # Only when no canonical code/alias matched, accept an unambiguous exact
+    # ProductCode.title match across the two marketplace brands.
+    title_candidates = []
+    seen_ids = set()
+    for brand_name in IMPORT_BRANDS:
+        for product in _title_matches(brand_name, key):
+            if product.id not in seen_ids:
+                title_candidates.append(product)
+                seen_ids.add(product.id)
+    return title_candidates[0] if len(title_candidates) == 1 else None
