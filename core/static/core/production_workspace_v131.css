@@ -141,3 +141,15 @@
 #prod138-save-toast[hidden]{display:none!important}
 .prod131-hidden-form[data-inline-url] button:disabled,.prod131-buttons .btn:disabled{opacity:.6;cursor:wait}
 @media(max-width:760px){#prod138-save-toast{left:12px;right:12px;max-width:none;bottom:12px}}
+
+/* V150: production heading controls and compact tailor balance card. */
+.prod150-head-controls{display:flex;align-items:stretch;gap:11px;flex-wrap:wrap}
+.prod150-quick-links{display:flex;flex-direction:column;gap:9px;justify-content:center}
+.prod150-quick-links .prod137-all-link{margin:0;justify-content:space-between;min-height:40px}
+.prod150-tailor-card{display:flex;flex-direction:column;gap:5px;justify-content:center;min-width:198px;padding:12px 17px;border:1px solid #3b695c;border-radius:13px;background:linear-gradient(150deg,#113c39,#0c2739);text-decoration:none;color:#dbf5ee}
+.prod150-tailor-card:hover{color:#fff;border-color:#64a990}
+.prod150-tailor-card>span:first-child{color:#a6d9c9;font-size:.78rem;font-weight:800}
+.prod150-tailor-card strong{font-weight:900;font-size:1.13rem}
+.prod150-tailor-card small{font-size:.66rem;font-weight:500}
+.prod150-tailor-advance{font-size:.7rem;color:#9cb4c4}
+@media(max-width:760px){.prod150-head-controls{width:100%;flex-wrap:nowrap}.prod150-quick-links{flex:1;min-width:0}.prod150-quick-links .prod137-all-link{width:100%;font-size:.73rem;padding:9px}.prod150-tailor-card{flex:1.2;min-width:0;padding:10px;font-size:.74rem}.prod150-tailor-card strong{font-size:.98rem}}

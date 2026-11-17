@@ -16,6 +16,7 @@ from . import material_report_v23 as v23
 from . import material_report_v92 as v92
 from .material_flow import ELASTIC, FABRIC, TAILOR, q
 from .material_cost_v23 import used_elastic
+from .tailor_ledger_v150 import live_tailor_balance
 from .models import MaterialReportBlock, RawMaterialStock
 
 
@@ -344,4 +345,6 @@ def material_report(request):
         "new_sheet_colors": v23._material_candidates(v23.BASE_KEYS),
         "today_j": v23.v20._today_jalali(),
         "open_count": sum(bool(v92._block_operational_status(b)) for b in blocks),
+        "tailor_debt": max(0, -live_tailor_balance()),
+        "tailor_advance": max(0, live_tailor_balance()),
     })
