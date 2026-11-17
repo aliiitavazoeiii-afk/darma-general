@@ -171,7 +171,7 @@ def _deduct_item(item, compositions, home):
 
 
 @transaction.atomic
-def create_tapsi_order(day, pairs, discount_cost=0, note=""):
+def create_tapsi_order(day, pairs, discount_cost=0, note="", unit_prices=None):
     """One order may have multiple product/size lines, one shipping charge."""
     day = SaleDay.objects.select_for_update().get(pk=day.pk if hasattr(day, "pk") else day)
     amounts = defaultdict(int)
@@ -183,6 +183,20 @@ def create_tapsi_order(day, pairs, discount_cost=0, note=""):
         raise ValueError("حداقل یک محصول باید به سفارش اضافه شود.")
     if len(amounts) > 50 or sum(amounts.values()) > 10000:
         raise ValueError("تعداد اقلام سفارش بیش از حد مجاز است.")
+
+    # Optional per-order selling prices. These are snapshots for the order,
+    # NEVER permanent Tapsi price-rule changes.
+    overrides = {}
+    if unit_prices is not None:
+        if not isinstance(unit_prices, dict):
+            raise ValueError("ساختار قیمت‌های سفارش معتبر نیست.")
+        for key, value in unit_prices.items():
+            pk = positive_int(key, "کد سایز قیمت‌گذاری")
+            overrides[pk] = positive_int(value, "قیمت فروش هر پک")
+            if overrides[pk] > 10_000_000_000:
+                raise ValueError("قیمت فروش واردشده بیش از محدوده مجاز است.")
+        if set(overrides) != set(amounts):
+            raise ValueError("برای تمام سایزهای سفارش باید قیمت معتبر ثبت شود.")
 
     discount_cost = nonnegative_int(discount_cost, "هزینه تخفیف")
     note = str(note or "").strip()[:300]
@@ -198,8 +212,8 @@ def create_tapsi_order(day, pairs, discount_cost=0, note=""):
     prices = initial_catalog_prices(product_sizes.values(), day.date)
     compositions = {}
     for ps_id, ps in product_sizes.items():
-        if prices.get(ps_id, 0) <= 0:
-            raise ValueError(f"ابتدا قیمت تپسی‌شاپ {ps.product.code} / {ps.size.name} را در قیمت‌گذاری ثبت کن.")
+        if overrides.get(ps_id, prices.get(ps_id, 0)) <= 0:
+            raise ValueError(f"قیمت فروش {ps.product.code} / {ps.size.name} معتبر نیست.")
         comps = list(ProductComposition.objects.filter(product=ps.product).select_related("color"))
         if not comps or sum(int(comp.qty) for comp in comps) != int(ps.product.pack_qty):
             raise ValueError(
@@ -212,10 +226,13 @@ def create_tapsi_order(day, pairs, discount_cost=0, note=""):
     # repricing. transaction.atomic rolls this back if stock posting fails.
     missing = set(amounts) - set(effective_prices(amounts, day.date))
     for ps_id in missing:
-        TapsiPriceRule.objects.get_or_create(
-            product_size=product_sizes[ps_id], effective_from=day.date,
-            defaults={"price": prices[ps_id]},
-        )
+        # Only the canonical catalog default can be seeded. A one-off custom
+        # order price must never change future order defaults.
+        if prices.get(ps_id, 0) > 0:
+            TapsiPriceRule.objects.get_or_create(
+                product_size=product_sizes[ps_id], effective_from=day.date,
+                defaults={"price": prices[ps_id]},
+            )
 
     home = StockLocation.objects.get(key=StockLocation.HOME)
     order = TapsiOrder.objects.create(
@@ -227,7 +244,7 @@ def create_tapsi_order(day, pairs, discount_cost=0, note=""):
     for ps_id, quantity in amounts.items():
         ps = product_sizes[ps_id]
         item = TapsiOrderItem.objects.create(
-            order=order, product_size=ps, quantity=quantity, unit_price=prices[ps_id],
+            order=order, product_size=ps, quantity=quantity, unit_price=overrides.get(ps_id, prices.get(ps_id, 0)),
             unit_cost=product_unit_cost(ps, day.date), pack_qty=ps.product.pack_qty,
             code_snapshot=ps.product.code, title_snapshot=ps.product.title or ps.product.code,
         )

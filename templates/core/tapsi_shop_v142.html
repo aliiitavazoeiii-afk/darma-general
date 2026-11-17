@@ -2,7 +2,7 @@
 {% block title %}تپسی‌شاپ | دارما{% endblock %}
 {% block content %}
 {% include 'core/_mobile_shell.html' %}
-<link rel="stylesheet" href="{% static 'core/tapsi_portal_v142.css' %}?v=146">
+<link rel="stylesheet" href="{% static 'core/tapsi_portal_v142.css' %}?v=150">
 <div class="t142-page">
   <header class="t142-header">
     <div>
@@ -43,7 +43,7 @@
   <section class="card glass-card t142-panel" id="t142-entry" aria-label="ثبت سفارش جدید تپسی‌شاپ">
     <div class="card-body">
       <div class="t142-section-heading">
-        <div><h2>ثبت سفارش جدید</h2><p>کد کالا را پیدا کن، سایز و تعداد را انتخاب کن و به سفارش اضافه کن.</p></div>
+        <div><h2>ثبت سفارش جدید</h2><p>کالا، سایز، قیمت این سفارش و تعداد را مشخص کن؛ قیمت پیش‌فرض قابل تغییر است.</p></div>
         <a class="btn btn-sm btn-outline-light" href="{% url 'settings_products' %}?section=pricing&amp;brand=darma#tapsi-pricing-panel">قیمت‌های تپسی</a>
       </div>
       <form id="t142-order-form" method="post" action="{% url 'tapsi_hub_create' %}">
@@ -58,6 +58,11 @@
           <div>
             <label for="t142-size">سایز</label>
             <select id="t142-size" class="form-select" disabled><option value="">ابتدا کالا را انتخاب کن</option></select>
+          </div>
+          <div class="t150-price-field">
+            <label for="t150-price">قیمت فروش هر پک (تومان)</label>
+            <input class="form-control money-input" id="t150-price" type="text" inputmode="numeric" placeholder="قیمت این سفارش" disabled>
+            <small id="t150-price-default" class="t150-price-note">ابتدا محصول و سایز را انتخاب کن.</small>
           </div>
           <div>
             <label for="t142-qty">تعداد پک</label>
@@ -128,5 +133,5 @@
   <p class="t142-footer-note">طلب کل ثبت‌شده تپسی‌شاپ: <strong class="money">{{ tapsi_receivable|groupnum }}</strong> تومان؛ به‌صورت مستقل در سرمایه کل منظور می‌شود. تا قبل از افزودن سیستم تسویه، این طلب پرداخت‌نشده فرض می‌شود.</p>
 </div>
 {{ calc_catalog|json_script:"t142-catalog" }}
-<script defer src="{% static 'core/tapsi_portal_v142.js' %}?v=146"></script>
+<script defer src="{% static 'core/tapsi_portal_v142.js' %}?v=150"></script>
 {% endblock %}

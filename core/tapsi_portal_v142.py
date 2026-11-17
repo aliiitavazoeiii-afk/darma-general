@@ -162,7 +162,8 @@ def create(request):
         return redirect("tapsi_home")
     ids = request.POST.getlist("product_size_id")
     quantities = request.POST.getlist("quantity")
-    if not ids or len(ids) != len(quantities):
+    unit_prices = request.POST.getlist("unit_price")
+    if not ids or len(ids) != len(quantities) or len(ids) != len(unit_prices):
         messages.error(request, "حداقل یک کالا و تعداد معتبر برای سفارش انتخاب کن.")
         return redirect(_hub_url(on_date))
     try:
@@ -170,10 +171,16 @@ def create(request):
         # new SaleDay as well when validation, stock posting or snapshots fail.
         with transaction.atomic():
             day, _ = SaleDay.objects.get_or_create(date=on_date)
+            overrides = {}
+            for ps_id, raw_price in zip(ids, unit_prices):
+                if ps_id in overrides and overrides[ps_id] != raw_price:
+                    raise ValueError("یک سایز با دو قیمت متفاوت در سفارش ثبت شده است.")
+                overrides[ps_id] = raw_price
             order = create_tapsi_order(
                 day, list(zip(ids, quantities)),
                 discount_cost=request.POST.get("discount_cost"),
                 note=request.POST.get("note"),
+                unit_prices=overrides,
             )
         messages.success(request, f"سفارش تپسی‌شاپ #{order.pk} ثبت شد؛ موجودی و سرمایه بر اساس منطق فعلی به‌روزرسانی شدند.")
     except (ValueError, RuntimeError) as exc:

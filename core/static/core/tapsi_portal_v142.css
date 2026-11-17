@@ -109,3 +109,10 @@
 .t145-result.t145-profit{border-color:rgba(75,216,155,.3);background:rgba(75,216,155,.065)}
 .t145-footnote{font-size:.73rem;color:#aebfcf;line-height:1.9;margin:16px 2px 0}
 @media(max-width:600px){.t145-fields{grid-template-columns:1fr;gap:10px}.t145-results{gap:7px}.t145-result{padding:11px}.t145-result strong{font-size:.97rem}}
+
+/* V150: editable per-order Tapsi price, not persistent platform price. */
+.t142-picker{grid-template-columns:minmax(200px,2fr) minmax(130px,1fr) minmax(160px,1fr) 105px auto}
+.t150-price-field .t150-price-note{display:block;color:#8fb9cc;font-size:.7rem;padding-top:6px;line-height:1.5}
+.t150-price-field input:disabled{opacity:.58}
+@media(max-width:1150px){.t142-picker{grid-template-columns:repeat(2,minmax(0,1fr))}.t142-searchbox{grid-column:1/-1}.t142-picker .btn{grid-column:2}}
+@media(max-width:650px){.t142-picker{grid-template-columns:1fr 1fr}.t150-price-field{grid-column:1/-1}.t142-picker .btn{grid-column:2}}
