@@ -39,7 +39,7 @@
       <form method="post" action="{% url 'expense_tracker:receivable_claim_add' person.id %}" class="inline-action-form">{% csrf_token %}
         <input class="money-input" name="amount" inputmode="numeric" placeholder="مبلغ" required>
         <input class="ltr-input" name="date" value="{{ today_j }}">
-        <input name="note" placeholder="مثلاً سهم شام">
+        <input name="note" placeholder="بابت چه چیزی؟ مثلاً سهم شام" aria-label="عنوان یا توضیح طلب">
         <button class="secondary-btn compact">ثبت طلب</button>
       </form>
     </details>
@@ -51,6 +51,26 @@
         <input name="note" placeholder="مثلاً کارت‌به‌کارت">
         <button class="primary-btn compact">ثبت تسویه</button>
       </form>
+    </details>
+    <details class="person-history">
+      <summary>مشاهده جزئیات طلب‌ها و تسویه‌ها <span>({{ person.history_entries|length }} مورد)</span></summary>
+      <div class="person-history-list">
+        {% for entry in person.history_entries %}
+        <div class="person-history-record">
+          <div class="person-history-record-top">
+            <span class="ledger-kind {% if entry.kind == 'payment' %}paid{% else %}claim{% endif %}">{% if entry.kind == 'payment' %}تسویه{% else %}طلب{% endif %}</span>
+            <span class="person-history-date">{{ entry.date|jalali }}</span>
+            <strong class="money person-history-amount">{{ entry.amount|groupnum }} تومان</strong>
+          </div>
+          <div class="person-history-note">
+            <span>{% if entry.kind == 'payment' %}توضیح تسویه{% else %}بابت چه چیزی؟{% endif %}</span>
+            <strong>{{ entry.note|default:"توضیحی برای این مورد ثبت نشده" }}</strong>
+          </div>
+        </div>
+        {% empty %}
+        <div class="muted person-history-empty">هنوز طلب یا تسویه‌ای ثبت نشده است.</div>
+        {% endfor %}
+      </div>
     </details>
   </article>
 {% empty %}
