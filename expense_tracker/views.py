@@ -5,7 +5,7 @@ import jdatetime
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
-from django.db.models import Sum
+from django.db.models import Prefetch, Sum, prefetch_related_objects
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.text import slugify
@@ -172,6 +172,24 @@ def _receivable_people():
         person.claim_total = totals.get(ReceivableEntry.CLAIM, 0)
         person.payment_total = totals.get(ReceivableEntry.PAYMENT, 0)
         person.outstanding = person.claim_total - person.payment_total
+    return people
+
+
+def _attach_receivable_history(people):
+    """Attach complete, read-only claim/repayment history to person cards.
+
+    Unlike the separate 120-row recent ledger, this intentionally has no
+    truncation so historical claim notes remain visible after later payments.
+    """
+    if people:
+        prefetch_related_objects(
+            people,
+            Prefetch(
+                "entries",
+                queryset=ReceivableEntry.objects.order_by("-date", "-created_at", "-id"),
+                to_attr="history_entries",
+            ),
+        )
     return people
 
 
@@ -353,7 +371,7 @@ def expense_delete(request, expense_id):
 
 @login_required
 def receivables(request):
-    people = _receivable_people()
+    people = _attach_receivable_history(_receivable_people())
     return render(
         request,
         "expense_tracker/receivables.html",
