@@ -2,17 +2,25 @@
 {% block title %}تولید | DARMA{% endblock %}
 {% block content %}
 {% include 'core/_mobile_shell.html' %}
-<link rel="stylesheet" href="{% static 'core/production_workspace_v131.css' %}?v=138">
+<link rel="stylesheet" href="{% static 'core/production_workspace_v131.css' %}?v=150">
 <div id="prod138-save-toast" role="status" aria-live="polite" aria-atomic="true" hidden></div>
 <div class="prod131">
   <header class="prod131-head">
     <div>
       <div class="page-kicker">مدیریت تولید دارما</div>
-      <h1 class="page-title mb-1">تولید و تحویل خیاط</h1>
-      <p class="prod131-muted mb-0">هر کد پارچه در یک ردیف؛ جزئیات سایز و تحویل فقط هنگام باز کردن ردیف.</p>
+      <h1 class="page-title mb-1">تولید</h1>
     </div>
-    <a class="prod137-all-link" href="{% url 'production_pack_costs' %}"><span>بهای تمام‌شده</span><span aria-hidden="true">←</span></a>
-    <a class="prod137-all-link" href="{% url 'material_production_overall' %}"><span>گزارش کلی</span><span aria-hidden="true">←</span></a>
+    <div class="prod150-head-controls">
+      <nav class="prod150-quick-links" aria-label="گزارش‌های تولید">
+        <a class="prod137-all-link" href="{% url 'production_pack_costs' %}"><span>بهای تمام‌شده</span><span aria-hidden="true">←</span></a>
+        <a class="prod137-all-link" href="{% url 'material_production_overall' %}"><span>گزارش کلی</span><span aria-hidden="true">←</span></a>
+      </nav>
+      <a class="prod150-tailor-card" href="{% url 'tailor_ledger' %}" aria-label="مشاهده بدهی و گردش حساب خیاط">
+        <span>بدهی خیاط</span>
+        <strong class="money">{{ tailor_debt|groupnum }} <small>تومان</small></strong>
+        {% if tailor_advance %}<span class="prod150-tailor-advance">طلب ما: {{ tailor_advance|groupnum }} تومان</span>{% else %}<span class="prod150-tailor-advance">مشاهده ریز حساب و اکسل</span>{% endif %}
+      </a>
+    </div>
     <form method="post" class="prod131-create">{% csrf_token %}
       <input type="hidden" name="date" value="{{ today_j }}">
       <input name="title" class="form-control" placeholder="عنوان صورت جدید (اختیاری)" aria-label="عنوان صورت جدید">

@@ -1,0 +1,70 @@
+{% extends 'base.html' %}{% load jalali static %}
+{% block title %}بدهی خیاط | دارما{% endblock %}
+{% block content %}
+{% include 'core/_mobile_shell.html' %}
+<style>
+.tl150{max-width:1380px;margin:auto;color:#e7f1f9;direction:rtl}
+.tl150 header{display:flex;align-items:start;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:19px}
+.tl150 h1{font-size:1.7rem;font-weight:900;margin:0 0 7px}
+.tl150 .sub{font-size:.8rem;color:#a8bdd1;line-height:1.9}
+.tl150 .buttons{display:flex;gap:8px;flex-wrap:wrap}
+.tl150 .buttons a{padding:11px 15px;border:1px solid #36506b;border-radius:10px;text-decoration:none;color:#d6ecfc;background:#142b41;font-weight:750}
+.tl150 .buttons .excel{background:#137252;color:#fff;border-color:#238a69}
+.tl150 .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:17px}
+.tl150 .stat,.tl150 .panel{border:1px solid #263e55;border-radius:15px;background:#0d2135}
+.tl150 .stat{padding:16px}.tl150 .stat span{font-size:.75rem;color:#a7c0d1;display:block;margin-bottom:8px}
+.tl150 .stat strong{font-size:1.25rem;font-weight:850;font-variant-numeric:tabular-nums}
+.tl150 .panel{padding:17px;margin-bottom:16px}
+.tl150 h2{font-size:1.05rem;font-weight:900;margin:0 0 13px}
+.tl150 .warn{color:#edc39f;border:1px solid #766146;background:#2a271f;border-radius:11px;padding:12px 15px;font-size:.8rem;line-height:2}
+.tl150 .scroll{overflow-x:auto;max-width:100%}
+.tl150 table{border-collapse:collapse;width:100%;min-width:910px}
+.tl150 th,.tl150 td{padding:11px 9px;text-align:right;border-bottom:1px solid #284158;font-size:.77rem;vertical-align:top}
+.tl150 th{color:#adc5d9;background:#142c43}
+.tl150 tbody tr:hover{background:rgba(160,195,226,.05)}
+.tl150 .muted{color:#9cb1c6}.tl150 .number{font-variant-numeric:tabular-nums;white-space:nowrap}
+.tl150 .positive{color:#59dbae}.tl150 .negative{color:#faa6a6}
+.tl150 .empty{padding:18px;text-align:center;color:#9ab4c9}
+.tl150 .mini{font-size:.72rem;color:#adc2d4;line-height:1.9}
+.tl150 details{border-top:1px solid #30455a;padding:12px 0}
+.tl150 summary{cursor:pointer;color:#dcecf8;font-weight:800}
+@media(max-width:760px){.tl150 .stats{grid-template-columns:repeat(2,minmax(0,1fr))}.tl150 h1{font-size:1.4rem}.tl150 .stat{padding:12px}.tl150 .stat strong{font-size:1rem}}
+</style>
+<main class="tl150">
+<header>
+ <div><div class="sub">تولید دارما / گزارش مالی خیاط</div><h1>بدهی خیاط</h1><div class="sub">گردش حساب از مانده مبنا، صورت‌های دوخت، واریزی‌ها و فاکتورهای عمده‌فروشی پدرام</div></div>
+ <div class="buttons"><a href="{% url 'material_report' %}">بازگشت به تولید</a><a class="excel" href="{% url 'tailor_ledger_xlsx' %}">دریافت اکسل کامل</a></div>
+</header>
+<section class="stats">
+ <article class="stat"><span>بدهی فعلی ما به خیاط (تومان)</span><strong class="number negative">{{ debt|groupnum }}</strong></article>
+ <article class="stat"><span>طلب ما از خیاط / پیش‌پرداخت</span><strong class="number positive">{{ advance|groupnum }}</strong></article>
+ <article class="stat"><span>مزد ثبت‌شده در صورت‌های دارای تحویل</span><strong class="number">{{ totals.wage|groupnum }}</strong></article>
+ <article class="stat"><span>واریزی ثبت‌شده به خیاط</span><strong class="number">{{ totals.payments|groupnum }}</strong></article>
+</section>
+<p class="warn">حساب خیاط در سیستم امضادار است: مانده منفی یعنی ما بدهکاریم؛ مانده مثبت یعنی خیاط به ما بدهکار است. چون سابقه تغییر دستی بعضی مانده‌های قدیمی کامل ثبت نشده، <b>مانده ابتدای این گزارش از مانده فعلی و گردش موجود بازسازی شده</b> و نباید با سند افتتاحیه تاریخی قطعی اشتباه شود. مبلغ مزد، همان مبلغ ثبت‌شده در صورت دارای تحویل اعمال‌شده است و تاریخ ستون، تاریخ خود صورت است.</p>
+<section class="panel">
+ <h2>گردش اصلی حساب خیاط · {{ entries|length }} رویداد</h2>
+ <div class="mini">مانده افتتاحیه بازسازی‌شده: <strong class="number">{{ base_reconstructed|groupnum }}</strong> تومان · فاکتورهای عمده‌فروشی پدرام نیز در مانده مشترک لحاظ می‌شوند (جمع: {{ totals.wholesale|groupnum }} تومان).</div>
+ <div class="scroll"><table data-tailor-ledger="v150"><thead><tr><th>تاریخ صورت / پرداخت</th><th>نوع</th><th>شرح</th><th>افزایش طلب ما</th><th>افزایش بدهی ما</th><th>مانده امضادار</th><th>بدهی به خیاط</th><th>توضیح / مرجع</th></tr></thead>
+ <tbody>
+ <tr><td>ابتدای سوابق</td><td>مانده مبنا</td><td>مانده بازسازی‌شده</td><td>—</td><td>—</td><td class="number">{{ base_reconstructed|groupnum }}</td><td class="number">{% if base_reconstructed < 0 %}{{ base_reconstructed|groupnum }}{% else %}۰{% endif %}</td><td class="muted">سند تاریخی افتتاحیه کامل در دیتابیس موجود نیست</td></tr>
+ {% for entry in entries %}
+ <tr><td class="number">{{ entry.date_j }}</td><td>{{ entry.origin }}</td><td>{{ entry.title }}</td><td class="number positive">{% if entry.payment %}+{{ entry.payment|groupnum }}{% else %}—{% endif %}</td><td class="number negative">{% if entry.charge %}{{ entry.charge|groupnum }}{% else %}—{% endif %}</td><td class="number">{{ entry.balance|groupnum }}</td><td class="number">{{ entry.debt|groupnum }}</td><td class="mini">{{ entry.note }} {% if entry.detail %}· {{ entry.detail }}{% endif %} · {{ entry.origin }}:{{ entry.ref }}</td></tr>
+ {% empty %}<tr><td colspan="8" class="empty">هیچ گردش دارای سند در حساب خیاط پیدا نشد.</td></tr>{% endfor %}
+ </tbody></table></div>
+</section>
+<section class="panel">
+ <h2>حساب مستقل قدیمی پدرام</h2>
+ <p class="mini">مانده فعلی این حساب: {{ legacy_account_current|groupnum }} تومان · در مانده بالا دوباره جمع نشده است.</p>
+ <details><summary>مشاهده {{ legacy_account_entries|length }} رویداد ثبت‌شده در حساب قدیمی</summary>
+ <div class="scroll"><table data-pedram-ledger="v150"><thead><tr><th>تاریخ</th><th>نوع</th><th>شرح</th><th>تغییر امضادار</th><th>مانده</th><th>مرجع</th></tr></thead>
+ <tbody>{% for entry in legacy_account_entries %}<tr><td>{{ entry.date_j }}</td><td>{{ entry.origin }}</td><td>{{ entry.title }}</td><td class="number">{{ entry.delta|groupnum }}</td><td class="number">{{ entry.balance|groupnum }}</td><td>{{ entry.ref }} · {{ entry.note }}</td></tr>{% empty %}<tr><td colspan="6" class="empty">رویداد قدیمی ثبت نشده است.</td></tr>{% endfor %}</tbody></table></div>
+ </details>
+</section>
+{% if legacy_events %}
+<section class="panel"><h2>رویدادهای مستقل قدیمی خیاط</h2><p class="mini">این {{ legacy_events|length }} سند برای بررسی نمایش داده می‌شوند، اما برای جلوگیری از دوباره‌شماری به مانده اصلی اضافه نشده‌اند؛ نسخه کامل در اکسل موجود است.</p>
+<details><summary>نمایش سوابق مستقل</summary><div class="scroll"><table><thead><tr><th>تاریخ</th><th>شرح</th><th>تغییر ثبت‌شده</th><th>مرجع</th></tr></thead><tbody>{% for entry in legacy_events %}<tr><td>{{ entry.date_j }}</td><td>{{ entry.title }}</td><td>{{ entry.delta|groupnum }}</td><td>{{ entry.detail }}</td></tr>{% endfor %}</tbody></table></div></details>
+</section>{% endif %}
+<p class="mini">خروجی اکسل شامل همه ردیف‌های نگه‌داری‌شده در دیتابیس است؛ فیلتر زمانی یا سقف ۱۰۰ ردیفی ندارد و هیچ رکورد حسابداری را تغییر نمی‌دهد.</p>
+</main>
+{% endblock %}

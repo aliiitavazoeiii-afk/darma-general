@@ -8,7 +8,7 @@
   try { catalog = JSON.parse(catalogNode.textContent || "[]"); } catch (_) { return; }
   const el = id => document.getElementById(id);
   const query = el("t142-query"), suggestions = el("t142-suggestions");
-  const size = el("t142-size"), qty = el("t142-qty"), add = el("t142-add");
+  const size = el("t142-size"), qty = el("t142-qty"), add = el("t142-add"), price = el("t150-price"), priceDefault = el("t150-price-default");
   const selected = el("t142-selected"), lines = el("t142-lines");
   const discount = el("t142-discount"), save = el("t142-save");
   const basket = new Map();
@@ -21,12 +21,17 @@
   function viewSelection(){
     const variant = chosen?.sizes.find(v => String(v.id) === String(size.value));
     const count = amount(qty.value);
-    add.disabled = !(variant && variant.price > 0 && count >= 1 && count <= 10000);
+    const entered = amount(price.value);
+    add.disabled = !(variant && entered > 0 && entered <= 10000000000
+      && Number.isSafeInteger(entered) && count >= 1 && count <= 10000 && Number.isSafeInteger(count));
+    priceDefault.textContent = variant
+      ? "قیمت پیش‌فرض این سایز: " + (variant.price > 0 ? money(variant.price) + " تومان" : "ثبت نشده")
+      : "ابتدا محصول و سایز را انتخاب کن.";
     selected.textContent = !chosen ? "هنوز محصولی انتخاب نشده است."
       : chosen.code + " · " + chosen.title + (variant
-      ? " · سایز " + variant.name + (variant.price > 0
-        ? " · " + money(variant.price) + " تومان"
-        : " · این سایز قیمت معتبر ندارد؛ از قیمت‌گذاری اصلاح کن.")
+      ? " · سایز " + variant.name + (entered > 0
+        ? " · قیمت این سفارش " + money(entered) + " تومان"
+        : " · قیمت معتبر وارد کن.")
       : "");
   }
   function pick(product){
@@ -43,11 +48,14 @@
     size.disabled = !product.sizes.length;
     const first = product.sizes.find(v => v.price > 0) || product.sizes[0];
     if (first) size.value = String(first.id);
+    price.value = first ? String(first.price || "") : "";
+    price.disabled = !first;
     viewSelection();
   }
   function search(){
     const q = query.value.trim().toLocaleLowerCase("fa-IR");
     chosen = null; add.disabled = true; size.disabled = true;
+    price.disabled = true; price.value = "";
     size.replaceChildren(); suggestions.replaceChildren();
     if (!q) { suggestions.hidden = true; viewSelection(); return; }
     const matches = catalog.filter(p => (p.code + " " + p.title + " " + p.brand)
@@ -69,7 +77,13 @@
   query.addEventListener("input",search);
   query.addEventListener("focus",()=>{if(query.value.trim()&&!chosen)search();});
   document.addEventListener("click",event=>{if(!event.target.closest(".t142-searchbox"))suggestions.hidden=true;});
-  size.addEventListener("change",viewSelection);qty.addEventListener("input",viewSelection);
+  size.addEventListener("change",()=>{
+    const variant=chosen?.sizes.find(v=>String(v.id)===String(size.value));
+    price.value=variant ? String(variant.price||"") : "";
+    viewSelection();
+  });
+  qty.addEventListener("input",viewSelection);
+  price.addEventListener("input",viewSelection);
   function value(label, textValue) {
     const node=document.createElement("div");node.className="t142-line-value";
     const small=document.createElement("small");small.textContent=label;
@@ -92,8 +106,9 @@
       del.addEventListener("click",()=>{basket.delete(item.id);render();});
       const id=document.createElement("input");id.type="hidden";id.name="product_size_id";id.value=item.id;
       const quantity=document.createElement("input");quantity.type="hidden";quantity.name="quantity";quantity.value=item.quantity;
+      const chosenPrice=document.createElement("input");chosenPrice.type="hidden";chosenPrice.name="unit_price";chosenPrice.value=item.price;
       row.append(title,value("تعداد پک",money(item.quantity)),
-        value("فی فروش",money(item.price)),value("جمع",money(item.price*item.quantity)),del,id,quantity);
+        value("فی فروش",money(item.price)),value("جمع",money(item.price*item.quantity)),del,id,quantity,chosenPrice);
       lines.append(row);
     }
     if(!basket.size){
@@ -118,10 +133,11 @@
   add.addEventListener("click",()=>{
     const variant=chosen?.sizes.find(v=>String(v.id)===String(size.value));
     const count=amount(qty.value);
-    if(!chosen||!variant||variant.price<=0||count<1||count>10000) return;
+    const chosenPrice=amount(price.value);
+    if(!chosen||!variant||chosenPrice<=0||chosenPrice>10000000000||!Number.isSafeInteger(chosenPrice)||count<1||count>10000||!Number.isSafeInteger(count)) return;
     const id=String(variant.id), previous=basket.get(id);
     basket.set(id,{id,code:chosen.code,title:chosen.title,size:variant.name,
-      price:variant.price,unit_cost:variant.unit_cost||0,pack_qty:chosen.pack_qty,quantity:(previous?.quantity||0)+count});
+      price:chosenPrice,unit_cost:variant.unit_cost||0,pack_qty:chosen.pack_qty,quantity:(previous?.quantity||0)+count});
     render();qty.value="1";viewSelection();query.focus();
   });
   discount.addEventListener("input",render);
