@@ -52,6 +52,10 @@ class Command(BaseCommand):
         ):
             get_template(template)
 
+        receivables_source = get_template("expense_tracker/receivables.html").template.source
+        if "person.history_entries" not in receivables_source or "entry.note" not in receivables_source:
+            raise CommandError("receivable person cards must expose historical claim/repayment notes")
+
         before = self._snapshot()
         today = date.today()
 
@@ -180,6 +184,12 @@ class Command(BaseCommand):
                     note="legacy claim",
                     mellat_applied=False,
                 )
+                legacy_person = ReceivablePerson.objects.get(pk=person.pk)
+                expense_views._attach_receivable_history([legacy_person])
+                if [(row.kind, row.note) for row in legacy_person.history_entries] != [
+                    (ReceivableEntry.CLAIM, "legacy claim")
+                ]:
+                    raise CommandError("historical claim note is not visible in person detail")
                 delete_receivable_entry(legacy_claim)
                 if int(source_balance(SOURCE_MELAT) or 0) != before["mellat"]:
                     raise CommandError("legacy claim delete unexpectedly changed Mellat")
@@ -198,6 +208,20 @@ class Command(BaseCommand):
                 )
                 if int(source_balance(SOURCE_MELAT) or 0) != before["mellat"] - 25_000:
                     raise CommandError("claim repayment did not credit Mellat exactly")
+
+                history_person = ReceivablePerson.objects.get(pk=person.pk)
+                expense_views._attach_receivable_history([history_person])
+                history = [
+                    (row.kind, row.amount, row.note)
+                    for row in history_person.history_entries
+                ]
+                if history != [
+                    (ReceivableEntry.PAYMENT, 15_000, "test repayment"),
+                    (ReceivableEntry.CLAIM, 40_000, "test claim"),
+                ]:
+                    raise CommandError(f"claim and repayment notes are not preserved in details: {history}")
+                if int(source_balance(SOURCE_MELAT) or 0) != before["mellat"] - 25_000:
+                    raise CommandError("read-only receivable history changed Mellat")
 
                 delete_receivable_entry(repayment)
                 if int(source_balance(SOURCE_MELAT) or 0) != before["mellat"] - 40_000:
@@ -225,6 +249,7 @@ class Command(BaseCommand):
         self.stdout.write("EXPENSE V1: create 10000 -> Mellat -10000")
         self.stdout.write("EXPENSE V1: edit to 25000 -> Mellat total delta -25000")
         self.stdout.write("EXPENSE V1: delete -> Mellat fully restored")
+        self.stdout.write("RECEIVABLE HISTORY: historical reasons and current claim/repayment notes visible; Mellat unchanged")
         self.stdout.write("RECEIVABLE V5: legacy claim delete -> Mellat unchanged")
         self.stdout.write("RECEIVABLE V5: new claim 40000 -> Mellat -40000")
         self.stdout.write("RECEIVABLE V5: repayment 15000 -> Mellat +15000; delete -> reversed")
