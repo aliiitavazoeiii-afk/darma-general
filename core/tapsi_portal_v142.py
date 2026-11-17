@@ -163,7 +163,9 @@ def create(request):
     ids = request.POST.getlist("product_size_id")
     quantities = request.POST.getlist("quantity")
     unit_prices = request.POST.getlist("unit_price")
-    if not ids or len(ids) != len(quantities) or len(ids) != len(unit_prices):
+    # Old cached forms did not submit unit_price; retain compatibility using
+    # the catalog defaults. Updated V150 UI always posts all chosen prices.
+    if not ids or len(ids) != len(quantities) or (unit_prices and len(ids) != len(unit_prices)):
         messages.error(request, "حداقل یک کالا و تعداد معتبر برای سفارش انتخاب کن.")
         return redirect(_hub_url(on_date))
     try:
@@ -180,7 +182,7 @@ def create(request):
                 day, list(zip(ids, quantities)),
                 discount_cost=request.POST.get("discount_cost"),
                 note=request.POST.get("note"),
-                unit_prices=overrides,
+                unit_prices=overrides if unit_prices else None,
             )
         messages.success(request, f"سفارش تپسی‌شاپ #{order.pk} ثبت شد؛ موجودی و سرمایه بر اساس منطق فعلی به‌روزرسانی شدند.")
     except (ValueError, RuntimeError) as exc:

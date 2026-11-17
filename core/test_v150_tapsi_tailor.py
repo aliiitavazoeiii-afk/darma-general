@@ -50,7 +50,6 @@ class TapsiOneOffSalePriceV150Tests(TestCase):
         self.assertContains(page, 'id="t150-price-default"')
         self.assertContains(page, "قیمت فروش هر پک")
         self.assertEqual(page.context["tapsi_catalog"][0]["sizes"][0]["price"],816000)
-        self.assertIn(b'unit_price', open("/dev/null","rb").read() if False else b'unit_price')
         with open("core/static/core/tapsi_portal_v142.js", encoding="utf-8") as handle:
             js = handle.read()
         self.assertIn('chosenPrice.name="unit_price"', js)
@@ -94,10 +93,20 @@ class TapsiOneOffSalePriceV150Tests(TestCase):
             "order_date":self.today.isoformat(),
             "product_size_id":[str(self.ps.pk)],
             "quantity":["1"],
+            "unit_price":["900000","950000"],
         })
         self.assertFalse(TapsiOrder.objects.exists())
         stock.refresh_from_db()
         self.assertEqual(stock.qty,30)
+        # Old V149 cached forms omit unit_price and must still use the
+        # canonical catalog default, not silently fail.
+        self.client.post(reverse("tapsi_hub_create"),{
+            "order_date":self.today.isoformat(),
+            "product_size_id":[str(self.ps.pk)],
+            "quantity":["1"],
+        })
+        self.assertEqual(TapsiOrder.objects.count(),1)
+        self.assertEqual(TapsiOrder.objects.get().items.get().unit_price,816000)
 
     def test_tapsi_existing_service_call_without_override_unchanged(self):
         order=create_tapsi_order(self.day,[(self.ps.id,1)], discount_cost=0)

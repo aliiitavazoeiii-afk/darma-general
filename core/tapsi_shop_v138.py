@@ -213,7 +213,11 @@ def create_tapsi_order(day, pairs, discount_cost=0, note="", unit_prices=None):
     compositions = {}
     for ps_id, ps in product_sizes.items():
         if overrides.get(ps_id, prices.get(ps_id, 0)) <= 0:
-            raise ValueError(f"قیمت فروش {ps.product.code} / {ps.size.name} معتبر نیست.")
+            if overrides:
+                raise ValueError(f"قیمت فروش {ps.product.code} / {ps.size.name} معتبر نیست.")
+            raise ValueError(
+                f"ابتدا قیمت تپسی‌شاپ {ps.product.code} / {ps.size.name} را در قیمت‌گذاری ثبت کن."
+            )
         comps = list(ProductComposition.objects.filter(product=ps.product).select_related("color"))
         if not comps or sum(int(comp.qty) for comp in comps) != int(ps.product.pack_qty):
             raise ValueError(
