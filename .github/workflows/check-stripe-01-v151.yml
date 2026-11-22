@@ -95,6 +95,7 @@ jobs:
               'core/test_stripe_01_v151.py',
               'core/test_production_workspace_v131.py',
               'core/test_production_overall_v137.py',
+              'core/test_production_inline_v138.py',
               'server_stripe_01_v151.sh',
           }
           assert not files-allowed, sorted(files-allowed)
