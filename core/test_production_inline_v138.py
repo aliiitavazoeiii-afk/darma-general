@@ -1,5 +1,6 @@
 """V138: AJAX saves must never redirect; original inventory and wage handlers remain authoritative."""
 from datetime import date
+from unittest.mock import patch
 from decimal import Decimal
 from pathlib import Path
 
@@ -16,9 +17,19 @@ from core.models import (
     Size, StockBalance, StockLocation,
 )
 
+from core import material_report_v92 as calendar_v92
+_STABLE_MONTH_CONTEXT = calendar_v92._jalali_month_context
 
 class ProductionInlineV138Tests(TestCase):
     def setUp(self):
+        month_patch = patch(
+            "core.material_report_v92._jalali_month_context",
+            side_effect=lambda today=None: _STABLE_MONTH_CONTEXT(
+                today if today is not None else date(2026, 10, 25)
+            ),
+        )
+        month_patch.start()
+        self.addCleanup(month_patch.stop)
         self.user = get_user_model().objects.create_user(
             username="v138-test", password="v138-test-password"
         )
