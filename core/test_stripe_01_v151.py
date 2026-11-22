@@ -256,6 +256,21 @@ class Stripe01ImportV151Tests(TestCase):
         self.assertFalse(SaleLine.objects.exists())
         self.assertFalse(InventoryMovement.objects.exists())
 
+    def test_long_marketing_title_and_compact_code_collision_are_protected(self):
+        for code, label in [
+            ("unrelated-code", "شورت اسلیپ زنانه دارما مدل راه راه 01 | XL | مشکی"),
+            ("rahrah01", "unrelated product label"),
+        ]:
+            with self.subTest(code=code):
+                other=ProductCode.objects.create(
+                    brand=self.brand,code=code,title=label,pack_qty=1
+                )
+                before=(ProductCode.objects.count(),Color.objects.count())
+                with self.assertRaises(CommandError):
+                    call_command("configure_stripe_01_v151",apply=True,stdout=StringIO())
+                self.assertEqual(before,(ProductCode.objects.count(),Color.objects.count()))
+                other.delete()
+
     def test_conflicting_existing_title_fails_without_catalog_changes(self):
         ProductCode.objects.create(
             brand=self.brand,code="custom-old",
