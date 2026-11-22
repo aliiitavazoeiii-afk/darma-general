@@ -4,6 +4,7 @@ from decimal import Decimal, ROUND_HALF_UP
 from .darma_cost_v55 import darma_cost_for
 from .models import AppSetting
 from .novani_cost_v59 import novani_cost_for
+from .stripe_01_v151 import applies_to as stripe01_offer_applies
 
 
 # One-off Digikala promotion/settlement rule reported for 1405/07/08 only.
@@ -27,11 +28,15 @@ def is_digikala_zero_commission_date(sale_date):
     return sale_date in DIGIKALA_ZERO_COMMISSION_DATES
 
 
-def digikala_fee_for_unit(sale_price, sale_date=None):
+def digikala_fee_for_unit(sale_price, sale_date=None, *, product_code=None, brand_name=None):
     price = Decimal(sale_price or 0)
     commission_rate = _setting("digikala_commission_percent", 24) / Decimal(100)
     if is_digikala_zero_commission_date(sale_date):
         commission_rate = Decimal(0)
+    elif stripe01_offer_applies(sale_date, brand_name, product_code):
+        # Only the NEW stripe-01 Darma SKU, only 1–10 Azar 1405.
+        # Processing floor, VAT basis and other categories remain unchanged.
+        commission_rate = Decimal("0.13")
     processing_rate = _setting("digikala_processing_percent", 7) / Decimal(100)
     processing_floor = _setting("digikala_processing_floor", 36000)
     vat_rate = _setting("digikala_vat_percent", 10) / Decimal(100)
@@ -58,7 +63,11 @@ def sale_line_metrics(line):
     gross = qty * int(line.sale_price or 0)
     fee_unit = int(
         (snap.digikala_fee_unit if snap else 0)
-        or digikala_fee_for_unit(line.sale_price, line.day.date)
+        or digikala_fee_for_unit(
+            line.sale_price, line.day.date,
+            product_code=line.product_size.product.code,
+            brand_name=line.product_size.product.brand.name,
+        )
     )
     digikala_fee = qty * fee_unit
     shorts = qty * pack_qty
@@ -67,7 +76,9 @@ def sale_line_metrics(line):
         unit_cost = int(snap.unit_cost)
     else:
         brand_name = line.product_size.product.brand.name
-        if brand_name in {"دارما", "انبارش"}:
+        if brand_name == "دارما" and line.product_size.product.code == "rahrah-01":
+            unit_cost = int(line.product_size.unit_cost or 67_000)
+        elif brand_name in {"دارما", "انبارش"}:
             unit_cost = int(darma_cost_for(line.day.date))
         elif brand_name == "Novani":
             unit_cost = int(novani_cost_for(line.day.date))

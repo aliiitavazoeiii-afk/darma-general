@@ -225,7 +225,7 @@ def apply_delivery_report(day: SaleDay, file_bytes: bytes, filename: str = "") -
         line.sale_price = price
         line.save(update_fields=["quantity", "sale_price"])
 
-        if ps.product.brand.name == "دارما" and ps.product.code == VARIANT_PRODUCT_CODE:
+        if ps.product.brand.name == "دارما" and is_variable_color_product_code(ps.product.code):
             key = key_by_ps.get(ps_id, (ps.product.brand.name, ps.product.code, ps.size.name))
             result = sync_variant_inventory(line, dict(variant_colors_by_key.get(key, {})))
         else:

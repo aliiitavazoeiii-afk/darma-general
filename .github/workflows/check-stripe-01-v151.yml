@@ -1,0 +1,109 @@
+name: V151 Darma stripe single-item Digikala title and 13 percent campaign
+on:
+  push:
+    branches:
+      - v151-stripe01-digikala-blackfriday
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  stripe01-blackfriday:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: darma
+          POSTGRES_USER: darma
+          POSTGRES_PASSWORD: darma
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U darma"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_NAME: darma
+      DB_USER: darma
+      DB_PASSWORD: darma
+      DJANGO_SETTINGS_MODULE: config.settings
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Check syntax, migrations, URLs, and templates
+        run: |
+          python -m compileall -q core/stripe_01_v151.py core/variant_sale_v12.py core/finance.py core/cost_accounting_v14.py core/daily_order_import_v12.py core/management/commands/configure_stripe_01_v151.py core/test_stripe_01_v151.py
+          bash -n server_stripe_01_v151.sh
+          node --check core/static/core/tapsi_portal_v142.js
+          python manage.py check
+          python manage.py makemigrations --check --dry-run
+          python - <<'PY'
+          import django
+          django.setup()
+          from django.template.loader import get_template
+          from django.urls import reverse
+          for name in ['core/production_pack_costs_v148.html','core/material_report_v131.html','core/material_report_overall_v137.html','core/tailor_ledger_v150.html','core/tapsi_shop_v142.html']:
+              get_template(name)
+          assert reverse('production_pack_costs') == '/material-report/pack-costs/'
+          assert reverse('tailor_ledger') == '/material-report/tailor-ledger/'
+          assert reverse('tailor_ledger_xlsx') == '/material-report/tailor-ledger/export.xlsx'
+          print('V148_TEMPLATES_URL=PASS')
+          PY
+      - name: Apply migrations to clean PostgreSQL
+        run: |
+          python manage.py migrate core 0012 --noinput
+          python manage.py shell -c "from core.models import Brand, StockLocation; Brand.objects.get_or_create(name='دارما'); StockLocation.objects.get_or_create(key='home', defaults={'title':'خانه'}); print('LEGACY_PRECONDITIONS_SEEDED')"
+          python manage.py migrate --noinput
+          python manage.py migrate --check --noinput
+          python manage.py shell -c "from django.db.migrations.recorder import MigrationRecorder; assert MigrationRecorder.Migration.objects.filter(app='core',name='0025_tapsi_receipts_auto_fabric_v147').exists(); print('V147_SCHEMA=OK')"
+      - name: V151 imported stripe XLSX and campaign fee with all existing ERP regressions
+        run: |
+          python - <<'PY'
+          import django
+          django.setup()
+          from django.test import override_settings
+          from django.core.management import call_command
+          with override_settings(MIGRATION_MODULES={'core': None}, STORAGES={'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'}}):
+              call_command('test','core.test_stripe_01_v151','core.test_v150_tapsi_tailor','core.test_digikala_title_v149','core.test_production_pack_cost_v148','core.test_production_overall_v137','core.test_production_workspace_v131','core.test_production_inline_v138','core.test_v147_flows','core.test_tapsi_shop_v138',interactive=False,verbosity=2)
+          PY
+      - name: Verify V151 isolated stripe SKU/commission change scope
+        run: |
+          python - <<'PY'
+          import subprocess
+          base='01a6fd7e697bed100a37a52a336f3d0185dfc00f'
+          files=set(subprocess.check_output(['git','diff','--name-only',base+'..HEAD'],text=True).splitlines())
+          allowed={
+              '.github/workflows/check-stripe-01-v151.yml',
+              'core/stripe_01_v151.py',
+              'core/special_darma_products_v66.py',
+              'core/variant_sale_v12.py',
+              'core/finance.py',
+              'core/cost_accounting_v14.py',
+              'core/daily_order_import_v12.py',
+              'core/management/commands/configure_stripe_01_v151.py',
+              'core/test_stripe_01_v151.py',
+              'core/test_production_workspace_v131.py',
+              'core/test_production_overall_v137.py',
+              'core/test_production_inline_v138.py',
+              'server_stripe_01_v151.sh',
+          }
+          assert not files-allowed, sorted(files-allowed)
+          assert not any(path.startswith('core/migrations/') for path in files)
+          for protected in ('core/models.py','core/material_report_v23.py',
+              'core/material_flow.py',
+              'core/finance_center_v97.py','core/production_fabric_auto_v147.py',
+              'core/capital_history_v87.py','core/darma_cost_v55.py'):
+              assert protected not in files, protected
+          print('V151_STRIPE_ONLY_NO_MIGRATION_NO_OTHER_PRODUCTS=PASS')
+          PY

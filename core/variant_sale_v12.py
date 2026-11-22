@@ -6,6 +6,7 @@ from django.db.models import Sum
 from .brand_colors import norm
 from .darma_pricing import SIZE_NAMES, get_group_prices
 from .special_darma_products_v66 import variable_color_codes, variable_color_names, variable_color_pack_qty
+from .stripe_01_v151 import PRODUCT_CODE as STRIPE01_CODE, TITLE_COLOR_ALIASES as STRIPE01_ALIASES
 from .models import (
     AppSetting, Brand, Color, InventoryMovement, ProductCode, ProductSize,
     SaleAllocation, SaleLine, SaleShortage, Size, StockBalance, StockLocation,
@@ -71,7 +72,11 @@ def resolve_variable_product_color(product_code, title):
     allowed = variable_color_names(code)
     if not allowed:
         return None
-    aliases = MASS06_TITLE_COLOR_ALIASES if code == "mass-06" else {}
+    aliases = (
+        STRIPE01_ALIASES if code == STRIPE01_CODE
+        else MASS06_TITLE_COLOR_ALIASES if code == "mass-06"
+        else {}
+    )
     return _title_color_token(title, allowed, aliases=aliases)
 
 

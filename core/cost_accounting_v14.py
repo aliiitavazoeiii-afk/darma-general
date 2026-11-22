@@ -3,6 +3,7 @@ from .finance import digikala_fee_for_unit
 from .final_services import inventory_unit_cost
 from .models import SaleSnapshot
 from .novani_cost_v59 import novani_cost_for
+from .stripe_01_v151 import PRODUCT_CODE as STRIPE01_CODE, UNIT_COST as STRIPE01_UNIT_COST
 from .takvin_pricing_v17 import takvin_cost_for
 
 
@@ -17,7 +18,11 @@ def snapshot_sale_line(line, ps=None, price=None):
     snap, _ = SaleSnapshot.objects.get_or_create(sale_line=line)
     snap.pack_qty = int(ps.product.pack_qty or 0)
     brand_name = ps.product.brand.name
-    if brand_name in {"دارما", "انبارش"}:
+    if brand_name == "دارما" and ps.product.code == STRIPE01_CODE:
+        # Only the user-confirmed single-piece stripe SKU has its own
+        # 67k per-piece COGS instead of the unrelated Darma blended cost.
+        snap.unit_cost = int(ps.unit_cost or STRIPE01_UNIT_COST)
+    elif brand_name in {"دارما", "انبارش"}:
         snap.unit_cost = int(darma_cost_for(line.day.date))
     elif brand_name == "Novani":
         # V59: Novani COGS is frozen from the single rule effective on sale date.
@@ -28,6 +33,10 @@ def snapshot_sale_line(line, ps=None, price=None):
         snap.unit_cost = int(ps.unit_cost)
     else:
         snap.unit_cost = int(inventory_unit_cost(ps.product.brand, ps.size))
-    snap.digikala_fee_unit = digikala_fee_for_unit(price, line.day.date)
+    snap.digikala_fee_unit = digikala_fee_for_unit(
+        price, line.day.date,
+        product_code=ps.product.code,
+        brand_name=brand_name,
+    )
     snap.save()
     return snap

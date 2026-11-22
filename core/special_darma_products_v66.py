@@ -6,9 +6,16 @@ from .brand_colors import norm
 from .darma_cost_v55 import darma_cost_for
 from .darma_pricing import SIZE_NAMES
 from .models import Brand, Color, ProductCode, ProductComposition, ProductSize, Size
+from .stripe_01_v151 import PRODUCT_CODE as STRIPE01_CODE, STOCK_COLOR_NAMES
 
 
 SPECIAL_DARMA_PRODUCTS = {
+    STRIPE01_CODE: {
+        "pack_qty": 1,
+        "composition": None,
+        "variable_colors": STOCK_COLOR_NAMES,
+        "note": "[stripe01-v151] تکی؛ رنگ فروش از عنوان دیجی‌کالا",
+    },
     "mass-03": {
         "pack_qty": 10,
         "composition": {"کرم": 10},
