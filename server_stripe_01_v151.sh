@@ -14,7 +14,7 @@ git diff --cached --quiet -- . ':(exclude)Caddyfile' || fail "Unexpected staged 
 git diff --quiet "$BASE"..HEAD -- core/models.py core/models_final.py core/migrations core/final_services.py core/sale_price_v60.py core/pricing_v60.py core/material_report_v23.py core/material_flow.py core/inventory_valuation_v17.py core/production_fabric_auto_v147.py core/business_receipts_v64.py core/darma_cost_v55.py core/capital_history_v87.py Caddyfile core/daily_order_import_v8.py core/daily_order_import_v23.py core/daily_order_views_v60.py core/material_report_v23.py core/material_report_v20.py core/business_tools_v62.py core/wholesale_logic_v119.py || fail "Protected existing business source modified"
 for file in $(git diff --name-only "$BASE"..HEAD); do
   case "$file" in
-    .github/workflows/check-stripe-01-v151.yml|core/stripe_01_v151.py|core/special_darma_products_v66.py|core/variant_sale_v12.py|core/finance.py|core/cost_accounting_v14.py|core/daily_order_import_v12.py|core/management/commands/configure_stripe_01_v151.py|core/test_stripe_01_v151.py|server_stripe_01_v151.sh) ;;
+    .github/workflows/check-stripe-01-v151.yml|core/stripe_01_v151.py|core/special_darma_products_v66.py|core/variant_sale_v12.py|core/finance.py|core/cost_accounting_v14.py|core/daily_order_import_v12.py|core/management/commands/configure_stripe_01_v151.py|core/test_stripe_01_v151.py|core/test_production_workspace_v131.py|core/test_production_overall_v137.py|server_stripe_01_v151.sh) ;;
     *) fail "Out-of-scope file: $file" ;;
   esac
 done

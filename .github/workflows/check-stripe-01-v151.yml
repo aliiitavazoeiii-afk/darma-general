@@ -93,6 +93,8 @@ jobs:
               'core/daily_order_import_v12.py',
               'core/management/commands/configure_stripe_01_v151.py',
               'core/test_stripe_01_v151.py',
+              'core/test_production_workspace_v131.py',
+              'core/test_production_overall_v137.py',
               'server_stripe_01_v151.sh',
           }
           assert not files-allowed, sorted(files-allowed)

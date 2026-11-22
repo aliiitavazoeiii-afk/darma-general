@@ -1,5 +1,6 @@
 """Isolated read-only tests for selected-month and all-history production analytics."""
 from datetime import date
+from unittest.mock import patch
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
@@ -15,9 +16,24 @@ from core.models import (
     RawMaterialStock, StockLocation, Size, StockBalance, BusinessPayment
 )
 
+from core import material_report_v92 as calendar_v92
+
+_STABLE_ABAN_MONTH_CONTEXT = calendar_v92._jalali_month_context
+
 
 class ProductionOverallV137Tests(TestCase):
     def setUp(self):
+        # These legacy production fixtures are explicitly dated Aban 1405.
+        # Fix their in-test reporting clock to Aban so they stay deterministic
+        # when CI runs across the 1 Azar month boundary.
+        month_patch = patch(
+            "core.material_report_v92._jalali_month_context",
+            side_effect=lambda today=None: _STABLE_ABAN_MONTH_CONTEXT(
+                today if today is not None else date(2026, 10, 25)
+            ),
+        )
+        month_patch.start()
+        self.addCleanup(month_patch.stop)
         user = get_user_model().objects.create_user(username="overall-v137", password="no-secret-data")
         self.client.force_login(user)
         self.brand = Brand.objects.create(name="دارما")
