@@ -9,6 +9,7 @@ from django.db import transaction
 
 from core.brand_colors import norm
 from core.daily_order_import_v8 import _compact_code
+from core.title_product_resolver_v27 import model_candidate_from_title
 from core.models import Brand, Color, ProductCode, ProductSize, SaleLine, Size
 from core.stripe_01_v151 import (
     BRAND_NAME, PACK_QTY, PRODUCT_CODE, PRODUCT_TITLE,
@@ -22,9 +23,16 @@ NEEDED_SIZES = ("M", "L", "XL", "XXL", "3XL", "4XL")
 
 def _validate_identity(brand, existing):
     key = _compact_code(PRODUCT_TITLE)
+    code_key = _compact_code(PRODUCT_CODE)
     for other in ProductCode.objects.filter(brand=brand).exclude(code=PRODUCT_CODE):
-        if _compact_code(other.code) == key or (
-            other.title and _compact_code(other.title) == key
+        # Detect the marketing title stored as a long description, as well as
+        # compact-code spelling collisions, before creating a second SKU.
+        registered_model = model_candidate_from_title(other.title)
+        if _compact_code(other.code) in {key, code_key} or (
+            other.title and (
+                _compact_code(other.title) == key
+                or _compact_code(registered_model) == key
+            )
         ):
             raise CommandError(
                 f"محصول دیگری با عنوان/کد «{PRODUCT_TITLE}» وجود دارد: "
