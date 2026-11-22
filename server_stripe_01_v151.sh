@@ -72,7 +72,7 @@ diff -u "$TMP/orders-before" "$TMP/orders-after" || fail "Tapsi order count chan
 echo "V151_STRIPE01_CODE=OK"
 echo "V151_EXISTING_SALES_AND_STOCK=UNCHANGED"
 echo "EXISTING_BUSINESS_HASHES=UNCHANGED"
-echo "EXISTING_PRICES_AND_BOOKED_ORDERS_UNCHANGED=YES
- echo 'NEXT_STEP: docker compose exec -T web python manage.py configure_stripe_01_v151 --apply'"
+echo "EXISTING_PRICES_AND_BOOKED_ORDERS_UNCHANGED=YES"
+echo "NEXT_STEP: docker compose exec -T web python manage.py configure_stripe_01_v151 --apply"
 echo "BACKUP=$BACKUP"
 docker compose ps
