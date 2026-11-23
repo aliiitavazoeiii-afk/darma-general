@@ -5,6 +5,7 @@ from django.db.models import Avg, Sum
 
 from .darma_cost_v55 import darma_cost_for
 from .finance import sale_line_metrics
+from .azar_pack_colors_v152 import effective_sale_compositions
 from .inventory_valuation_v17 import finished_inventory_value_v17
 from .models import (
     Account, AccountEntry, AppSetting, BankTransfer, Brand, DigikalaSettlement,
@@ -75,7 +76,7 @@ def sync_sale_inventory(line):
     if line.quantity <= 0:
         line.inventory_applied_quantity=0; line.save(update_fields=["inventory_applied_quantity"]); return {"shortages":[],"transferred":0}
     transferred=0; created_shortages=[]
-    for comp in ProductComposition.objects.filter(product=product).select_related("color"):
+    for comp in effective_sale_compositions(line):
         needed=int(line.quantity)*int(comp.qty)
         before=_stock(brand=brand,size=size,color=comp.color,location=home).qty
         source_bal=_transfer_for_need(brand=brand,size=size,color=comp.color,needed=needed,reference=f"{ref}:auto-transfer:{comp.color_id}")
