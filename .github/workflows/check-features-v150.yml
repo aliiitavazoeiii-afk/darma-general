@@ -60,13 +60,24 @@ jobs:
           django.setup()
           from django.test import override_settings
           from django.core.management import call_command
+          from datetime import date
+          from unittest.mock import patch
+          from core import material_report_v92 as month_module
           with override_settings(
               MIGRATION_MODULES={'core': None},
               STORAGES={'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'}}
           ):
               call_command('test', 'core.test_features_v150',
-                  'core.test_tapsi_shop_v138','core.test_production_workspace_v131',
-                  'core.test_production_inline_v138', interactive=False,verbosity=2)
+                  'core.test_tapsi_shop_v138', interactive=False,verbosity=2)
+              # The legacy V131/V138 tests fixture sheets are hardcoded to
+              # 1405/08. Freeze only their month selector to that month;
+              # new production-yield tests use the real runtime date.
+              original = month_module._jalali_month_context
+              def frozen_month(today=None):
+                  return original(today=date(2026, 10, 27))
+              with patch.object(month_module, '_jalali_month_context', side_effect=frozen_month):
+                  call_command('test','core.test_production_workspace_v131',
+                      'core.test_production_inline_v138', interactive=False,verbosity=2)
           PY
       - name: Scoped changes and protected base model verification
         run: |
