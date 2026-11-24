@@ -2,7 +2,7 @@
 {% block title %}تپسی‌شاپ | دارما{% endblock %}
 {% block content %}
 {% include 'core/_mobile_shell.html' %}
-<link rel="stylesheet" href="{% static 'core/tapsi_portal_v142.css' %}?v=146">
+<link rel="stylesheet" href="{% static 'core/tapsi_portal_v142.css' %}?v=150">
 <div class="t142-page">
   <header class="t142-header">
     <div>
@@ -58,6 +58,10 @@
           <div>
             <label for="t142-size">سایز</label>
             <select id="t142-size" class="form-select" disabled><option value="">ابتدا کالا را انتخاب کن</option></select>
+          </div>
+          <div>
+            <label for="t150-unit-price">فی فروش این سایز (تومان) — قابل تغییر</label>
+            <input class="form-control" id="t150-unit-price" type="text" inputmode="numeric" placeholder="قیمت پیش‌فرض" disabled>
           </div>
           <div>
             <label for="t142-qty">تعداد پک</label>
@@ -128,5 +132,5 @@
   <p class="t142-footer-note">طلب کل ثبت‌شده تپسی‌شاپ: <strong class="money">{{ tapsi_receivable|groupnum }}</strong> تومان؛ به‌صورت مستقل در سرمایه کل منظور می‌شود. تا قبل از افزودن سیستم تسویه، این طلب پرداخت‌نشده فرض می‌شود.</p>
 </div>
 {{ calc_catalog|json_script:"t142-catalog" }}
-<script defer src="{% static 'core/tapsi_portal_v142.js' %}?v=146"></script>
+<script defer src="{% static 'core/tapsi_portal_v142.js' %}?v=150"></script>
 {% endblock %}

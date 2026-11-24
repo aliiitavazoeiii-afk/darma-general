@@ -162,6 +162,10 @@ def create(request):
         return redirect("tapsi_home")
     ids = request.POST.getlist("product_size_id")
     quantities = request.POST.getlist("quantity")
+    posted_prices = request.POST.getlist("unit_price")
+    if posted_prices and len(posted_prices) != len(ids):
+        messages.error(request, "تعداد قیمت‌های واردشده با اقلام سفارش برابر نیست.")
+        return redirect(_hub_url(on_date))
     if not ids or len(ids) != len(quantities):
         messages.error(request, "حداقل یک کالا و تعداد معتبر برای سفارش انتخاب کن.")
         return redirect(_hub_url(on_date))
@@ -172,6 +176,7 @@ def create(request):
             day, _ = SaleDay.objects.get_or_create(date=on_date)
             order = create_tapsi_order(
                 day, list(zip(ids, quantities)),
+                unit_prices=dict(zip(ids, posted_prices)) if posted_prices else None,
                 discount_cost=request.POST.get("discount_cost"),
                 note=request.POST.get("note"),
             )

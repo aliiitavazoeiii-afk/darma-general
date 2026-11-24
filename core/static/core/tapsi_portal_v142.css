@@ -109,3 +109,8 @@
 .t145-result.t145-profit{border-color:rgba(75,216,155,.3);background:rgba(75,216,155,.065)}
 .t145-footnote{font-size:.73rem;color:#aebfcf;line-height:1.9;margin:16px 2px 0}
 @media(max-width:600px){.t145-fields{grid-template-columns:1fr;gap:10px}.t145-results{gap:7px}.t145-result{padding:11px}.t145-result strong{font-size:.97rem}}
+
+/* V150: a standalone one-off sale price per selected size, never the saved default. */
+.t142-picker{grid-template-columns:minmax(210px,2fr) minmax(130px,1fr) minmax(165px,1fr) 90px auto}
+@media(max-width:1050px){.t142-picker{grid-template-columns:repeat(2,minmax(0,1fr))}.t142-picker .btn{grid-column:2}}
+@media(max-width:650px){.t142-picker{grid-template-columns:repeat(2,minmax(0,1fr))}.t142-searchbox{grid-column:1/-1}}

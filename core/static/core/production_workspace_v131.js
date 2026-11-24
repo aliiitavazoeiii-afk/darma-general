@@ -18,6 +18,12 @@
     return Number.isFinite(n) ? n : 0;
   };
   const format = n => Math.round(n).toLocaleString('fa-IR');
+  function updateMean(group) {
+    const weight = number(group.querySelector('input[data-field="weight"]')?.value ?? group.dataset.weight);
+    const rate = Number(group.dataset.meanRate);
+    const estimate = group.querySelector('.prod150-mean');
+    if (estimate) estimate.textContent = rate > 0 && weight > 0 ? format(weight * rate) : '—';
+  }
 
   const colorChoices = Array.from(document.querySelectorAll('.prod131-color-choice'));
   const materialChoices = Array.from(document.querySelectorAll('.prod131-status-choice'));
@@ -210,6 +216,10 @@
     });
     group.querySelectorAll('.prod131-fields input,.prod131-fields select').forEach(input => {
       input.addEventListener('change', () => { group.dataset.unsavedEdit = '1'; });
+      if (input.dataset.field === 'weight') input.addEventListener('input', () => {
+        group.dataset.unsavedEdit = '1';
+        updateMean(group);
+      });
     });
   });
 
@@ -292,6 +302,7 @@
       surplus: state.surplus,
       costTotal: state.cost_total,
       unitCost: state.unit_cost,
+      meanRate: state.mean_pieces_per_kg,
       materialStatus: state.material_applied ? 'applied' : 'unapplied',
       materialMeaningful: state.material_meaningful ? '1' : '0',
       countable: state.production_meaningful ? '1' : '0'
@@ -301,7 +312,7 @@
     });
 
     const cells = Array.from(group.querySelectorAll('.prod131-main > td'));
-    if (cells.length >= 7) {
+    if (cells.length >= 8) {
       const code = cells[0].querySelector('.prod131-code strong');
       if (code) code.textContent = state.code || 'بدون کد';
       cells[1].textContent = state.weight || '—';
@@ -315,7 +326,8 @@
       cells[4].classList.toggle('is-zero', remaining === 0 && surplus === 0);
       cells[5].textContent = number(state.unit_cost) ? format(number(state.unit_cost)) : '—';
 
-      const status = cells[6];
+      updateMean(group);
+      const status = cells[7];
       const pending = status.querySelector('.prod131-state.pending');
       if (state.dirty_stock) {
         if (!pending) {
