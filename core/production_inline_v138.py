@@ -35,6 +35,7 @@ def _row_state(row):
         "remaining": row["remaining"],
         "surplus": row["surplus"],
         "unit_cost": row["unit_cost"],
+        "mean_pieces_per_kg": row["mean_pieces_per_kg"],
         "cost_total": row["cost_total"],
         "material_applied": row["material_applied"],
         "material_meaningful": row["material_meaningful"],
@@ -83,7 +84,9 @@ def material_block_inline_action(request, block_id):
         pk=block_id,
     )
     posting._reset_request_caches()
-    editor = presentation._editor(block)
+    historical = list(MaterialReportBlock.objects.filter(date__lte=block.date)
+        .select_related('brand').prefetch_related('output_applications', 'stock_consumptions'))
+    editor = presentation._editor(block, presentation._completed_color_history(historical))
     return JsonResponse({
         "ok": True,
         "action": action,

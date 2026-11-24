@@ -113,11 +113,12 @@
     {% endfor %}
 
     
+    <p class="prod150-mean-note">میانگین برش، تعداد تحویل پیشنهادی برای وزن هر طاقه است؛ از مجموع شورت‌های تحویل‌گرفته‌شده ÷ مجموع وزن طاقه‌های تکمیل‌شده قبلی همان رنگ محاسبه می‌شود. طاقه‌های نیمه‌کاره در این میانگین نیستند.</p>
     <div class="prod131-table-wrap">
       <table class="prod131-table" id="prod131-table">
         <colgroup>
           <col class="prod131-col-code"><col class="prod131-col-weight"><col class="prod131-col-cut">
-          <col class="prod131-col-entered"><col class="prod131-col-remaining"><col class="prod131-col-cost">
+          <col class="prod131-col-entered"><col class="prod131-col-remaining"><col class="prod131-col-cost"><col class="prod131-col-mean">
           <col class="prod131-col-status"><col class="prod131-col-action">
         </colgroup>
         <thead>
@@ -128,13 +129,14 @@
             <th scope="col">تحویل</th>
             <th scope="col">مانده</th>
             <th scope="col">بهای هر عدد</th>
+            <th scope="col" title="پیش‌بینی تعداد تحویل براساس بازده واقعی طاقه‌های کامل همان رنگ در صورت‌های قدیمی‌تر">میانگین برش</th>
             <th scope="col">وضعیت</th>
             <th scope="col"></th>
           </tr>
         </thead>
         {% for editor in editors %}
           {% for row in editor.rows %}
-          <tbody class="prod131-group" data-search="{{ row.search }}" data-color="{{ row.key }}" data-material-status="{% if row.material_applied %}applied{% else %}unapplied{% endif %}" data-material-meaningful="{% if row.material_meaningful %}1{% else %}0{% endif %}" data-block="{{ editor.obj.id }}" data-key="{{ row.key }}" data-weight="{{ row.weight }}" data-cut="{{ row.cut }}" data-entered="{{ row.entered }}" data-remaining="{{ row.remaining }}" data-surplus="{{ row.surplus }}" data-unit-cost="{{ row.unit_cost }}" data-cost-total="{{ row.cost_total }}" data-countable="{% if row.production_meaningful %}1{% else %}0{% endif %}">
+          <tbody class="prod131-group" data-search="{{ row.search }}" data-color="{{ row.key }}" data-material-status="{% if row.material_applied %}applied{% else %}unapplied{% endif %}" data-material-meaningful="{% if row.material_meaningful %}1{% else %}0{% endif %}" data-block="{{ editor.obj.id }}" data-key="{{ row.key }}" data-weight="{{ row.weight }}" data-cut="{{ row.cut }}" data-entered="{{ row.entered }}" data-remaining="{{ row.remaining }}" data-surplus="{{ row.surplus }}" data-unit-cost="{{ row.unit_cost }}" data-mean-rate="{{ row.mean_pieces_per_kg }}" data-mean-rolls="{{ row.mean_history_rolls }}" data-cost-total="{{ row.cost_total }}" data-countable="{% if row.production_meaningful %}1{% else %}0{% endif %}">
             <tr class="prod131-main" {% if forloop.first %}id="block-{{ editor.obj.id }}"{% endif %}>
               <td>
                 <div class="prod131-code"><strong>{% if row.code %}{{ row.code }}{% else %}بدون کد{% endif %}</strong><span>{{ row.color }}</span></div>
@@ -145,13 +147,14 @@
               <td class="prod131-num">{{ row.entered|groupnum }}</td>
               <td class="prod131-num prod131-remain {% if row.surplus > 0 %}is-surplus{% elif row.remaining > 0 %}is-pending{% else %}is-zero{% endif %}">{% if row.surplus > 0 %}+{{ row.surplus|groupnum }}{% else %}{{ row.remaining|groupnum }}{% endif %}</td>
               <td class="prod131-num">{{ row.unit_cost|default:'—' }}</td>
+              <td class="prod131-num prod150-mean" title="براساس {{ row.mean_history_rolls }} طاقه تکمیل‌شده قدیمی‌تر همین رنگ">{% if row.mean_cut is not None %}{{ row.mean_cut|groupnum }}{% else %}—{% endif %}</td>
               <td>
                 {% if row.dirty_stock %}<span class="prod131-state pending" title="تحویل در این صورت ثبت شده، اما هنوز به موجودی خانه یا خورشید همگام نشده است">تحویل منتظر ثبت در انبار</span>{% endif %}
                 {% if row.material_applied %}<span class="prod131-mat-state is-applied">مصرف مواد اعمال‌شده</span>{% else %}<span class="prod131-mat-state is-unapplied">مصرف مواد اعمال‌نشده</span>{% endif %}
               </td>
               <td><button type="button" class="prod131-toggle" aria-expanded="false" aria-label="باز کردن جزئیات {{ row.color }} {{ row.code }}">جزئیات <span>⌄</span></button></td>
             </tr>
-            <tr class="prod131-detail" hidden><td colspan="8">
+            <tr class="prod131-detail" hidden><td colspan="9">
               <div class="prod131-detail-panel">
                 <div class="prod131-detail-header">
                   <div><h3>{{ row.color }} {% if row.code %}{{ row.code }}{% endif %}</h3>
@@ -268,7 +271,7 @@
           </tbody>
           {% endfor %}
         {% empty %}
-        <tbody class="prod131-no-sheets"><tr><td colspan="8">در این ماه هنوز صورتی ثبت نشده است. از «صورت جدید» استفاده کن.</td></tr></tbody>
+        <tbody class="prod131-no-sheets"><tr><td colspan="9">در این ماه هنوز صورتی ثبت نشده است. از «صورت جدید» استفاده کن.</td></tr></tbody>
         {% endfor %}
       </table>
       <div class="prod131-no-results" id="prod131-no-results" hidden>کدی با این جست‌وجو پیدا نشد؛ رنگ یا کد دیگری وارد کن.</div>
@@ -281,5 +284,5 @@
 </div>
 {% endblock %}
 {% block scripts %}
-<script src="{% static 'core/production_workspace_v131.js' %}?v=138"></script>
+<script src="{% static 'core/production_workspace_v131.js' %}?v=150"></script>
 {% endblock %}

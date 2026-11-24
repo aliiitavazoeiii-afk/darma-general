@@ -4,6 +4,7 @@ POST remains delegated to V23. The original material, inventory, cost and wage
 endpoints are unchanged; every editor posts the COMPLETE original block payload.
 """
 from collections import defaultdict
+from .brand_colors import norm
 from decimal import Decimal
 
 import jdatetime
@@ -83,6 +84,45 @@ def _roll_entries(block):
     return entries
 
 
+def _completed_color_history(blocks):
+    """Actual, fully received historical rolls by brand and normalized color.
+
+    Only completed, stock-synchronized deliveries contribute: an unfinished
+    roll's full fabric weight must not dilute the observed yield. Never use
+    forecast/entered cut as evidence of actual received garments.
+    """
+    history = defaultdict(list)
+    for block in blocks:
+        for roll in _roll_entries(block):
+            if (roll["weight"] > 0 and roll["cut"] > 0
+                    and roll["entered"] >= roll["cut"]
+                    and roll["applied"] == roll["entered"]):
+                history[(block.brand_id, norm(roll["color"]))].append(
+                    (block.date, block.pk, roll["weight"], roll["entered"])
+                )
+    return history
+
+
+def _historical_color_yield(history, block, color):
+    """Only earlier production sheets; exclude same sheet and future edits."""
+    pieces = 0
+    weight = Decimal("0")
+    rolls = 0
+    for day, sheet_id, kg, qty in history.get((block.brand_id, norm(color)), ()):
+        if (day, sheet_id) >= (block.date, block.pk):
+            continue
+        pieces += qty
+        weight += kg
+        rolls += 1
+    return (Decimal(pieces) / weight, rolls) if weight > 0 else (None, 0)
+
+
+def _estimate_from_yield(weight, pieces_per_kg):
+    if pieces_per_kg is None or q(weight) <= 0:
+        return None
+    return v23.round_money(q(weight) * pieces_per_kg)
+
+
 def _totals(blocks, only_open=False):
     total = {"rolls": 0, "weight": Decimal("0"), "cut": 0,
              "entered": 0, "applied": 0, "remaining": 0, "surplus": 0,
@@ -128,7 +168,7 @@ def _totals(blocks, only_open=False):
     return total
 
 
-def _editor(block):
+def _editor(block, history=None):
     """Adapt V23's exact form field names for the new compact row editor."""
     view = v23._view_block(block)
     keys = view["active_keys"]
@@ -193,6 +233,7 @@ def _editor(block):
         fields_by_key = {f["field_key"]: f for f in fields}
         wage = v23.v20._wage_for_pieces(cut, v23.v20._dozen_wage()) if cut else 0
         batch_cost = v23.calculate_model_cost(key, raw, wage) if cut else {}
+        rate, history_count = _historical_color_yield(history or {}, block, v23._material_label(key))
         rows.append({
             "key": key,
             "color": v23._material_label(key),
@@ -203,6 +244,9 @@ def _editor(block):
             "surplus": max(0, entered - cut),
             "cost_total": int(batch_cost.get("total_cost") or 0),
             "unit_cost": fields_by_key["cost"]["value"],
+            "mean_cut": _estimate_from_yield(raw.get("weight"), rate),
+            "mean_pieces_per_kg": str(rate) if rate is not None else "",
+            "mean_history_rolls": history_count,
             "elastic16": raw.get("elastic16") or "",
             "elastic25": raw.get("elastic25") or "",
             "material_applied": key in consumed_keys,
@@ -313,7 +357,8 @@ def material_report(request):
         month = current_key
     active = [b for b in blocks if _month_key(b.date) == month]
 
-    editors = [_editor(b) for b in active]
+    completed_history = _completed_color_history(blocks)
+    editors = [_editor(b, completed_history) for b in active]
     colors = {}
     for editor in editors:
         for row in editor["rows"]:
