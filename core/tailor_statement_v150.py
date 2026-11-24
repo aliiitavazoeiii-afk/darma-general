@@ -21,6 +21,12 @@ from .material_report_v23 import _material_label
 from .models import BusinessPayment, MaterialReportBlock
 
 
+def _safe_excel_text(value):
+    """Prevent user-provided descriptions from becoming Excel formulas."""
+    text = str(value or "")
+    return "'" + text if text[:1] in ("=", "+", "-", "@") else text
+
+
 def build_tailor_statement():
     account = _tailor_row(create=False)
     closing = int(account.amount or 0) if account else 0
@@ -110,7 +116,8 @@ def tailor_statement_excel(request):
     ws.append(["—", "مانده اولیه بازسازی‌شده", "مبنای گزارش", "ارقام افتتاحیه قابل ممیزی مستقل نیستند", 0, 0, statement["opening"]])
     for item in statement["rows"]:
         ws.append([
-            item["date_j"], item["kind"], item["reference"], item["description"],
+            _safe_excel_text(item["date_j"]), _safe_excel_text(item["kind"]),
+            _safe_excel_text(item["reference"]), _safe_excel_text(item["description"]),
             item["increase"], item["decrease"], item["balance"],
         ])
     ws.freeze_panes = f"A{header_row + 1}"
