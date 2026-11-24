@@ -1,0 +1,92 @@
+name: V150 color yield and Tapsi per-sale price with tailor ledger
+on:
+  push:
+    branches: [v150-production-yield-tapsi-tailor]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: darma
+          POSTGRES_USER: darma
+          POSTGRES_PASSWORD: darma
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U darma"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_NAME: darma
+      DB_USER: darma
+      DB_PASSWORD: darma
+      DJANGO_SETTINGS_MODULE: config.settings
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Syntax and no migrations
+        run: |
+          python -m compileall -q core/tailor_statement_v150.py core/material_report_ui_v131.py core/production_inline_v138.py core/tapsi_shop_v138.py core/tapsi_portal_v142.py core/test_features_v150.py
+          node --check core/static/core/tapsi_portal_v142.js
+          node --check core/static/core/production_workspace_v131.js
+          python manage.py check
+          python manage.py makemigrations --check --dry-run
+          python - <<'PY'
+          import django
+          django.setup()
+          from django.template.loader import get_template
+          from django.urls import reverse
+          for x in ["core/material_report_v131.html", "core/tailor_statement_v150.html", "core/tapsi_shop_v142.html"]:
+              get_template(x)
+          assert reverse('tailor_statement') == '/material-report/tailor-account/'
+          assert reverse('tailor_statement_excel') == '/material-report/tailor-account/excel/'
+          PY
+      - name: Regressions without historical migrations for fast isolated DB
+        run: |
+          python - <<'PY'
+          import django
+          django.setup()
+          from django.test import override_settings
+          from django.core.management import call_command
+          with override_settings(
+              MIGRATION_MODULES={'core': None},
+              STORAGES={'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'}}
+          ):
+              call_command('test', 'core.test_features_v150',
+                  'core.test_tapsi_shop_v138','core.test_production_workspace_v131',
+                  'core.test_production_inline_v138', interactive=False,verbosity=2)
+          PY
+      - name: Scoped changes and protected base model verification
+        run: |
+          python - <<'PY'
+          import subprocess
+          base="d1fd87ff3a0b6e94b24de72d4c6fd4572a352a5b"
+          changed=set(subprocess.check_output(['git','diff','--name-only',base+'..HEAD'], text=True).splitlines())
+          allowed={
+            "core/material_report_ui_v131.py", "core/production_inline_v138.py",
+            "core/static/core/production_workspace_v131.css", "core/static/core/production_workspace_v131.js",
+            "templates/core/material_report_v131.html", "core/tapsi_shop_v138.py",
+            "core/tapsi_portal_v142.py","core/static/core/tapsi_portal_v142.js",
+            "core/static/core/tapsi_portal_v142.css","templates/core/tapsi_shop_v142.html",
+            "core/tailor_statement_v150.py","templates/core/tailor_statement_v150.html",
+            "core/urls.py","core/test_features_v150.py",
+            ".github/workflows/check-features-v150.yml","server_features_v150.sh",
+          }
+          assert not changed-allowed, sorted(changed-allowed)
+          for protected in ("core/models.py", "core/models_final.py", "core/material_report_v23.py",
+              "core/capital_history_v87.py", "core/material_flow.py", "core/business_tools_v62.py"):
+              assert protected not in changed
+          assert not any(path.startswith("core/migrations/") for path in changed)
+          PY
