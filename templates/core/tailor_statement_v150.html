@@ -1,0 +1,50 @@
+{% extends 'base.html' %}{% load jalali static %}
+{% block title %}گردش حساب خیاط | دارما{% endblock %}
+{% block content %}
+{% include 'core/_mobile_shell.html' %}
+<style>
+.tail150{max-width:1350px;margin:0 auto;padding:17px 10px;color:var(--p-text,#e6eff7)}
+.tail150-head,.tail150-kpis{display:flex;gap:13px;flex-wrap:wrap;align-items:center;justify-content:space-between}
+.tail150 h1{font-size:1.45rem;margin:0 0 9px}.tail150 p{line-height:1.85}
+.tail150-back{color:#b9d4eb;text-decoration:none}
+.tail150-kpis{margin:17px 0;display:grid;grid-template-columns:repeat(4,minmax(140px,1fr))}
+.tail150-kpis article,.tail150-note,.tail150-table-wrap{background:#142436;border:1px solid #34465a;border-radius:13px;padding:16px}
+.tail150-kpis span{display:block;color:#b3c2d2;font-size:.78rem;margin-bottom:8px}
+.tail150-kpis strong{font-size:1.22rem;font-weight:800}
+.tail150-note{border-color:#7a6951;color:#dfd1bc}
+.tail150-table-wrap{margin-top:16px;overflow:auto;padding:0}
+.tail150 table{min-width:920px;width:100%;border-collapse:collapse;font-size:.83rem}
+.tail150 th,.tail150 td{padding:14px 10px;text-align:right;border-bottom:1px solid #34465a;vertical-align:top}
+.tail150 th{background:#24374b;color:#fff;white-space:nowrap}
+.tail150 td:nth-child(4){min-width:255px;line-height:1.7}
+.tail150 .num{font-variant-numeric:tabular-nums;white-space:nowrap}
+@media(max-width:760px){.tail150-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.tail150-kpis article{padding:12px}.tail150-kpis strong{font-size:.94rem}}
+</style>
+<div class="tail150">
+  <div class="tail150-head">
+    <div><a class="tail150-back" href="{% url 'material_report' %}">بازگشت به تولید</a>
+      <h1>گردش کامل حساب خیاط</h1><p>تمام واریزی‌های ثبت‌شده به خیاط و مزد صورت‌های تولید دارای تحویل اعمال‌شده.</p></div>
+    <a class="btn btn-success" href="{% url 'tailor_statement_excel' %}">دریافت خروجی اکسل کامل</a>
+  </div>
+  <section class="tail150-kpis" aria-label="خلاصه حساب خیاط">
+    <article><span>مانده ابتدای سوابق (بازسازی‌شده)</span><strong class="num">{{ statement.opening|groupnum }}</strong></article>
+    <article><span>جمع واریزی‌ها (+)</span><strong class="num">{{ statement.payments|groupnum }}</strong></article>
+    <article><span>جمع مزد تولید (-)</span><strong class="num">{{ statement.wages|groupnum }}</strong></article>
+    <article><span>مانده فعلی ثبت‌شده در حسابداری</span><strong class="num">{{ statement.closing|groupnum }}</strong>
+      <small>{% if statement.closing < 0 %}بدهی به خیاط{% elif statement.closing > 0 %}طلب از خیاط{% else %}تسویه{% endif %}</small></article>
+  </section>
+  <div class="tail150-note">
+    <strong>توضیح حسابداری:</strong> در نسخه‌های گذشته، مانده اولیه و تغییرات دستی حساب خیاط در دفتر گردش تغییرناپذیر ذخیره نشده‌اند. «مانده ابتدای سوابق» این صفحه از مانده امروز، واریزی‌ها و مزدهای قابل‌بازیابی بازسازی می‌شود و نباید مبلغ افتتاحیه قطعی تلقی شود. تاریخ مزدها تاریخ صورت تولید است، نه لزوماً روز ثبت مالی آن.
+    {% if statement.missing_wages %}<p>هشدار: {{ statement.missing_wages|length }} صورت دارای تحویل اعمال‌شده، مبلغ مزد صفر یا نامشخص دارند و در جمع مزد قابل اتکا وارد نشده‌اند. جزئیات باید با اسناد قبلی تطبیق داده شود.</p>{% endif %}
+  </div>
+  <div class="tail150-table-wrap">
+    <table><thead><tr><th>تاریخ</th><th>نوع</th><th>سند</th><th>شرح و ریز تحویل‌ها</th><th>واریزی (+)</th><th>مزد (-)</th><th>مانده پس از رویداد</th></tr></thead>
+    <tbody>
+      <tr><td>—</td><td>مانده مبنای بازسازی‌شده</td><td>افتتاحیه استنتاجی</td><td>بدون سابقه تاریخی مستقل از تغییرات دستی</td><td>—</td><td>—</td><td class="num">{{ statement.opening|groupnum }}</td></tr>
+      {% for item in statement.rows %}
+      <tr><td>{{ item.date_j }}</td><td>{{ item.kind }}</td><td>{{ item.reference }}</td><td>{{ item.description }}</td><td class="num">{{ item.increase|groupnum }}</td><td class="num">{{ item.decrease|groupnum }}</td><td class="num">{{ item.balance|groupnum }}</td></tr>
+      {% endfor %}
+    </tbody></table>
+  </div>
+</div>
+{% endblock %}

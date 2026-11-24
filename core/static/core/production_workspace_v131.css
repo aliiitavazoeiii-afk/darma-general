@@ -146,3 +146,10 @@
 .prod150-mean-note{font-size:.75rem;line-height:1.8;color:#afc3d2;margin:0 0 12px}
 .prod131-col-code{width:19%}.prod131-col-weight{width:7%}.prod131-col-cut{width:8%}.prod131-col-entered{width:8%}.prod131-col-remaining{width:8%}.prod131-col-cost{width:12%}
 .prod131-col-status{width:18%}.prod131-col-action{width:8%}
+
+.prod150-header-cards{display:flex;gap:11px;flex-wrap:wrap;align-items:stretch}
+.prod150-report-stack{display:flex;flex-direction:column;gap:8px;min-width:165px}
+.prod150-report-stack>.prod137-all-link{justify-content:space-between;flex:1;min-height:40px}
+.prod150-tailor-card{display:flex;flex-direction:column;justify-content:center;gap:5px;min-width:175px;border:1px solid rgba(131,199,164,.4);padding:12px 16px;border-radius:12px;background:rgba(48,123,95,.12);color:#d6f9e8!important;text-decoration:none!important}
+.prod150-tailor-card strong{font-size:.87rem}.prod150-tailor-card small{font-size:.7rem;color:#a9cbb9}.prod150-tailor-card>span{align-self:flex-end}
+@media(max-width:760px){.prod150-header-cards{width:100%}.prod150-report-stack,.prod150-tailor-card{flex:1;min-width:145px}}
