@@ -1,0 +1,89 @@
+name: V154 stripe01 dated profit on V152
+on:
+  push:
+    branches:
+      - v154-stripe01-profit-on-v152
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  profit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: darma
+          POSTGRES_USER: darma
+          POSTGRES_PASSWORD: darma
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U darma"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_NAME: darma
+      DB_USER: darma
+      DB_PASSWORD: darma
+      DJANGO_SETTINGS_MODULE: config.settings
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Static checks and compile
+        run: |
+          python -m compileall -q core/stripe_01_v151.py core/sale_price_v60.py core/finance.py core/cost_accounting_v14.py core/daily_order_import_v12.py core/daily_order_import_v23.py core/excel_sales.py core/test_stripe_01_profit_v153.py
+          bash -n server_stripe_01_profit_v154.sh
+          python manage.py check
+          python manage.py makemigrations --check --dry-run
+      - name: Migrate isolated PostgreSQL
+        run: |
+          python manage.py migrate core 0012 --noinput
+          python manage.py shell -c "from core.models import Brand,StockLocation; Brand.objects.get_or_create(name='دارما'); StockLocation.objects.get_or_create(key='home',defaults={'title':'خانه'})"
+          python manage.py migrate --noinput
+          python manage.py migrate --check --noinput
+      - name: Campaign, import, and preexisting stripe regressions
+        run: |
+          python - <<'PY'
+          import django
+          django.setup()
+          from django.test import override_settings
+          from django.core.management import call_command
+          with override_settings(MIGRATION_MODULES={'core': None}, STORAGES={'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'}}):
+              call_command('test', 'core.test_stripe_01_profit_v153',
+                           'core.test_stripe_01_v151', 'core.test_digikala_title_v149',
+                           'core.test_azar_pack_colors_v152',
+                           interactive=False, verbosity=2)
+          PY
+      - name: Assert only authorized code was changed
+        run: |
+          python - <<'PY'
+          import subprocess
+          base='d15b4d54a2cd82b96cbeba6ff6c492d62d8ffe56'
+          changed=set(subprocess.check_output(['git','diff','--name-only',base+'..HEAD'],text=True).splitlines())
+          allowed={
+              'core/stripe_01_v151.py','core/sale_price_v60.py',
+              'core/finance.py','core/cost_accounting_v14.py',
+              'core/daily_order_import_v12.py','core/daily_order_import_v23.py',
+              'core/excel_sales.py','core/test_stripe_01_profit_v153.py',
+              '.github/workflows/check-stripe-01-profit-v154.yml',
+              'server_stripe_01_profit_v154.sh',
+          }
+          assert not changed-allowed, sorted(changed-allowed)
+          assert not any(p.startswith('core/migrations/') for p in changed)
+          for protected in ['core/models.py','core/material_report_v23.py',
+                            'core/variant_sale_v12.py','core/finance_excel_v9.py',
+                            'core/darma_cost_v55.py','core/capital_history_v87.py']:
+              assert protected not in changed, protected
+          print('V153_SCOPE=PASS')
+          PY

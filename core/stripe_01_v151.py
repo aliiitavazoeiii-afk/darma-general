@@ -33,3 +33,34 @@ def applies_to(when, brand_name, product_code):
         and str(brand_name or "") == BRAND_NAME
         and str(product_code or "") == PRODUCT_CODE
     )
+
+
+# V153: separate price/COGS window. The 13% commission remains governed
+# by the already-approved 1–10 Azar V151 rule above, without changing it.
+PROFIT_START = date(2026, 11, 26)  # 1405/09/05 (inclusive)
+PROFIT_END = date(2026, 12, 1)     # 1405/09/10 (inclusive)
+PROFIT_SALE_PRICE = 162_500
+PROFIT_UNIT_COST = 76_000
+
+
+def profit_rule_applies(when, brand_name, product_code):
+    return (
+        when is not None
+        and PROFIT_START <= when <= PROFIT_END
+        and str(brand_name or "") == BRAND_NAME
+        and str(product_code or "") == PRODUCT_CODE
+    )
+
+
+def promotional_sale_price(when, brand_name, product_code):
+    """Return the dated offer price or None; do not change the catalog baseline."""
+    if profit_rule_applies(when, brand_name, product_code):
+        return PROFIT_SALE_PRICE
+    return None
+
+
+def stripe01_unit_cost_for(when, brand_name, product_code, baseline_cost):
+    """Keep the user-confirmed 76k COGS on Azar 5–10 only."""
+    if profit_rule_applies(when, brand_name, product_code):
+        return PROFIT_UNIT_COST
+    return int(baseline_cost)

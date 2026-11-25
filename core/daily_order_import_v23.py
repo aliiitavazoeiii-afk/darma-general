@@ -11,6 +11,7 @@ from . import daily_order_import_v12 as v12
 from .cost_accounting_v14 import snapshot_sale_line
 from .final_services import sync_sale_inventory
 from .models import AccountEntry, ProductSize, SaleDay, SaleLine
+from .sale_price_v60 import sale_price_for
 from .variant_sale_v12 import (
     VARIANT_PRODUCT_CODE,
     assert_stock_invariant,
@@ -275,10 +276,10 @@ def apply_delivery_preview(day: SaleDay, preview: dict) -> dict:
             ps = line.product_size
         qty = int(targets.get(ps_id, 0))
         if line is None:
-            price = int(ps.default_sale_price or 0)
+            price = int(sale_price_for(ps, day.date) or 0)
             line = SaleLine.objects.create(day=day, product_size=ps, quantity=0, sale_price=price)
         else:
-            price = int(line.sale_price or ps.default_sale_price or 0)
+            price = int(line.sale_price or sale_price_for(ps, day.date) or 0)
 
         if qty > 0 and price <= 0:
             raise base.DailyOrderImportError(

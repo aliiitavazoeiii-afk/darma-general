@@ -3,6 +3,7 @@ from datetime import date
 from django.db import transaction
 
 from .models import AppSetting, ProductSize
+from .stripe_01_v151 import promotional_sale_price as stripe01_promotional_sale_price
 
 
 MANAGED_BRANDS = ("دارما", "تکوین")
@@ -68,6 +69,12 @@ def sale_price_for(product_size, on_date=None):
     if not isinstance(product_size, ProductSize):
         product_size = ProductSize.objects.select_related("product__brand", "size").get(pk=product_size)
     on_date = on_date or date.today()
+    # V153: 5–10 Azar applies at sale date, without overwriting catalog/rules.
+    stripe_price = stripe01_promotional_sale_price(
+        on_date, product_size.product.brand.name, product_size.product.code
+    )
+    if stripe_price is not None:
+        return stripe_price
     if product_size.product.brand.name not in MANAGED_BRANDS:
         return int(product_size.default_sale_price or 0)
 
