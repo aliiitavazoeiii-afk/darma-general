@@ -4,7 +4,11 @@ from decimal import Decimal, ROUND_HALF_UP
 from .darma_cost_v55 import darma_cost_for
 from .models import AppSetting
 from .novani_cost_v59 import novani_cost_for
-from .stripe_01_v151 import applies_to as stripe01_offer_applies
+from .stripe_01_v151 import (
+    applies_to as stripe01_offer_applies,
+    stripe01_unit_cost_for,
+    UNIT_COST as STRIPE01_BASE_UNIT_COST,
+)
 
 
 # One-off Digikala promotion/settlement rule reported for 1405/07/08 only.
@@ -77,7 +81,10 @@ def sale_line_metrics(line):
     else:
         brand_name = line.product_size.product.brand.name
         if brand_name == "دارما" and line.product_size.product.code == "rahrah-01":
-            unit_cost = int(line.product_size.unit_cost or 67_000)
+            unit_cost = stripe01_unit_cost_for(
+                line.day.date, brand_name, line.product_size.product.code,
+                line.product_size.unit_cost or STRIPE01_BASE_UNIT_COST,
+            )
         elif brand_name in {"دارما", "انبارش"}:
             unit_cost = int(darma_cost_for(line.day.date))
         elif brand_name == "Novani":
