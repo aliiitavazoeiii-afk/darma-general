@@ -8,6 +8,7 @@ from .cost_accounting_v14 import snapshot_sale_line
 from .finance_excel_v9 import sync_sale_receivable
 from .sale_inventory_v19 import sync_sale_inventory_v19
 from .models import Color, ProductSize, SaleDay, SaleLine, SaleShortage
+from .sale_price_v60 import sale_price_for
 
 
 def _int(value, default=0):
@@ -34,7 +35,7 @@ def sale_line_save(request):
         return HttpResponse("Novani برند موجودی/تولید است و در فروش روزانه ثبت نمی‌شود.", status=400)
 
     qty = max(0, _int(request.POST.get("quantity")))
-    price = max(0, _int(request.POST.get("sale_price"), ps.default_sale_price))
+    price = max(0, _int(request.POST.get("sale_price"), sale_price_for(ps, day.date)))
     line, _ = SaleLine.objects.select_for_update().get_or_create(
         day=day,
         product_size=ps,
