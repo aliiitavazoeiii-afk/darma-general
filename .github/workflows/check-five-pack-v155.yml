@@ -1,0 +1,89 @@
+name: V155 all five packs 19 percent on Azar 5-7
+on:
+  push:
+    branches:
+      - v155-fivepack-digikala-19-azar5-7
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  profit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: darma
+          POSTGRES_USER: darma
+          POSTGRES_PASSWORD: darma
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U darma"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_NAME: darma
+      DB_USER: darma
+      DB_PASSWORD: darma
+      DJANGO_SETTINGS_MODULE: config.settings
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Static checks and compile
+        run: |
+          python -m compileall -q core/finance.py core/cost_accounting_v14.py core/digikala_five_pack_v155.py core/management/commands/reprice_5pack_digikala_v155.py core/test_five_pack_v155.py
+          bash -n server_five_pack_v155.sh
+          python manage.py check
+          python manage.py makemigrations --check --dry-run
+      - name: Migrate isolated PostgreSQL
+        run: |
+          python manage.py migrate core 0012 --noinput
+          python manage.py shell -c "from core.models import Brand,StockLocation; Brand.objects.get_or_create(name='دارما'); StockLocation.objects.get_or_create(key='home',defaults={'title':'خانه'})"
+          python manage.py migrate --noinput
+          python manage.py migrate --check --noinput
+      - name: Campaign, import, and preexisting stripe regressions
+        run: |
+          python - <<'PY'
+          import django
+          django.setup()
+          from django.test import override_settings
+          from django.core.management import call_command
+          with override_settings(MIGRATION_MODULES={'core': None}, STORAGES={'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'}}):
+              call_command('test', 'core.test_stripe_01_profit_v153',
+                           'core.test_stripe_01_v151', 'core.test_digikala_title_v149',
+                           'core.test_azar_pack_colors_v152', 'core.test_five_pack_v155',
+                           interactive=False, verbosity=2)
+          PY
+      - name: Assert only authorized code was changed
+        run: |
+          python - <<'PY'
+          import subprocess
+          base='2a05a24e30452329bd5d595fb4a5322909ac005d'
+          changed=set(subprocess.check_output(['git','diff','--name-only',base+'..HEAD'],text=True).splitlines())
+          allowed={
+              'core/finance.py','core/cost_accounting_v14.py',
+              'core/digikala_five_pack_v155.py',
+              'core/management/commands/reprice_5pack_digikala_v155.py',
+              'core/test_five_pack_v155.py',
+              '.github/workflows/check-five-pack-v155.yml',
+              'server_five_pack_v155.sh',
+          }
+          assert not changed-allowed, sorted(changed-allowed)
+          assert not any(p.startswith('core/migrations/') for p in changed)
+          for protected in ['core/models.py','core/material_report_v23.py',
+                            'core/variant_sale_v12.py','core/finance_excel_v9.py',
+                            'core/darma_cost_v55.py','core/capital_history_v87.py']:
+              assert protected not in changed, protected
+          print('V155_SCOPE=PASS')
+          PY
