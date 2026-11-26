@@ -22,7 +22,7 @@ def _get_snapshot(line):
 def reconcile(*, apply=False, verify=False):
     # Lock SaleLines to avoid racing with an order re-import/edit.
     lines = (
-        SaleLine.objects.select_for_update()
+        SaleLine.objects.select_for_update(of=("self",))
         .filter(day__date__range=(START, END), quantity__gt=0)
         .select_related("day", "product_size__product__brand", "product_size__size", "snapshot")
         .order_by("day__date", "id")
