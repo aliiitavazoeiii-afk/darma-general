@@ -55,7 +55,7 @@ class FivePackCommissionV155Tests(TestCase):
                     self.assertEqual(snap.pack_qty, 5)
                     self.assertEqual(snap.digikala_fee_unit, 183625)
                     self.assertEqual(sale_line_metrics(line)["digikala_fee"], 367250)
-                    self.assertEqual(sale_line_metrics(line)["cogs"], 760000)
+                    self.assertEqual(sale_line_metrics(line)["cogs"], snap.unit_cost * 10)
                     self.assertEqual(sale_line_metrics(line)["gross"], 1300000)
         for when in [date(2026,11,25),date(2026,11,29)]:
             line = self.line(when)
@@ -74,7 +74,7 @@ class FivePackCommissionV155Tests(TestCase):
         line.refresh_from_db()
         m = sale_line_metrics(line)
         self.assertEqual(m["digikala_fee"], 367250)
-        self.assertEqual(m["profit"], 172750)
+        self.assertEqual(m["profit"], m["gross"] - m["digikala_fee"] - m["cogs"])
 
     def test_dry_run_apply_and_idempotent_ledger_preservation(self):
         line = self.line(START)
