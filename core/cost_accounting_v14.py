@@ -42,6 +42,7 @@ def snapshot_sale_line(line, ps=None, price=None):
         price, line.day.date,
         product_code=ps.product.code,
         brand_name=brand_name,
+        pack_qty=snap.pack_qty,
     )
     snap.save()
     return snap
