@@ -28,7 +28,7 @@ from .models import (
     Account, AccountEntry, BusinessPayment, DigikalaSettlement, DiaGallerySale, Expense, Brand,
     ExcelManualRow, ExcelManualSetting, InventoryMovement, MaterialReportBlock,
     SaleAllocation, SaleLine, StockBalance, StockThreshold, TapsiStockAllocation,
-    TailorBalanceEntry,
+    
 )
 
 SECTIONS = ("overview", "audit", "inventory", "profit", "cash", "production", "integrity")
@@ -200,7 +200,7 @@ def _audit(start, end, limit=30):
         else:
             # Outside V155, the historical snapshot is authoritative; current
             # app settings are not safe to retroactively impose on prior sales.
-            effective_fee = int(snap.digikala_fee_unit) if snap else digikala_fee_for_unit(
+            effective_fee = int(snap.digikala_fee_unit) if snap and snap.digikala_fee_unit else digikala_fee_for_unit(
                 price, line.day.date, product_code=code, brand_name=brand,
                 pack_qty=pack,
             )
@@ -229,13 +229,18 @@ def _stock(today):
     since = today - timedelta(days=27)
     demand = defaultdict(int)
     # Physical units only, using recorded color/size stock allocations.
+    darma_id = Brand.objects.filter(name="دارما").values_list("id", flat=True).first()
+    anbaresh_id = Brand.objects.filter(name="انبارش").values_list("id", flat=True).first()
     for row in SaleAllocation.objects.filter(
         sale_line__day__date__gte=since, sale_line__day__date__lte=today,
     ).values("sale_line__product_size__product__brand_id", "sale_line__product_size__size_id", "color_id").annotate(total=Sum("qty")):
-        key = (row["sale_line__product_size__product__brand_id"], row["sale_line__product_size__size_id"], row["color_id"])
+        brand_id = row["sale_line__product_size__product__brand_id"]
+        # Anbaresh sales are physically deducted from Darma stock.
+        if anbaresh_id and brand_id == anbaresh_id and darma_id:
+            brand_id = darma_id
+        key = (brand_id, row["sale_line__product_size__size_id"], row["color_id"])
         demand[key] += int(row["total"] or 0)
     # Dia physically consumes Darma stock. Count independently.
-    darma_id = Brand.objects.filter(name="دارما").values_list("id", flat=True).first()
     if darma_id:
         for row in DiaGallerySale.objects.filter(
             day__date__gte=since, day__date__lte=today, quantity__gt=0
@@ -326,7 +331,8 @@ def _production(today):
     ).all())
     result = build_overall_report(blocks)
     raw = _raw_material_context()
-    outstanding = _amount(TailorBalanceEntry.objects.all(), "delta")
+    from .tailor_ledger_v150 import live_tailor_balance
+    outstanding = live_tailor_balance()
     return {
         "all": result["all"], "followups": result["followups"][:12],
         "followup_total": result["followup_total"],
@@ -334,7 +340,7 @@ def _production(today):
         "fabric_warehouse": int(raw["fabric_warehouse_total"] or 0),
         "fabric_tailor": int(raw["fabric_tailor_total"] or 0),
         "tailor_ledger_net": outstanding,
-        "note": "مانده دفتر خیاط امضادار است؛ الزاما برابر بدهی قطعی تجاری نیست.",
+        "note": "مانده فعلی خیاط از ردیف مبنای حسابداری موجود خوانده شده؛ برای تفسیر علامت مثبت و منفی به دفتر خیاط رجوع کنید.",
     }
 
 
