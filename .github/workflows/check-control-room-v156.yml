@@ -1,0 +1,98 @@
+name: V156 isolated read-only Control Room
+on:
+  push:
+    branches: [v156-readonly-control-room]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  readonly-control-room:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: darma
+          POSTGRES_USER: darma
+          POSTGRES_PASSWORD: darma
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U darma"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_NAME: darma
+      DB_USER: darma
+      DB_PASSWORD: darma
+      DJANGO_SETTINGS_MODULE: config.settings
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Static checks and route/template compilation
+        run: |
+          python -m compileall -q core/control_room_v156.py core/test_control_room_v156.py
+          bash -n server_control_room_v156.sh
+          python manage.py check
+          python manage.py makemigrations --check --dry-run
+          python - <<'PY'
+          import django
+          django.setup()
+          from django.template.loader import get_template
+          from django.urls import reverse
+          assert reverse('control_room') == '/control-room/'
+          get_template('core/control_room_v156.html')
+          print('V156_URL_TEMPLATE=PASS')
+          PY
+      - name: Fresh PostgreSQL migrations
+        run: |
+          python manage.py migrate core 0012 --noinput
+          python manage.py shell -c "from core.models import Brand,StockLocation; Brand.objects.get_or_create(name='دارما'); StockLocation.objects.get_or_create(key='home',defaults={'title':'خانه'})"
+          python manage.py migrate --noinput
+          python manage.py migrate --check --noinput
+      - name: All Control Room screens read-only and ERP baseline regressions
+        run: |
+          python - <<'PY'
+          import django
+          django.setup()
+          from django.test import override_settings
+          from django.core.management import call_command
+          with override_settings(MIGRATION_MODULES={'core': None}, STORAGES={'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'}}):
+              call_command('test', 'core.test_control_room_v156',
+                           'core.test_five_pack_v155', 'core.test_stripe_01_profit_v153',
+                           'core.test_azar_pack_colors_v152',
+                           interactive=False, verbosity=2)
+          PY
+      - name: Enforce minimal integration; no existing financial, stock or migration code modified
+        run: |
+          python - <<'PY'
+          import subprocess
+          base='36921a88560fe21a7bea5f633872cc31ae4f89ed'
+          changed=set(subprocess.check_output(['git','diff','--name-only',base+'..HEAD'],text=True).splitlines())
+          allowed={
+              'core/control_room_v156.py','core/test_control_room_v156.py',
+              'templates/core/control_room_v156.html','core/urls.py',
+              'templates/base.html','.github/workflows/check-control-room-v156.yml',
+              'server_control_room_v156.sh',
+          }
+          assert changed <= allowed, sorted(changed-allowed)
+          assert not any(p.startswith('core/migrations/') for p in changed)
+          parent=subprocess.check_output(['git','show',f'{base}:templates/base.html'],text=True)
+          current=open('templates/base.html').read()
+          import re
+          added=re.search(r'\n<a class="nav114-link \{% if .*/control-room/.*?</a>\n',current)
+          assert added, 'Expected standalone sidebar link'
+          assert current.replace(added.group(0),'')==parent, 'Old sidebar markup changed'
+          old_urls=subprocess.check_output(['git','show',f'{base}:core/urls.py'],text=True)
+          current_urls=open('core/urls.py').read()
+          assert current_urls.replace('    control_room_v156,\n','').replace('    path("control-room/", control_room_v156.control_room, name="control_room"),\n','')==old_urls
+          print('V156_ONLY_LINK_ROUTE_AND_NEW_ISOLATED_FILES=PASS')
+          PY
