@@ -8,6 +8,7 @@ from . import (
     business_tools_v91,
     calculator_v37,
     calendar_views,
+    control_room_v156,
     catalog_v5,
     daily_order_views_v60,
     daily_report_actions_v21,
@@ -54,6 +55,7 @@ from . import (
 )
 
 urlpatterns = [
+    path("control-room/", control_room_v156.control_room, name="control_room"),
     path("", excel_dashboard_v89.dashboard, name="dashboard"),
     path("digikala/", digikala_views_v40.digikala_home, name="digikala"),
     path("digikala/summary/", digikala_views_v40.digikala_summary, name="digikala_summary"),
