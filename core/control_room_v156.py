@@ -7,7 +7,6 @@ All estimates are labelled, all quantities use saved operational records.
 """
 from collections import defaultdict
 from datetime import timedelta
-from decimal import Decimal
 
 import jdatetime
 from django.contrib.auth.decorators import login_required
@@ -26,7 +25,7 @@ from .report_v5 import _raw_material_context
 from .self_spend_v62 import capital_accounts_queryset
 from .tapsi_shop_v138 import tapsi_period_metrics, tapsi_receivable_total
 from .models import (
-    Account, AccountEntry, BusinessPayment, DigikalaSettlement, DiaGallerySale,
+    Account, AccountEntry, BusinessPayment, DigikalaSettlement, DiaGallerySale, Expense, Brand,
     ExcelManualRow, ExcelManualSetting, InventoryMovement, MaterialReportBlock,
     SaleAllocation, SaleLine, StockBalance, StockThreshold, TapsiStockAllocation,
     TailorBalanceEntry,
@@ -146,6 +145,9 @@ def _sales(start, end):
     for row in ranked:
         row["margin"] = round(100 * row["profit"] / row["gross"], 1) if row["gross"] else None
         row["return_on_cogs"] = round(100 * row["profit"] / row["cogs"], 1) if row["cogs"] else None
+    maximum_gross = max((item["gross"] for item in channels.values()), default=0)
+    for item in channels.values():
+        item["bar"] = max(3, round(item["gross"] / maximum_gross * 100)) if maximum_gross > 0 else 0
     gross = sum(item["gross"] for item in channels.values())
     profit = sum(item["profit"] for item in channels.values())
     fee = sum(item["fee"] for item in channels.values())
@@ -233,12 +235,11 @@ def _stock(today):
         key = (row["sale_line__product_size__product__brand_id"], row["sale_line__product_size__size_id"], row["color_id"])
         demand[key] += int(row["total"] or 0)
     # Dia physically consumes Darma stock. Count independently.
-    for row in DiaGallerySale.objects.filter(
-        day__date__gte=since, day__date__lte=today, quantity__gt=0
-    ).values("size_id", "color_id").annotate(total=Sum("quantity")):
-        from .models import Brand
-        darma_id = Brand.objects.filter(name="دارما").values_list("id", flat=True).first()
-        if darma_id:
+    darma_id = Brand.objects.filter(name="دارما").values_list("id", flat=True).first()
+    if darma_id:
+        for row in DiaGallerySale.objects.filter(
+            day__date__gte=since, day__date__lte=today, quantity__gt=0
+        ).values("size_id", "color_id").annotate(total=Sum("quantity")):
             demand[(darma_id, row["size_id"], row["color_id"])] += int(row["total"] or 0)
     for row in TapsiStockAllocation.objects.filter(
         item__order__day__date__gte=since, item__order__day__date__lte=today,
@@ -303,11 +304,7 @@ def _cash(today):
         })
     recent_outgoings = _amount(BusinessPayment.objects.filter(date__range=(since, today)))
     receipts_total = sum(row["total"] for row in receipts)
-    recent_expenses = _amount(
-        __import__("core.models", fromlist=["Expense"]).Expense.objects.filter(
-            date__range=(since, today)
-        )
-    )
+    recent_expenses = _amount(Expense.objects.filter(date__range=(since, today)))
     # Scenario, not a contractual due-date forecast; historical records don't
     # contain confirmed future settlement schedules.
     runrate_14 = round((receipts_total - recent_outgoings - recent_expenses) * 14 / 30)
