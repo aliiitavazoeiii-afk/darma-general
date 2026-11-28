@@ -1,0 +1,193 @@
+{% load static jalali %}<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#08111b">
+<title>اتاق کنترل | DARMA INTELLIGENCE</title>
+<link rel="icon" href="{% static 'core/darma-favicon-v135.svg' %}">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css">
+<style>
+:root{--bg:#08121e;--side:#0a1622;--surface:#111e2b;--surface2:#162637;--line:#283c4d;--ink:#eef5f5;--muted:#94a9b5;--gold:#e7ba79;--teal:#4ad7bc;--rose:#ff8b88;--blue:#8fbdf5}
+*{box-sizing:border-box}body{margin:0;color:var(--ink);font-family:Vazirmatn,Tahoma,Arial,sans-serif;background:var(--bg);font-variant-numeric:tabular-nums}a{color:inherit;text-decoration:none}.cr-app{display:grid;grid-template-columns:254px minmax(0,1fr);min-height:100vh}
+.cr-side{padding:30px 17px;background:var(--side);border-left:1px solid var(--line);position:sticky;top:0;height:100vh;overflow:auto}.cr-brand{display:flex;align-items:center;gap:12px;padding:6px 9px 22px;border-bottom:1px solid var(--line)}.cr-logo{width:47px;height:47px;border:1px solid #6e6352;background:linear-gradient(145deg,#263f47,#182737);display:grid;place-items:center;border-radius:14px;color:var(--gold);font-weight:900;letter-spacing:-2px;font-size:1.3rem}.cr-name{font-weight:800;letter-spacing:2px;font-size:1.13rem}.cr-brand small{display:block;font-size:.66rem;letter-spacing:2px;color:var(--muted);direction:ltr;text-align:right;margin-top:4px}.cr-menu-title{color:#6f8999;font-size:.72rem;padding:24px 13px 8px}.cr-menu{display:grid;gap:5px}.cr-menu a{display:flex;align-items:center;gap:13px;padding:11px 14px;border:1px solid transparent;border-radius:11px;color:#9fb2bd;font-size:.84rem;transition:.15s}.cr-menu a span{font-family:Arial,sans-serif;font-size:1.25rem;width:24px;display:inline-block;text-align:center;color:#7e9bab}.cr-menu a:hover{background:#172b37;color:#fff}.cr-menu a.active{background:#203b40;border-color:#3e6861;color:#ecfbf7;font-weight:800}.cr-menu a.active span{color:var(--teal)}.cr-back{display:block;margin:26px 7px 0;border:1px solid #425462;padding:12px;border-radius:11px;text-align:center;font-size:.8rem;color:#dce9e9}.cr-back:hover{border-color:var(--gold);color:var(--gold)}.cr-side-note{padding:17px 12px 8px;font-size:.71rem;color:#78919d;line-height:2.2}
+.cr-main{min-width:0;padding:29px clamp(18px,3.3vw,54px) 64px;max-width:1680px;width:100%;margin:0 auto}.cr-top{display:flex;align-items:center;justify-content:space-between;gap:20px;border-bottom:1px solid #213544;padding-bottom:23px;margin-bottom:30px}.cr-eyebrow{color:var(--gold);font-size:.75rem;font-weight:800;letter-spacing:2px}.cr-top h1{font-size:clamp(1.5rem,2.7vw,2.3rem);margin:6px 0 0;font-weight:900;letter-spacing:-1px}.cr-date{text-align:left;color:#a9bdc6;font-size:.84rem}.cr-readonly{display:inline-flex;align-items:center;gap:7px;font-size:.68rem;background:#15312e;color:#86f2d1;padding:7px 12px;border:1px solid #32675b;border-radius:40px;margin-bottom:9px;font-weight:800}.cr-indicator{width:7px;height:7px;border-radius:50%;background:var(--teal)}.cr-lead{color:var(--muted);font-size:.85rem;line-height:2.1;margin:-5px 0 22px}.cr-kpi-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:0 0 24px}.cr-kpi{background:linear-gradient(145deg,#152533,#101d2a);border:1px solid #2a3f50;border-radius:17px;padding:21px;min-width:0;position:relative;overflow:hidden}.cr-kpi:before{content:"";position:absolute;top:0;right:0;width:54px;height:2px;background:var(--gold)}.cr-kpi .ey{color:#96acb9;font-size:.76rem}.cr-kpi strong{display:block;color:var(--ink);font-size:clamp(1.15rem,1.75vw,1.67rem);margin:12px 0 6px;font-weight:900;overflow-wrap:anywhere}.cr-kpi .hint{color:#819eab;font-size:.71rem}.cr-kpi.green:before{background:var(--teal)}.cr-kpi.red:before{background:var(--rose)}.cr-kpi.blue:before{background:var(--blue)}.cr-kpi.green strong{color:var(--teal)}.cr-kpi.red strong{color:var(--rose)}.cr-kpi .unit{font-size:.67rem;font-weight:500;color:#a8bcc6}
+.cr-columns{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(270px,1fr);gap:18px}.cr-panel{border:1px solid #283e4c;background:linear-gradient(135deg,#132332,#101b29);border-radius:18px;margin-bottom:19px;overflow:hidden}.cr-panel-header{padding:20px 23px;border-bottom:1px solid #293b49;display:flex;gap:12px;align-items:center;justify-content:space-between}.cr-panel-header h2{font-size:.98rem;margin:0;font-weight:800}.cr-panel-header small{font-size:.68rem;color:#8fa8b4}.cr-panel-content{padding:19px 23px}.cr-note{margin-top:14px;background:#182832;border-right:3px solid var(--gold);padding:12px 14px;color:#b9c6ca;font-size:.76rem;line-height:2;border-radius:4px}.cr-note.warn{border-right-color:var(--rose)}.cr-muted{color:var(--muted)}.cr-num{direction:ltr;unicode-bidi:isolate;display:inline-block;white-space:nowrap;font-family:Vazirmatn,Tahoma,Arial,sans-serif}.cr-positive{color:var(--teal)}.cr-negative{color:var(--rose)}.cr-gold{color:var(--gold)}.cr-chip{display:inline-block;color:#b2c4cd;border:1px solid #3b4f5b;padding:4px 10px;border-radius:80px;font-size:.67rem}.cr-chip.bad{background:rgba(239,120,113,.1);color:#ffaaa4;border-color:#7f4b4e}.cr-chip.good{color:#90edce;border-color:#3d6c5f}.cr-list{list-style:none;margin:0;padding:0}.cr-list li{display:flex;gap:12px;padding:14px 0;border-bottom:1px solid #273947;align-items:flex-start}.cr-list li:last-child{border-bottom:0}.cr-list b{font-size:.82rem;display:block}.cr-list small{font-size:.7rem;display:block;color:#9ab0bc;margin-top:5px;line-height:1.8}.cr-dot{flex:none;width:8px;height:8px;border-radius:50%;background:var(--gold);margin-top:8px}.cr-dot.bad{background:var(--rose)}.cr-dot.good{background:var(--teal)}.cr-row{display:flex;gap:12px;align-items:center;justify-content:space-between;border-bottom:1px solid #253846;padding:13px 0;font-size:.85rem}.cr-row:last-child{border:0}.cr-row .cr-num{font-weight:800;color:#eaf4f2}.cr-table-wrap{overflow:auto}.cr-table{width:100%;border-collapse:collapse;min-width:570px}.cr-table th,.cr-table td{padding:13px 14px;text-align:right;border-bottom:1px solid #263947;white-space:nowrap;font-size:.77rem}.cr-table th{color:#9cb3c0;font-size:.7rem;font-weight:700;background:#162a37}.cr-table tr:last-child td{border-bottom:0}.cr-table tr:hover td{background:#172b38}.cr-table .cr-num{font-size:.78rem}.cr-meter{height:8px;background:#263c4b;border-radius:8px;overflow:hidden;margin-top:9px}.cr-meter>i{display:block;height:100%;background:linear-gradient(90deg,#258776,var(--teal));border-radius:8px}.cr-bar-name{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:.77rem}.cr-bar-entry{padding:13px 0;border-bottom:1px solid #243745}.cr-bar-entry:last-child{border:0}.cr-empty{padding:45px 20px;text-align:center;color:#819ca9;font-size:.85rem}.cr-foot{margin-top:22px;color:#6f8d9e;font-size:.7rem;line-height:2}.cr-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.cr-tag{display:block;color:#849fac;font-size:.69rem;margin-top:6px}.cr-mobile-nav{display:none}
+@media(max-width:1140px){.cr-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.cr-columns{grid-template-columns:1fr}.cr-side{width:220px}.cr-app{grid-template-columns:220px minmax(0,1fr)}}
+@media(max-width:760px){.cr-app{display:block}.cr-side{position:relative;height:auto;width:100%;padding:12px 15px;border-left:0;border-bottom:1px solid var(--line)}.cr-brand{border:0;padding-bottom:10px}.cr-logo{height:40px;width:40px}.cr-menu-title,.cr-side-note,.cr-back,.cr-side .cr-menu{display:none}.cr-mobile-nav{display:flex;gap:8px;overflow-x:auto;margin:0 0 24px;padding-bottom:6px}.cr-mobile-nav a{border:1px solid #294255;padding:9px 13px;white-space:nowrap;font-size:.72rem;border-radius:10px;color:#b3c5ce}.cr-mobile-nav a.active{background:#23433e;color:#b4f5e0;border-color:#3d7969}.cr-top{align-items:flex-start}.cr-main{padding:22px 14px 45px}.cr-kpi-grid{gap:9px}.cr-kpi{padding:15px}.cr-panel-header{padding:16px}.cr-panel-content{padding:15px}}
+@media(max-width:430px){.cr-kpi-grid{grid-template-columns:1fr 1fr}.cr-kpi strong{font-size:1.15rem}.cr-kpi .ey{font-size:.67rem}.cr-date{font-size:.71rem}.cr-pair{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="cr-app">
+<aside class="cr-side">
+  <div class="cr-brand"><div class="cr-logo">D</div><div><div class="cr-name">DARMA</div><small>INTELLIGENCE ROOM</small></div></div>
+  <div class="cr-menu-title">مرکز فرماندهی · گزارش‌های مستقل</div>
+  <nav class="cr-menu" aria-label="بخش‌های اتاق کنترل">
+  {% for key,label,icon in nav %}
+    <a class="{% if key == tab %}active{% endif %}" href="{% url 'control_room' %}?tab={{ key }}" {% if key == tab %}aria-current="page"{% endif %}><span aria-hidden="true">{{ icon }}</span>{{ label }}</a>
+  {% endfor %}
+  </nav>
+  <a href="{% url 'dashboard' %}" class="cr-back">← بازگشت به پنل اصلی</a>
+  <div class="cr-side-note">این اتاق فقط اطلاعات موجود را می‌خواند. هیچ عملیات ثبت، اصلاح یا حذف ندارد.</div>
+</aside>
+<main class="cr-main" id="main">
+  <header class="cr-top">
+    <div><div class="cr-eyebrow">DARMA · OPERATIONS INTELLIGENCE</div><h1>{% if tab == 'overview' %}اتاق کنترل کسب‌وکار{% elif tab == 'audit' %}حسابرسی مالی{% elif tab == 'inventory' %}موجودی و نیاز تولید{% elif tab == 'profit' %}تحلیل سودآوری{% elif tab == 'cash' %}نقدینگی و سرمایه{% elif tab == 'production' %}گزارش جامع تولید{% else %}سلامت داده‌ها و ردیابی{% endif %}</h1></div>
+    <div class="cr-date"><div class="cr-readonly"><i class="cr-indicator"></i> READ ONLY · فقط مشاهده</div><div>امروز: <span class="cr-num">{{ today }}</span></div></div>
+  </header>
+  <nav class="cr-mobile-nav" aria-label="انتخاب بخش">{% for key,label,icon in nav %}<a href="{% url 'control_room' %}?tab={{ key }}" class="{% if tab == key %}active{% endif %}">{{ label }}</a>{% endfor %}</nav>
+
+  {% if tab == 'overview' %}
+  <p class="cr-lead">تصویر یکپارچهٔ عملکرد کسب‌وکار؛ داده‌ها مستقیماً از فروش، حسابداری، انبار و تولید فعلی خوانده می‌شوند.</p>
+  <div class="cr-kpi-grid">
+    <div class="cr-kpi"><div class="ey">فروش سه کانال در ماه</div><strong class="cr-num">{{ sales.gross|groupnum }}</strong><div class="hint">تومان · از {{ month_start }}</div></div>
+    <div class="cr-kpi green"><div class="ey">سود فروش پیش از سربار</div><strong class="cr-num">{{ sales.profit|groupnum }}</strong><div class="hint">تومان · حاشیه {{ sales.margin|default_if_none:"—" }}٪</div></div>
+    <div class="cr-kpi blue"><div class="ey">سرمایه بر اساس مدل فعلی</div><strong class="cr-num">{{ capital.capital_total|groupnum }}</strong><div class="hint">تومان · اجزای ثبت‌شده در ERP</div></div>
+    <div class="cr-kpi red"><div class="ey">هشدارهای موجودی</div><strong class="cr-num">{{ stock.risk_total|groupnum }}</strong><div class="hint">رنگ / سایز در معرض کمبود</div></div>
+  </div>
+  <div class="cr-columns">
+    <section>
+      <div class="cr-panel"><div class="cr-panel-header"><h2>عملکرد کانال‌های فروش</h2><small>از {{ sales.start }} تا {{ sales.end }}</small></div><div class="cr-panel-content">
+        {% for row in sales.channels %}
+          <div class="cr-bar-entry"><div class="cr-bar-name"><strong>{{ row.title }}</strong><span class="cr-num">{{ row.gross|groupnum }} تومان</span></div><div class="cr-meter"><i style="width:{{ row.bar }}%"></i></div><div class="cr-tag">سود فروش: <span class="cr-num">{{ row.profit|groupnum }}</span> تومان</div></div>
+        {% endfor %}
+      </div></div>
+      <div class="cr-panel"><div class="cr-panel-header"><h2>پرسودترین محصولات ثبت‌شده</h2><small>سود فروش، نه سود خالص شرکت</small></div>
+        {% if sales.top %}<div class="cr-table-wrap"><table class="cr-table"><thead><tr><th>برند / محصول</th><th>کانال</th><th>تعداد پک</th><th>سود</th></tr></thead><tbody>
+          {% for row in sales.top %}<tr><td><b>{{ row.brand }} / {{ row.code }}</b><small class="cr-tag">{{ row.size }}</small></td><td>{{ row.channel }}</td><td class="cr-num">{{ row.packs|groupnum }}</td><td class="cr-num {% if row.profit < 0 %}cr-negative{% else %}cr-positive{% endif %}">{{ row.profit|groupnum }}</td></tr>{% endfor %}
+        </tbody></table></div>{% else %}<div class="cr-empty">هنوز فروش ثبت‌شده‌ای در این ماه وجود ندارد.</div>{% endif %}
+      </div>
+    </section>
+    <section>
+      <div class="cr-panel"><div class="cr-panel-header"><h2>آنچه باید بررسی شود</h2><small>پیشنهادهای مبتنی بر داده</small></div><div class="cr-panel-content">
+        <ul class="cr-list">
+          {% if stock.risk_total %}<li><i class="cr-dot bad"></i><div><b>{{ stock.risk_total }} مورد خطر کمبود موجودی</b><small>موجودی خانه در مقایسه با مصرف ۲۸ روز اخیر؛ <a class="cr-gold" href="?tab=inventory">مشاهده جزئیات</a></small></div></li>{% endif %}
+          {% if audit.count %}<li><i class="cr-dot bad"></i><div><b>{{ audit.count }} مورد نیازمند بررسی مالی</b><small>اختلاف یا نقص داده در ۳۰ روز اخیر؛ <a class="cr-gold" href="?tab=audit">مشاهده حسابرسی</a></small></div></li>{% endif %}
+          {% if sales.bottom and sales.bottom.0.profit < 0 %}<li><i class="cr-dot"></i><div><b>محصول با سود فروش منفی</b><small>{{ sales.bottom.0.brand }} / {{ sales.bottom.0.code }} · <span class="cr-num">{{ sales.bottom.0.profit|groupnum }}</span> تومان</small></div></li>{% endif %}
+          <li><i class="cr-dot good"></i><div><b>پایش نقدینگی</b><small>مطالبات و میانگین دریافت‌های ثبت‌شده را در <a class="cr-gold" href="?tab=cash">بخش نقدینگی</a> ببین.</small></div></li>
+        </ul>
+      </div></div>
+      <div class="cr-panel"><div class="cr-panel-header"><h2>مطالبات قابل پیگیری</h2><small>ارقام حسابداری</small></div><div class="cr-panel-content">
+        <div class="cr-row"><span>دیجی‌کالا</span><span class="cr-num">{{ capital.digikala|groupnum }}</span></div>
+        <div class="cr-row"><span>تپسی‌شاپ</span><span class="cr-num">{{ capital.tapsi|groupnum }}</span></div>
+        <div class="cr-row"><span>دیا گالری</span><span class="cr-num">{{ capital.dia|groupnum }}</span></div>
+        <div class="cr-note">این ارقام الزاماً مبلغ قابل وصول در یک تاریخ مشخص نیستند؛ سررسید تسویه از داده‌های فعلی تأیید نشده است.</div>
+      </div></div>
+    </section>
+  </div>
+  <p class="cr-foot">محدوده: فروش دیجی‌کالا، تپسی‌شاپ و دیا گالری. هزینه‌های عمومی، تبلیغات، مرجوعی‌های مستقل و فروش عمده در سود فوق ممکن است کامل منظور نشده باشند.</p>
+
+  {% elif tab == 'audit' %}
+  <p class="cr-lead">بازرسی بدون تغییر سند: مقایسهٔ کارمزدهای ذخیره‌شده با قوانین تاییدشده و کنترل مبلغ طلب ثبت‌شده در دفتر مالی. بازه: {{ audit.start }} تا {{ audit.end }}.</p>
+  <div class="cr-kpi-grid">
+    <div class="cr-kpi blue"><div class="ey">ردیف‌های بررسی‌شده</div><strong class="cr-num">{{ audit.inspected|groupnum }}</strong><div class="hint">دارما و تکوین</div></div>
+    <div class="cr-kpi red"><div class="ey">اختلاف سند طلب</div><strong class="cr-num">{{ audit.ledger_gap|groupnum }}</strong><div class="hint">فروش در برابر دفتر حسابداری</div></div>
+    <div class="cr-kpi"><div class="ey">Snapshot ناقص</div><strong class="cr-num">{{ audit.missing_snapshot|groupnum }}</strong><div class="hint">سود تاریخی ممکن است دقیق نباشد</div></div>
+    <div class="cr-kpi"><div class="ey">کارمزد قدیمی کمپین</div><strong class="cr-num">{{ audit.wrong_fee|groupnum }}</strong><div class="hint">قانون پک ۵تایی در آذر</div></div>
+  </div>
+  <section class="cr-panel"><div class="cr-panel-header"><h2>موارد قابل بررسی ({{ audit.count }})</h2><small>بدون هیچ اصلاح خودکار</small></div>
+    {% if audit.issues %}<div class="cr-table-wrap"><table class="cr-table"><thead><tr><th>نوع</th><th>شرح</th><th>اختلاف (تومان)</th></tr></thead><tbody>
+      {% for row in audit.issues %}<tr><td><span class="cr-chip {% if row.level == 'danger' %}bad{% endif %}">{{ row.title }}</span></td><td>{{ row.detail }}</td><td class="cr-num">{% if row.amount is not None %}{{ row.amount|groupnum }}{% else %}—{% endif %}</td></tr>{% endfor %}
+    </tbody></table></div>{% else %}<div class="cr-empty">موردی در کنترل‌های فعلی یافت نشد؛ این نتیجه به معنای حسابرسی کامل نیست.</div>{% endif %}
+    {% if audit.hidden %}<div class="cr-note">{{ audit.hidden }} مورد دیگر در این نما پنهان شده‌اند.</div>{% endif %}
+  </section>
+  <div class="cr-note warn">این بخش فقط مغایرت را نشان می‌دهد. ثبت اصلاحیه، بازنویسی Snapshot یا سند حسابداری از داخل اتاق کنترل امکان‌پذیر نیست.</div>
+
+  {% elif tab == 'inventory' %}
+  <p class="cr-lead">پایش رنگ و سایز واقعی با موجودی «خانه» و فروش ثبت‌شده در ۲۸ روز اخیر. پیشنهاد نیاز تولید صرفاً برون‌یابی تقاضای گذشته است.</p>
+  <div class="cr-kpi-grid">
+    <div class="cr-kpi"><div class="ey">موجودی خانه</div><strong class="cr-num">{{ stock.home_total|groupnum }}</strong><div class="hint">عدد · همه برندها بدون انبارش تکراری</div></div>
+    <div class="cr-kpi blue"><div class="ey">موجودی خورشید</div><strong class="cr-num">{{ stock.khorshid_total|groupnum }}</strong><div class="hint">انتقال خودکار فرض نشده</div></div>
+    <div class="cr-kpi red"><div class="ey">موارد نیازمند توجه</div><strong class="cr-num">{{ stock.risk_total|groupnum }}</strong><div class="hint">برآورد پوشش کمتر از ۱۴ روز یا زیر حداقل</div></div>
+    <div class="cr-kpi green"><div class="ey">ردیف‌های موجودی</div><strong class="cr-num">{{ stock.stock_rows|groupnum }}</strong><div class="hint">رنگ × سایز × برند</div></div>
+  </div>
+  <section class="cr-panel"><div class="cr-panel-header"><h2>اولویت بررسی موجودی و برش</h2><small>بازه مصرف {{ stock.since }} تا {{ stock.until }}</small></div>
+    {% if stock.risk_rows %}<div class="cr-table-wrap"><table class="cr-table"><thead><tr><th>محصول فیزیکی</th><th>خانه</th><th>خورشید</th><th>مصرف ۲۸ روز</th><th>پوشش تخمینی (روز)</th><th>نیاز ۲۸ روز بعد *</th></tr></thead><tbody>
+    {% for row in stock.risk_rows %}<tr><td>{{ row.label }}</td><td class="cr-num">{{ row.home|groupnum }}</td><td class="cr-num">{{ row.khorshid|groupnum }}</td><td class="cr-num">{{ row.sold|groupnum }}</td><td class="cr-num">{% if row.cover is not None %}{{ row.cover }}{% else %}نامشخص{% endif %}</td><td class="cr-num cr-gold">{{ row.suggested|groupnum }}</td></tr>{% endfor %}
+    </tbody></table></div>{% else %}<div class="cr-empty">بر اساس سوابق قابل دسترس، مورد فوری شناسایی نشد.</div>{% endif %}
+    {% if stock.risk_hidden %}<div class="cr-note">{{ stock.risk_hidden }} ردیف دیگر نیز بررسی می‌شوند.</div>{% endif %}
+  </section>
+  <div class="cr-note">* «نیاز» صرفاً تخمین ۲۸ روز تقاضا منهای موجودی خانه است، نه دستور برش. فروش بدون Allocation تاریخی یا سفارش‌های آتی در این مدل لحاظ نشده‌اند؛ خورشید جداست.</div>
+
+  {% elif tab == 'profit' %}
+  <p class="cr-lead">مقایسه عملکرد کالاها به تفکیک کانال و سایز؛ سود فروش با فرمول‌های ثبت‌شده در ERP محاسبه شده، نه سود عملیاتی بعد از همه سربارها.</p>
+  <div class="cr-kpi-grid">
+    <div class="cr-kpi"><div class="ey">درآمد این ماه</div><strong class="cr-num">{{ sales.gross|groupnum }}</strong><div class="hint">تومان</div></div>
+    <div class="cr-kpi green"><div class="ey">سود فروش</div><strong class="cr-num">{{ sales.profit|groupnum }}</strong><div class="hint">تومان</div></div>
+    <div class="cr-kpi blue"><div class="ey">حاشیه سود</div><strong class="cr-num">{{ sales.margin|default_if_none:"—" }}%</strong><div class="hint">پیش از هزینه‌های عمومی</div></div>
+    <div class="cr-kpi"><div class="ey">کارمزد و هزینه پلتفرم‌ها</div><strong class="cr-num">{{ sales.fee|groupnum }}</strong><div class="hint">تومان</div></div>
+  </div>
+  <section class="cr-panel"><div class="cr-panel-header"><h2>رتبه‌بندی کالاها و سایزها</h2><small>از {{ sales.start }} تا {{ sales.end }}</small></div>
+    {% if sales.products %}<div class="cr-table-wrap"><table class="cr-table"><thead><tr><th>برند / کد</th><th>سایز</th><th>کانال</th><th>تعداد</th><th>فروش</th><th>بهای تمام‌شده</th><th>کارمزد</th><th>سود</th><th>حاشیه</th><th>بازده بهای کالا</th></tr></thead><tbody>
+    {% for row in sales.products %}<tr><td>{{ row.brand }} / <b>{{ row.code }}</b></td><td>{{ row.size }}</td><td>{{ row.channel }}</td><td class="cr-num">{{ row.packs }}</td><td class="cr-num">{{ row.gross|groupnum }}</td><td class="cr-num">{{ row.cogs|groupnum }}</td><td class="cr-num">{{ row.fee|groupnum }}</td><td class="cr-num {% if row.profit < 0 %}cr-negative{% else %}cr-positive{% endif %}">{{ row.profit|groupnum }}</td><td class="cr-num">{{ row.margin|default_if_none:"—" }}٪</td><td class="cr-num">{{ row.return_on_cogs|default_if_none:"—" }}٪</td></tr>{% endfor %}
+    </tbody></table></div>{% else %}<div class="cr-empty">در این ماه اطلاعات فروش محصولی وجود ندارد.</div>{% endif %}
+  </section>
+  <div class="cr-note warn">دیا گالری در مجموع کانال‌ها لحاظ شده، ولی به دلیل نبود کد محصول در رکورد فروش، به ردیف SKU ساختگی تبدیل نمی‌شود. مرجوعی، تبلیغات و هزینه‌های سربار می‌توانند سود واقعی را کاهش دهند.</div>
+
+  {% elif tab == 'cash' %}
+  <p class="cr-lead">تفکیک سرمایهٔ ثبت‌شده، مطالبات پلتفرم‌ها و جریان دریافت/پرداخت واقعی. زمان دریافت آینده در سیستم قابل اتکا ثبت نشده است.</p>
+  <div class="cr-kpi-grid">
+    <div class="cr-kpi blue"><div class="ey">سرمایه طبق فرمول ERP</div><strong class="cr-num">{{ cash.capital.capital_total|groupnum }}</strong><div class="hint">تومان</div></div>
+    <div class="cr-kpi green"><div class="ey">دریافت پلتفرم‌ها در ۳۰ روز</div><strong class="cr-num">{{ cash.receipts_total|groupnum }}</strong><div class="hint">تومان</div></div>
+    <div class="cr-kpi"><div class="ey">پرداخت‌های ثبت‌شده ۳۰ روز</div><strong class="cr-num">{{ cash.outgoings|groupnum }}</strong><div class="hint">تومان</div></div>
+    <div class="cr-kpi"><div class="ey">مخارج ثبت‌شده ۳۰ روز</div><strong class="cr-num">{{ cash.expenses|groupnum }}</strong><div class="hint">تومان · منبع مستقل</div></div>
+  </div>
+  <div class="cr-columns">
+    <section class="cr-panel"><div class="cr-panel-header"><h2>اجزای سرمایه</h2><small>مدل فعلی پنل</small></div><div class="cr-panel-content">
+    {% for title,value in cash.capital.breakdown %}<div class="cr-row"><span>{{ title }}</span><strong class="cr-num">{{ value|groupnum }}</strong></div>{% endfor %}
+    <div class="cr-row"><b>جمع سرمایه</b><strong class="cr-num cr-positive">{{ cash.capital.capital_total|groupnum }}</strong></div>
+    </div></section>
+    <section>
+      <div class="cr-panel"><div class="cr-panel-header"><h2>دریافت‌های پلتفرم‌ها</h2><small>۳۰ روز اخیر</small></div><div class="cr-panel-content">{% for row in cash.receipts %}<div class="cr-row"><span>{{ row.label }}</span><strong class="cr-num">{{ row.total|groupnum }}</strong></div>{% endfor %}</div></div>
+      <div class="cr-panel"><div class="cr-panel-header"><h2>سناریوی روند نقدی</h2><small>فقط برون‌یابی ۳۰ روز گذشته</small></div><div class="cr-panel-content">
+      <div class="cr-row"><span>روند خالص ۱۴ روز آینده</span><b class="cr-num">{{ cash.scenario_14|groupnum }}</b></div>
+      <div class="cr-row"><span>روند خالص ۳۰ روز آینده</span><b class="cr-num">{{ cash.scenario_30|groupnum }}</b></div>
+      <div class="cr-note warn">سناریوی آماری، نه جریان نقدی قطعی. تسویهٔ آتی، بدهی‌های سررسیدشده و خریدهای پیش‌بینی‌نشده معلوم نیستند. احتمال هم‌پوشانی برخی هزینه‌های ثبت‌شده وجود دارد.</div>
+      </div></div>
+    </section>
+  </div>
+
+  {% elif tab == 'production' %}
+  <p class="cr-lead">خلاصه تولید از گزارش‌های واقعی برش و تحویل، بدون اصلاح صورت‌ها یا انتقال خودکار موجودی.</p>
+  <div class="cr-kpi-grid">
+    <div class="cr-kpi"><div class="ey">کل برش ثبت‌شده</div><strong class="cr-num">{{ production.all.cut|groupnum }}</strong><div class="hint">عدد</div></div>
+    <div class="cr-kpi green"><div class="ey">تحویل ثبت‌شده</div><strong class="cr-num">{{ production.all.entered|groupnum }}</strong><div class="hint">عدد · مبنای گزارش تولید</div></div>
+    <div class="cr-kpi blue"><div class="ey">میانگین بازده ۲۰ کیلو</div><strong class="cr-num">{{ production.all.yield20|groupnum }}</strong><div class="hint">عدد از داده‌های معتبر وزن/برش</div></div>
+    <div class="cr-kpi red"><div class="ey">موارد نیازمند پیگیری تولید</div><strong class="cr-num">{{ production.followup_total|groupnum }}</strong><div class="hint">مغایرت/مانده/اعمال‌نشده</div></div>
+  </div>
+  <div class="cr-columns">
+    <div class="cr-panel"><div class="cr-panel-header"><h2>فهرست پیگیری تولید</h2><small>اولویت براساس مقدار باقی‌مانده</small></div>{% if production.followups %}<div class="cr-table-wrap"><table class="cr-table"><thead><tr><th>ماه / رنگ</th><th>کد</th><th>مانده</th><th>ثبت‌نشده</th><th>برگشت موردنیاز</th></tr></thead><tbody>{% for row in production.followups %}<tr><td>{{ row.month }} · {{ row.color }}</td><td>{{ row.code }}</td><td>{{ row.remaining }}</td><td>{{ row.unsynced }}</td><td>{{ row.reverse_due }}</td></tr>{% endfor %}</tbody></table></div>{% else %}<div class="cr-empty">مورد پیگیری در گزارش تولید ثبت نشده است.</div>{% endif %}</div>
+    <section>
+      <div class="cr-panel"><div class="cr-panel-header"><h2>دارایی مواد اولیه</h2><small>تومان</small></div><div class="cr-panel-content">
+      <div class="cr-row"><span>پارچه انبار</span><b class="cr-num">{{ production.fabric_warehouse|groupnum }}</b></div>
+      <div class="cr-row"><span>پارچه نزد خیاط</span><b class="cr-num">{{ production.fabric_tailor|groupnum }}</b></div>
+      <div class="cr-row"><span>جمع مواد اولیه</span><b class="cr-num">{{ production.materials|groupnum }}</b></div>
+      <div class="cr-row"><span>جمع امضادار رویدادهای دفتر خیاط</span><b class="cr-num">{{ production.tailor_ledger_net|groupnum }}</b></div>
+      <div class="cr-note">{{ production.note }}</div>
+      </div></div>
+    </section>
+  </div>
+
+  {% else %}
+  <p class="cr-lead">شفافیت دربارهٔ داده‌هایی که قابل اثبات هستند و محدودیت‌هایی که فعلاً امکان حسابرسی تاریخی آن‌ها وجود ندارد.</p>
+  <div class="cr-kpi-grid">
+    <div class="cr-kpi"><div class="ey">Snapshotهای مفقود</div><strong class="cr-num">{{ integrity.missing_snapshots|groupnum }}</strong><div class="hint">فروش دارای تعداد مثبت</div></div>
+    <div class="cr-kpi blue"><div class="ey">آخرین تاریخ فروش</div><strong>{{ integrity.last_sale_date|default:"—" }}</strong><div class="hint">تاریخ میلادی موجود در دیتابیس</div></div>
+    <div class="cr-kpi"><div class="ey">سند فروش با مرجع نامعمول</div><strong class="cr-num">{{ integrity.orphan_entries|groupnum }}</strong><div class="hint">نشانه مقدماتی، نه اثبات خطا</div></div>
+    <div class="cr-kpi green"><div class="ey">اختیار نوشتن این صفحه</div><strong>غیرفعال</strong><div class="hint">GET-only + تراکنش PostgreSQL فقط خواندنی</div></div>
+  </div>
+  <div class="cr-columns">
+    <section class="cr-panel"><div class="cr-panel-header"><h2>رویدادهای ثبت‌شده اخیر</h2><small>تاریخچه فعالیت، نه ویرایش توسط کاربر</small></div>
+    {% if integrity.events %}<div class="cr-table-wrap"><table class="cr-table"><thead><tr><th>زمان</th><th>نوع</th><th>شرح</th><th>مقدار</th></tr></thead><tbody>{% for row in integrity.events %}<tr><td>{{ row.when|date:"Y-m-d H:i" }}</td><td>{{ row.kind }}</td><td>{{ row.detail }}</td><td class="cr-num">{{ row.amount|groupnum }}</td></tr>{% endfor %}</tbody></table></div>{% else %}<div class="cr-empty">رویدادی یافت نشد.</div>{% endif %}</section>
+    <section>
+      <div class="cr-panel"><div class="cr-panel-header"><h2>مرزهای قابلیت اتکا</h2><small>بدون ادعای ساختگی</small></div><div class="cr-panel-content"><ul class="cr-list">{% for warning in integrity.warnings %}<li><i class="cr-dot bad"></i><div><small>{{ warning }}</small></div></li>{% endfor %}</ul></div></div>
+      <div class="cr-panel"><div class="cr-panel-header"><h2>آخرین تغییر ردیف‌های دستی</h2><small>زمان ثبت‌شده، بدون نام ویرایشگر</small></div><div class="cr-panel-content">{% for row in integrity.manual_updates %}<div class="cr-row"><div><b>{{ row.title }}</b><span class="cr-tag">{{ row.updated_at|date:"Y-m-d H:i" }}</span></div><span class="cr-num">{{ row.amount|groupnum }}</span></div>{% empty %}<div class="cr-empty">ردیفی وجود ندارد.</div>{% endfor %}</div></div>
+    </section>
+  </div>
+  {% endif %}
+  <footer class="cr-foot">DARMA INTELLIGENCE · V156 · این بخش مستقل صرفاً مشاهده‌ای است. تمام فرم‌های ثبت، حذف، اصلاح و موتور قیمت‌گذاری در پنل اصلی باقی می‌مانند و اینجا قابل اجرا نیستند. <a class="cr-gold" href="{% url 'dashboard' %}">بازگشت به پنل</a></footer>
+</main>
+</div>
+</body>
+</html>
