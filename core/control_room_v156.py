@@ -175,6 +175,12 @@ def _audit(start, end, limit=30):
         day__date__gte=start, day__date__lte=end, quantity__gt=0,
         product_size__product__brand__name__in=("دارما", "تکوین"),
     ).select_related("day", "product_size__product__brand", "product_size__size", "snapshot")
+    refs = [f"sale:{pk}:digikala" for pk in lines.values_list("pk", flat=True)]
+    ledger_by_ref = defaultdict(list)
+    for reference, delta in AccountEntry.objects.filter(
+        reference__in=refs, account__key="digikala", entry_type="sale"
+    ).values_list("reference", "delta"):
+        ledger_by_ref[reference].append(int(delta))
     for line in lines.iterator(chunk_size=200):
         inspected += 1
         try:
@@ -205,10 +211,7 @@ def _audit(start, end, limit=30):
                 pack_qty=pack,
             )
         expected_claim = (price - effective_fee) * qty
-        entries = list(AccountEntry.objects.filter(
-            reference=f"sale:{line.pk}:digikala", account__key="digikala",
-            entry_type="sale"
-        ).values_list("delta", flat=True))
+        entries = ledger_by_ref.get(f"sale:{line.pk}:digikala", [])
         if len(entries) != 1 or int(entries[0]) != expected_claim:
             ledger_gap += 1
             current = sum(int(val) for val in entries)
